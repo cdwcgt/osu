@@ -156,6 +156,8 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.ScalingPositionX, 0.5f, 0f, 1f);
             SetDefault(OsuSetting.ScalingPositionY, 0.5f, 0f, 1f);
 
+            SetDefault(OsuSetting.ScalingMenuBackgroundDim, 0.9f, 0f, 1f);
+
             SetDefault(OsuSetting.UIScale, 1f, 0.8f, 1.6f, 0.01f);
 
             SetDefault(OsuSetting.UIHoldActivationDelay, 200.0, 0.0, 500.0, 50.0);
@@ -360,6 +362,7 @@ namespace osu.Game.Configuration
         ScalingPositionY,
         ScalingSizeX,
         ScalingSizeY,
+        ScalingMenuBackgroundDim,
         UIScale,
         IntroSequence,
         NotifyOnUsernameMentioned,

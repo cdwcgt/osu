@@ -45,6 +45,8 @@ namespace osu.Game.Graphics.Containers
 
         private BackgroundScreenStack backgroundStack;
 
+        private Bindable<float> scalingMenuBackgroundDim;
+
         private RectangleF? customRect;
         private bool customRectIsRelativePosition;
 
@@ -132,6 +134,9 @@ namespace osu.Game.Graphics.Containers
             posY = config.GetBindable<float>(OsuSetting.ScalingPositionY);
             posY.ValueChanged += _ => Scheduler.AddOnce(updateSize);
 
+            scalingMenuBackgroundDim = config.GetBindable<float>(OsuSetting.ScalingMenuBackgroundDim);
+            scalingMenuBackgroundDim.ValueChanged += _ => Scheduler.AddOnce(updateSize);
+
             safeAreaPadding = safeArea.SafeAreaPadding.GetBoundCopy();
             safeAreaPadding.BindValueChanged(_ => Scheduler.AddOnce(updateSize));
         }
@@ -157,7 +162,7 @@ namespace osu.Game.Graphics.Containers
                     {
                         AddInternal(backgroundStack = new BackgroundScreenStack
                         {
-                            Colour = OsuColour.Gray(0.1f),
+                            Colour = OsuColour.Gray(1.0f - scalingMenuBackgroundDim.Value),
                             Alpha = 0,
                             Depth = float.MaxValue
                         });
@@ -166,6 +171,7 @@ namespace osu.Game.Graphics.Containers
                     }
 
                     backgroundStack.FadeIn(TRANSITION_DURATION);
+                    backgroundStack.Colour = OsuColour.Gray(1.0f - scalingMenuBackgroundDim.Value);
                 }
                 else
                     backgroundStack?.FadeOut(TRANSITION_DURATION);
