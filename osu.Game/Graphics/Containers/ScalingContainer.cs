@@ -162,7 +162,6 @@ namespace osu.Game.Graphics.Containers
                     {
                         AddInternal(backgroundStack = new BackgroundScreenStack
                         {
-                            Colour = OsuColour.Gray(1.0f - scalingMenuBackgroundDim.Value),
                             Alpha = 0,
                             Depth = float.MaxValue
                         });
@@ -171,7 +170,7 @@ namespace osu.Game.Graphics.Containers
                     }
 
                     backgroundStack.FadeIn(TRANSITION_DURATION);
-                    backgroundStack.Colour = OsuColour.Gray(1.0f - scalingMenuBackgroundDim.Value);
+                    backgroundStack.FadeColour(OsuColour.Gray(1.0f - scalingMenuBackgroundDim.Value), 800, Easing.OutQuint);
                 }
                 else
                     backgroundStack?.FadeOut(TRANSITION_DURATION);
