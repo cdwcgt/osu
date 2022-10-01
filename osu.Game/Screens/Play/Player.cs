@@ -14,7 +14,6 @@ using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Audio.Sample;
 using osu.Framework.Bindables;
-using osu.Framework.Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Input.Events;
@@ -46,6 +45,7 @@ namespace osu.Game.Screens.Play
     [Cached]
     public abstract class Player : ScreenWithBeatmapBackground, ISamplePlaybackDisabler, ILocalUserPlayInfo
     {
+
         /// <summary>
         /// The delay upon completion of the beatmap before displaying the results screen.
         /// </summary>
@@ -566,8 +566,6 @@ namespace osu.Game.Screens.Play
         /// </param>
         protected void PerformExit(bool showDialogFirst)
         {
-            // if an exit has been requested, cancel any pending completion (the user has shown intention to exit).
-            resultsDisplayDelegate?.Cancel();
 
             // there is a chance that an exit request occurs after the transition to results has already started.
             // even in such a case, the user has shown intent, so forcefully return to this screen (to proceed with the upwards exit process).
@@ -668,83 +666,80 @@ namespace osu.Game.Screens.Play
             musicController.Stop();
 
             sampleRestart?.Play();
-            RestartRequested?.Invoke(quickRestart);
+            //RestartRequested?.Invoke(quickRestart);
 
             PerformExit(false);
+            OnRestart.Invoke();
         }
 
-        /// <summary>
-        /// This delegate, when set, means the results screen has been queued to appear.
-        /// The display of the results screen may be delayed by any work being done in <see cref="PrepareScoreForResultsAsync"/>.
-        /// </summary>
-        /// <remarks>
-        /// Once set, this can *only* be cancelled by rewinding, ie. if <see cref="JudgementProcessor.HasCompleted">ScoreProcessor.HasCompleted</see> becomes <see langword="false"/>.
-        /// Even if the user requests an exit, it will forcefully proceed to the results screen (see special case in <see cref="OnExiting"/>).
-        /// </remarks>
-        private ScheduledDelegate resultsDisplayDelegate;
+        public Action OnRestart { get; set; }
 
-        /// <summary>
-        /// A task which asynchronously prepares a completed score for display at results.
-        /// This may include performing net requests or importing the score into the database, generally to ensure things are in a sane state for the play session.
-        /// </summary>
-        private Task<ScoreInfo> prepareScoreForDisplayTask;
+
+        //private Task<ScoreInfo> prepareScoreForDisplayTask;
 
         /// <summary>
         /// Handles changes in player state which may progress the completion of gameplay / this screen's lifetime.
         /// </summary>
         /// <exception cref="InvalidOperationException">Thrown if this method is called more than once without changing state.</exception>
+        ///
+
         private void scoreCompletionChanged(ValueChangedEvent<bool> completed)
         {
-            // If this player instance is in the middle of an exit, don't attempt any kind of state update.
-            if (!this.IsCurrentScreen())
-                return;
-
-            // Special case to handle rewinding post-completion. This is the only way already queued forward progress can be cancelled.
-            // TODO: Investigate whether this can be moved to a RewindablePlayer subclass or similar.
-            // Currently, even if this scenario is hit, prepareScoreForDisplay has already been queued (and potentially run).
-            // In scenarios where rewinding is possible (replay, spectating) this is a non-issue as no submission/import work is done,
-            // but it still doesn't feel right that this exists here.
-            if (!completed.NewValue)
-            {
-                resultsDisplayDelegate?.Cancel();
-                resultsDisplayDelegate = null;
-
-                GameplayState.HasPassed = false;
-                ValidForResume = true;
-                skipOutroOverlay.Hide();
-                return;
-            }
-
-            // Only show the completion screen if the player hasn't failed
-            if (HealthProcessor.HasFailed)
-                return;
-
-            GameplayState.HasPassed = true;
-
-            // Setting this early in the process means that even if something were to go wrong in the order of events following, there
-            // is no chance that a user could return to the (already completed) Player instance from a child screen.
-            ValidForResume = false;
-
-            // Ensure we are not writing to the replay any more, as we are about to consume and store the score.
-            DrawableRuleset.SetRecordTarget(null);
-
-            if (!Configuration.ShowResults)
-                return;
-
-            prepareScoreForDisplayTask ??= Task.Run(prepareAndImportScore);
-
-            bool storyboardHasOutro = DimmableStoryboard.ContentDisplayed && !DimmableStoryboard.HasStoryboardEnded.Value;
-
-            if (storyboardHasOutro)
-            {
-                // if the current beatmap has a storyboard, the progression to results will be handled by the storyboard ending
-                // or the user pressing the skip outro button.
-                skipOutroOverlay.Show();
-                return;
-            }
-
-            progressToResults(true);
+            Beatmap.Disabled = false;
+            musicController.NextTrack(() => Restart());
         }
+        //private void scoreCompletionChanged(ValueChangedEvent<bool> completed)
+        //{
+        //    // If this player instance is in the middle of an exit, don't attempt any kind of state update.
+        //    if (!this.IsCurrentScreen())
+        //        return;
+        //
+        //    // Special case to handle rewinding post-completion. This is the only way already queued forward progress can be cancelled.
+        //    // TODO: Investigate whether this can be moved to a RewindablePlayer subclass or similar.
+        //    // Currently, even if this scenario is hit, prepareScoreForDisplay has already been queued (and potentially run).
+        //    // In scenarios where rewinding is possible (replay, spectating) this is a non-issue as no submission/import work is done,
+        //    // but it still doesn't feel right that this exists here.
+        //    if (!completed.NewValue)
+        //    {
+        //        resultsDisplayDelegate?.Cancel();
+        //        resultsDisplayDelegate = null;
+        //
+        //        GameplayState.HasPassed = false;
+        //        ValidForResume = true;
+        //        skipOutroOverlay.Hide();
+        //        return;
+        //    }
+        //
+        //    // Only show the completion screen if the player hasn't failed
+        //    if (HealthProcessor.HasFailed)
+        //        return;
+        //
+        //    GameplayState.HasPassed = true;
+        //
+        //    // Setting this early in the process means that even if something were to go wrong in the order of events following, there
+        //    // is no chance that a user could return to the (already completed) Player instance from a child screen.
+        //    ValidForResume = false;
+        //
+        //    // Ensure we are not writing to the replay any more, as we are about to consume and store the score.
+        //    DrawableRuleset.SetRecordTarget(null);
+        //
+        //    if (!Configuration.ShowResults)
+        //        return;
+        //
+        //    prepareScoreForDisplayTask ??= Task.Run(prepareAndImportScore);
+        //
+        //    bool storyboardHasOutro = DimmableStoryboard.ContentDisplayed && !DimmableStoryboard.HasStoryboardEnded.Value;
+        //
+        //    if (storyboardHasOutro)
+        //    {
+        //        // if the current beatmap has a storyboard, the progression to results will be handled by the storyboard ending
+        //        // or the user pressing the skip outro button.
+        //        skipOutroOverlay.Show();
+        //        return;
+        //    }
+        //
+        //    progressToResults(true);
+        //}
 
         /// <summary>
         /// Asynchronously run score preparation operations (database import, online submission etc.).
@@ -786,32 +781,6 @@ namespace osu.Game.Screens.Play
         /// <param name="withDelay">Whether a minimum delay (<see cref="RESULTS_DISPLAY_DELAY"/>) should be added before the screen is displayed.</param>
         private void progressToResults(bool withDelay)
         {
-            if (resultsDisplayDelegate != null)
-                // Note that if progressToResults is called one withDelay=true and then withDelay=false, this no-delay timing will not be
-                // accounted for. shouldn't be a huge concern (a user pressing the skip button after a results progression has already been queued
-                // may take x00 more milliseconds than expected in the very rare edge case).
-                //
-                // If required we can handle this more correctly by rescheduling here.
-                return;
-
-            double delay = withDelay ? RESULTS_DISPLAY_DELAY : 0;
-
-            resultsDisplayDelegate = new ScheduledDelegate(() =>
-            {
-                if (prepareScoreForDisplayTask?.IsCompleted != true)
-                    // If the asynchronous preparation has not completed, keep repeating this delegate.
-                    return;
-
-                resultsDisplayDelegate?.Cancel();
-
-                if (!this.IsCurrentScreen())
-                    // This player instance may already be in the process of exiting.
-                    return;
-
-                this.Push(CreateResults(prepareScoreForDisplayTask.GetResultSafely()));
-            }, Time.Current + delay, 50);
-
-            Scheduler.Add(resultsDisplayDelegate);
         }
 
         protected override bool OnScroll(ScrollEvent e)
@@ -1076,9 +1045,6 @@ namespace osu.Game.Screens.Play
                 if (!GameplayState.HasPassed && !GameplayState.HasFailed)
                     GameplayState.HasQuit = true;
 
-                // if arriving here and the results screen preparation task hasn't run, it's safe to say the user has not completed the beatmap.
-                if (prepareScoreForDisplayTask == null)
-                    ScoreProcessor.FailScore(Score.ScoreInfo);
             }
 
             // GameplayClockContainer performs seeks / start / stop operations on the beatmap's track.

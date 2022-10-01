@@ -131,7 +131,7 @@ namespace osu.Game.Screens.Select
 
             LoadComponentAsync(Carousel = new BeatmapCarousel
             {
-                AllowSelection = false, // delay any selection until our bindables are ready to make a good choice.
+                //AllowSelection = false, // delay any selection until our bindables are ready to make a good choice.
                 Anchor = Anchor.CentreRight,
                 Origin = Anchor.CentreRight,
                 RelativeSizeAxes = Axes.Both,
@@ -391,10 +391,12 @@ namespace osu.Game.Screens.Select
             if (customStartAction != null)
             {
                 customStartAction();
-                Carousel.AllowSelection = false;
+                //Carousel.AllowSelection = false;
             }
-            else if (OnStart())
-                Carousel.AllowSelection = false;
+            else
+            {
+                OnStart();
+            }
         }
 
         /// <summary>
