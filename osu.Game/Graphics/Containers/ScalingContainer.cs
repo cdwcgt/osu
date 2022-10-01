@@ -45,6 +45,8 @@ namespace osu.Game.Graphics.Containers
 
         private BackgroundScreenStack backgroundStack;
 
+        private Bindable<float> scalingMenuBackgroundDim;
+
         private RectangleF? customRect;
         private bool customRectIsRelativePosition;
 
@@ -132,6 +134,9 @@ namespace osu.Game.Graphics.Containers
             posY = config.GetBindable<float>(OsuSetting.ScalingPositionY);
             posY.ValueChanged += _ => Scheduler.AddOnce(updateSize);
 
+            scalingMenuBackgroundDim = config.GetBindable<float>(OsuSetting.ScalingMenuBackgroundDim);
+            scalingMenuBackgroundDim.ValueChanged += _ => Scheduler.AddOnce(updateSize);
+
             safeAreaPadding = safeArea.SafeAreaPadding.GetBoundCopy();
             safeAreaPadding.BindValueChanged(_ => Scheduler.AddOnce(updateSize));
         }
@@ -144,7 +149,7 @@ namespace osu.Game.Graphics.Containers
             sizableContainer.FinishTransforms();
         }
 
-        private bool requiresBackgroundVisible => (scalingMode.Value == ScalingMode.Everything || scalingMode.Value == ScalingMode.ExcludeOverlays) && (sizeX.Value != 1 || sizeY.Value != 1);
+        private bool requiresBackgroundVisible => (scalingMode.Value == ScalingMode.Everything || scalingMode.Value == ScalingMode.ExcludeOverlays) && (sizeX.Value != 1 || sizeY.Value != 1) && scalingMenuBackgroundDim.Value != 1f;
 
         private void updateSize()
         {
@@ -157,7 +162,6 @@ namespace osu.Game.Graphics.Containers
                     {
                         AddInternal(backgroundStack = new BackgroundScreenStack
                         {
-                            Colour = OsuColour.Gray(0.1f),
                             Alpha = 0,
                             Depth = float.MaxValue
                         });
@@ -166,6 +170,7 @@ namespace osu.Game.Graphics.Containers
                     }
 
                     backgroundStack.FadeIn(TRANSITION_DURATION);
+                    backgroundStack.FadeColour(OsuColour.Gray(1.0f - scalingMenuBackgroundDim.Value), 800, Easing.OutQuint);
                 }
                 else
                     backgroundStack?.FadeOut(TRANSITION_DURATION);
