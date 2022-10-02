@@ -42,6 +42,9 @@ namespace osu.Game.Overlays.Music
         private FilterControl filter;
         private Playlist list;
 
+        [Resolved]
+        private DifficultyRecommender difficultyRecommender { get; set; }
+
         [BackgroundDependencyLoader]
         private void load(OsuColour colours, Bindable<WorkingBeatmap> beatmap)
         {
@@ -153,7 +156,7 @@ namespace osu.Game.Overlays.Music
                     return;
                 }
 
-                beatmap.Value = beatmaps.GetWorkingBeatmap(set.Beatmaps.First());
+                beatmap.Value = beatmaps.GetWorkingBeatmap(difficultyRecommender.GetRecommendedBeatmap(set.Beatmaps.AsEnumerable()) ?? set.Beatmaps.First());
                 beatmap.Value.Track.Restart();
             });
         }

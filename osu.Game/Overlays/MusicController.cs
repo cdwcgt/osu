@@ -58,6 +58,9 @@ namespace osu.Game.Overlays
         [Resolved]
         private RealmAccess realm { get; set; }
 
+        [Resolved]
+        private DifficultyRecommender difficultyRecommender { get; set; }
+
         protected override void LoadComplete()
         {
             base.LoadComplete();
@@ -205,9 +208,12 @@ namespace osu.Game.Overlays
             var playableSet = getBeatmapSets().AsEnumerable().TakeWhile(i => !i.Equals(current.BeatmapSetInfo)).LastOrDefault()
                               ?? getBeatmapSets().LastOrDefault();
 
-            if (playableSet != null)
+            var playableBeatmap = difficultyRecommender.GetRecommendedBeatmap(playableSet?.Beatmaps.AsEnumerable())
+                                  ?? playableSet?.Beatmaps.First();
+
+            if (playableBeatmap != null)
             {
-                changeBeatmap(beatmaps.GetWorkingBeatmap(playableSet.Beatmaps.First()));
+                changeBeatmap(beatmaps.GetWorkingBeatmap(playableBeatmap));
                 restartTrack();
                 return PreviousTrackResult.Previous;
             }
@@ -237,7 +243,8 @@ namespace osu.Game.Overlays
             var playableSet = getBeatmapSets().AsEnumerable().SkipWhile(i => !i.Equals(current.BeatmapSetInfo)).ElementAtOrDefault(1)
                               ?? getBeatmapSets().FirstOrDefault();
 
-            var playableBeatmap = playableSet?.Beatmaps.FirstOrDefault();
+            var playableBeatmap = difficultyRecommender.GetRecommendedBeatmap(playableSet?.Beatmaps.AsEnumerable())
+                                  ?? playableSet?.Beatmaps.First();
 
             if (playableBeatmap != null)
             {
