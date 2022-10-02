@@ -10,6 +10,7 @@ using osu.Framework.Screens;
 using osu.Game.Graphics;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Notifications;
+
 using osu.Game.Rulesets.Mods;
 using osu.Game.Scoring;
 using osu.Game.Screens.Play;
@@ -80,27 +81,34 @@ namespace osu.Game.Screens.Select
 
             modsAtGameplayStart = Mods.Value;
 
-            // Ctrl+Enter should start map with autoplay enabled.
-            if (GetContainingInputManager().CurrentState?.Keyboard.ControlPressed == true)
+            var autoInstance = getAutoplayMod();
+
+            var hdInstance = Ruleset.Value.CreateInstance().CreateMod<ModHidden>();
+
+            if (autoInstance == null)
             {
-                var autoInstance = getAutoplayMod();
-
-                if (autoInstance == null)
+                notifications?.Post(new SimpleNotification
                 {
-                    notifications?.Post(new SimpleNotification
-                    {
-                        Text = "The current ruleset doesn't have an autoplay mod avalaible!"
-                    });
-                    return false;
-                }
-
-                var mods = Mods.Value.Append(autoInstance).ToArray();
-
-                if (!ModUtils.CheckCompatibleSet(mods, out var invalid))
-                    mods = mods.Except(invalid).Append(autoInstance).ToArray();
-
-                Mods.Value = mods;
+                    Text = "The current ruleset doesn't have an autoplay mod avalaible!"
+                });
+                return false;
             }
+
+            var mods = Mods.Value.Append(autoInstance).ToArray();
+
+            if ((Ruleset.Value.OnlineID == 0 || Ruleset.Value.OnlineID == 2)
+                &&
+                hdInstance != null)
+            {
+                mods = mods.Append(hdInstance).ToArray();
+            }
+
+
+            if (!ModUtils.CheckCompatibleSet(mods, out var invalid))
+                mods = mods.Except(invalid).Append(autoInstance).ToArray();
+
+            Mods.Value = mods;
+
 
             SampleConfirm?.Play();
 

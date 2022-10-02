@@ -685,61 +685,52 @@ namespace osu.Game.Screens.Play
 
         private void scoreCompletionChanged(ValueChangedEvent<bool> completed)
         {
-            Beatmap.Disabled = false;
-            musicController.NextTrack(() => Restart());
+            // If this player instance is in the middle of an exit, don't attempt any kind of state update.
+            if (!this.IsCurrentScreen())
+                return;
+
+            // Special case to handle rewinding post-completion. This is the only way already queued forward progress can be cancelled.
+            // TODO: Investigate whether this can be moved to a RewindablePlayer subclass or similar.
+            // Currently, even if this scenario is hit, prepareScoreForDisplay has already been queued (and potentially run).
+            // In scenarios where rewinding is possible (replay, spectating) this is a non-issue as no submission/import work is done,
+            // but it still doesn't feel right that this exists here.
+            if (!completed.NewValue)
+            {
+                GameplayState.HasPassed = false;
+                ValidForResume = true;
+                skipOutroOverlay.Hide();
+                return;
+            }
+
+            // Only show the completion screen if the player hasn't failed
+            if (HealthProcessor.HasFailed)
+                return;
+
+            GameplayState.HasPassed = true;
+
+            // Setting this early in the process means that even if something were to go wrong in the order of events following, there
+            // is no chance that a user could return to the (already completed) Player instance from a child screen.
+            ValidForResume = false;
+
+            // Ensure we are not writing to the replay any more, as we are about to consume and store the score.
+            DrawableRuleset.SetRecordTarget(null);
+
+            if (!Configuration.ShowResults)
+                return;
+
+
+            bool storyboardHasOutro = DimmableStoryboard.ContentDisplayed && !DimmableStoryboard.HasStoryboardEnded.Value;
+
+            if (storyboardHasOutro)
+            {
+                // if the current beatmap has a storyboard, the progression to results will be handled by the storyboard ending
+                // or the user pressing the skip outro button.
+                skipOutroOverlay.Show();
+                return;
+            }
+
+            progressToResults(true);
         }
-        //private void scoreCompletionChanged(ValueChangedEvent<bool> completed)
-        //{
-        //    // If this player instance is in the middle of an exit, don't attempt any kind of state update.
-        //    if (!this.IsCurrentScreen())
-        //        return;
-        //
-        //    // Special case to handle rewinding post-completion. This is the only way already queued forward progress can be cancelled.
-        //    // TODO: Investigate whether this can be moved to a RewindablePlayer subclass or similar.
-        //    // Currently, even if this scenario is hit, prepareScoreForDisplay has already been queued (and potentially run).
-        //    // In scenarios where rewinding is possible (replay, spectating) this is a non-issue as no submission/import work is done,
-        //    // but it still doesn't feel right that this exists here.
-        //    if (!completed.NewValue)
-        //    {
-        //        resultsDisplayDelegate?.Cancel();
-        //        resultsDisplayDelegate = null;
-        //
-        //        GameplayState.HasPassed = false;
-        //        ValidForResume = true;
-        //        skipOutroOverlay.Hide();
-        //        return;
-        //    }
-        //
-        //    // Only show the completion screen if the player hasn't failed
-        //    if (HealthProcessor.HasFailed)
-        //        return;
-        //
-        //    GameplayState.HasPassed = true;
-        //
-        //    // Setting this early in the process means that even if something were to go wrong in the order of events following, there
-        //    // is no chance that a user could return to the (already completed) Player instance from a child screen.
-        //    ValidForResume = false;
-        //
-        //    // Ensure we are not writing to the replay any more, as we are about to consume and store the score.
-        //    DrawableRuleset.SetRecordTarget(null);
-        //
-        //    if (!Configuration.ShowResults)
-        //        return;
-        //
-        //    prepareScoreForDisplayTask ??= Task.Run(prepareAndImportScore);
-        //
-        //    bool storyboardHasOutro = DimmableStoryboard.ContentDisplayed && !DimmableStoryboard.HasStoryboardEnded.Value;
-        //
-        //    if (storyboardHasOutro)
-        //    {
-        //        // if the current beatmap has a storyboard, the progression to results will be handled by the storyboard ending
-        //        // or the user pressing the skip outro button.
-        //        skipOutroOverlay.Show();
-        //        return;
-        //    }
-        //
-        //    progressToResults(true);
-        //}
 
         /// <summary>
         /// Asynchronously run score preparation operations (database import, online submission etc.).
@@ -781,6 +772,8 @@ namespace osu.Game.Screens.Play
         /// <param name="withDelay">Whether a minimum delay (<see cref="RESULTS_DISPLAY_DELAY"/>) should be added before the screen is displayed.</param>
         private void progressToResults(bool withDelay)
         {
+            Beatmap.Disabled = false;
+            musicController.NextTrack(() => Restart());
         }
 
         protected override bool OnScroll(ScrollEvent e)
