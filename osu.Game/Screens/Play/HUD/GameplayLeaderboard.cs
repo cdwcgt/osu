@@ -171,13 +171,13 @@ namespace osu.Game.Screens.Play.HUD
             for (int i = 0; i < Flow.Count; i++)
             {
                 Flow.SetLayoutPosition(orderedByScore[i], i);
-                orderedByScore[i].ScorePosition = CheckValidScorePosition(i + 1) ? i + 1 : null;
+                orderedByScore[i].ScorePosition = CheckValidScorePosition(i + 1, orderedByScore[i].Tracked) ? i + 1 : null;
             }
 
             sorting.Validate();
         }
 
-        protected virtual bool CheckValidScorePosition(int i) => true;
+        protected virtual bool CheckValidScorePosition(int i, bool tracked) => true;
 
         private partial class InputDisabledScrollContainer : OsuScrollContainer
         {

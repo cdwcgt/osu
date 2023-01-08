@@ -92,6 +92,24 @@ namespace osu.Game.Tests.Visual.Gameplay
                 AddUntilStep($"tracked player is #{expectedOverflowIndex}", () => leaderboard.TrackedScore?.ScorePosition, () => Is.EqualTo(expectedOverflowIndex));
         }
 
+        [TestCase(PlayBeatmapDetailArea.TabType.Local, 51)]
+        [TestCase(PlayBeatmapDetailArea.TabType.Global, 51)]
+        [TestCase(PlayBeatmapDetailArea.TabType.Country, 51)]
+        [TestCase(PlayBeatmapDetailArea.TabType.Friends, 51)]
+        public void TestNotTrackedScorePosition(PlayBeatmapDetailArea.TabType tabType, int? expectedOverflowIndex)
+        {
+            AddStep($"change TabType to {tabType}", () => beatmapTabType.Value = tabType);
+            AddUntilStep("tracked player is #50", () => leaderboard.TrackedScore?.ScorePosition, () => Is.EqualTo(50));
+
+            AddStep("add one more score", () => scores.Add(new ScoreInfo { User = new APIUser { Username = "New player 1" }, TotalScore = RNG.Next(0, 500000) }));
+
+            AddUntilStep("wait for sort", () => leaderboard.ChildrenOfType<GameplayLeaderboardScore>().First().ScorePosition != null);
+
+            AddUntilStep($"not tracked player is #{expectedOverflowIndex}", () => leaderboard.ChildrenOfType<GameplayLeaderboardScore>()
+                                                                                             .Single(x => x.User?.Username == "New player 1")
+                                                                                             .ScorePosition == expectedOverflowIndex);
+        }
+
         [Test]
         public void TestVisibility()
         {
