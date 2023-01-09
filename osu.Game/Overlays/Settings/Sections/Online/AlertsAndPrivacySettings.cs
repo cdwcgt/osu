@@ -30,6 +30,11 @@ namespace osu.Game.Overlays.Settings.Sections.Online
                     LabelText = OnlineSettingsStrings.NotifyOnPrivateMessage,
                     Current = config.GetBindable<bool>(OsuSetting.NotifyOnPrivateMessage)
                 },
+                new SettingsCheckbox
+                {
+                    LabelText = "Stream Mode",
+                    Current = config.GetBindable<bool>(OsuSetting.StreamMode)
+                }
             };
         }
     }
