@@ -102,7 +102,8 @@ namespace osu.Game.Screens.Play.HUD
 
         protected override bool CheckValidScorePosition(int i, bool tracked)
         {
-            // change displayed position to '-' when there are 50 already submitted scores and tracked score is last
+            // change displayed position to '-' when there are 50 already submitted scores and tracked score is last.
+            // but untracked grades should not be '-'.
             if (scoreSource.Value != PlayBeatmapDetailArea.TabType.Local && tracked)
             {
                 if (i == Flow.Count && Flow.Count > GetScoresRequest.MAX_SCORES_PER_REQUEST)

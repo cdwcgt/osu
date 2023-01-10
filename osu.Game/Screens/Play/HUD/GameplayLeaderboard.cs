@@ -177,6 +177,12 @@ namespace osu.Game.Screens.Play.HUD
             sorting.Validate();
         }
 
+        /// <summary>
+        /// Check if score position should be '-'.
+        /// </summary>
+        /// <param name="i">Sorted position for score.</param>
+        /// <param name="tracked">Whether score is tracked score.</param>
+        /// <returns></returns>
         protected virtual bool CheckValidScorePosition(int i, bool tracked) => true;
 
         private partial class InputDisabledScrollContainer : OsuScrollContainer
