@@ -17,11 +17,6 @@ namespace osu.Game.Rulesets.Scoring
         public event Func<bool>? Failed;
 
         /// <summary>
-        /// Additional conditions on top of <see cref="DefaultFailCondition"/> that cause a failing state.
-        /// </summary>
-        public event Func<HealthProcessor, JudgementResult, bool>? FailConditions;
-
-        /// <summary>
         /// The current health.
         /// </summary>
         public readonly BindableDouble Health = new BindableDouble(1) { MinValue = 0, MaxValue = 1 };
@@ -41,11 +36,20 @@ namespace osu.Game.Rulesets.Scoring
 
             Health.Value += GetHealthIncreaseFor(result);
 
-            if (meetsAnyFailCondition(result))
+            if (meetsAnyFailCondition())
             {
                 if (Failed?.Invoke() != false)
                     HasFailed = true;
             }
+        }
+
+        public void PerformFail()
+        {
+            if (HasFailed)
+                return;
+
+            if (Failed?.Invoke() != false)
+                HasFailed = true;
         }
 
         protected override void RevertResultInternal(JudgementResult result)
@@ -68,23 +72,12 @@ namespace osu.Game.Rulesets.Scoring
         protected virtual bool DefaultFailCondition => Precision.AlmostBigger(Health.MinValue, Health.Value);
 
         /// <summary>
-        /// Whether the current state of <see cref="HealthProcessor"/> or the provided <paramref name="result"/> meets any fail condition.
+        /// Whether the current state of <see cref="HealthProcessor"/> meets any fail condition.
         /// </summary>
-        /// <param name="result">The judgement result.</param>
-        private bool meetsAnyFailCondition(JudgementResult result)
+        private bool meetsAnyFailCondition()
         {
             if (DefaultFailCondition)
                 return true;
-
-            if (FailConditions != null)
-            {
-                foreach (var condition in FailConditions.GetInvocationList())
-                {
-                    bool conditionResult = (bool)condition.Method.Invoke(condition.Target, new object[] { this, result })!;
-                    if (conditionResult)
-                        return true;
-                }
-            }
 
             return false;
         }

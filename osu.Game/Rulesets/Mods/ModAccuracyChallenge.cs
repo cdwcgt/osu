@@ -15,7 +15,7 @@ using osu.Game.Scoring;
 
 namespace osu.Game.Rulesets.Mods
 {
-    public class ModAccuracyChallenge : ModFailCondition, IApplicableToScoreProcessor
+    public class ModAccuracyChallenge : ModFailCondition, IApplicableToScoreProcessor, INeedJudgementResult
     {
         public override string Name => "Accuracy Challenge";
 
@@ -49,12 +49,15 @@ namespace osu.Game.Rulesets.Mods
 
         public ScoreRank AdjustRank(ScoreRank rank, double accuracy) => rank;
 
-        protected override bool FailCondition(HealthProcessor healthProcessor, JudgementResult result)
+        public void OnNewJudgementResult(JudgementResult result)
         {
             if (!result.Type.AffectsAccuracy())
-                return false;
+                return;
 
-            return getAccuracyWithImminentResultAdded(result) < MinimumAccuracy.Value;
+            if (getAccuracyWithImminentResultAdded(result) < MinimumAccuracy.Value)
+            {
+                PerformFail.Invoke();
+            }
         }
 
         private double getAccuracyWithImminentResultAdded(JudgementResult result)

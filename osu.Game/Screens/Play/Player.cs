@@ -146,7 +146,7 @@ namespace osu.Game.Screens.Play
         /// Whether failing should be allowed.
         /// By default, this checks whether all selected mods allow failing.
         /// </summary>
-        protected virtual bool CheckModsAllowFailure() => GameplayState.Mods.OfType<IApplicableFailOverride>().All(m => m.PerformFail());
+        protected virtual bool CheckModsAllowFailure() => GameplayState.Mods.OfType<IApplicableFailOverride>().All(m => m.CheckFail());
 
         public readonly PlayerConfiguration Configuration;
 
@@ -1041,6 +1041,11 @@ namespace osu.Game.Screens.Play
 
             foreach (var mod in GameplayState.Mods.OfType<IApplicableToTrack>())
                 mod.ApplyToTrack(GameplayClockContainer.AdjustmentsFromMods);
+
+            foreach (var mod in GameplayState.Mods.OfType<INeedJudgementResult>())
+            {
+                DrawableRuleset.NewResult += result => mod.OnNewJudgementResult(result);
+            }
 
             updateGameplayState();
 

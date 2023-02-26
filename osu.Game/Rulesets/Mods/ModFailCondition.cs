@@ -4,7 +4,6 @@
 using System;
 using osu.Framework.Bindables;
 using osu.Game.Configuration;
-using osu.Game.Rulesets.Judgements;
 using osu.Game.Rulesets.Scoring;
 
 namespace osu.Game.Rulesets.Mods
@@ -16,15 +15,15 @@ namespace osu.Game.Rulesets.Mods
         [SettingSource("Restart on fail", "Automatically restarts when failed.")]
         public BindableBool Restart { get; } = new BindableBool();
 
-        public virtual bool PerformFail() => true;
+        public virtual bool CheckFail() => true;
 
         public virtual bool RestartOnFail => Restart.Value;
 
+        protected Action PerformFail = null!;
+
         public void ApplyToHealthProcessor(HealthProcessor healthProcessor)
         {
-            healthProcessor.FailConditions += FailCondition;
+            PerformFail = healthProcessor.PerformFail;
         }
-
-        protected abstract bool FailCondition(HealthProcessor healthProcessor, JudgementResult result);
     }
 }

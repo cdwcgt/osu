@@ -11,7 +11,7 @@ using osu.Game.Rulesets.Scoring;
 
 namespace osu.Game.Rulesets.Mods
 {
-    public abstract class ModPerfect : ModFailCondition
+    public abstract class ModPerfect : ModFailCondition, INeedJudgementResult
     {
         public override string Name => "Perfect";
         public override string Acronym => "PF";
@@ -27,8 +27,12 @@ namespace osu.Game.Rulesets.Mods
             Restart.Value = Restart.Default = true;
         }
 
-        protected override bool FailCondition(HealthProcessor healthProcessor, JudgementResult result)
-            => result.Type.AffectsAccuracy()
-               && result.Type != result.Judgement.MaxResult;
+        public void OnNewJudgementResult(JudgementResult result)
+        {
+            if (result.Type.AffectsAccuracy() && result.Type != result.Judgement.MaxResult)
+            {
+                PerformFail.Invoke();
+            }
+        }
     }
 }

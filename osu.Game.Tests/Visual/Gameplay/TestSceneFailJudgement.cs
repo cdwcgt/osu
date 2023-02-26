@@ -49,7 +49,7 @@ namespace osu.Game.Tests.Visual.Gameplay
             protected override void LoadComplete()
             {
                 base.LoadComplete();
-                HealthProcessor.FailConditions += (_, _) => true;
+                DrawableRuleset.NewResult += _ => HealthProcessor.PerformFail();
             }
         }
     }
