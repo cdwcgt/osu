@@ -176,6 +176,18 @@ namespace osu.Game.Overlays
                 }
             }
 
+            if (user.AccoungStanding.Length > 0)
+            {
+                var accountStanding = new AccountStandingSection();
+
+                sections = sections.Append(accountStanding).ToArray();
+
+                accountStanding.User.Value = userProfile;
+
+                sectionsContainer.Add(accountStanding);
+                tabs.AddItem(accountStanding);
+            }
+
             loadingLayer.Hide();
         }
 
