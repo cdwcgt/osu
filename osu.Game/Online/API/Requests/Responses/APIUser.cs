@@ -80,6 +80,9 @@ namespace osu.Game.Online.API.Requests.Responses
             public int? Id;
         }
 
+        [JsonProperty(@"account_history")]
+        public APIAccoungStanding[] AccoungStanding;
+
         [JsonProperty(@"is_admin")]
         public bool IsAdmin;
 
