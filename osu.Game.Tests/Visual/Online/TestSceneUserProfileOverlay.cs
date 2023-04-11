@@ -154,6 +154,18 @@ namespace osu.Game.Tests.Visual.Online
                 Total = 50
             },
             SupportLevel = 2,
+            AccoungStanding = new[]
+            {
+                new APIAccoungStanding
+                {
+                    Description = "test",
+                    Length = 100,
+                    Permanent = true,
+                    TimeStamp = new DateTimeOffset(2023, 6, 4, 6, 32, 1, new TimeSpan()),
+                    Id = 100,
+                    Type = APIAccoungStanding.AccountHistoryType.Silence
+                }
+            }
         };
     }
 }
