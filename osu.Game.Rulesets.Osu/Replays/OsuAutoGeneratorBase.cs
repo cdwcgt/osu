@@ -24,6 +24,8 @@ namespace osu.Game.Rulesets.Osu.Replays
 
         public const float SPIN_RADIUS = 50;
 
+        public virtual int FrameRate => 60;
+
         #endregion
 
         #region Construction / Initialisation
@@ -78,7 +80,7 @@ namespace osu.Game.Rulesets.Osu.Replays
         /// </summary>
         /// <param name="time">The time of the previous frame.</param>
         protected double GetFrameDelay(double time)
-            => ApplyModsToRate(time, 1000.0 / 60);
+            => ApplyModsToRate(time, 1000.0 / FrameRate);
 
         private class ReplayFrameComparer : IComparer<ReplayFrame>
         {
