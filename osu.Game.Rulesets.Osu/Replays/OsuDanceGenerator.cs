@@ -228,21 +228,5 @@ namespace osu.Game.Rulesets.Osu.Replays
         protected abstract Vector2 GetPosition(double time);
 
         #endregion
-
-        private class OsuKeyDownReplayFrame : OsuReplayFrame
-        {
-            public OsuKeyDownReplayFrame(double time, Vector2 position)
-                : base(time, position)
-            {
-            }
-        }
-
-        private class OsuKeyUpReplayFrame : OsuReplayFrame
-        {
-            public OsuKeyUpReplayFrame(double time, Vector2 position)
-                : base(time, position)
-            {
-            }
-        }
     }
 }
