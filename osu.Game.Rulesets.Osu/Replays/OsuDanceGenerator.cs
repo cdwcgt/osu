@@ -16,6 +16,7 @@ using osu.Game.Rulesets.Osu.Beatmaps;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Osu.Replays.Mover;
 using osu.Game.Rulesets.Osu.UI;
+using osu.Game.Rulesets.Replays;
 using osuTK;
 
 namespace osu.Game.Rulesets.Osu.Replays
@@ -60,39 +61,39 @@ namespace osu.Game.Rulesets.Osu.Replays
             AddFrameToReplay(new OsuReplayFrame(h.StartTime - 1500, h.StackedPosition));
 
             // Initialize the mover
-            CurrentPostion = h.StackedPosition;
+            CurrentPosition = h.StackedPosition;
             OnObjChange();
 
             for (int i = 0; i < hitObjects.Count; i++)
             {
                 var prev = h;
                 h = hitObjects[i];
-                CurrentPostion = addHitObjectClickFrames(h, prev);
+                CurrentPosition = addHitObjectClickFrames(h, prev);
 
                 // Apply the next object to the mover
                 //CurrentPostion = h.StackedPosition;
                 var next = hitObjects[Math.Min(i + 1, hitObjects.Count - 1)];
-                TargetPostion = next.StackedPosition;
+                TargetPosition = next.StackedPosition;
                 ObjectIndex = Math.Min(Math.Max(hitObjects.Count - 2, 0), i);
                 OnObjChange();
-
-                // Computes the cursor position for all replayable frames between two objects
-                for (double time = h.GetEndTime() + GetFrameDelay(h.GetEndTime()); time < TargetObject.StartTime; time += GetFrameDelay(time))
-                {
-                    AddFrameToReplay(new OsuReplayFrame(time, MoverUtilExtensions.ApplyOffset(Update(time), time, 0), getAction(time)));
-                }
+                applyMoverPosition();
             }
 
-            if (!(h is IHasDuration))
-            {
-                //addHitObjectClickFrames(hitObjects[^1], hitObjects[^2]);
-            }
-
+            // clear all key action when finish.
             var lastFrame = (OsuReplayFrame)Frames[^1];
             lastFrame.Actions.Clear();
             AddFrameToReplay(lastFrame);
 
             return Replay;
+
+            void applyMoverPosition()
+            {
+                // Computes the cursor position for all replayable frames between two objects
+                for (double time = CurrentObject.GetEndTime() + GetFrameDelay(CurrentObject.GetEndTime()); time < TargetObject.StartTime; time += GetFrameDelay(time))
+                {
+                    AddFrameToReplay(new OsuReplayFrame(time, MoverUtilExtensions.ApplyOffset(GetPosition(time), time, 0), getAction(time)));
+                }
+            }
         }
 
         #region Helper subroutines
@@ -185,7 +186,7 @@ namespace osu.Game.Rulesets.Osu.Replays
                     break;
 
                 default:
-                    addOffSetFrame(new OsuReplayFrame(h.StartTime, Update(h.StartTime), getAction(h.StartTime)), 0);
+                    addOffSetFrame(new OsuReplayFrame(h.StartTime, GetPosition(h.StartTime), getAction(h.StartTime)), 0);
                     break;
             }
 
@@ -208,9 +209,9 @@ namespace osu.Game.Rulesets.Osu.Replays
 
         public OsuHitObject TargetObject => hitObjects[Math.Min(ObjectIndex + 1, hitObjects.Count - 1)];
 
-        protected Vector2 CurrentPostion;
+        protected Vector2 CurrentPosition;
 
-        protected Vector2 TargetPostion;
+        protected Vector2 TargetPosition;
         protected double CurrentObjectTime => CurrentObject.GetEndTime();
         protected double TargetObjectTime => TargetObject.StartTime;
         protected double Duration => TargetObjectTime - CurrentObjectTime;
@@ -218,7 +219,7 @@ namespace osu.Game.Rulesets.Osu.Replays
         protected IReadOnlyList<IApplicableToRate> TimeAffectingMods { set; get; }
 
         protected virtual void OnObjChange() { }
-        protected abstract Vector2 Update(double time);
+        protected abstract Vector2 GetPosition(double time);
 
         #endregion
 
