@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO.Pipes;
 using System.Linq;
 using osu.Framework.Graphics;
 using osu.Framework.Utils;
@@ -11,12 +10,9 @@ using osu.Game.Beatmaps;
 using osu.Game.Replays;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Objects;
-using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Rulesets.Osu.Beatmaps;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Osu.Replays.Mover;
-using osu.Game.Rulesets.Osu.UI;
-using osu.Game.Rulesets.Replays;
 using osuTK;
 
 namespace osu.Game.Rulesets.Osu.Replays
@@ -56,13 +52,24 @@ namespace osu.Game.Rulesets.Osu.Replays
             if (Beatmap.HitObjects.Count == 0)
                 return Replay;
 
-            var h = Beatmap.HitObjects[0];
+            var h = targetObject = Beatmap.HitObjects[0];
+            currentObject = new HitCircle
+            {
+                StartTime = h.StartTime - 1500,
+                Position = new Vector2(256, 500)
+            };
 
-            AddFrameToReplay(new OsuReplayFrame(h.StartTime - 1500, h.StackedPosition));
+            // the part generate entry curve
+            CurrentPosition = new Vector2(256, 500);
+            TargetPosition = h.StackedPosition;
+            OnObjChange();
+            applyMoverPosition(h.StartTime - 1500, h.StartTime - 1);
 
             // Initialize the mover
             CurrentPosition = h.StackedPosition;
             OnObjChange();
+            currentObject = null;
+            targetObject = null;
 
             for (int i = 0; i < hitObjects.Count; i++)
             {
@@ -71,25 +78,23 @@ namespace osu.Game.Rulesets.Osu.Replays
                 CurrentPosition = addHitObjectClickFrames(h, prev);
 
                 // Apply the next object to the mover
-                //CurrentPostion = h.StackedPosition;
                 var next = hitObjects[Math.Min(i + 1, hitObjects.Count - 1)];
                 TargetPosition = next.StackedPosition;
                 ObjectIndex = Math.Min(Math.Max(hitObjects.Count - 2, 0), i);
                 OnObjChange();
-                applyMoverPosition();
+                applyMoverPosition(h.GetEndTime(), TargetObject.StartTime);
             }
 
             // clear all key action when finish.
             var lastFrame = (OsuReplayFrame)Frames[^1];
-            lastFrame.Actions.Clear();
-            AddFrameToReplay(lastFrame);
+            AddFrameToReplay(new OsuReplayFrame(lastFrame.Time + 1, lastFrame.Position));
 
             return Replay;
 
-            void applyMoverPosition()
+            // Computes the cursor position for all replayable frames between two objects
+            void applyMoverPosition(double currentTime, double targetTime)
             {
-                // Computes the cursor position for all replayable frames between two objects
-                for (double time = CurrentObject.GetEndTime() + GetFrameDelay(CurrentObject.GetEndTime()); time < TargetObject.StartTime; time += GetFrameDelay(time))
+                for (double time = currentTime + GetFrameDelay(currentTime); time < targetTime; time += GetFrameDelay(time))
                 {
                     AddFrameToReplay(new OsuReplayFrame(time, MoverUtilExtensions.ApplyOffset(GetPosition(time), time, 0), getAction(time)));
                 }
@@ -205,9 +210,10 @@ namespace osu.Game.Rulesets.Osu.Replays
 
         public int ObjectIndex { set; protected get; }
 
-        protected OsuHitObject CurrentObject => hitObjects[ObjectIndex];
-
-        public OsuHitObject TargetObject => hitObjects[Math.Min(ObjectIndex + 1, hitObjects.Count - 1)];
+        private OsuHitObject? currentObject;
+        private OsuHitObject? targetObject;
+        protected OsuHitObject CurrentObject => currentObject ?? hitObjects[ObjectIndex];
+        public OsuHitObject TargetObject => targetObject ?? hitObjects[Math.Min(ObjectIndex + 1, hitObjects.Count - 1)];
 
         protected Vector2 CurrentPosition;
 
