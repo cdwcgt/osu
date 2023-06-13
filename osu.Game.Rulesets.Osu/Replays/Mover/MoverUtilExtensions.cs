@@ -12,12 +12,15 @@ namespace osu.Game.Rulesets.Osu.Replays.Mover
         public static float AngleRV(this Vector2 v1, Vector2 v2) => MathF.Atan2(v1.Y - v2.Y, v1.X - v2.X);
         public static Vector2 V2FromRad(float rad, float radius) => new Vector2(MathF.Cos(rad), MathF.Sin(rad)) * radius;
 
-        public static float GetEndAngle(this Slider s) => s.GetAngle();
-        public static float GetStartAngle(this Slider s) => s.GetAngle(true);
-
-        public static float GetAngle(this Slider s, bool start = false) =>
-            (start ? s.StackedPosition : s.StackedEndPosition).AngleRV(s.StackedPositionAt(
-                start ? 1 / s.Duration : (s.Duration - 1) / s.Duration
+        /// <summary>
+        /// get entry or exit angle of the slider.
+        /// </summary>
+        /// <param name="slider">The slider for which you want to calculate the angle.</param>
+        /// <param name="end">if true, calculate exit angle, else calculate entry angle.</param>
+        /// <returns></returns>
+        public static float GetAngle(this Slider slider, bool end = false) =>
+            (end ? slider.StackedEndPosition : slider.StackedPosition).AngleRV(slider.StackedPositionAt(
+                end ? (slider.Duration - 1) / slider.Duration : 1 / slider.Duration
             ));
 
         public static float AngleBetween(Vector2 centre, Vector2 v1, Vector2 v2)
