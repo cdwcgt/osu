@@ -3,7 +3,9 @@
 
 #nullable disable
 
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -65,6 +67,18 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                         {
                             LabelText = "Show specific team",
                             Current = currentTeam,
+                        },
+                        new TourneyButton
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Text = "Next Team",
+                            Action = nextTeam
+                        },
+                        new TourneyButton
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Text = "prevous Team",
+                            Action = prevoursTeam
                         }
                     }
                 }
@@ -74,6 +88,20 @@ namespace osu.Game.Tournament.Screens.TeamIntro
         }
 
         private void teamChanged(ValueChangedEvent<TournamentTeam> team) => updateTeamDisplay();
+
+        private void nextTeam()
+        {
+            List<TournamentTeam> teamList = LadderInfo.Teams.ToList();
+            int i = teamList.FindIndex(x => x == currentTeam.Value);
+            currentTeam.Value = LadderInfo.Teams[i - 1];
+        }
+
+        private void prevoursTeam()
+        {
+            List<TournamentTeam> teamList = LadderInfo.Teams.ToList();
+            int i = teamList.FindIndex(x => x == currentTeam.Value);
+            currentTeam.Value = LadderInfo.Teams[i + 1];
+        }
 
         public override void Show()
         {
@@ -276,7 +304,6 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                             new TeamDisplay(team) { Margin = new MarginPadding { Bottom = 30 } },
                             new RowDisplay("Average Rank:", $"#{team.AverageRank:#,0}"),
                             new RowDisplay("Seed:", team.Seed.Value),
-                            new RowDisplay("Last year's placing:", team.LastYearPlacing.Value > 0 ? $"#{team.LastYearPlacing:#,0}" : "0"),
                             new Container { Margin = new MarginPadding { Bottom = 30 } },
                         }
                     },

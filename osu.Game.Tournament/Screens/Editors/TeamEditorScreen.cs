@@ -26,6 +26,8 @@ namespace osu.Game.Tournament.Screens.Editors
     {
         protected override BindableList<TournamentTeam> Storage => LadderInfo.Teams;
 
+        private SettingsTextBox teamData;
+
         [BackgroundDependencyLoader]
         private void load()
         {
@@ -34,6 +36,34 @@ namespace osu.Game.Tournament.Screens.Editors
                 RelativeSizeAxes = Axes.X,
                 Text = "Add all countries",
                 Action = addAllCountries
+            });
+
+            ControlPanel.Add(teamData = new SettingsTextBox
+            {
+                RelativeSizeAxes = Axes.X,
+                LabelText = "data",
+                Width = 150,
+            });
+
+            ControlPanel.Add(new TourneyButton
+            {
+                RelativeSizeAxes = Axes.X,
+                Text = "Add Team",
+                Action = addTeam
+            });
+
+            ControlPanel.Add(new TourneyButton
+            {
+                RelativeSizeAxes = Axes.X,
+                Text = "Update Flag",
+                Action = updateFlag
+            });
+
+            ControlPanel.Add(new TourneyButton
+            {
+                RelativeSizeAxes = Axes.X,
+                Text = "Update Seed",
+                Action = updateSeed
             });
         }
 
@@ -55,6 +85,79 @@ namespace osu.Game.Tournament.Screens.Editors
 
             foreach (var c in countries)
                 Storage.Add(c);
+        }
+
+        private void addTeam()
+        {
+            string[] data = teamData.Current.Value.Split(",");
+
+            int[] beatmaps = { 4128922, 4128929, 4128945, 4128925, 4128923, 4128927 };
+
+            string[] mods = { "HyBird", "Jack", "Rice Mixed", "LN Mixed", "Stamina", "LN Density" };
+
+            var team = new TournamentTeam
+            {
+                FullName = { Value = data[1] },
+                Seed = { Value = data[0] },
+                FlagName = { Value = string.Empty }
+            };
+
+            for (int i = 15; i < data.Length; i++)
+            {
+                if (int.TryParse(data[i], out int id))
+                {
+                    team.Players.Add(new TournamentUser
+                    {
+                        OnlineID = id
+                    });
+                }
+            }
+
+            for (int i = 0; i < 6; i++)
+            {
+                var result = new SeedingResult();
+                result.Mod.Value = mods[i];
+
+                var beatmap = new SeedingBeatmap
+                {
+                    ID = beatmaps[i],
+                    Score = int.Parse(data[i + 3]),
+                    Seed =
+                    {
+                        Value = int.Parse(data[i + 9])
+                    }
+                };
+
+                result.Beatmaps.Add(beatmap);
+
+                result.Seed.Value = int.Parse(data[i + 3]);
+
+                team.SeedingResults.Add(result);
+            }
+
+            Storage.Add(team);
+        }
+
+        private void updateSeed()
+        {
+            foreach (var team in Storage)
+            {
+                team.SeedingResults[1].Beatmaps[0].ID = 4128929;
+                team.SeedingResults[1].Beatmaps[0].Beatmap = null;
+
+                foreach (var seed in team.SeedingResults)
+                {
+                    seed.Seed.Value = seed.Beatmaps[0].Seed.Value;
+                }
+            }
+        }
+
+        private void updateFlag()
+        {
+            foreach (var team in Storage)
+            {
+                team.FlagName.Value = team.Players[0].CountryCode.ToString();
+            }
         }
 
         public partial class TeamRow : CompositeDrawable, IModelBacked<TournamentTeam>
