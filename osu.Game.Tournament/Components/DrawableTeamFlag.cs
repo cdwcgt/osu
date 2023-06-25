@@ -3,6 +3,7 @@
 
 #nullable disable
 
+using System.Linq;
 using JetBrains.Annotations;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -11,6 +12,8 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
 using osu.Game.Tournament.Models;
+using osu.Game.Users;
+using osu.Game.Users.Drawables;
 using osuTK;
 
 namespace osu.Game.Tournament.Components
@@ -19,33 +22,34 @@ namespace osu.Game.Tournament.Components
     {
         private readonly TournamentTeam team;
 
-        [UsedImplicitly]
-        private Bindable<string> flag;
-
-        private Sprite flagSprite;
-
         public DrawableTeamFlag(TournamentTeam team)
         {
             this.team = team;
         }
 
         [BackgroundDependencyLoader]
-        private void load(TextureStore textures)
+        private void load()
         {
             if (team == null) return;
 
-            Size = new Vector2(75, 54);
+            Size = new Vector2(75, 75);
             Masking = true;
             CornerRadius = 5;
-            Child = flagSprite = new Sprite
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            if (team == null) return;
+
+            Scheduler.AddOnce(() => Child = new UpdateableAvatar(team.Players.FirstOrDefault()?.ToAPIUser(), false)
             {
                 RelativeSizeAxes = Axes.Both,
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre,
                 FillMode = FillMode.Fill
-            };
-
-            (flag = team.FlagName.GetBoundCopy()).BindValueChanged(_ => flagSprite.Texture = textures.Get($@"Flags/{team.FlagName}"), true);
+            });
         }
     }
 }

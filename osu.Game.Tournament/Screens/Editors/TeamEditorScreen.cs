@@ -42,7 +42,6 @@ namespace osu.Game.Tournament.Screens.Editors
             {
                 RelativeSizeAxes = Axes.X,
                 LabelText = "data",
-                Width = 150,
             });
 
             ControlPanel.Add(new TourneyButton
@@ -91,46 +90,55 @@ namespace osu.Game.Tournament.Screens.Editors
         {
             string[] data = teamData.Current.Value.Split(",");
 
-            int[] beatmaps = { 4128922, 4128929, 4128945, 4128925, 4128923, 4128927 };
+            int[] beatmaps = { 4183097, 4183112, 4183098, 4183099, 4183114, 4183113, 4183117, 4183100 };
 
-            string[] mods = { "HyBird", "Jack", "Rice Mixed", "LN Mixed", "Stamina", "LN Density" };
+            int[][] point =
+            {
+                new[] { 0 },
+                new[] { 1, 6, 7 },
+                new[] { 2, 5 },
+                new[] { 3, 4 }
+            };
+
+            string[] mods = { "SV", "RC", "HB", "LN" };
 
             var team = new TournamentTeam
             {
-                FullName = { Value = data[1] },
-                Seed = { Value = data[0] },
-                FlagName = { Value = string.Empty }
+                FullName = { Value = data[0] },
+                Seed = { Value = data[3] },
+                FlagName = { Value = data[1] }
             };
 
-            for (int i = 15; i < data.Length; i++)
+            if (int.TryParse(data[1], out int id))
             {
-                if (int.TryParse(data[i], out int id))
+                team.Players.Add(new TournamentUser
                 {
-                    team.Players.Add(new TournamentUser
-                    {
-                        OnlineID = id
-                    });
-                }
+                    OnlineID = id
+                });
             }
+            else return;
 
-            for (int i = 0; i < 6; i++)
+            for (int i = 0; i < 4; i++)
             {
                 var result = new SeedingResult();
                 result.Mod.Value = mods[i];
 
-                var beatmap = new SeedingBeatmap
+                for (int j = 0; j < point[i].Length; j++)
                 {
-                    ID = beatmaps[i],
-                    Score = int.Parse(data[i + 3]),
-                    Seed =
+                    int p = point[i][j];
+                    var beatmap = new SeedingBeatmap
                     {
-                        Value = int.Parse(data[i + 9])
-                    }
-                };
+                        ID = beatmaps[p],
+                        Score = int.Parse(data[p + 4]),
+                        Seed =
+                        {
+                            Value = int.Parse(data[p + 12])
+                        }
+                    };
+                    result.Beatmaps.Add(beatmap);
+                }
 
-                result.Beatmaps.Add(beatmap);
-
-                result.Seed.Value = int.Parse(data[i + 3]);
+                result.Seed.Value = int.Parse(data[i + 24]);
 
                 team.SeedingResults.Add(result);
             }
