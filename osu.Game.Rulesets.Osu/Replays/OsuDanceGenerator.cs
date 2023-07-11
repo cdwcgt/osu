@@ -32,17 +32,7 @@ namespace osu.Game.Rulesets.Osu.Replays
 
         private void preProcessObjects()
         {
-            for (int i = 0; i < Beatmap.HitObjects.Count; i++)
-            {
-                var h = Beatmap.HitObjects[i];
-
-                if (h is Spinner { SpinsRequired: 0 })
-                    continue;
-
-                hitObjects.Add(h);
-            }
-
-            hitObjects = hitObjects.OrderBy(h => h.StartTime).ToList();
+            hitObjects = Beatmap.HitObjects.FindAll(h => h is not Spinner { SpinsRequired: 0 }).OrderBy(h => h.StartTime).ToList();
         }
 
         public override Replay Generate()
