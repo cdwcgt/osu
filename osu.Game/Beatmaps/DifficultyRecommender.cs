@@ -72,7 +72,7 @@ namespace osu.Game.Beatmaps
             foreach (var kvp in api.LocalUser.Value.RulesetsStatistics)
             {
                 // algorithm taken from https://github.com/ppy/osu-web/blob/e6e2825516449e3d0f3f5e1852c6bdd3428c3437/app/Models/User.php#L1505
-                recommendedDifficultyMapping[kvp.Key] = Math.Pow((double)(kvp.Value.PP ?? 0), 0.4) * 0.195;
+                recommendedDifficultyMapping[kvp.Key] = Math.Pow(20000, 0.4) * 0.195;
             }
         }
 
