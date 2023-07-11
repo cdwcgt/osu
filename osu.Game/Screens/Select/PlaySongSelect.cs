@@ -3,13 +3,17 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
+using osu.Framework.Configuration;
 using osu.Framework.Extensions.LocalisationExtensions;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Framework.Screens;
 using osu.Game.Beatmaps;
+using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Localisation;
@@ -32,7 +36,12 @@ namespace osu.Game.Screens.Select
         [Resolved]
         private INotificationOverlay? notifications { get; set; }
 
+        [Resolved]
+        private OsuConfigManager config { get; set; } = null!;
+
         public override bool AllowExternalScreenChange => true;
+
+        private BindableBool OnRoll { get; set; } = new BindableBool();
 
         public override MenuItem[] CreateForwardNavigationMenuItemsForBeatmap(BeatmapInfo beatmap) => new MenuItem[]
         {
@@ -87,6 +96,13 @@ namespace osu.Game.Screens.Select
 
         protected override bool OnStart()
         {
+            OnRoll.Value = config.Get<bool>(OsuSetting.AutoRoll);
+
+            return onStart();
+        }
+
+        private bool onStart()
+        {
             if (playerLoader != null) return false;
 
             modsAtGameplayStart = Mods.Value;
@@ -116,6 +132,12 @@ namespace osu.Game.Screens.Select
             SampleConfirm?.Play();
 
             this.Push(playerLoader = new PlayerLoader(createPlayer));
+
+            if (playerLoader is PlayerLoader loader)
+            {
+                loader.OnRoll.BindTo(OnRoll);
+            }
+
             return true;
 
             Player createPlayer()
@@ -128,11 +150,14 @@ namespace osu.Game.Screens.Select
                 {
                     player = new ReplayPlayer((beatmap, mods) => replayGeneratingMod.CreateScoreFromReplayData(beatmap, mods))
                     {
-                        LeaderboardScores = { BindTarget = playBeatmapDetailArea.Leaderboard.Scores }
+                        LeaderboardScores = { BindTarget = playBeatmapDetailArea.Leaderboard.Scores },
                     };
+
+                    player.OnRoll.BindTo(OnRoll);
                 }
                 else
                 {
+                    OnRoll.Value = false;
                     player = new SoloPlayer
                     {
                         LeaderboardScores = { BindTarget = playBeatmapDetailArea.Leaderboard.Scores }
@@ -151,6 +176,12 @@ namespace osu.Game.Screens.Select
             {
                 Mods.Value = modsAtGameplayStart;
                 playerLoader = null;
+            }
+
+            if (OnRoll.Value)
+            {
+                Carousel.SelectNextRandom();
+                FinaliseSelection();
             }
         }
     }

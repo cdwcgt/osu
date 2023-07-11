@@ -278,6 +278,7 @@ namespace osu.Game.Screens.Play
                     {
                         if (!this.IsCurrentScreen()) return;
 
+                        OnRoll.Value = false;
                         fadeOut(true);
                         PerformExit(false);
                     },
@@ -566,6 +567,11 @@ namespace osu.Game.Screens.Play
         /// </param>
         protected void PerformExit(bool showDialogFirst)
         {
+            if (showDialogFirst)
+            {
+                OnRoll.Value = false;
+            }
+
             // there is a chance that an exit request occurs after the transition to results has already started.
             // even in such a case, the user has shown intent, so forcefully return to this screen (to proceed with the upwards exit process).
             if (!this.IsCurrentScreen())
@@ -744,6 +750,8 @@ namespace osu.Game.Screens.Play
             progressToResults(true);
         }
 
+        public BindableBool OnRoll { get; set; } = new BindableBool();
+
         /// <summary>
         /// Queue the results screen for display.
         /// </summary>
@@ -759,6 +767,11 @@ namespace osu.Game.Screens.Play
 
             resultsDisplayDelegate = new ScheduledDelegate(() =>
             {
+                if (OnRoll.Value && this.IsCurrentScreen())
+                {
+                    this.Exit();
+                }
+
                 if (prepareScoreForDisplayTask == null)
                 {
                     // Try importing score since the task hasn't been invoked yet.

@@ -149,6 +149,10 @@ namespace osu.Game.Screens.Play
         [Resolved]
         private BatteryInfo? batteryInfo { get; set; }
 
+        public BindableBool OnRoll = new BindableBool();
+
+        private bool onRoll;
+
         public PlayerLoader(Func<Player> createPlayer)
         {
             this.createPlayer = createPlayer;
@@ -222,6 +226,8 @@ namespace osu.Game.Screens.Play
             base.LoadComplete();
 
             inputManager = GetContainingInputManager();
+            onRoll = OnRoll.Value;
+            OnRoll.Value = false;
         }
 
         #region Screen handling
@@ -515,6 +521,8 @@ namespace osu.Game.Screens.Play
                         this.Exit();
                 });
             }, 500);
+
+            OnRoll.Value = onRoll;
         }
 
         private void cancelLoad()
