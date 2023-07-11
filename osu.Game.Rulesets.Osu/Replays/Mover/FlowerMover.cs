@@ -3,6 +3,8 @@
 
 using System;
 using System.Collections.Generic;
+using osu.Framework.Graphics;
+using osu.Framework.Utils;
 using osu.Game.Beatmaps;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Objects;
@@ -91,5 +93,54 @@ namespace osu.Game.Rulesets.Osu.Replays.Mover
         }
 
         protected override Vector2 GetPosition(double time) => path?.PositionAt((float)((time - CurrentObjectTime) / Duration)) ?? Vector2.One;
+
+        protected override Vector2 AddHitObjectClickFrames(OsuHitObject h, OsuHitObject prev)
+        {
+            Vector2 startPosition = h.StackedPosition;
+            Vector2 difference = startPosition - SPINNER_CENTRE;
+            float radius = difference.Length;
+            float angle = radius == 0 ? 0 : MathF.Atan2(difference.Y, difference.X);
+            Vector2 pos = h.StackedEndPosition;
+            UpdateAction(h, prev);
+
+            switch (h)
+            {
+                case Slider slider:
+                    AddFrameToReplay(new OsuReplayFrame(h.StartTime, h.StackedPosition, GetAction(h.StartTime)));
+
+                    for (double j = GetFrameDelay(slider.StartTime); j < slider.Duration; j += GetFrameDelay(slider.StartTime + j))
+                    {
+                        pos = slider.StackedPositionAt(j / slider.Duration);
+                        AddFrameToReplay(new OsuReplayFrame(h.StartTime + j, pos, GetAction(h.StartTime + j)));
+                    }
+
+                    break;
+
+                case Spinner spinner:
+                    double rEndTime = spinner.StartTime + spinner.Duration * 0.7;
+                    double previousFrame = h.StartTime;
+                    double delay;
+
+                    for (double nextFrame = h.StartTime + GetFrameDelay(h.StartTime); nextFrame < spinner.EndTime; nextFrame += delay)
+                    {
+                        delay = GetFrameDelay(previousFrame);
+                        double t = ApplyModsToTimeDelta(previousFrame, nextFrame) * -1;
+                        angle += (float)t / 20;
+                        double r = nextFrame > rEndTime ? 50 : Interpolation.ValueAt(nextFrame, 50, 50, spinner.StartTime, rEndTime, Easing.In);
+                        pos = SPINNER_CENTRE + CirclePosition(angle, r);
+                        AddOffSetFrame(new OsuReplayFrame((int)nextFrame, pos, GetAction(nextFrame)), 0);
+
+                        previousFrame = nextFrame;
+                    }
+
+                    break;
+
+                default:
+                    AddOffSetFrame(new OsuReplayFrame(h.StartTime, GetPosition(h.StartTime), GetAction(h.StartTime)), 0);
+                    break;
+            }
+
+            return pos;
+        }
     }
 }

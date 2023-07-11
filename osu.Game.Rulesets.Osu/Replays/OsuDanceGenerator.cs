@@ -4,8 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using osu.Framework.Graphics;
-using osu.Framework.Utils;
 using osu.Game.Beatmaps;
 using osu.Game.Replays;
 using osu.Game.Rulesets.Mods;
@@ -75,7 +73,7 @@ namespace osu.Game.Rulesets.Osu.Replays
             {
                 var prev = h;
                 h = hitObjects[i];
-                CurrentPosition = addHitObjectClickFrames(h, prev);
+                CurrentPosition = AddHitObjectClickFrames(h, prev);
 
                 // Apply the next object to the mover
                 var next = hitObjects[Math.Min(i + 1, hitObjects.Count - 1)];
@@ -96,7 +94,7 @@ namespace osu.Game.Rulesets.Osu.Replays
             {
                 for (double time = currentTime + GetFrameDelay(currentTime); time < targetTime; time += GetFrameDelay(time))
                 {
-                    AddFrameToReplay(new OsuReplayFrame(time, MoverUtilExtensions.ApplyOffset(GetPosition(time), time, 0), getAction(time)));
+                    AddFrameToReplay(new OsuReplayFrame(time, MoverUtilExtensions.ApplyOffset(GetPosition(time), time, 0), GetAction(time)));
                 }
             }
         }
@@ -116,7 +114,7 @@ namespace osu.Game.Rulesets.Osu.Replays
         /// </summary>
         private readonly double[] keyUpTime = { -10000, -10000 };
 
-        private void updateAction(OsuHitObject h, OsuHitObject last)
+        protected void UpdateAction(OsuHitObject h, OsuHitObject last)
         {
             double timeDifference = ApplyModsToTimeDelta(last.GetEndTime(), h.StartTime);
 
@@ -129,7 +127,7 @@ namespace osu.Game.Rulesets.Osu.Replays
             keyUpTime[(int)action] = h.GetEndTime() + KEY_UP_DELAY;
         }
 
-        private OsuAction[] getAction(double time)
+        protected OsuAction[] GetAction(double time)
         {
             var actions = new List<OsuAction>(2);
 
@@ -149,56 +147,9 @@ namespace osu.Game.Rulesets.Osu.Replays
             return actions.ToArray();
         }
 
-        private Vector2 addHitObjectClickFrames(OsuHitObject h, OsuHitObject prev)
-        {
-            Vector2 startPosition = h.StackedPosition;
-            Vector2 difference = startPosition - SPINNER_CENTRE;
-            float radius = difference.Length;
-            float angle = radius == 0 ? 0 : MathF.Atan2(difference.Y, difference.X);
-            Vector2 pos = h.StackedEndPosition;
-            updateAction(h, prev);
+        protected abstract Vector2 AddHitObjectClickFrames(OsuHitObject h, OsuHitObject prev);
 
-            switch (h)
-            {
-                case Slider slider:
-                    AddFrameToReplay(new OsuReplayFrame(h.StartTime, h.StackedPosition, getAction(h.StartTime)));
-
-                    for (double j = GetFrameDelay(slider.StartTime); j < slider.Duration; j += GetFrameDelay(slider.StartTime + j))
-                    {
-                        pos = slider.StackedPositionAt(j / slider.Duration);
-                        AddFrameToReplay(new OsuReplayFrame(h.StartTime + j, pos, getAction(h.StartTime + j)));
-                    }
-
-                    break;
-
-                case Spinner spinner:
-                    double rEndTime = spinner.StartTime + spinner.Duration * 0.7;
-                    double previousFrame = h.StartTime;
-                    double delay;
-
-                    for (double nextFrame = h.StartTime + GetFrameDelay(h.StartTime); nextFrame < spinner.EndTime; nextFrame += delay)
-                    {
-                        delay = GetFrameDelay(previousFrame);
-                        double t = ApplyModsToTimeDelta(previousFrame, nextFrame) * -1;
-                        angle += (float)t / 20;
-                        double r = nextFrame > rEndTime ? 50 : Interpolation.ValueAt(nextFrame, 50, 50, spinner.StartTime, rEndTime, Easing.In);
-                        pos = SPINNER_CENTRE + CirclePosition(angle, r);
-                        addOffSetFrame(new OsuReplayFrame((int)nextFrame, pos, getAction(nextFrame)), 0);
-
-                        previousFrame = nextFrame;
-                    }
-
-                    break;
-
-                default:
-                    addOffSetFrame(new OsuReplayFrame(h.StartTime, GetPosition(h.StartTime), getAction(h.StartTime)), 0);
-                    break;
-            }
-
-            return pos;
-        }
-
-        private void addOffSetFrame(OsuReplayFrame frame, float radius)
+        protected void AddOffSetFrame(OsuReplayFrame frame, float radius)
         {
             frame.Position = MoverUtilExtensions.ApplyOffset(frame.Position, frame.Time, radius);
             AddFrameToReplay(frame);
