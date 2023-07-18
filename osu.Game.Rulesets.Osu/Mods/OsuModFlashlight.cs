@@ -36,7 +36,7 @@ namespace osu.Game.Rulesets.Osu.Mods
         {
             MinValue = 0.5f,
             MaxValue = 2f,
-            Precision = 0.1f
+            Precision = 0.01f
         };
 
         public override BindableBool ComboBasedSize { get; } = new BindableBool(true);
