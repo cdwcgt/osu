@@ -16,6 +16,7 @@ using osu.Framework.Localisation;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.OpenGL.Vertices;
+using osu.Game.Overlays.Settings;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Scoring;
 using osu.Game.Rulesets.UI;
@@ -40,6 +41,16 @@ namespace osu.Game.Rulesets.Mods
         [SettingSource("Change size based on combo", "Decrease the flashlight size as combo increases.")]
         public abstract BindableBool ComboBasedSize { get; }
 
+        [SettingSource("Use Max Combo")]
+        public BindableBool UseMaxCombo { get; } = new BindableBool();
+
+        [SettingSource("DefaultCombo")]
+        public BindableInt DefaultCombo { get; } = new BindableInt
+        {
+            MaxValue = 200,
+            MinValue = 0,
+        };
+
         /// <summary>
         /// The default size of the flashlight in ruleset-appropriate dimensions.
         /// <see cref="SizeMultiplier"/> and <see cref="ComboBasedSize"/> will apply their adjustments on top of this size.
@@ -55,7 +66,7 @@ namespace osu.Game.Rulesets.Mods
 
         public void ApplyToScoreProcessor(ScoreProcessor scoreProcessor)
         {
-            Combo.BindTo(scoreProcessor.Combo);
+            Combo.BindTo(UseMaxCombo.Value ? scoreProcessor.HighestCombo : scoreProcessor.Combo);
 
             // Default value of ScoreProcessor's Rank in Flashlight Mod should be SS+
             scoreProcessor.Rank.Value = ScoreRank.XH;
@@ -86,6 +97,7 @@ namespace osu.Game.Rulesets.Mods
             flashlight.Depth = float.MinValue;
 
             flashlight.Combo.BindTo(Combo);
+            flashlight.DefaultCombo.BindTo(DefaultCombo);
 
             drawableRuleset.Overlays.Add(flashlight);
         }
@@ -95,6 +107,8 @@ namespace osu.Game.Rulesets.Mods
         public abstract partial class Flashlight : Drawable
         {
             public readonly BindableInt Combo = new BindableInt();
+
+            public readonly BindableInt DefaultCombo = new BindableInt();
 
             private IShader shader = null!;
 
@@ -148,7 +162,7 @@ namespace osu.Game.Rulesets.Mods
                 if (isBreakTime.Value)
                     size *= 2.5f;
                 else if (comboBasedSize)
-                    size *= GetComboScaleFor(Combo.Value);
+                    size *= GetComboScaleFor(Combo.Value + DefaultCombo.Value);
 
                 return size;
             }
