@@ -108,6 +108,8 @@ namespace osu.Game.Rulesets.Osu.Replays
         {
             double timeDifference = ApplyModsToTimeDelta(last.GetEndTime(), h.StartTime);
 
+            // Start alternating once the time separation is too small (faster than ~225BPM).
+            // same as OsuAutoGenerator do.
             if (timeDifference > 0 && timeDifference < 266)
                 buttonIndex++;
             else
