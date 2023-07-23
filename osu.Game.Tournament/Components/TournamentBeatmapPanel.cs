@@ -1,8 +1,6 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-#nullable disable
-
 using System;
 using System.Collections.Specialized;
 using System.Linq;
@@ -11,10 +9,12 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Graphics.Sprites;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Drawables;
 using osu.Game.Graphics;
 using osu.Game.Tournament.Models;
+using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Components
@@ -23,14 +23,15 @@ namespace osu.Game.Tournament.Components
     {
         public readonly TournamentBeatmap Beatmap;
 
-        private readonly string mod;
+        private readonly string? mod;
 
         public const float HEIGHT = 50;
 
         private readonly Bindable<TournamentMatch> currentMatch = new Bindable<TournamentMatch>();
-        private Box flash;
+        private Box? flash;
+        private PadLock? padLock;
 
-        public TournamentBeatmapPanel(TournamentBeatmap beatmap, string mod = null)
+        public TournamentBeatmapPanel(TournamentBeatmap beatmap, string? mod = null)
         {
             ArgumentNullException.ThrowIfNull(beatmap);
 
@@ -61,6 +62,12 @@ namespace osu.Game.Tournament.Components
                     RelativeSizeAxes = Axes.Both,
                     Colour = OsuColour.Gray(0.5f),
                     OnlineInfo = Beatmap,
+                },
+                padLock = new PadLock
+                {
+                    Origin = Anchor.Centre,
+                    Anchor = Anchor.Centre,
+                    Alpha = 0f,
                 },
                 new FillFlowContainer
                 {
@@ -139,28 +146,48 @@ namespace osu.Game.Tournament.Components
             updateState();
         }
 
-        private void picksBansOnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        private void picksBansOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
             => updateState();
 
-        private BeatmapChoice choice;
+        private BeatmapChoice? choice;
 
         private void updateState()
         {
-            var found = currentMatch.Value.PicksBans.FirstOrDefault(p => p.BeatmapID == Beatmap.OnlineID);
+            var found = currentMatch.Value.PicksBans.Where(p => p.BeatmapID == Beatmap.OnlineID).ToList();
+            var foundProtected = found.FirstOrDefault(s => s.Type == ChoiceType.Protected);
+            var lastFound = found.LastOrDefault();
 
-            bool doFlash = found != choice;
-            choice = found;
+            bool doFlash = lastFound != choice;
+            choice = lastFound;
 
-            if (found != null)
+            if (padLock != null)
+            {
+                if (foundProtected != null)
+                {
+                    padLock.Team = foundProtected.Team;
+                    padLock.FadeIn();
+
+                    if (currentMatch.Value.PicksBans.Any(p => p.Type == ChoiceType.Pick))
+                    {
+                        padLock.FadeTo(0.5f);
+                    }
+                }
+                else
+                {
+                    padLock.FadeOut();
+                }
+            }
+
+            if (lastFound != null)
             {
                 if (doFlash)
                     flash?.FadeOutFromOne(500).Loop(0, 10);
 
                 BorderThickness = 6;
 
-                BorderColour = TournamentGame.GetTeamColour(found.Team);
+                BorderColour = TournamentGame.GetTeamColour(lastFound.Team);
 
-                switch (found.Type)
+                switch (lastFound.Type)
                 {
                     case ChoiceType.Pick:
                         Colour = Color4.White;
@@ -171,6 +198,11 @@ namespace osu.Game.Tournament.Components
                         Colour = Color4.Gray;
                         Alpha = 0.5f;
                         break;
+
+                    case ChoiceType.Protected:
+                        Alpha = 1f;
+                        BorderThickness = 0;
+                        break;
                 }
             }
             else
@@ -178,6 +210,44 @@ namespace osu.Game.Tournament.Components
                 Colour = Color4.White;
                 BorderThickness = 0;
                 Alpha = 1;
+            }
+        }
+
+        private partial class PadLock : Container
+        {
+            [Resolved]
+            private OsuColour osuColour { get; set; } = null!;
+
+            public TeamColour Team
+            {
+                set => lockIcon.Colour = value == TeamColour.Red ? osuColour.TeamColourRed : osuColour.TeamColourBlue;
+            }
+
+            private readonly SpriteIcon background;
+            private readonly SpriteIcon lockIcon;
+
+            public PadLock()
+            {
+                Children = new Drawable[]
+                {
+                    background = new SpriteIcon
+                    {
+                        Origin = Anchor.Centre,
+                        Anchor = Anchor.Centre,
+                        Size = new Vector2(45),
+                        Icon = OsuIcon.ModBg,
+                        Shadow = true,
+                        Colour = Color4.LightGray
+                    },
+                    lockIcon = new SpriteIcon
+                    {
+                        Origin = Anchor.Centre,
+                        Anchor = Anchor.Centre,
+                        Size = new Vector2(15),
+                        Icon = FontAwesome.Solid.ShieldAlt,
+                        Shadow = true,
+                    }
+                };
             }
         }
     }
