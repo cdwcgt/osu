@@ -32,6 +32,8 @@ namespace osu.Game.Tournament.Screens.MapPool
         private TeamColour pickColour;
         private ChoiceType pickType;
 
+        private OsuButton buttonRedProtected;
+        private OsuButton buttonBlueProtected;
         private OsuButton buttonRedBan;
         private OsuButton buttonBlueBan;
         private OsuButton buttonRedPick;
@@ -66,6 +68,18 @@ namespace osu.Game.Tournament.Screens.MapPool
                         new TournamentSpriteText
                         {
                             Text = "Current Mode"
+                        },
+                        buttonRedProtected = new TourneyButton
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Text = "Red Protect",
+                            Action = () => setMode(TeamColour.Red, ChoiceType.Protected)
+                        },
+                        buttonBlueProtected = new TourneyButton
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Text = "Blue Protect",
+                            Action = () => setMode(TeamColour.Blue, ChoiceType.Protected)
                         },
                         buttonRedBan = new TourneyButton
                         {
@@ -138,6 +152,8 @@ namespace osu.Game.Tournament.Screens.MapPool
 
             static Color4 setColour(bool active) => active ? Color4.White : Color4.Gray;
 
+            buttonRedProtected.Colour = setColour(pickColour == TeamColour.Red && pickType == ChoiceType.Protected);
+            buttonBlueProtected.Colour = setColour(pickColour == TeamColour.Blue && pickType == ChoiceType.Protected);
             buttonRedBan.Colour = setColour(pickColour == TeamColour.Red && pickType == ChoiceType.Ban);
             buttonBlueBan.Colour = setColour(pickColour == TeamColour.Blue && pickType == ChoiceType.Ban);
             buttonRedPick.Colour = setColour(pickColour == TeamColour.Red && pickType == ChoiceType.Pick);
@@ -150,10 +166,12 @@ namespace osu.Game.Tournament.Screens.MapPool
 
             var nextColour = (CurrentMatch.Value.PicksBans.LastOrDefault()?.Team ?? roll_winner) == TeamColour.Red ? TeamColour.Blue : TeamColour.Red;
 
-            if (pickType == ChoiceType.Ban && CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Ban) >= 2)
+            if (pickType == ChoiceType.Protected && CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Protected) >= 2)
+                setMode(pickColour, ChoiceType.Ban);
+            else if (pickType == ChoiceType.Ban && CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Ban) >= 2)
                 setMode(pickColour, ChoiceType.Pick);
             else
-                setMode(nextColour, CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Ban) >= 2 ? ChoiceType.Pick : ChoiceType.Ban);
+                setMode(nextColour, pickType);
         }
 
         protected override bool OnMouseDown(MouseDownEvent e)
@@ -199,8 +217,15 @@ namespace osu.Game.Tournament.Screens.MapPool
                 // don't attempt to add if the beatmap isn't in our pool
                 return;
 
-            if (CurrentMatch.Value.PicksBans.Any(p => p.BeatmapID == beatmapId))
-                // don't attempt to add if already exists.
+            if (pickType == ChoiceType.Protected && CurrentMatch.Value.PicksBans.Any(p => p.BeatmapID == beatmapId))
+                return;
+
+            if (pickType == ChoiceType.Ban && CurrentMatch.Value.PicksBans.Any(p => p.BeatmapID == beatmapId))
+                // don't ban if already protected.
+                return;
+
+            if (pickType == ChoiceType.Pick && CurrentMatch.Value.PicksBans.Any(p => p.BeatmapID == beatmapId && p.Type != ChoiceType.Protected))
+                // don't pick if map already in pickbans unless is protected.
                 return;
 
             CurrentMatch.Value.PicksBans.Add(new BeatmapChoice
