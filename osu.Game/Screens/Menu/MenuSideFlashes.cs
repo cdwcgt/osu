@@ -111,7 +111,7 @@ namespace osu.Game.Screens.Menu
 
             // linear colour looks better in this case, so let's use it for now.
             Color4 gradientDark = baseColour.Opacity(0).ToLinear();
-            Color4 gradientLight = baseColour.Opacity(0.3f).ToLinear();
+            Color4 gradientLight = baseColour.Opacity(0.8f).ToLinear();
 
             leftBox.Colour = ColourInfo.GradientHorizontal(gradientLight, gradientDark);
             rightBox.Colour = ColourInfo.GradientHorizontal(gradientDark, gradientLight);
