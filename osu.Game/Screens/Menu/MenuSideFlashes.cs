@@ -63,10 +63,8 @@ namespace osu.Game.Screens.Menu
                     Anchor = Anchor.CentreLeft,
                     Origin = Anchor.CentreLeft,
                     RelativeSizeAxes = Axes.Y,
-                    Width = box_width * 2,
+                    Width = box_width,
                     Height = 1.5f,
-                    // align off-screen to make sure our edges don't become visible during parallax.
-                    X = -box_width,
                     Alpha = 0,
                     Blending = BlendingParameters.Additive
                 },
@@ -75,9 +73,8 @@ namespace osu.Game.Screens.Menu
                     Anchor = Anchor.CentreRight,
                     Origin = Anchor.CentreRight,
                     RelativeSizeAxes = Axes.Y,
-                    Width = box_width * 2,
+                    Width = box_width,
                     Height = 1.5f,
-                    X = box_width,
                     Alpha = 0,
                     Blending = BlendingParameters.Additive
                 }
@@ -114,7 +111,7 @@ namespace osu.Game.Screens.Menu
 
             // linear colour looks better in this case, so let's use it for now.
             Color4 gradientDark = baseColour.Opacity(0).ToLinear();
-            Color4 gradientLight = baseColour.Opacity(0.6f).ToLinear();
+            Color4 gradientLight = baseColour.Opacity(0.3f).ToLinear();
 
             leftBox.Colour = ColourInfo.GradientHorizontal(gradientLight, gradientDark);
             rightBox.Colour = ColourInfo.GradientHorizontal(gradientDark, gradientLight);
