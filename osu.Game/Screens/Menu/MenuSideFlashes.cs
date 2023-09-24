@@ -33,15 +33,11 @@ namespace osu.Game.Screens.Menu
         private const float alpha_multiplier = (1 - amplitude_dead_zone) / 0.55f;
         private const float kiai_multiplier = (1 - amplitude_dead_zone * 0.95f) / 0.8f;
 
-        private const int box_max_alpha = 200;
         private const double box_fade_in_time = 65;
-        private const int box_width = 200;
+        private const int box_width = 400;
 
         private IBindable<APIUser> user;
         private Bindable<Skin> skin;
-
-        [Resolved]
-        private OsuColour colours { get; set; }
 
         public MenuSideFlashes()
         {
@@ -111,7 +107,7 @@ namespace osu.Game.Screens.Menu
 
         private void updateColour()
         {
-            Color4 baseColour = colours.Blue;
+            Color4 baseColour = Color4.White;
 
             if (user.Value?.IsSupporter ?? false)
                 baseColour = skin.Value.GetConfig<GlobalSkinColours, Color4>(GlobalSkinColours.MenuGlow)?.Value ?? baseColour;
