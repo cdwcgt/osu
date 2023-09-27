@@ -31,7 +31,7 @@ namespace osu.Game.Screens.Menu
         private const float kiai_multiplier = (1 - amplitude_dead_zone * 0.95f) / 0.8f;
 
         private const double box_fade_in_time = 65;
-        private const int box_width = 400;
+        private const int box_width = 310;
 
         private IBindable<APIUser> user = null!;
         private Bindable<Skin> skin = null!;
