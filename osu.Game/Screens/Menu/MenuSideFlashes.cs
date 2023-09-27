@@ -1,8 +1,6 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-#nullable disable
-
 using osuTK.Graphics;
 using osu.Framework.Allocation;
 using osu.Framework.Extensions.Color4Extensions;
@@ -11,7 +9,6 @@ using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Shapes;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.ControlPoints;
-using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Skinning;
 using osu.Game.Online.API;
@@ -26,8 +23,8 @@ namespace osu.Game.Screens.Menu
     {
         private readonly IBindable<WorkingBeatmap> beatmap = new Bindable<WorkingBeatmap>();
 
-        private Box leftBox;
-        private Box rightBox;
+        private Box leftBox = null!;
+        private Box rightBox = null!;
 
         private const float amplitude_dead_zone = 0.25f;
         private const float alpha_multiplier = (1 - amplitude_dead_zone) / 0.55f;
@@ -36,8 +33,8 @@ namespace osu.Game.Screens.Menu
         private const double box_fade_in_time = 65;
         private const int box_width = 400;
 
-        private IBindable<APIUser> user;
-        private Bindable<Skin> skin;
+        private IBindable<APIUser> user = null!;
+        private Bindable<Skin> skin = null!;
 
         public MenuSideFlashes()
         {
