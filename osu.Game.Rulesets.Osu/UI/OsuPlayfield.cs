@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Pooling;
@@ -35,6 +36,7 @@ namespace osu.Game.Rulesets.Osu.UI
         private readonly ProxyContainer approachCircles;
         private readonly ProxyContainer spinnerProxies;
         private readonly JudgementContainer<DrawableOsuJudgement> judgementLayer;
+        protected readonly BindableBool NoDraw300 = new BindableBool();
 
         public SmokeContainer Smoke { get; }
         public FollowPointRenderer FollowPoints { get; }
@@ -119,6 +121,7 @@ namespace osu.Game.Rulesets.Osu.UI
         private void load(OsuRulesetConfigManager config, IBeatmap beatmap)
         {
             config?.BindWith(OsuRulesetSetting.PlayfieldBorderStyle, playfieldBorder.PlayfieldBorderStyle);
+            config?.BindWith(OsuRulesetSetting.NoDraw300, NoDraw300);
 
             var osuBeatmap = (OsuBeatmap)beatmap;
 
@@ -167,7 +170,7 @@ namespace osu.Game.Rulesets.Osu.UI
             // Hitobjects that block future hits should miss previous hitobjects if they're hit out-of-order.
             hitPolicy.HandleHit(judgedObject);
 
-            if (!judgedObject.DisplayResult || !DisplayJudgements.Value)
+            if (!judgedObject.DisplayResult || !DisplayJudgements.Value || (judgedObject.Result.Type == HitResult.Great && NoDraw300.Value))
                 return;
 
             DrawableOsuJudgement explosion = poolDictionary[result.Type].Get(doj => doj.Apply(result, judgedObject));

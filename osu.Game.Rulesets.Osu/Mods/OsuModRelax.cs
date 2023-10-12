@@ -28,7 +28,7 @@ namespace osu.Game.Rulesets.Osu.Mods
         /// <summary>
         /// How early before a hitobject's start time to trigger a hit.
         /// </summary>
-        private const float relax_leniency = 3;
+        private const float relax_leniency = 12;
 
         private bool isDownState;
         private bool wasLeft;

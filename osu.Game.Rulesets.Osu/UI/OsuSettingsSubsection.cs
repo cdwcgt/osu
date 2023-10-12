@@ -4,8 +4,10 @@
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Localisation;
+using osu.Game.Configuration;
 using osu.Game.Localisation;
 using osu.Game.Overlays.Settings;
+using osu.Game.Overlays.Settings.Sections.Mf;
 using osu.Game.Rulesets.Osu.Configuration;
 using osu.Game.Rulesets.UI;
 
@@ -21,7 +23,7 @@ namespace osu.Game.Rulesets.Osu.UI
         }
 
         [BackgroundDependencyLoader]
-        private void load()
+        private void load(MConfigManager mConfig)
         {
             var config = (OsuRulesetConfigManager)Config;
 
@@ -37,6 +39,11 @@ namespace osu.Game.Rulesets.Osu.UI
                     ClassicDefault = false,
                     LabelText = RulesetSettingsStrings.SnakingOutSliders,
                     Current = config.GetBindable<bool>(OsuRulesetSetting.SnakingOutSliders)
+                },
+                new SettingsCheckbox
+                {
+                    LabelText = "Hide 300s",
+                    Current = config.GetBindable<bool>(OsuRulesetSetting.NoDraw300)
                 },
                 new SettingsCheckbox
                 {
