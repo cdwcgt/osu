@@ -7,7 +7,6 @@ using osu.Framework.Localisation;
 using osu.Game.Configuration;
 using osu.Game.Localisation;
 using osu.Game.Overlays.Settings;
-using osu.Game.Overlays.Settings.Sections.Mf;
 using osu.Game.Rulesets.Osu.Configuration;
 using osu.Game.Rulesets.UI;
 

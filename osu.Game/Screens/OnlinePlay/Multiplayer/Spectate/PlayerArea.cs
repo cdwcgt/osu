@@ -7,6 +7,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Game.Beatmaps;
 using osu.Game.Graphics.UserInterface;
@@ -14,6 +15,7 @@ using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Scoring;
 using osu.Game.Screens.Play;
+using osu.Game.Screens.ReplayVs;
 
 namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 {
@@ -31,6 +33,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// Whether a <see cref="Player"/> is loaded in the area.
         /// </summary>
         public bool PlayerLoaded => (stack?.CurrentScreen as Player)?.IsLoaded == true;
+
+        public Player? Player => stack?.CurrentScreen as Player;
 
         /// <summary>
         /// The user id this <see cref="PlayerArea"/> corresponds to.
@@ -61,10 +65,15 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         private readonly LoadingLayer loadingLayer;
         private OsuScreenStack? stack;
 
-        public PlayerArea(int userId, SpectatorPlayerClock clock)
+        private readonly bool isReplayVs;
+        private readonly ColourInfo teamColor;
+
+        public PlayerArea(int userId, SpectatorPlayerClock clock, bool isReplayVs = false, ColourInfo teamColor = default)
         {
             UserId = userId;
             SpectatorPlayerClock = clock;
+            this.isReplayVs = isReplayVs;
+            this.teamColor = teamColor;
 
             RelativeSizeAxes = Axes.Both;
 
@@ -98,15 +107,28 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                 }
             };
 
-            stack.Push(new MultiSpectatorPlayerLoader(Score, () =>
+            if (!isReplayVs)
             {
-                var player = new MultiSpectatorPlayer(Score, SpectatorPlayerClock);
-                player.OnGameplayStarted += () => OnGameplayStarted?.Invoke();
+                stack.Push(new MultiSpectatorPlayerLoader(Score, () =>
+                {
+                    var player = new MultiSpectatorPlayer(Score, SpectatorPlayerClock);
+                    player.OnGameplayStarted += () => OnGameplayStarted?.Invoke();
 
-                clockAdjustmentsFromMods.BindAdjustments(player.ClockAdjustmentsFromMods);
+                    clockAdjustmentsFromMods.BindAdjustments(player.ClockAdjustmentsFromMods);
+                    return player;
+                }));
+            }
+            else
+            {
+                stack.Push(new ReplayVsPlayerLoader(Score, () =>
+                {
+                    var player = new ReplayVsPlayer(Score, SpectatorPlayerClock, teamColor);
+                    player.OnGameplayStarted += () => OnGameplayStarted?.Invoke();
 
-                return player;
-            }));
+                    clockAdjustmentsFromMods.BindAdjustments(player.ClockAdjustmentsFromMods);
+                    return player;
+                }));
+            }
 
             loadingLayer.Hide();
         }
