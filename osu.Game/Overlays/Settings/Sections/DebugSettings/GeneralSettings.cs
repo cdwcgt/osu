@@ -9,6 +9,7 @@ using osu.Framework.Screens;
 using osu.Game.Localisation;
 using osu.Game.Screens;
 using osu.Game.Screens.Import;
+using osu.Game.Screens.IrcBot;
 using osu.Game.Screens.Utility;
 
 namespace osu.Game.Overlays.Settings.Sections.DebugSettings
@@ -41,6 +42,11 @@ namespace osu.Game.Overlays.Settings.Sections.DebugSettings
                 {
                     Text = @"Run latency certifier",
                     Action = () => performer?.PerformFromScreen(menu => menu.Push(new LatencyCertifierScreen()))
+                },
+                new SettingsButton
+                {
+                    Text = "ircbot",
+                    Action = () => performer?.PerformFromScreen(menu => menu.Push(new IrcBotScreen()))
                 }
             };
         }
