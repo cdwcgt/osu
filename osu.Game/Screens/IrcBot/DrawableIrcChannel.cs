@@ -8,9 +8,11 @@ namespace osu.Game.Screens.IrcBot
 {
     public partial class DrawableIrcChannel : Container
     {
+        public IChatChannel Channel;
+
         public DrawableIrcChannel(IChatChannel channel)
         {
-
+            Channel = channel;
         }
     }
 }
