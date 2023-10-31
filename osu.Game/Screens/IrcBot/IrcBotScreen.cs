@@ -19,7 +19,9 @@ namespace osu.Game.Screens.IrcBot
     [Cached]
     public partial class IrcBotScreen : OsuScreen
     {
+        [Cached]
         private readonly BanchoClient banchoClient = new BanchoClient();
+
         private IrcLogin loginPanel;
         private IrcChannelList roomTab;
         private readonly Container<DrawableIrcChannel> currentChannelContainer;
@@ -47,6 +49,11 @@ namespace osu.Game.Screens.IrcBot
                             Colour = overlayColourProvider.Background6,
                             RelativeSizeAxes = Axes.Both,
                         },
+                        new AddRoomButton
+                        {
+                            Origin = Anchor.TopLeft,
+                            Anchor = Anchor.TopLeft,
+                        },
                         new FillFlowContainer
                         {
                             Origin = Anchor.TopLeft,
@@ -55,6 +62,7 @@ namespace osu.Game.Screens.IrcBot
                             Height = 80f,
                             RelativeSizeAxes = Axes.X,
                             Direction = FillDirection.Horizontal,
+                            Padding = new MarginPadding { Top = 30f },
                             Children = new Drawable[]
                             {
                                 roomTab = new IrcChannelList
@@ -64,7 +72,6 @@ namespace osu.Game.Screens.IrcBot
                                     Name = "Room Tab",
                                     Padding = new MarginPadding { Right = 35 }
                                 },
-                                
                             }
                         },
                         currentChannelContainer = new Container<DrawableIrcChannel>
@@ -110,6 +117,8 @@ namespace osu.Game.Screens.IrcBot
             loadedIrcChannel.BindCollectionChanged((_, _) => roomTab.UpdateAvailableChannels(banchoClient.Channels));
 
             banchoClient.OnChannelJoined += onNewChannel;
+
+            banchoClient.OnMessageReceived += onNewMessage;
         }
 
         protected override void LoadComplete()
@@ -117,6 +126,24 @@ namespace osu.Game.Screens.IrcBot
             base.LoadComplete();
 
             roomTab.UpdateAvailableChannels(banchoClient.Channels);
+
+            currentIrcChannel.BindValueChanged(c =>
+            {
+                if (c.NewValue == null)
+                {
+                    currentChannelContainer.Clear(false);
+                    return;
+                }
+
+                if (currentChannelContainer.Child.Channel == c.NewValue)
+                    return;
+
+                if (loadedIrcChannel.TryGetValue(c.NewValue, out var drawablechannel))
+                {
+                    currentChannelContainer.Clear(false);
+                    currentChannelContainer.Add(drawablechannel);
+                }
+            });
         }
 
         private void loginToBancho(string username, string password)
@@ -140,14 +167,25 @@ namespace osu.Game.Screens.IrcBot
 
             LoadComponentAsync(drawableChannel, ircChannel =>
             {
-                currentChannelContainer.Clear();
+                currentChannelContainer.Clear(false);
                 currentChannelContainer.Add(ircChannel);
+                currentIrcChannel.Value = channel;
             });
         }
 
         private void onLeaveChannel(IChatChannel channel)
         {
             loadedIrcChannel.Remove(channel);
+        }
+
+        private void onNewMessage(IIrcMessage message)
+        {
+            if (message is not IPrivateIrcMessage) return;
+
+            foreach (var ch in loadedIrcChannel.Values)
+            {
+                ch.UpdateMessage();
+            }
         }
 
         public void TryJoinChannel(string channelName)

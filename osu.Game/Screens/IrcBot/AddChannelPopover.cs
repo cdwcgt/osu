@@ -42,7 +42,11 @@ namespace osu.Game.Screens.IrcBot
                     new ShearedButton
                     {
                         Text = "Join",
-                        Action = () => joinChannel.Invoke(channelName.Text)
+                        Action = () =>
+                        {
+                            joinChannel.Invoke(channelName.Text);
+                            Hide();
+                        }
                     }
                 }
             };

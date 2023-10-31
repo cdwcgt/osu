@@ -32,7 +32,8 @@ namespace osu.Game.Screens.IrcBot
 
             Action = () =>
             {
-
+                if (!screen.IsLogin.Value)
+                    return;
 
                 this.ShowPopover();
             };
@@ -40,7 +41,8 @@ namespace osu.Game.Screens.IrcBot
 
         public Popover? GetPopover()
         {
-
+            if (!screen.IsLogin.Value)
+                return null;
 
             return new AddChannelPopover(screen.TryJoinChannel);
         }

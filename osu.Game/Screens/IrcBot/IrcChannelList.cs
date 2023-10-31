@@ -18,9 +18,6 @@ namespace osu.Game.Screens.IrcBot
 {
     public partial class IrcChannelList : Container
     {
-        [Resolved]
-        private OverlayColourProvider colourProvider { get; set; } = null!;
-
         private FillFlowContainer<IrcChannelListingItem> flow = null!;
 
         [BackgroundDependencyLoader]
@@ -29,11 +26,6 @@ namespace osu.Game.Screens.IrcBot
             RelativeSizeAxes = Axes.Both;
             Children = new Drawable[]
             {
-                new Box
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Colour = colourProvider.Background4,
-                },
                 new OsuScrollContainer(Direction.Horizontal)
                 {
                     RelativeSizeAxes = Axes.Both,
@@ -45,17 +37,7 @@ namespace osu.Game.Screens.IrcBot
                             RelativeSizeAxes = Axes.Y,
                             Direction = FillDirection.Horizontal,
                             AutoSizeAxes = Axes.X,
-                            Padding = new MarginPadding
-                            {
-                                Vertical = 13,
-                                Horizontal = 15,
-                            },
                         },
-                        new AddRoomButton()
-                        {
-                            Origin = Anchor.TopLeft,
-                            Anchor = Anchor.TopLeft,
-                        }
                     },
                 },
             };
@@ -63,11 +45,7 @@ namespace osu.Game.Screens.IrcBot
 
         public void UpdateAvailableChannels(IEnumerable<IChatChannel> newChannels)
         {
-            flow.ChildrenEnumerable = new IrcChannelListingItem[]
-            {
-                new IrcChannelListingItem(new Channel("test1", false)),
-                new IrcChannelListingItem(new Channel("test1", false)),
-            };
+            flow.ChildrenEnumerable = newChannels.Select(c => new IrcChannelListingItem(c));
         }
     }
 }
