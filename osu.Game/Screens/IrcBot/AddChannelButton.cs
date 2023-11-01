@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using BanchoSharp;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions;
@@ -13,15 +14,15 @@ using osu.Game.Graphics.UserInterface;
 
 namespace osu.Game.Screens.IrcBot
 {
-    public partial class AddRoomButton : IconButton, IHasPopover
+    public partial class AddChannelButton : IconButton, IHasPopover
     {
         [Resolved]
-        private IrcBotScreen screen { get; set; } = null!;
+        private BanchoClient bancho { get; set; } = null!;
 
-        public AddRoomButton()
+        public AddChannelButton()
         {
             Icon = FontAwesome.Solid.Plus;
-            TooltipText = "Add room";
+            TooltipText = "Add channel";
         }
 
         [BackgroundDependencyLoader]
@@ -32,7 +33,7 @@ namespace osu.Game.Screens.IrcBot
 
             Action = () =>
             {
-                if (!screen.IsLogin.Value)
+                if (!bancho.IsAuthenticated)
                     return;
 
                 this.ShowPopover();
@@ -41,10 +42,12 @@ namespace osu.Game.Screens.IrcBot
 
         public Popover? GetPopover()
         {
-            if (!screen.IsLogin.Value)
+            if (!bancho.IsAuthenticated)
                 return null;
 
-            return new AddChannelPopover(screen.TryJoinChannel);
+            return getPopover();
         }
+
+        protected virtual Popover getPopover() => new AddChannelPopover();
     }
 }

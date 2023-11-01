@@ -2,24 +2,31 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using BanchoSharp;
+using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Graphics.UserInterfaceV2;
-using osu.Game.Overlays.Settings;
 using osuTK;
 
 namespace osu.Game.Screens.IrcBot
 {
     public partial class AddChannelPopover : OsuPopover
     {
-        private OsuTextBox channelName;
+        protected OsuSpriteText Title;
+        protected OsuTextBox ChannelName;
+        protected ShearedButton Button;
+        protected FillFlowContainer Flow;
 
-        public AddChannelPopover(Action<string> joinChannel)
+        [Resolved]
+        private BanchoClient bancho { get; set; } = null!;
+
+        public AddChannelPopover()
         {
-            Child = new FillFlowContainer
+            Child = Flow = new FillFlowContainer
             {
                 AutoSizeAxes = Axes.Y,
                 Width = 300,
@@ -28,23 +35,23 @@ namespace osu.Game.Screens.IrcBot
                 Spacing = new Vector2(0f, 14f),
                 Children = new Drawable[]
                 {
-                    new OsuSpriteText
+                    Title = new OsuSpriteText
                     {
                         Text = "Add Channel",
                         Font = OsuFont.GetFont(weight: FontWeight.Bold),
                     },
-                    channelName = new OsuTextBox
+                    ChannelName = new OsuTextBox
                     {
                         RelativeSizeAxes = Axes.X,
                         PlaceholderText = "Channel Name",
                         TabbableContentContainer = this
                     },
-                    new ShearedButton
+                    Button = new ShearedButton
                     {
                         Text = "Join",
                         Action = () =>
                         {
-                            joinChannel.Invoke(channelName.Text);
+                            bancho.JoinChannelAsync(ChannelName.Text);
                             Hide();
                         }
                     }

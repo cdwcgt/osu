@@ -10,14 +10,12 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
-using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
-using osu.Game.Online.API;
-using osu.Game.Online.API.Requests;
 using osu.Game.Online.API.Requests.Responses;
-using osu.Game.Online.Chat;
+using osu.Game.Overlays;
+using osu.Game.Overlays.Chat;
 
-namespace osu.Game.Overlays.Chat
+namespace osu.Game.Screens.IrcBot
 {
     public partial class IrcChatLine : CompositeDrawable
     {

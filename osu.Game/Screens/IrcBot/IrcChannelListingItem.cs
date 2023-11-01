@@ -1,24 +1,31 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using BanchoSharp;
 using BanchoSharp.Interfaces;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Graphics.UserInterface;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
+using osu.Game.Graphics.UserInterface;
 using osu.Game.Overlays;
 
 namespace osu.Game.Screens.IrcBot
 {
-    public partial class IrcChannelListingItem : OsuClickableContainer
+    public partial class IrcChannelListingItem : OsuClickableContainer, IHasContextMenu
     {
         public IChatChannel Channel;
         private Box background = null!;
         private OsuSpriteText channelText = null!;
         private const float text_size = 18;
+
+        [Resolved]
+        private BanchoClient bancho { get; set; } = null!;
 
         [Resolved]
         private OverlayColourProvider colourProvider { get; set; } = null!;
@@ -69,5 +76,10 @@ namespace osu.Game.Screens.IrcBot
                 background.Colour = s.NewValue == Channel ? colourProvider.Foreground1 : colourProvider.Dark3;
             });
         }
+
+        public MenuItem[] ContextMenuItems => new MenuItem[]
+        {
+            new OsuMenuItem("Leave Channel", MenuItemType.Destructive, () => bancho.PartChannelAsync(Channel.ChannelName))
+        };
     }
 }
