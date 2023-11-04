@@ -1,3 +1,11 @@
+# NOTE
+
+This branch includes a port of the [PP+](https://syrin.me/pp+/) algorithm originally written by Drezi several years ago.
+
+With Drezi's permission, I have rewritten the algorithm within the lazer framework so that it could now be open sourced to contribute to the ongoing development of the osu! difficulty calculation systems.
+
+The port is not one-to-one, but I will work on fixing the major discrepancies in time.
+
 <p align="center">
   <img width="500" alt="osu! logo" src="assets/lazer.png">
 </p>

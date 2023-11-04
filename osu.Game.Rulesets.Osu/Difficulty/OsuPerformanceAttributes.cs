@@ -12,17 +12,23 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         [JsonProperty("aim")]
         public double Aim { get; set; }
 
+        [JsonProperty("jump aim")]
+        public double JumpAim { get; set; }
+
+        [JsonProperty("flow aim")]
+        public double FlowAim { get; set; }
+
+        [JsonProperty("precision")]
+        public double Precision { get; set; }
+
         [JsonProperty("speed")]
         public double Speed { get; set; }
 
+        [JsonProperty("stamina")]
+        public double Stamina { get; set; }
+
         [JsonProperty("accuracy")]
         public double Accuracy { get; set; }
-
-        [JsonProperty("flashlight")]
-        public double Flashlight { get; set; }
-
-        [JsonProperty("effective_miss_count")]
-        public double EffectiveMissCount { get; set; }
 
         public override IEnumerable<PerformanceDisplayAttribute> GetAttributesForDisplay()
         {
@@ -30,9 +36,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 yield return attribute;
 
             yield return new PerformanceDisplayAttribute(nameof(Aim), "Aim", Aim);
+            yield return new PerformanceDisplayAttribute(nameof(JumpAim), "Jump Aim", JumpAim);
+            yield return new PerformanceDisplayAttribute(nameof(FlowAim), "Flow Aim", FlowAim);
+            yield return new PerformanceDisplayAttribute(nameof(Precision), "Precision", Precision);
             yield return new PerformanceDisplayAttribute(nameof(Speed), "Speed", Speed);
+            yield return new PerformanceDisplayAttribute(nameof(Stamina), "Stamina", Stamina);
             yield return new PerformanceDisplayAttribute(nameof(Accuracy), "Accuracy", Accuracy);
-            yield return new PerformanceDisplayAttribute(nameof(Flashlight), "Flashlight Bonus", Flashlight);
         }
     }
 }

@@ -24,7 +24,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
     {
         private const double difficulty_multiplier = 0.0675;
 
-        public override int Version => 20220902;
+        public override int Version => 20231104;
 
         public OsuDifficultyCalculator(IRulesetInfo ruleset, IWorkingBeatmap beatmap)
             : base(ruleset, beatmap)
@@ -37,43 +37,27 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 return new OsuDifficultyAttributes { Mods = mods };
 
             double aimRating = Math.Sqrt(skills[0].DifficultyValue()) * difficulty_multiplier;
-            double aimRatingNoSliders = Math.Sqrt(skills[1].DifficultyValue()) * difficulty_multiplier;
-            double speedRating = Math.Sqrt(skills[2].DifficultyValue()) * difficulty_multiplier;
-            double speedNotes = ((Speed)skills[2]).RelevantNoteCount();
-            double flashlightRating = Math.Sqrt(skills[3].DifficultyValue()) * difficulty_multiplier;
+            double jumpAimRating = Math.Sqrt(skills[2].DifficultyValue()) * difficulty_multiplier;
+            double flowAimRating = Math.Sqrt(skills[3].DifficultyValue()) * difficulty_multiplier;
+            double precisionRating = Math.Sqrt(Math.Max(0, skills[0].DifficultyValue() - skills[1].DifficultyValue())) * difficulty_multiplier;
 
-            double sliderFactor = aimRating > 0 ? aimRatingNoSliders / aimRating : 1;
+            double speedRating = Math.Sqrt(skills[4].DifficultyValue()) * difficulty_multiplier;
+            double staminaRating = Math.Sqrt(skills[5].DifficultyValue()) * difficulty_multiplier;
+
+            double accuracyRating = skills[6].DifficultyValue();
+
+            double starRating = Math.Pow(Math.Pow(aimRating, 3) + Math.Pow(Math.Max(speedRating, staminaRating), 3), 1 / 3.0) * 1.6;
 
             if (mods.Any(m => m is OsuModTouchDevice))
             {
                 aimRating = Math.Pow(aimRating, 0.8);
-                flashlightRating = Math.Pow(flashlightRating, 0.8);
             }
 
             if (mods.Any(h => h is OsuModRelax))
             {
                 aimRating *= 0.9;
                 speedRating = 0.0;
-                flashlightRating *= 0.7;
             }
-
-            double baseAimPerformance = Math.Pow(5 * Math.Max(1, aimRating / 0.0675) - 4, 3) / 100000;
-            double baseSpeedPerformance = Math.Pow(5 * Math.Max(1, speedRating / 0.0675) - 4, 3) / 100000;
-            double baseFlashlightPerformance = 0.0;
-
-            if (mods.Any(h => h is OsuModFlashlight))
-                baseFlashlightPerformance = Math.Pow(flashlightRating, 2.0) * 25.0;
-
-            double basePerformance =
-                Math.Pow(
-                    Math.Pow(baseAimPerformance, 1.1) +
-                    Math.Pow(baseSpeedPerformance, 1.1) +
-                    Math.Pow(baseFlashlightPerformance, 1.1), 1.0 / 1.1
-                );
-
-            double starRating = basePerformance > 0.00001
-                ? Math.Cbrt(OsuPerformanceCalculator.PERFORMANCE_BASE_MULTIPLIER) * 0.027 * (Math.Cbrt(100000 / Math.Pow(2, 1 / 1.1) * basePerformance) + 4)
-                : 0;
 
             double preempt = IBeatmapDifficultyInfo.DifficultyRange(beatmap.Difficulty.ApproachRate, 1800, 1200, 450) / clockRate;
             double drainRate = beatmap.Difficulty.DrainRate;
@@ -92,17 +76,17 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             {
                 StarRating = starRating,
                 Mods = mods,
-                AimDifficulty = aimRating,
-                SpeedDifficulty = speedRating,
-                SpeedNoteCount = speedNotes,
-                FlashlightDifficulty = flashlightRating,
-                SliderFactor = sliderFactor,
+                AimStrain = aimRating,
+                JumpAimStrain = jumpAimRating,
+                FlowAimStrain = flowAimRating,
+                PrecisionStrain = precisionRating,
+                SpeedStrain = speedRating,
+                StaminaStrain = staminaRating,
+                AccuracyStrain = accuracyRating,
                 ApproachRate = preempt > 1200 ? (1800 - preempt) / 120 : (1200 - preempt) / 150 + 5,
-                OverallDifficulty = (80 - hitWindowGreat) / 6,
-                DrainRate = drainRate,
+                OverallDifficulty = (80 - hitWindows.WindowFor(HitResult.Great) / clockRate) / 6,
                 MaxCombo = maxCombo,
                 HitCircleCount = hitCirclesCount,
-                SliderCount = sliderCount,
                 SpinnerCount = spinnerCount,
             };
 
@@ -111,6 +95,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
         protected override IEnumerable<DifficultyHitObject> CreateDifficultyHitObjects(IBeatmap beatmap, double clockRate)
         {
+            OsuDifficultyHitObject lastLastDifficultyObject = null;
+            OsuDifficultyHitObject lastDifficultyObject = null;
+
             List<DifficultyHitObject> objects = new List<DifficultyHitObject>();
 
             // The first jump is formed by the first two hitobjects of the map.
@@ -118,20 +105,29 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             for (int i = 1; i < beatmap.HitObjects.Count; i++)
             {
                 var lastLast = i > 1 ? beatmap.HitObjects[i - 2] : null;
-                objects.Add(new OsuDifficultyHitObject(beatmap.HitObjects[i], beatmap.HitObjects[i - 1], lastLast, clockRate, objects, objects.Count));
-            }
+                var last = beatmap.HitObjects[i - 1];
+                var current = beatmap.HitObjects[i];
 
-            return objects;
+                var difficultyHitObject = new OsuDifficultyHitObject(current, lastLast, last, lastLastDifficultyObject, lastDifficultyObject, clockRate, objects, objects.Count);
+                objects.Add(difficultyHitObject);
+
+                lastLastDifficultyObject = lastDifficultyObject;
+                lastDifficultyObject = difficultyHitObject;
+                yield return difficultyHitObject;
+            }
         }
 
         protected override Skill[] CreateSkills(IBeatmap beatmap, Mod[] mods, double clockRate)
         {
             return new Skill[]
             {
-                new Aim(mods, true),
-                new Aim(mods, false),
+                new Aim(mods),
+                new RawAim(mods),
+                new JumpAim(mods),
+                new FlowAim(mods),
                 new Speed(mods),
-                new Flashlight(mods)
+                new Stamina(mods),
+                new RhythmComplexity(mods)
             };
         }
 

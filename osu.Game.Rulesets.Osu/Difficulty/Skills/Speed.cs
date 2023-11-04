@@ -4,10 +4,7 @@
 using System;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Mods;
-using osu.Game.Rulesets.Osu.Difficulty.Evaluators;
 using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 {
@@ -16,51 +13,32 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     /// </summary>
     public class Speed : OsuStrainSkill
     {
-        private double skillMultiplier => 1375;
-        private double strainDecayBase => 0.3;
+        protected virtual double SkillMultiplier => 2600;
+        protected virtual double StrainDecayBase => 0.1;
 
         private double currentStrain;
-        private double currentRhythm;
 
-        protected override int ReducedSectionCount => 5;
-        protected override double DifficultyMultiplier => 1.04;
-
-        private readonly List<double> objectStrains = new List<double>();
-
-        public Speed(Mod[] mods)
-            : base(mods)
+        public Speed(Mod[] mods) : base(mods)
         {
         }
 
-        private double strainDecay(double ms) => Math.Pow(strainDecayBase, ms / 1000);
+        protected double StrainDecay(double ms) => Math.Pow(StrainDecayBase, ms / 1000);
 
-        protected override double CalculateInitialStrain(double time, DifficultyHitObject current) => (currentStrain * currentRhythm) * strainDecay(time - current.Previous(0).StartTime);
-
+        protected override double CalculateInitialStrain(double time, DifficultyHitObject current) => currentStrain * StrainDecay(time - current.Previous(0).StartTime);
         protected override double StrainValueAt(DifficultyHitObject current)
         {
-            currentStrain *= strainDecay(((OsuDifficultyHitObject)current).StrainTime);
-            currentStrain += SpeedEvaluator.EvaluateDifficultyOf(current) * skillMultiplier;
+            currentStrain *= StrainDecay(((OsuDifficultyHitObject)current).StrainTime);
+            var osuCurrent = (OsuDifficultyHitObject)current;
 
-            currentRhythm = RhythmEvaluator.EvaluateDifficultyOf(current);
+            double ms = osuCurrent.LastTwoStrainTime / 2;
 
-            double totalStrain = currentStrain * currentRhythm;
+            // Curves are similar to 2.5 / ms for tapValue and 1 / ms for streamValue, but scale better at high BPM.
+            double tapValue = 30 / Math.Pow(ms - 20, 2) + 2 / ms;
+            double streamValue = 12.5 / Math.Pow(ms - 20, 2) + 0.25 / ms + 0.005;
 
-            objectStrains.Add(totalStrain);
+            currentStrain += ((1 - osuCurrent.Flow) * tapValue + osuCurrent.Flow * streamValue) * SkillMultiplier;
 
-            return totalStrain;
-        }
-
-        public double RelevantNoteCount()
-        {
-            if (objectStrains.Count == 0)
-                return 0;
-
-            double maxStrain = objectStrains.Max();
-
-            if (maxStrain == 0)
-                return 0;
-
-            return objectStrains.Sum(strain => 1.0 / (1.0 + Math.Exp(-(strain / maxStrain * 12.0 - 6.0))));
+            return currentStrain;
         }
     }
 }
