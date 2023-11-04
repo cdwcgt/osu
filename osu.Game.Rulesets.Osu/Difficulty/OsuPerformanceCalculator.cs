@@ -15,8 +15,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 {
     public class OsuPerformanceCalculator : PerformanceCalculator
     {
-        public OsuPerformanceCalculator(Ruleset ruleset)
-            : base(ruleset)
+        public OsuPerformanceCalculator()
+            : base(new OsuRuleset())
         {
         }
 
