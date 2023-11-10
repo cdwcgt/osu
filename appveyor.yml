@@ -1,32 +1,35 @@
-clone_depth: 1
-version: '{branch}-{build}'
 image: Visual Studio 2022
+version: 2023.1026.{build}
+pull_requests:
+  do_not_increment_build_number: true
+skip_tags: true
+clone_depth: 1
 cache:
-  - '%LOCALAPPDATA%\NuGet\v3-cache -> appveyor.yml'
-
+  - '%LOCALAPPDATA%\NuGet\v3-cache'
 dotnet_csproj:
   patch: true
-  file: 'osu.Game\osu.Game.csproj' # Use wildcard when it's able to exclude Xamarin projects
-  version: '0.0.{build}'
+  file: '**\*.csproj'
+  version: 2023.1026.0
+  file_version: 2023.1026.0
+build_script:
+- cmd: >-
+    dotnet build osu.Desktop -c Release -r win-x64
 
-before_build:
-  - cmd: dotnet --info # Useful when version mismatch between CI and local
-  - cmd: dotnet workload install maui-android # Change to `dotnet workload restore` once there's no old projects
-  - cmd: dotnet workload install maui-ios # Change to `dotnet workload restore` once there's no old projects
-  - cmd: nuget restore -verbosity quiet # Only nuget.exe knows both new (.NET Core) and old (Xamarin) projects
+    dotnet build osu.Desktop -c Release -r linux-x64
 
-build:
-  project: osu.sln
-  parallel: true
-  verbosity: minimal
-  publish_nuget: true
-
-after_build:
-  - ps: .\InspectCode.ps1
-
-test:
-  assemblies:
-    except:
-      - '**\*Android*'
-      - '**\*iOS*'
-      - 'build\**\*'
+    dotnet build osu.Desktop -c Release -r linux-arm
+test: off
+artifacts:
+- path: ./osu.Desktop/bin/Release/net6.0/win-x64
+  name: osu-windows
+- path: ./osu.Desktop/bin/Release/net6.0/linux-x64
+  name: osu-linux-x64
+- path: ./osu.Desktop/bin/Release/net6.0/linux-arm
+  name: osu-linux-arm
+deploy:
+- provider: GitHub
+  tag: 2023.1026.0
+  auth_token:
+    secure: EEbZ2OGaIPcjhGpQGzfE80TbrG14UiTPGNnQjMIKD5wzrYPQ4Kyhb3qLzMNahL1I
+  repository: PercyDan54/osu
+  artifact: osu-windows, osu-linux-x64, osu-linux-arm
