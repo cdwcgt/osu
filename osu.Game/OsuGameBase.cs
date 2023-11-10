@@ -254,7 +254,7 @@ namespace osu.Game
         [BackgroundDependencyLoader]
         private void load(ReadableKeyCombinationProvider keyCombinationProvider, FrameworkConfigManager frameworkConfig)
         {
-            VersionHash = "ccebd225999c37348891413d572c4600";
+            VersionHash = "36ff52f299ef567fc4f5722d0fa0bd41";
 
             Resources.AddStore(new DllResourceStore(OsuResources.ResourceAssembly));
 
@@ -398,6 +398,8 @@ namespace osu.Game
                     }
                 })
             });
+
+            base.Content.Add(new TouchInputInterceptor());
 
             KeyBindingStore = new RealmKeyBindingStore(realm, keyCombinationProvider);
             KeyBindingStore.Register(globalBindings, RulesetStore.AvailableRulesets);
@@ -569,14 +571,14 @@ namespace osu.Game
 
                     case JoystickHandler jh:
                         return new JoystickSettings(jh);
-
-                    case TouchHandler th:
-                        return new TouchSettings(th);
                 }
             }
 
             switch (handler)
             {
+                case TouchHandler th:
+                    return new TouchSettings(th);
+
                 case MidiHandler:
                     return new InputSection.HandlerSection(handler);
 

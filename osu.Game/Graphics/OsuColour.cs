@@ -162,7 +162,7 @@ namespace osu.Game.Graphics
                     return Pink1;
 
                 case ModType.System:
-                    return Gray7;
+                    return Yellow;
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(modType), modType, "Unknown mod type");
@@ -397,5 +397,7 @@ namespace osu.Game.Graphics
 
         public Color4 SpotlightColour => Green2;
         public Color4 FeaturedArtistColour => Blue2;
+
+        public Color4 DangerousButtonColour => Pink3;
     }
 }

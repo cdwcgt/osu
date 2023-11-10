@@ -425,7 +425,7 @@ namespace osu.Game.Screens.Edit
         {
             if (HasUnsavedChanges)
             {
-                dialogOverlay.Push(new SaveBeforeGameplayTestDialog(() =>
+                dialogOverlay.Push(new SaveRequiredPopupDialog("The beatmap will be saved in order to test it.", () =>
                 {
                     if (!Save()) return;
 
@@ -1018,25 +1018,36 @@ namespace osu.Game.Screens.Edit
         {
             var exportItems = new List<MenuItem>
             {
-                new EditorMenuItem(EditorStrings.ExportForEditing, MenuItemType.Standard, exportBeatmap) { Action = { Disabled = !RuntimeInfo.IsDesktop } },
-                new EditorMenuItem(EditorStrings.ExportForCompatibility, MenuItemType.Standard, exportLegacyBeatmap) { Action = { Disabled = !RuntimeInfo.IsDesktop } },
+                new EditorMenuItem(EditorStrings.ExportForEditing, MenuItemType.Standard, () => exportBeatmap(false)) { Action = { Disabled = !RuntimeInfo.IsDesktop } },
+                new EditorMenuItem(EditorStrings.ExportForCompatibility, MenuItemType.Standard, () => exportBeatmap(true)) { Action = { Disabled = !RuntimeInfo.IsDesktop } },
             };
 
             return new EditorMenuItem(CommonStrings.Export) { Items = exportItems };
         }
 
-        private void exportBeatmap()
+        private void exportBeatmap(bool legacy)
         {
-            if (!Save()) return;
+            if (HasUnsavedChanges)
+            {
+                dialogOverlay.Push(new SaveRequiredPopupDialog("The beatmap will be saved in order to export it.", () =>
+                {
+                    if (!Save()) return;
 
-            beatmapManager.Export(Beatmap.Value.BeatmapSetInfo);
-        }
+                    runExport();
+                }));
+            }
+            else
+            {
+                runExport();
+            }
 
-        private void exportLegacyBeatmap()
-        {
-            if (!Save()) return;
-
-            beatmapManager.ExportLegacy(Beatmap.Value.BeatmapSetInfo);
+            void runExport()
+            {
+                if (legacy)
+                    beatmapManager.ExportLegacy(Beatmap.Value.BeatmapSetInfo);
+                else
+                    beatmapManager.Export(Beatmap.Value.BeatmapSetInfo);
+            }
         }
 
         /// <summary>
@@ -1084,6 +1095,19 @@ namespace osu.Game.Screens.Edit
 
         protected void CreateNewDifficulty(RulesetInfo rulesetInfo)
         {
+            if (isNewBeatmap)
+            {
+                dialogOverlay.Push(new SaveRequiredPopupDialog("This beatmap will be saved in order to create another difficulty.", () =>
+                {
+                    if (!Save())
+                        return;
+
+                    CreateNewDifficulty(rulesetInfo);
+                }));
+
+                return;
+            }
+
             if (!rulesetInfo.Equals(editorBeatmap.BeatmapInfo.Ruleset))
             {
                 switchToNewDifficulty(rulesetInfo, false);

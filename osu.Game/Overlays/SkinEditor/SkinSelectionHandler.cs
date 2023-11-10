@@ -135,7 +135,7 @@ namespace osu.Game.Overlays.SkinEditor
             {
                 var drawableItem = (Drawable)b.Item;
 
-                var flippedPosition = GeometryUtils.GetFlippedPosition(direction, flipOverOrigin ? drawableItem.Parent.ScreenSpaceDrawQuad : selectionQuad, b.ScreenSpaceSelectionPoint);
+                var flippedPosition = GeometryUtils.GetFlippedPosition(direction, flipOverOrigin ? drawableItem.Parent!.ScreenSpaceDrawQuad : selectionQuad, b.ScreenSpaceSelectionPoint);
 
                 updateDrawablePosition(drawableItem, flippedPosition);
 
@@ -198,10 +198,24 @@ namespace osu.Game.Overlays.SkinEditor
                 Items = createAnchorItems((d, o) => ((Drawable)d).Origin == o, applyOrigins).ToArray()
             };
 
+            yield return new EditorMenuItemSpacer();
+
             yield return new OsuMenuItem("Reset position", MenuItemType.Standard, () =>
             {
                 foreach (var blueprint in SelectedBlueprints)
                     ((Drawable)blueprint.Item).Position = Vector2.Zero;
+            });
+
+            yield return new OsuMenuItem("Reset rotation", MenuItemType.Standard, () =>
+            {
+                foreach (var blueprint in SelectedBlueprints)
+                    ((Drawable)blueprint.Item).Rotation = 0;
+            });
+
+            yield return new OsuMenuItem("Reset scale", MenuItemType.Standard, () =>
+            {
+                foreach (var blueprint in SelectedBlueprints)
+                    ((Drawable)blueprint.Item).Scale = Vector2.One;
             });
 
             yield return new EditorMenuItemSpacer();
@@ -242,7 +256,7 @@ namespace osu.Game.Overlays.SkinEditor
         private static void updateDrawablePosition(Drawable drawable, Vector2 screenSpacePosition)
         {
             drawable.Position =
-                drawable.Parent.ToLocalSpace(screenSpacePosition) - drawable.AnchorPosition;
+                drawable.Parent!.ToLocalSpace(screenSpacePosition) - drawable.AnchorPosition;
         }
 
         private void applyOrigins(Anchor origin)

@@ -55,6 +55,13 @@ namespace osu.Game.Rulesets.Scoring
         [Order(1)]
         Great,
 
+        /// <summary>
+        /// This is an optional timing window tighter than <see cref="Great"/>.
+        /// </summary>
+        /// <remarks>
+        /// By default, this does not give any bonus accuracy or score.
+        /// To have it affect scoring, consider adding a nested bonus object.
+        /// </remarks>
         [Description(@"Perfect")]
         [EnumMember(Value = "perfect")]
         [Order(0)]
@@ -342,6 +349,9 @@ namespace osu.Game.Rulesets.Scoring
 
             if (maxResult.IsBonus() && minResult != HitResult.IgnoreMiss)
                 throw new ArgumentOutOfRangeException(nameof(minResult), $"{HitResult.IgnoreMiss} is the only valid minimum result for a {maxResult} judgement.");
+
+            if (minResult == HitResult.IgnoreMiss)
+                return;
 
             if (maxResult == HitResult.LargeTickHit && minResult != HitResult.LargeTickMiss)
                 throw new ArgumentOutOfRangeException(nameof(minResult), $"{HitResult.LargeTickMiss} is the only valid minimum result for a {maxResult} judgement.");
