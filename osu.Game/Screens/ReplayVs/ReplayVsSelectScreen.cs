@@ -1,8 +1,6 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-#nullable disable
-
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,6 +10,7 @@ using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Graphics.Sprites;
 using osu.Framework.Screens;
 using osu.Game.Beatmaps;
 using osu.Game.Graphics;
@@ -29,13 +28,13 @@ namespace osu.Game.Screens.ReplayVs
 {
     public partial class ReplayVsSelectScreen : OsuScreen
     {
-        private TeamContainer teamRedContainer;
-        private TeamContainer teamBlueContainer;
-        private OsuSpriteText errorText;
-        private DatabasedLegacyScoreDecoder decoder;
+        private TeamContainer teamRedContainer = null!;
+        private TeamContainer teamBlueContainer = null!;
+        private OsuSpriteText errorText = null!;
+        private DatabasedLegacyScoreDecoder decoder = null!;
 
         [Resolved]
-        private BeatmapManager beatmapManager { get; set; }
+        private BeatmapManager beatmapManager { get; set; } = null!;
 
         [BackgroundDependencyLoader]
         private void load(OsuColour colours, RulesetStore rulesetStore)
@@ -94,28 +93,12 @@ namespace osu.Game.Screens.ReplayVs
             };
         }
 
-        private partial class BasicOsuButton : OsuButton
-        {
-        }
-
         private partial class TeamContainer : Container
         {
             private readonly string name;
             private readonly ColourInfo colour;
-            private int index = 1;
-
-            private LabelledFileChooser newFileChooser => new LabelledFileChooser(".osr")
-            {
-                Width = 0.8f,
-                Anchor = Anchor.Centre,
-                Origin = Anchor.Centre,
-                FixedLabelWidth = 60,
-                Label = index.ToString(),
-                Text = "Click to select a replay",
-                TabbableContentContainer = this
-            };
-
-            private FillFlowContainer flowContainer;
+            private int index;
+            private FillFlowContainer<LabelledFileChooser> flowContainer = null!;
 
             public TeamContainer(string name, ColourInfo colour)
             {
@@ -143,7 +126,7 @@ namespace osu.Game.Screens.ReplayVs
                         Origin = Anchor.Centre,
                         Size = new Vector2(1, 0.8f),
                         Y = 20f,
-                        Child = flowContainer = new FillFlowContainer
+                        Child = flowContainer = new FillFlowContainer<LabelledFileChooser>
                         {
                             RelativeSizeAxes = Axes.X,
                             AutoSizeAxes = Axes.Y,
@@ -159,10 +142,9 @@ namespace osu.Game.Screens.ReplayVs
                         Anchor = Anchor.TopCentre,
                         Origin = Anchor.TopCentre
                     },
-                    new BasicOsuButton
+                    new IconButton
                     {
-                        Text = "+",
-                        Size = new Vector2(30),
+                        Icon = FontAwesome.Solid.PlusCircle,
                         Action = addFileChooser,
                         Anchor = Anchor.TopCentre,
                         Origin = Anchor.TopCentre,
@@ -179,15 +161,29 @@ namespace osu.Game.Screens.ReplayVs
 
             private void addFileChooser()
             {
-                var fileChooser = newFileChooser;
+                var fileChooser = new LabelledFileChooser(".osr")
+                {
+                    Width = 0.8f,
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    FixedLabelWidth = 60,
+                    Label = (++index).ToString(),
+                    Text = "Click to select a replay",
+                    TabbableContentContainer = this
+                };
+                fileChooser.Current.BindValueChanged(f =>
+                {
+                    if (f.NewValue != null)
+                    {
+                        fileChooser.Text = f.NewValue.Name;
+                    }
+                });
                 flowContainer.Add(fileChooser);
-                index++;
             }
 
             public string[] Files => flowContainer.Children
-                                                  .Cast<LabelledFileChooser>()
-                                                  .Where(f => f.Current.Value?.FullName != string.Empty)
-                                                  .Select(f => f.Current.Value?.FullName)
+                                                  .Where(f => f.Current.Value != null)
+                                                  .Select(f => f.Current.Value!.FullName)
                                                   .ToArray();
         }
 
@@ -196,9 +192,9 @@ namespace osu.Game.Screens.ReplayVs
             string[] teamRedFiles = teamRedContainer.Files;
             string[] teamBlueFiles = teamBlueContainer.Files;
 
-            if (teamRedFiles.Length == 0 || teamBlueFiles.Length == 0)
+            if (teamRedFiles.Length + teamBlueFiles.Length == 0)
             {
-                showError("Select at least one replay for each team");
+                showError("Select at least one replay");
                 return;
             }
 
@@ -207,23 +203,22 @@ namespace osu.Game.Screens.ReplayVs
 
             try
             {
-                teamRedScores.Add(parseReplay(teamRedFiles[0]));
-                var beatmapInfo = teamRedScores[0].ScoreInfo.BeatmapInfo;
+                string firstScoreFile = teamRedFiles.Length > 0 ? teamRedFiles[0] : teamBlueFiles[0];
+                var firstScore = parseReplay(firstScoreFile);
+                var beatmapInfo = firstScore.ScoreInfo.BeatmapInfo;
                 var beatmap = beatmapManager.GetWorkingBeatmap(beatmapInfo);
 
-                for (int i = 1; i < teamRedFiles.Length; i++)
+                foreach (string file in teamRedFiles)
                 {
-                    string file = teamRedFiles[i];
                     var score = parseReplay(file);
-                    if (score.ScoreInfo.BeatmapInfo.Equals(beatmapInfo))
+                    if (score.ScoreInfo.BeatmapInfo!.Equals(beatmapInfo))
                         teamRedScores.Add(score);
                 }
 
-                for (int i = 0; i < teamBlueFiles.Length; i++)
+                foreach (string file in teamBlueFiles)
                 {
-                    string file = teamBlueFiles[i];
                     var score = parseReplay(file);
-                    if (score.ScoreInfo.BeatmapInfo.Equals(beatmapInfo))
+                    if (score.ScoreInfo.BeatmapInfo!.Equals(beatmapInfo))
                         teamBlueScores.Add(score);
                 }
 
@@ -238,7 +233,7 @@ namespace osu.Game.Screens.ReplayVs
         private void showError(string error)
         {
             errorText.Text = error;
-            errorText.FadeIn().Then().ScaleTo(1.05f, 100, Easing.Out).Then().ScaleTo(1f, 50f);
+            errorText.FadeIn().ScaleTo(1.05f, 100, Easing.Out).Then().ScaleTo(1f, 50f);
         }
 
         private Score parseReplay(string path)

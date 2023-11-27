@@ -1,9 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-#nullable disable
-
-using JetBrains.Annotations;
+using System.Threading;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Graphics;
@@ -28,7 +26,7 @@ namespace osu.Game.Screens.ReplayVs
 
         private readonly AudioAdjustments clockAdjustmentsFromMods = new AudioAdjustments();
 
-        public ReplayVsPlayer([NotNull] Score score, [NotNull] SpectatorPlayerClock spectatorPlayerClock, ColourInfo teamColor)
+        public ReplayVsPlayer(Score score, SpectatorPlayerClock spectatorPlayerClock, ColourInfo teamColor)
             : base(new PlayerConfiguration { AllowUserInteraction = false })
         {
             this.spectatorPlayerClock = spectatorPlayerClock;
@@ -37,8 +35,12 @@ namespace osu.Game.Screens.ReplayVs
         }
 
         [BackgroundDependencyLoader]
-        private void load()
+        private void load(CancellationToken cancellationToken)
         {
+            // HUD overlay may not be loaded if load has been cancelled early.
+            if (cancellationToken.IsCancellationRequested)
+                return;
+
             HUDOverlay.PlayerSettingsOverlay.Expire();
             HUDOverlay.HoldToQuit.Expire();
 

@@ -33,7 +33,7 @@ namespace osu.Game.Screens.ReplayVs
         /// <summary>
         /// Whether all spectating players have finished loading.
         /// </summary>
-        public bool AllPlayersLoaded => instances.All(p => p?.PlayerLoaded == true);
+        public bool AllPlayersLoaded => instances.All(p => p.PlayerLoaded == true);
 
         [Resolved]
         private OsuColour colours { get; set; } = null!;
@@ -104,21 +104,26 @@ namespace osu.Game.Screens.ReplayVs
                 }
             };
 
+            bool singleTeam = teamBlueScores.Length == 0 || teamRedScores.Length == 0;
+
             for (int i = 0; i < teamRedScores.Length; i++)
             {
-                grid.Add(instances[i] = new PlayerArea(-1, syncManager.CreateManagedClock(), true, colours.Red));
+                grid.Add(instances[i] = new PlayerArea(-1, syncManager.CreateManagedClock(), true, singleTeam ? Colour4.White : colours.Red));
             }
 
             for (int i = teamRedScores.Length; i < replayCount; i++)
             {
-                grid.Add(instances[i] = new PlayerArea(-1, syncManager.CreateManagedClock(), true, colours.Blue));
+                grid.Add(instances[i] = new PlayerArea(-1, syncManager.CreateManagedClock(), true, singleTeam ? Colour4.White : colours.Blue));
             }
 
-            LoadComponentAsync(new MatchScoreDisplay
+            if (!singleTeam)
             {
-                Team1Score = { BindTarget = teamRedScore },
-                Team2Score = { BindTarget = teamBlueScore },
-            }, scoreDisplayContainer.Add);
+                LoadComponentAsync(new MatchScoreDisplay
+                {
+                    Team1Score = { BindTarget = teamRedScore },
+                    Team2Score = { BindTarget = teamBlueScore },
+                }, scoreDisplayContainer.Add);
+            }
 
             base.LoadComplete();
 

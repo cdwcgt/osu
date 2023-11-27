@@ -1,10 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-#nullable disable
-
 using System;
-using JetBrains.Annotations;
 using osu.Framework.Allocation;
 using osu.Framework.Screens;
 using osu.Game.Scoring;
@@ -21,7 +18,7 @@ namespace osu.Game.Screens.ReplayVs
     {
         public readonly ScoreInfo Score;
 
-        public ReplayVsPlayerLoader([NotNull] Score score, [NotNull] Func<ReplayVsPlayer> createPlayer)
+        public ReplayVsPlayerLoader(Score score, Func<ReplayVsPlayer> createPlayer)
             : base(createPlayer)
         {
             if (score.Replay == null)
