@@ -27,7 +27,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
 
             path = new SliderPath(new[]
             {
-                new PathControlPoint(StartPos, PathType.Linear),
+                new PathControlPoint(StartPos, PathType.LINEAR),
                 new PathControlPoint(midP),
                 new PathControlPoint(EndPos)
             });
