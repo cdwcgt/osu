@@ -12,6 +12,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
+using osu.Framework.Screens;
 using osu.Game.Beatmaps;
 using osu.Game.Input.Bindings;
 using osu.Game.IO.Archives;
@@ -61,6 +62,11 @@ namespace osu.Game.Screens.Play
         protected override void PrepareReplay()
         {
             DrawableRuleset?.SetReplayScore(Score);
+        }
+
+        public override void OnEntering(ScreenTransitionEvent e)
+        {
+            base.OnEntering(e);
 
             if (SaveScore)
             {

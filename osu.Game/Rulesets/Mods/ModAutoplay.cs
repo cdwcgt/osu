@@ -14,7 +14,7 @@ using osu.Game.Screens.Play;
 
 namespace osu.Game.Rulesets.Mods
 {
-    public abstract class ModAutoplay : Mod, ICreateReplayData
+    public abstract class ModAutoplay : Mod, ICreateReplayData, IApplicableToPlayer
     {
         public override string Name => "Autoplay";
         public override string Acronym => "AT";
