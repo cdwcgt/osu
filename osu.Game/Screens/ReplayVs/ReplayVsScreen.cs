@@ -2,11 +2,11 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Bindables;
-using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Screens;
@@ -75,9 +75,13 @@ namespace osu.Game.Screens.ReplayVs
                 masterClockContainer.WithChild(new GridContainer
                 {
                     RelativeSizeAxes = Axes.Both,
-                    RowDimensions = new[] { new Dimension(GridSizeMode.AutoSize) },
+                    RowDimensions = new[] { new Dimension(), new Dimension(GridSizeMode.AutoSize) },
                     Content = new[]
                     {
+                        new Drawable[]
+                        {
+                            grid = new PlayerGrid { RelativeSizeAxes = Axes.Both }
+                        },
                         new Drawable[]
                         {
                             scoreDisplayContainer = new Container
@@ -85,10 +89,6 @@ namespace osu.Game.Screens.ReplayVs
                                 RelativeSizeAxes = Axes.X,
                                 AutoSizeAxes = Axes.Y
                             },
-                        },
-                        new Drawable[]
-                        {
-                            grid = new PlayerGrid { RelativeSizeAxes = Axes.Both }
                         },
                     }
                 }),
@@ -138,6 +138,8 @@ namespace osu.Game.Screens.ReplayVs
             {
                 instances[i + teamRedScores.Length].LoadScore(teamBlueScores[i]);
             }
+
+            bindAudioAdjustments(instances.First());
         }
 
         private void bindAudioAdjustments(PlayerArea first)
@@ -167,22 +169,22 @@ namespace osu.Game.Screens.ReplayVs
 
             if (!AllPlayersLoaded) return;
 
-            int team1Score = 0;
-            int team2Score = 0;
+            long team1Score = 0;
+            long team2Score = 0;
 
             for (int i = 0; i < teamRedScores.Length; i++)
             {
-                if (instances[i].Player?.ScoreProcessor != null)
+                if (instances[i].Player != null)
                 {
-                    team1Score += Convert.ToInt32(instances[i].Player?.ScoreProcessor.TotalScore.Value);
+                    team1Score += instances[i].Player!.ScoreProcessor.TotalScore.Value;
                 }
             }
 
             for (int i = teamRedScores.Length; i < replayCount; i++)
             {
-                if (instances[i].Player?.ScoreProcessor != null)
+                if (instances[i].Player != null)
                 {
-                    team2Score += Convert.ToInt32(instances[i].Player?.ScoreProcessor.TotalScore.Value);
+                    team2Score += instances[i].Player!.ScoreProcessor.TotalScore.Value;
                 }
             }
 
@@ -195,13 +197,26 @@ namespace osu.Game.Screens.ReplayVs
 
         private void performInitialSeek()
         {
-            // Seek the master clock to the gameplay time.
-            // This is chosen as the first available frame in the players' replays, which matches the seek by each individual SpectatorPlayer.
-            double startTime = instances.Where(i => i.Score != null)
-                                        .SelectMany(i => i.Score.AsNonNull().Replay.Frames)
-                                        .Select(f => f.Time)
-                                        .DefaultIfEmpty(0)
-                                        .Min();
+            // We want to start showing gameplay as soon as possible.
+            // Each client may be in a different place in the beatmap, so we need to do our best to find a common
+            // starting point.
+            //
+            // Preferring a lower value ensures that we don't have some clients stuttering to keep up.
+            List<double> minFrameTimes = new List<double>();
+
+            foreach (var instance in instances)
+            {
+                if (instance.Score == null)
+                    continue;
+
+                minFrameTimes.Add(instance.Score.Replay.Frames.MinBy(f => f.Time)?.Time ?? 0);
+            }
+
+            // Remove any outliers (only need to worry about removing those lower than the mean since we will take a Min() after).
+            double mean = minFrameTimes.Average();
+            minFrameTimes.RemoveAll(t => mean - t > 1000);
+
+            double startTime = minFrameTimes.Min() - 1000;
 
             masterClockContainer.Reset(startTime, true);
         }
