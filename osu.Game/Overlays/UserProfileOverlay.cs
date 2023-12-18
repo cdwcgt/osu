@@ -4,6 +4,7 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.ObjectExtensions;
@@ -12,6 +13,8 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
+using osu.Framework.Localisation;
+using osu.Game.Database;
 using osu.Game.Extensions;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
@@ -24,6 +27,7 @@ using osu.Game.Online.API.Requests;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Overlays.Profile;
 using osu.Game.Overlays.Profile.Sections;
+using osu.Game.Resources.Localisation.Web;
 using osu.Game.Rulesets;
 using osu.Game.Users;
 using osuTK;
@@ -37,6 +41,7 @@ namespace osu.Game.Overlays
 
         private readonly OnlineViewContainer onlineViewContainer;
         private readonly LoadingLayer loadingLayer;
+        private readonly Container notFoundContainer;
 
         private ProfileSection? lastSection;
         private ProfileSection[]? sections;
@@ -60,6 +65,52 @@ namespace osu.Game.Overlays
                 onlineViewContainer = new OnlineViewContainer($"Sign in to view the {Header.Title.Title}")
                 {
                     RelativeSizeAxes = Axes.Both
+                },
+                notFoundContainer = new Container
+                {
+                    Margin = new MarginPadding { Top = OverlayTitle.ICON_SIZE + 25 },
+                    RelativeSizeAxes = Axes.Both,
+                    Alpha = 0,
+                    Children = new Drawable[]
+                    {
+                        new Box
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Colour = BackgroundColour
+                        },
+                        new FillFlowContainer
+                        {
+                            Margin = new MarginPadding { Left = 30 },
+                            RelativeSizeAxes = Axes.Both,
+                            Direction = FillDirection.Vertical,
+                            Children = new Drawable[]
+                            {
+                                new OsuSpriteText
+                                {
+                                    Text = UsersStrings.ShowNotFoundTitle,
+                                    Font = OsuFont.GetFont(size: 30),
+                                    Margin = new MarginPadding { Bottom = 20 }
+                                },
+                                new OsuSpriteText
+                                {
+                                    Text = UsersStrings.ShowNotFoundReasonHeader,
+                                    Margin = new MarginPadding { Bottom = 10 }
+                                },
+                                new OsuSpriteText
+                                {
+                                    Text = LocalisableString.Interpolate($"● {UsersStrings.ShowNotFoundReason1}")
+                                },
+                                new OsuSpriteText
+                                {
+                                    Text = LocalisableString.Interpolate($"● {UsersStrings.ShowNotFoundReason2}")
+                                },
+                                new OsuSpriteText
+                                {
+                                    Text = LocalisableString.Interpolate($"● {UsersStrings.ShowNotFoundReason3}")
+                                }
+                            }
+                        }
+                    }
                 },
                 loadingLayer = new LoadingLayer(true)
             });
@@ -105,6 +156,8 @@ namespace osu.Game.Overlays
             userReq?.Cancel();
             Clear();
             lastSection = null;
+
+            notFoundContainer.Hide();
 
             sections = !user.IsBot
                 ? new ProfileSection[]
@@ -175,6 +228,14 @@ namespace osu.Game.Overlays
                 userReq = user.OnlineID > 1 ? new GetUserRequest(user.OnlineID, ruleset) : new GetUserRequest(user.Username, ruleset);
                 userReq.Success += u => userLoadComplete(u, ruleset);
 
+                userReq.Failure += exception =>
+                {
+                    if (exception.InnerException is WebException apiException && apiException.Message == @"NotFound")
+                    {
+                        showNotFound();
+                    }
+                };
+
                 API.Queue(userReq);
                 loadingLayer.Show();
             }
@@ -206,6 +267,12 @@ namespace osu.Game.Overlays
             }
 
             loadingLayer.Hide();
+        }
+
+        private void showNotFound()
+        {
+            loadingLayer.Hide();
+            notFoundContainer.Show();
         }
 
         private partial class ProfileSectionTabControl : OsuTabControl<ProfileSection>
