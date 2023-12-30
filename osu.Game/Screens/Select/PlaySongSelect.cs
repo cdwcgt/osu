@@ -108,12 +108,16 @@ namespace osu.Game.Screens.Select
                     return false;
                 }
 
-                var mods = Mods.Value.Append(autoInstance).ToArray();
+                // PATCH: ModUtils.CheckCompatibleSet compares mod settings
+                if (Mods.Value.All(m => m.GetType() != autoInstance.GetType()))
+                {
+                    var mods = Mods.Value.Append(autoInstance).ToArray();
 
-                if (!ModUtils.CheckCompatibleSet(mods, out var invalid))
-                    mods = mods.Except(invalid).Append(autoInstance).ToArray();
+                    if (!ModUtils.CheckCompatibleSet(mods, out var invalid))
+                        mods = mods.Except(invalid).Append(autoInstance).ToArray();
 
-                Mods.Value = mods;
+                    Mods.Value = mods;
+                }
             }
 
             SampleConfirm?.Play();
