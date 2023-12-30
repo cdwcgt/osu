@@ -201,6 +201,8 @@ namespace osu.Game
 
         private RulesetConfigCache rulesetConfigCache;
 
+        private SessionAverageHitErrorTracker hitErrorTracker;
+
         protected SpectatorClient SpectatorClient { get; private set; }
 
         protected MultiplayerClient MultiplayerClient { get; private set; }
@@ -254,7 +256,7 @@ namespace osu.Game
         [BackgroundDependencyLoader]
         private void load(ReadableKeyCombinationProvider keyCombinationProvider, FrameworkConfigManager frameworkConfig)
         {
-            VersionHash = "ca7eee5e62a7e05a2361570cc9a6dcbd";
+            VersionHash = "fc03416f6dd857e98af54e00946b9b4c";
 
             Resources.AddStore(new DllResourceStore(OsuResources.ResourceAssembly));
 
@@ -341,6 +343,7 @@ namespace osu.Game
                 dependencies.CacheAs(powerStatus);
 
             dependencies.Cache(SessionStatics = new SessionStatics());
+            dependencies.Cache(hitErrorTracker = new SessionAverageHitErrorTracker());
             dependencies.Cache(Colours = new OsuColour());
 
             RegisterImportHandler(BeatmapManager);
@@ -400,6 +403,7 @@ namespace osu.Game
             });
 
             base.Content.Add(new TouchInputInterceptor());
+            base.Content.Add(hitErrorTracker);
 
             KeyBindingStore = new RealmKeyBindingStore(realm, keyCombinationProvider);
             KeyBindingStore.Register(globalBindings, RulesetStore.AvailableRulesets);
@@ -470,7 +474,7 @@ namespace osu.Game
             AddFont(Resources, @"Fonts/Venera/Venera-Bold");
             AddFont(Resources, @"Fonts/Venera/Venera-Black");
 
-            Fonts.AddStore(new HexaconsIcons.HexaconsStore(Textures));
+            Fonts.AddStore(new OsuIcon.OsuIconStore(Textures));
         }
 
         protected override IReadOnlyDependencyContainer CreateChildDependencies(IReadOnlyDependencyContainer parent) =>
@@ -521,14 +525,21 @@ namespace osu.Game
             {
                 ManualResetEventSlim readyToRun = new ManualResetEventSlim();
 
+                bool success = false;
+
                 Scheduler.Add(() =>
                 {
-                    realmBlocker = realm.BlockAllOperations("migration");
+                    try
+                    {
+                        realmBlocker = realm.BlockAllOperations("migration");
+                        success = true;
+                    }
+                    catch { }
 
                     readyToRun.Set();
                 }, false);
 
-                if (!readyToRun.Wait(30000))
+                if (!readyToRun.Wait(30000) || !success)
                     throw new TimeoutException("Attempting to block for migration took too long.");
 
                 bool? cleanupSucceded = (Storage as OsuStorage)?.Migrate(Host.GetStorage(path));
