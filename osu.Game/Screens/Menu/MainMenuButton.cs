@@ -1,8 +1,6 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-#nullable disable
-
 using System;
 using System.Linq;
 using osu.Framework;
@@ -33,7 +31,7 @@ namespace osu.Game.Screens.Menu
     /// </summary>
     public partial class MainMenuButton : BeatSyncedContainer, IStateful<ButtonState>
     {
-        public event Action<ButtonState> StateChanged;
+        public event Action<ButtonState>? StateChanged;
 
         public readonly Key[] TriggerKeys;
 
@@ -44,17 +42,28 @@ namespace osu.Game.Screens.Menu
         private readonly string sampleName;
 
         /// <summary>
-        /// The menu state for which we are visible for.
+        /// The menu state for which we are visible for (assuming only one).
         /// </summary>
-        public ButtonSystemState VisibleState = ButtonSystemState.TopLevel;
+        public ButtonSystemState VisibleState
+        {
+            set
+            {
+                VisibleStateMin = value;
+                VisibleStateMax = value;
+            }
+        }
 
-        private readonly Action clickAction;
-        private Sample sampleClick;
-        private Sample sampleHover;
+        public ButtonSystemState VisibleStateMin = ButtonSystemState.TopLevel;
+        public ButtonSystemState VisibleStateMax = ButtonSystemState.TopLevel;
+
+        private readonly Action? clickAction;
+        private Sample? sampleClick;
+        private Sample? sampleHover;
+        private SampleChannel? sampleChannel;
 
         public override bool ReceivePositionalInputAt(Vector2 screenSpacePos) => box.ReceivePositionalInputAt(screenSpacePos);
 
-        public MainMenuButton(LocalisableString text, string sampleName, IconUsage symbol, Color4 colour, Action clickAction = null, float extraWidth = 0, params Key[] triggerKeys)
+        public MainMenuButton(LocalisableString text, string sampleName, IconUsage symbol, Color4 colour, Action? clickAction = null, float extraWidth = 0, params Key[] triggerKeys)
         {
             this.sampleName = sampleName;
             this.clickAction = clickAction;
@@ -225,7 +234,8 @@ namespace osu.Game.Screens.Menu
 
         private void trigger()
         {
-            sampleClick?.Play();
+            sampleChannel = sampleClick?.GetChannel();
+            sampleChannel?.Play();
 
             clickAction?.Invoke();
 
@@ -236,6 +246,8 @@ namespace osu.Game.Screens.Menu
 
         public override bool HandleNonPositionalInput => state == ButtonState.Expanded;
         public override bool HandlePositionalInput => state != ButtonState.Exploded && box.Scale.X >= 0.8f;
+
+        public void StopSamplePlayback() => sampleChannel?.Stop();
 
         protected override void Update()
         {
@@ -311,9 +323,9 @@ namespace osu.Game.Screens.Menu
                         break;
 
                     default:
-                        if (value == VisibleState)
+                        if (value <= VisibleStateMax && value >= VisibleStateMin)
                             State = ButtonState.Expanded;
-                        else if (value < VisibleState)
+                        else if (value < VisibleStateMin)
                             State = ButtonState.Contracted;
                         else
                             State = ButtonState.Exploded;
