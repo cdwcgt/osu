@@ -20,7 +20,7 @@ using osuTK.Input;
 
 namespace osu.Game.Tournament.Screens.MapPool
 {
-    public partial class MapPoolScreen : TournamentMatchScreen
+    public partial class MapPoolScreen : BeatmapInfoScreen
     {
         private FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>> mapFlows = null!;
 
@@ -103,6 +103,11 @@ namespace osu.Game.Tournament.Screens.MapPool
                         {
                             LabelText = "Split display by mods",
                             Current = LadderInfo.SplitMapPoolByMods,
+                        },
+                        new ControlPanel.Spacer(),
+                        new MatchRoundNameTextBox
+                        {
+                            RelativeSizeAxes = Axes.X,
                         },
                     },
                 }
@@ -292,7 +297,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                         flowCount = 1;
                     }
 
-                    currentFlow.Add(new TournamentBeatmapPanel(b.Beatmap, b.Mods)
+                    currentFlow.Add(new TournamentBeatmapPanel(b.Beatmap, b.Mods, 10)
                     {
                         Anchor = Anchor.TopCentre,
                         Origin = Anchor.TopCentre,

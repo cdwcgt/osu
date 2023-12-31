@@ -8,6 +8,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Localisation;
 using osu.Game.Beatmaps;
@@ -30,13 +31,14 @@ namespace osu.Game.Tournament.Components
 
         private Box flash = null!;
 
-        public TournamentBeatmapPanel(IBeatmapInfo? beatmap, string mod = "")
+        public TournamentBeatmapPanel(IBeatmapInfo? beatmap, string mod = "", float cornerRadius = 0)
         {
             Beatmap = beatmap;
             this.mod = mod;
 
             Width = 400;
             Height = HEIGHT;
+            CornerRadius = cornerRadius;
         }
 
         [BackgroundDependencyLoader]
@@ -168,6 +170,18 @@ namespace osu.Game.Tournament.Components
                 {
                     case ChoiceType.Pick:
                         Colour = Color4.White;
+
+                        if (CornerRadius > 0)
+                        {
+                            EdgeEffect = new EdgeEffectParameters
+                            {
+                                Type = EdgeEffectType.Glow,
+                                Colour = BorderColour,
+                                Hollow = true,
+                                Radius = 15
+                            };
+                        }
+
                         Alpha = 1;
                         break;
 
@@ -179,6 +193,7 @@ namespace osu.Game.Tournament.Components
             }
             else
             {
+                EdgeEffect = new EdgeEffectParameters();
                 Colour = Color4.White;
                 BorderThickness = 0;
                 Alpha = 1;

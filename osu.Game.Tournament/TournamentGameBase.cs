@@ -100,7 +100,7 @@ namespace osu.Game.Tournament
                     using (Stream stream = storage.GetStream(BRACKET_FILENAME, FileAccess.Read, FileMode.Open))
                     using (var sr = new StreamReader(stream))
                     {
-                        ladder = JsonConvert.DeserializeObject<LadderInfo>(await sr.ReadToEndAsync().ConfigureAwait(false), new JsonPointConverter()) ?? ladder;
+                        ladder = JsonConvert.DeserializeObject<LadderInfo>(await sr.ReadToEndAsync().ConfigureAwait(false), new JsonPointConverter(), new JsonColour4Converter()) ?? ladder;
                     }
                 }
 
@@ -357,7 +357,7 @@ namespace osu.Game.Tournament
                     Formatting = Formatting.Indented,
                     NullValueHandling = NullValueHandling.Ignore,
                     DefaultValueHandling = DefaultValueHandling.Ignore,
-                    Converters = new JsonConverter[] { new JsonPointConverter() }
+                    Converters = new JsonConverter[] { new JsonPointConverter(), new JsonColour4Converter() }
                 });
         }
 

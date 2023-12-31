@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -12,8 +13,11 @@ using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Legacy;
 using osu.Game.Extensions;
 using osu.Game.Graphics;
+using osu.Game.Online.API;
+using osu.Game.Online.API.Requests;
 using osu.Game.Rulesets;
 using osu.Game.Screens.Menu;
+using osu.Game.Tournament.Models;
 using osuTK;
 using osuTK.Graphics;
 
@@ -39,6 +43,9 @@ namespace osu.Game.Tournament.Components
                 refreshContent();
             }
         }
+
+        [Resolved]
+        private IAPIProvider api { get; set; } = null!;
 
         private LegacyMods mods;
 
@@ -107,29 +114,71 @@ namespace osu.Game.Tournament.Components
                 return;
             }
 
-            double bpm = beatmap.BPM;
+            var req = new GetBeatmapAttributesRequest(beatmap.OnlineID, ((int)mods).ToString(), ruleset.Value.ShortName);
+            req.Success += res =>
+            {
+                ((TournamentBeatmap)beatmap).StarRating = res.Attributes.StarRating;
+                Schedule(postUpdate);
+            };
+            req.Failure += _ =>
+            {
+                Schedule(postUpdate);
+            };
+            api.Queue(req);
+        }
+
+        private void postUpdate()
+        {
+            double bpm = beatmap!.BPM;
             double length = beatmap.Length;
             string hardRockExtra = "";
             string srExtra = "";
 
             float ar = beatmap.Difficulty.ApproachRate;
+            float cs = beatmap.Difficulty.CircleSize;
+            float od = beatmap.Difficulty.OverallDifficulty;
+            float hp = beatmap.Difficulty.DrainRate;
+
+            if ((mods & LegacyMods.Easy) > 0)
+            {
+                cs /= 2;
+                ar /= 2;
+                od /= 2;
+                hp /= 2;
+                hardRockExtra = "*";
+            }
 
             if ((mods & LegacyMods.HardRock) > 0)
             {
+                cs = MathF.Min(cs * 1.3f, 10);
+                ar = MathF.Min(ar * 1.4f, 10);
+                od = MathF.Min(od * 1.4f, 10);
+                hp = MathF.Min(hp * 1.4f, 10);
                 hardRockExtra = "*";
-                srExtra = "*";
             }
+
+            double preempt = (int)IBeatmapDifficultyInfo.DifficultyRange(ar, 1800, 1200, 450);
+            double hitWindow = (int)IBeatmapDifficultyInfo.DifficultyRange(od, 80, 50, 20);
 
             if ((mods & LegacyMods.DoubleTime) > 0)
             {
-                // temporary local calculation (taken from OsuDifficultyCalculator)
-                double preempt = (int)IBeatmapDifficultyInfo.DifficultyRange(ar, 1800, 1200, 450) / 1.5;
-                ar = (float)(preempt > 1200 ? (1800 - preempt) / 120 : (1200 - preempt) / 150 + 5);
-
+                preempt /= 1.5;
+                hitWindow /= 1.5;
                 bpm *= 1.5f;
                 length /= 1.5f;
-                srExtra = "*";
             }
+
+            if ((mods & LegacyMods.HalfTime) > 0)
+            {
+                preempt /= 0.75;
+                hitWindow /= 0.75;
+                bpm *= 0.75f;
+                length /= 0.75f;
+            }
+
+            // temporary local calculation (taken from OsuDifficultyCalculator)
+            ar = (float)(preempt > 1200 ? (1800 - preempt) / 120 : (1200 - preempt) / 150 + 5);
+            od = (float)((80 - hitWindow) / 6);
 
             (string heading, string content)[] stats;
 
@@ -138,9 +187,9 @@ namespace osu.Game.Tournament.Components
                 default:
                     stats = new (string heading, string content)[]
                     {
-                        ("CS", $"{beatmap.Difficulty.CircleSize:0.#}{hardRockExtra}"),
-                        ("AR", $"{ar:0.#}{hardRockExtra}"),
-                        ("OD", $"{beatmap.Difficulty.OverallDifficulty:0.#}{hardRockExtra}"),
+                        ("圆圈大小", $"{cs:0.#}{hardRockExtra}"),
+                        ("缩圈速度", $"{ar:0.#}{hardRockExtra}"),
+                        ("准度要求", $"{od:0.#}{hardRockExtra}"),
                     };
                     break;
 
@@ -148,16 +197,16 @@ namespace osu.Game.Tournament.Components
                 case 3:
                     stats = new (string heading, string content)[]
                     {
-                        ("OD", $"{beatmap.Difficulty.OverallDifficulty:0.#}{hardRockExtra}"),
-                        ("HP", $"{beatmap.Difficulty.DrainRate:0.#}{hardRockExtra}")
+                        ("准度要求", $"{beatmap.Difficulty.OverallDifficulty:0.#}{hardRockExtra}"),
+                        ("掉血速度", $"{hp:0.#}{hardRockExtra}")
                     };
                     break;
 
                 case 2:
                     stats = new (string heading, string content)[]
                     {
-                        ("CS", $"{beatmap.Difficulty.CircleSize:0.#}{hardRockExtra}"),
-                        ("AR", $"{ar:0.#}"),
+                        ("圆圈大小", $"{cs:0.#}{hardRockExtra}"),
+                        ("缩圈速度", $"{ar:0.#}"),
                     };
                     break;
             }
@@ -192,7 +241,7 @@ namespace osu.Game.Tournament.Components
                                         Children = new Drawable[]
                                         {
                                             new DiffPiece(stats),
-                                            new DiffPiece(("Star Rating", $"{beatmap.StarRating:0.00}{srExtra}"))
+                                            new DiffPiece(("难度星级", $"{beatmap.StarRating:0.00}{srExtra}"))
                                         }
                                     },
                                     new FillFlowContainer
@@ -204,7 +253,7 @@ namespace osu.Game.Tournament.Components
                                         Direction = FillDirection.Vertical,
                                         Children = new Drawable[]
                                         {
-                                            new DiffPiece(("Length", length.ToFormattedDuration().ToString())),
+                                            new DiffPiece(("谱面长度", length.ToFormattedDuration().ToString())),
                                             new DiffPiece(("BPM", $"{bpm:0.#}")),
                                         }
                                     },

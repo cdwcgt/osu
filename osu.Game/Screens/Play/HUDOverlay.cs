@@ -362,6 +362,7 @@ namespace osu.Game.Screens.Play
 
         protected ModDisplay CreateModsContainer() => new ModDisplay
         {
+            ExpansionMode = ExpansionMode.AlwaysExpanded,
             Anchor = Anchor.TopRight,
             Origin = Anchor.TopRight,
         };

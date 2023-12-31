@@ -119,6 +119,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
                             Current = LadderInfo.PlayersPerTeam,
                             KeyboardStep = 1,
                         },
+                        new ControlPanel.Spacer(),
+                        new MatchRoundNameTextBox
+                        {
+                            RelativeSizeAxes = Axes.X,
+                        },
                     }
                 }
             });

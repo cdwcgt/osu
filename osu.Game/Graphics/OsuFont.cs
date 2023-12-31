@@ -63,7 +63,7 @@ namespace osu.Game.Graphics
                     return @"Venera";
 
                 case Typeface.Torus:
-                    return @"Torus";
+                    return @"Harmony";
 
                 case Typeface.TorusAlternate:
                     return @"Torus-Alternate";

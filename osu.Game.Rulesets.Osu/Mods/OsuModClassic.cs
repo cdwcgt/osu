@@ -23,7 +23,7 @@ namespace osu.Game.Rulesets.Osu.Mods
         public override Type[] IncompatibleMods => base.IncompatibleMods.Append(typeof(OsuModStrictTracking)).ToArray();
 
         [SettingSource("No slider head accuracy requirement", "Scores sliders proportionally to the number of ticks hit.")]
-        public Bindable<bool> NoSliderHeadAccuracy { get; } = new BindableBool(true);
+        public Bindable<bool> NoSliderHeadAccuracy { get; } = new BindableBool();
 
         [SettingSource("Apply classic note lock", "Applies note lock to the full hit window.")]
         public Bindable<bool> ClassicNoteLock { get; } = new BindableBool(true);

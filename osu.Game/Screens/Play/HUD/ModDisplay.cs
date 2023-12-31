@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -63,8 +64,8 @@ namespace osu.Game.Screens.Play.HUD
         {
             iconsContainer.Clear();
 
-            foreach (Mod mod in mods.NewValue.AsOrdered())
-                iconsContainer.Add(new ModIcon(mod) { Scale = new Vector2(0.6f) });
+            foreach (Mod mod in mods.NewValue.Where(m => m is not ModClassic).AsOrdered())
+                iconsContainer.Add(new ModIcon(mod, allowLegacy: true) { Scale = new Vector2(0.6f) });
 
             appearTransform();
         }

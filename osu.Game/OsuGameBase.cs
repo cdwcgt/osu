@@ -259,6 +259,7 @@ namespace osu.Game
             VersionHash = "fc03416f6dd857e98af54e00946b9b4c";
 
             Resources.AddStore(new DllResourceStore(OsuResources.ResourceAssembly));
+            Resources.AddStore(new DllResourceStore(M.Resources.MResources.ResourceAssembly));
 
             dependencies.Cache(realm = new RealmAccess(Storage, CLIENT_DATABASE_FILENAME, Host.UpdateThread));
 
@@ -445,6 +446,7 @@ namespace osu.Game
         {
             AddFont(Resources, @"Fonts/osuFont");
 
+            AddFont(Resources, @"Fonts/Harmony");
             AddFont(Resources, @"Fonts/Torus/Torus-Regular");
             AddFont(Resources, @"Fonts/Torus/Torus-Light");
             AddFont(Resources, @"Fonts/Torus/Torus-SemiBold");

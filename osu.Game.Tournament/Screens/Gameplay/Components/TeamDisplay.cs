@@ -14,8 +14,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
     {
         private readonly TeamScore score;
 
-        private readonly TournamentSpriteTextWithBackground teamNameText;
-
         private readonly Bindable<string> teamName = new Bindable<string>("???");
 
         private bool showScore;
@@ -95,13 +93,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                                             }
                                         }
                                     },
-                                    teamNameText = new TournamentSpriteTextWithBackground
-                                    {
-                                        Scale = new Vector2(0.5f),
-                                        Origin = anchor,
-                                        Anchor = anchor,
-                                    },
-                                    new DrawableTeamSeed(Team)
+                                    new DrawableTeamTitle(team, anchor)
                                     {
                                         Scale = new Vector2(0.5f),
                                         Origin = anchor,
@@ -124,8 +116,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             if (Team != null)
                 teamName.BindTo(Team.FullName);
-
-            teamName.BindValueChanged(name => teamNameText.Text.Text = name.NewValue, true);
         }
 
         private void updateDisplay()
