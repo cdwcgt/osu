@@ -33,12 +33,8 @@ namespace osu.Game.Screens.Edit.Compose.Components
     {
         private int? lastCustomDivisor;
 
-        private readonly BindableBeatDivisor beatDivisor = new BindableBeatDivisor();
-
-        public BeatDivisorControl(BindableBeatDivisor beatDivisor)
-        {
-            this.beatDivisor.BindTo(beatDivisor);
-        }
+        [Resolved]
+        private BindableBeatDivisor beatDivisor { get; set; } = null!;
 
         [BackgroundDependencyLoader]
         private void load(OverlayColourProvider colourProvider)
@@ -266,6 +262,7 @@ namespace osu.Game.Screens.Edit.Compose.Components
             private readonly OsuSpriteText divisorText;
 
             public DivisorDisplay()
+                : base(HoverSampleSet.Default)
             {
                 Anchor = Anchor.Centre;
                 Origin = Anchor.Centre;
@@ -324,7 +321,7 @@ namespace osu.Game.Screens.Edit.Compose.Components
                     Spacing = new Vector2(10),
                     Children = new Drawable[]
                     {
-                        divisorTextBox = new OsuNumberBox
+                        divisorTextBox = new AutoSelectTextBox
                         {
                             RelativeSizeAxes = Axes.X,
                             PlaceholderText = "Beat divisor"
@@ -344,8 +341,6 @@ namespace osu.Game.Screens.Edit.Compose.Components
                 base.LoadComplete();
                 BeatDivisor.BindValueChanged(_ => updateState(), true);
                 divisorTextBox.OnCommit += (_, _) => setPresetsFromTextBoxEntry();
-
-                Schedule(() => GetContainingInputManager().ChangeFocus(divisorTextBox));
             }
 
             private void setPresetsFromTextBoxEntry()
@@ -591,6 +586,17 @@ namespace osu.Game.Screens.Edit.Compose.Components
                         active = value;
                     }
                 }
+            }
+        }
+
+        private partial class AutoSelectTextBox : OsuNumberBox
+        {
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+
+                GetContainingInputManager().ChangeFocus(this);
+                SelectAll();
             }
         }
     }

@@ -17,6 +17,7 @@ using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Framework.Utils;
 using osu.Game.Audio;
+using osu.Game.Beatmaps;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
@@ -48,7 +49,8 @@ namespace osu.Game.Overlays.Mods
         /// Contrary to <see cref="OsuGameBase.AvailableMods"/> and <see cref="globalAvailableMods"/>, the <see cref="Mod"/> instances
         /// inside the <see cref="ModState"/> objects are owned solely by this <see cref="ModSelectOverlay"/> instance.
         /// </remarks>
-        public Bindable<Dictionary<ModType, IReadOnlyList<ModState>>> AvailableMods { get; } = new Bindable<Dictionary<ModType, IReadOnlyList<ModState>>>(new Dictionary<ModType, IReadOnlyList<ModState>>());
+        public Bindable<Dictionary<ModType, IReadOnlyList<ModState>>> AvailableMods { get; } =
+            new Bindable<Dictionary<ModType, IReadOnlyList<ModState>>>(new Dictionary<ModType, IReadOnlyList<ModState>>());
 
         private Func<Mod, bool> isValidMod = _ => true;
 
@@ -76,9 +78,9 @@ namespace osu.Game.Overlays.Mods
         public ShearedSearchTextBox SearchTextBox { get; private set; } = null!;
 
         /// <summary>
-        /// Whether the total score multiplier calculated from the current selected set of mods should be shown.
+        /// Whether the effects (on score multiplier, on or beatmap difficulty) of the current selected set of mods should be shown.
         /// </summary>
-        protected virtual bool ShowTotalMultiplier => true;
+        protected virtual bool ShowModEffects => true;
 
         /// <summary>
         /// Whether per-mod customisation controls are visible.
@@ -110,24 +112,44 @@ namespace osu.Game.Overlays.Mods
 
         private readonly Bindable<Dictionary<ModType, IReadOnlyList<Mod>>> globalAvailableMods = new Bindable<Dictionary<ModType, IReadOnlyList<Mod>>>();
 
-        private IEnumerable<ModState> allAvailableMods => AvailableMods.Value.SelectMany(pair => pair.Value);
+        public IEnumerable<ModState> AllAvailableMods => AvailableMods.Value.SelectMany(pair => pair.Value);
 
         private readonly BindableBool customisationVisible = new BindableBool();
+        private Bindable<bool> textSearchStartsActive = null!;
 
         private ModSettingsArea modSettingsArea = null!;
         private ColumnScrollContainer columnScroll = null!;
         private ColumnFlowContainer columnFlow = null!;
         private FillFlowContainer<ShearedButton> footerButtonFlow = null!;
+        private FillFlowContainer footerContentFlow = null!;
         private DeselectAllModsButton deselectAllModsButton = null!;
 
         private Container aboveColumnsContent = null!;
-        private DifficultyMultiplierDisplay? multiplierDisplay;
+        private ScoreMultiplierDisplay? multiplierDisplay;
+        private BeatmapAttributesDisplay? beatmapAttributesDisplay;
 
         protected ShearedButton BackButton { get; private set; } = null!;
         protected ShearedToggleButton? CustomisationButton { get; private set; }
         protected SelectAllModsButton? SelectAllModsButton { get; set; }
 
+        private bool textBoxShouldFocus;
+
         private Sample? columnAppearSample;
+
+        private WorkingBeatmap? beatmap;
+
+        public WorkingBeatmap? Beatmap
+        {
+            get => beatmap;
+            set
+            {
+                if (beatmap == value) return;
+
+                beatmap = value;
+                if (IsLoaded && beatmapAttributesDisplay != null)
+                    beatmapAttributesDisplay.BeatmapInfo.Value = beatmap?.BeatmapInfo;
+            }
+        }
 
         protected ModSelectOverlay(OverlayColourScheme colourScheme = OverlayColourScheme.Green)
             : base(colourScheme)
@@ -135,7 +157,7 @@ namespace osu.Game.Overlays.Mods
         }
 
         [BackgroundDependencyLoader]
-        private void load(OsuGameBase game, OsuColour colours, AudioManager audio)
+        private void load(OsuGameBase game, OsuColour colours, AudioManager audio, OsuConfigManager configManager)
         {
             Header.Title = ModSelectOverlayStrings.ModSelectTitle;
             Header.Description = ModSelectOverlayStrings.ModSelectDescription;
@@ -163,7 +185,7 @@ namespace osu.Game.Overlays.Mods
                 aboveColumnsContent = new Container
                 {
                     RelativeSizeAxes = Axes.X,
-                    Height = ModsEffectDisplay.HEIGHT,
+                    Height = ScoreMultiplierDisplay.HEIGHT,
                     Padding = new MarginPadding { Horizontal = 100 },
                     Child = SearchTextBox = new ShearedSearchTextBox
                     {
@@ -178,7 +200,7 @@ namespace osu.Game.Overlays.Mods
                     {
                         Padding = new MarginPadding
                         {
-                            Top = ModsEffectDisplay.HEIGHT + PADDING,
+                            Top = ScoreMultiplierDisplay.HEIGHT + PADDING,
                             Bottom = PADDING
                         },
                         RelativeSizeAxes = Axes.Both,
@@ -209,16 +231,7 @@ namespace osu.Game.Overlays.Mods
                 }
             });
 
-            if (ShowTotalMultiplier)
-            {
-                aboveColumnsContent.Add(multiplierDisplay = new DifficultyMultiplierDisplay
-                {
-                    Anchor = Anchor.TopRight,
-                    Origin = Anchor.TopRight
-                });
-            }
-
-            FooterContent.Child = footerButtonFlow = new FillFlowContainer<ShearedButton>
+            FooterContent.Add(footerButtonFlow = new FillFlowContainer<ShearedButton>
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
@@ -238,9 +251,42 @@ namespace osu.Game.Overlays.Mods
                     DarkerColour = colours.Pink2,
                     LighterColour = colours.Pink1
                 })
-            };
+            });
+
+            if (ShowModEffects)
+            {
+                FooterContent.Add(footerContentFlow = new FillFlowContainer
+                {
+                    AutoSizeAxes = Axes.Both,
+                    Direction = FillDirection.Vertical,
+                    Spacing = new Vector2(30, 10),
+                    Anchor = Anchor.BottomRight,
+                    Origin = Anchor.BottomRight,
+                    Margin = new MarginPadding
+                    {
+                        Vertical = PADDING,
+                        Horizontal = 20
+                    },
+                    Children = new Drawable[]
+                    {
+                        multiplierDisplay = new ScoreMultiplierDisplay
+                        {
+                            Anchor = Anchor.BottomRight,
+                            Origin = Anchor.BottomRight
+                        },
+                        beatmapAttributesDisplay = new BeatmapAttributesDisplay
+                        {
+                            Anchor = Anchor.BottomRight,
+                            Origin = Anchor.BottomRight,
+                            BeatmapInfo = { Value = beatmap?.BeatmapInfo }
+                        },
+                    }
+                });
+            }
 
             globalAvailableMods.BindTo(game.AvailableMods);
+
+            textSearchStartsActive = configManager.GetBindable<bool>(OsuSetting.ModSelectTextSearchStartsActive);
         }
 
         public override void Hide()
@@ -308,6 +354,25 @@ namespace osu.Game.Overlays.Mods
             base.Update();
 
             SearchTextBox.PlaceholderText = SearchTextBox.HasFocus ? Resources.Localisation.Web.CommonStrings.InputSearch : ModSelectOverlayStrings.TabToSearch;
+
+            if (beatmapAttributesDisplay != null)
+            {
+                float rightEdgeOfLastButton = footerButtonFlow.Last().ScreenSpaceDrawQuad.TopRight.X;
+
+                // this is cheating a bit; the 640 value is hardcoded based on how wide the expanded panel _generally_ is.
+                // due to the transition applied, the raw screenspace quad of the panel cannot be used, as it will trigger an ugly feedback cycle of expanding and collapsing.
+                float projectedLeftEdgeOfExpandedBeatmapAttributesDisplay = footerButtonFlow.ToScreenSpace(footerButtonFlow.DrawSize - new Vector2(640, 0)).X;
+
+                bool screenIsntWideEnough = rightEdgeOfLastButton > projectedLeftEdgeOfExpandedBeatmapAttributesDisplay;
+
+                // only update preview panel's collapsed state after we are fully visible, to ensure all the buttons are where we expect them to be.
+                if (Alpha == 1)
+                    beatmapAttributesDisplay.Collapsed.Value = screenIsntWideEnough;
+
+                footerContentFlow.LayoutDuration = 200;
+                footerContentFlow.LayoutEasing = Easing.OutQuint;
+                footerContentFlow.Direction = screenIsntWideEnough ? FillDirection.Vertical : FillDirection.Horizontal;
+            }
         }
 
         /// <summary>
@@ -381,7 +446,7 @@ namespace osu.Game.Overlays.Mods
 
         private void filterMods()
         {
-            foreach (var modState in allAvailableMods)
+            foreach (var modState in AllAvailableMods)
                 modState.ValidForSelection.Value = modState.Mod.HasImplementation && IsValidMod.Invoke(modState.Mod);
         }
 
@@ -406,7 +471,7 @@ namespace osu.Game.Overlays.Mods
             bool anyCustomisableModActive = false;
             bool anyModPendingConfiguration = false;
 
-            foreach (var modState in allAvailableMods)
+            foreach (var modState in AllAvailableMods)
             {
                 anyCustomisableModActive |= modState.Active.Value && modState.Mod.GetSettingsSourceProperties().Any();
                 anyModPendingConfiguration |= modState.PendingConfiguration;
@@ -445,6 +510,11 @@ namespace osu.Game.Overlays.Mods
 
             modSettingsArea.ResizeHeightTo(modAreaHeight, transition_duration, Easing.InOutCubic);
             TopLevelContent.MoveToY(-modAreaHeight, transition_duration, Easing.InOutCubic);
+
+            if (customisationVisible.Value)
+                SearchTextBox.KillFocus();
+            else
+                setTextBoxFocus(textBoxShouldFocus);
         }
 
         /// <summary>
@@ -463,7 +533,7 @@ namespace osu.Game.Overlays.Mods
 
             var newSelection = new List<Mod>();
 
-            foreach (var modState in allAvailableMods)
+            foreach (var modState in AllAvailableMods)
             {
                 var matchingSelectedMod = SelectedMods.Value.SingleOrDefault(selected => selected.GetType() == modState.Mod.GetType());
 
@@ -490,7 +560,7 @@ namespace osu.Game.Overlays.Mods
             if (externalSelectionUpdateInProgress)
                 return;
 
-            var candidateSelection = allAvailableMods.Where(modState => modState.Active.Value)
+            var candidateSelection = AllAvailableMods.Where(modState => modState.Active.Value)
                                                      .Select(modState => modState.Mod)
                                                      .ToArray();
 
@@ -544,7 +614,7 @@ namespace osu.Game.Overlays.Mods
                     if (columnNumber > 5 && !column.Active.Value) return;
 
                     // use X position of the column on screen as a basis for panning the sample
-                    float balance = column.Parent.BoundingBox.Centre.X / RelativeToAbsoluteFactor.X;
+                    float balance = column.Parent!.BoundingBox.Centre.X / RelativeToAbsoluteFactor.X;
 
                     // dip frequency and ramp volume of sample over the first 5 displayed columns
                     float progress = Math.Min(1, columnNumber / 5f);
@@ -557,6 +627,8 @@ namespace osu.Game.Overlays.Mods
 
                 nonFilteredColumnCount += 1;
             }
+
+            setTextBoxFocus(textSearchStartsActive.Value);
         }
 
         protected override void PopOut()
@@ -636,7 +708,8 @@ namespace osu.Game.Overlays.Mods
 
                 case GlobalAction.Select:
                 {
-                    // Pressing select should select first filtered mod or completely hide the overlay in one shot if search term is empty.
+                    // Pressing select should select first filtered mod if a search is in progress.
+                    // If there is no search in progress, it should exit the dialog (a bit weird, but this is the expectation from stable).
                     if (string.IsNullOrEmpty(SearchTerm))
                     {
                         hideOverlay(true);
@@ -694,12 +767,18 @@ namespace osu.Game.Overlays.Mods
                 return false;
 
             // TODO: should probably eventually support typical platform search shortcuts (`Ctrl-F`, `/`)
-            if (SearchTextBox.HasFocus)
-                SearchTextBox.KillFocus();
-            else
-                SearchTextBox.TakeFocus();
-
+            setTextBoxFocus(!textBoxShouldFocus);
             return true;
+        }
+
+        private void setTextBoxFocus(bool keepFocus)
+        {
+            textBoxShouldFocus = keepFocus;
+
+            if (textBoxShouldFocus)
+                SearchTextBox.TakeFocus();
+            else
+                SearchTextBox.KillFocus();
         }
 
         #endregion
@@ -883,6 +962,9 @@ namespace osu.Game.Overlays.Mods
                     case ClickEvent:
                         OnClicked?.Invoke();
                         return true;
+
+                    case HoverEvent:
+                        return false;
 
                     case MouseEvent:
                         return true;

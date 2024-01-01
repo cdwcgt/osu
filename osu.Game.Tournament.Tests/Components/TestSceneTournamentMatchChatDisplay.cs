@@ -1,12 +1,9 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
-
-#nullable disable
 
 using System.Linq;
 using NUnit.Framework;
 using osu.Framework.Allocation;
-using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Testing;
 using osu.Game.Online.API.Requests.Responses;
@@ -65,18 +62,6 @@ namespace osu.Game.Tournament.Tests.Components
                 Origin = Anchor.Centre,
             });
 
-            ladderInfo.CurrentMatch.Value = new TournamentMatch
-            {
-                Team1 =
-                {
-                    Value = new TournamentTeam { Players = new BindableList<TournamentUser> { redUser } }
-                },
-                Team2 =
-                {
-                    Value = new TournamentTeam { Players = new BindableList<TournamentUser> { blueUser, blueUserWithCustomColour } }
-                }
-            };
-
             chatDisplay.Channel.Value = testChannel;
         }
 
@@ -89,6 +74,18 @@ namespace osu.Game.Tournament.Tests.Components
                 Sender = admin,
                 Content = "I am a wang!"
             }));
+
+            AddStep("set current match", () => ladderInfo.CurrentMatch.Value = new TournamentMatch
+            {
+                Team1 =
+                {
+                    Value = new TournamentTeam { Players = { redUser } }
+                },
+                Team2 =
+                {
+                    Value = new TournamentTeam { Players = { blueUser, blueUserWithCustomColour } }
+                }
+            });
 
             AddStep("message from team red", () => testChannel.AddNewMessages(new Message(nextMessageId())
             {
