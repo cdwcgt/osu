@@ -4,14 +4,12 @@
 #nullable disable
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Framework.Graphics.Pooling;
 using osu.Game.Beatmaps;
 using osu.Game.Rulesets.Judgements;
 using osu.Game.Rulesets.Objects;
@@ -37,14 +35,14 @@ namespace osu.Game.Rulesets.Osu.UI
         private readonly JudgementContainer<DrawableOsuJudgement> judgementLayer;
         protected readonly BindableBool NoDraw300 = new BindableBool();
 
+        private readonly JudgementPooler<DrawableOsuJudgement> judgementPooler;
+
         public SmokeContainer Smoke { get; }
         public FollowPointRenderer FollowPoints { get; }
 
         public static readonly Vector2 BASE_SIZE = new Vector2(512, 384);
 
         protected override GameplayCursorContainer CreateCursor() => new OsuCursorContainer();
-
-        private readonly IDictionary<HitResult, DrawablePool<DrawableOsuJudgement>> poolDictionary = new Dictionary<HitResult, DrawablePool<DrawableOsuJudgement>>();
 
         private readonly Container judgementAboveHitObjectLayer;
 
@@ -67,24 +65,15 @@ namespace osu.Game.Rulesets.Osu.UI
 
             HitPolicy = new StartTimeOrderedHitPolicy();
 
-            foreach (var result in Enum.GetValues<HitResult>().Where(r =>
-                     {
-                         switch (r)
-                         {
-                             case HitResult.Great:
-                             case HitResult.Ok:
-                             case HitResult.Meh:
-                             case HitResult.Miss:
-                             case HitResult.LargeTickMiss:
-                             case HitResult.IgnoreMiss:
-                                 return true;
-                         }
-
-                         return false;
-                     }))
-                poolDictionary.Add(result, new DrawableJudgementPool(result, onJudgementLoaded));
-
-            AddRangeInternal(poolDictionary.Values);
+            AddInternal(judgementPooler = new JudgementPooler<DrawableOsuJudgement>(new[]
+            {
+                HitResult.Great,
+                HitResult.Ok,
+                HitResult.Meh,
+                HitResult.Miss,
+                HitResult.LargeTickMiss,
+                HitResult.IgnoreMiss,
+            }, onJudgementLoaded));
 
             NewResult += onNewResult;
         }
@@ -185,10 +174,10 @@ namespace osu.Game.Rulesets.Osu.UI
             if (!judgedObject.DisplayResult || !DisplayJudgements.Value || (judgedObject.Result.Type == HitResult.Great && NoDraw300.Value))
                 return;
 
-            if (!poolDictionary.TryGetValue(result.Type, out var pool))
-                return;
+            var explosion = judgementPooler.Get(result.Type, doj => doj.Apply(result, judgedObject));
 
-            DrawableOsuJudgement explosion = pool.Get(doj => doj.Apply(result, judgedObject));
+            if (explosion == null)
+                return;
 
             judgementLayer.Add(explosion);
 
@@ -202,31 +191,6 @@ namespace osu.Game.Rulesets.Osu.UI
         private partial class ProxyContainer : LifetimeManagementContainer
         {
             public void Add(Drawable proxy) => AddInternal(proxy);
-        }
-
-        private partial class DrawableJudgementPool : DrawablePool<DrawableOsuJudgement>
-        {
-            private readonly HitResult result;
-            private readonly Action<DrawableOsuJudgement> onLoaded;
-
-            public DrawableJudgementPool(HitResult result, Action<DrawableOsuJudgement> onLoaded)
-                : base(20)
-            {
-                this.result = result;
-                this.onLoaded = onLoaded;
-            }
-
-            protected override DrawableOsuJudgement CreateNewDrawable()
-            {
-                var judgement = base.CreateNewDrawable();
-
-                // just a placeholder to initialise the correct drawable hierarchy for this pool.
-                judgement.Apply(new JudgementResult(new HitObject(), new Judgement()) { Type = result }, null);
-
-                onLoaded?.Invoke(judgement);
-
-                return judgement;
-            }
         }
 
         private class OsuHitObjectLifetimeEntry : HitObjectLifetimeEntry
