@@ -13,7 +13,6 @@ using osu.Game.Beatmaps;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
-using osu.Game.Localisation.HUD;
 using osu.Game.Rulesets.Judgements;
 using osu.Game.Rulesets.Objects.Legacy;
 using osu.Game.Rulesets.Osu.Judgements;
@@ -29,7 +28,7 @@ namespace osu.Game.Rulesets.Osu.HUD
     [Cached]
     public partial class AimErrorMeter : HitErrorMeter
     {
-        [SettingSource(typeof(AimErrorMeterStrings), nameof(AimErrorMeterStrings.JudgementSize), nameof(AimErrorMeterStrings.JudgementSizeDescription))]
+        [SettingSource("Judgement position size", "How big of hit point should be.")]
         public BindableNumber<float> JudgementSize { get; } = new BindableNumber<float>(7f)
         {
             MinValue = 0f,
@@ -37,10 +36,10 @@ namespace osu.Game.Rulesets.Osu.HUD
             Precision = 1f
         };
 
-        [SettingSource(typeof(AimErrorMeterStrings), nameof(AimErrorMeterStrings.JudgementStyle), nameof(AimErrorMeterStrings.JudgementStyleDescription))]
+        [SettingSource("Judgement position style", "The style of hit point.")]
         public Bindable<HitStyle> JudgementStyle { get; } = new Bindable<HitStyle>();
 
-        [SettingSource(typeof(AimErrorMeterStrings), nameof(AimErrorMeterStrings.AverageSize), nameof(AimErrorMeterStrings.AverageSizeDescription))]
+        [SettingSource("Average position size", "How big of average position should be.")]
         public BindableNumber<float> AverageSize { get; } = new BindableNumber<float>(12f)
         {
             MinValue = 7f,
@@ -48,10 +47,10 @@ namespace osu.Game.Rulesets.Osu.HUD
             Precision = 1f
         };
 
-        [SettingSource(typeof(AimErrorMeterStrings), nameof(AimErrorMeterStrings.AverageStyle), nameof(AimErrorMeterStrings.AverageStyleDescription))]
+        [SettingSource("Average position style", "The style of average position.")]
         public Bindable<HitStyle> AverageStyle { get; } = new Bindable<HitStyle>(HitStyle.Plus);
 
-        [SettingSource("Position Style")]
+        [SettingSource("Position Style", "")]
         public Bindable<PositionStyle> HitPositionStyle { get; } = new Bindable<PositionStyle>();
 
         [Resolved]
@@ -467,11 +466,8 @@ namespace osu.Game.Rulesets.Osu.HUD
 
         public enum HitStyle
         {
-            [LocalisableDescription(typeof(AimErrorMeterStrings), nameof(AimErrorMeterStrings.StyleX))]
             X,
-
-            [LocalisableDescription(typeof(AimErrorMeterStrings), nameof(AimErrorMeterStrings.StylePlus))]
-            Plus
+            Plus,
         }
 
         public enum PositionStyle
