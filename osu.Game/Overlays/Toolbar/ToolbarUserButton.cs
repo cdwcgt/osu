@@ -34,7 +34,7 @@ namespace osu.Game.Overlays.Toolbar
 
         public ToolbarUserButton()
         {
-            AutoSizeAxes = Axes.X;
+            ButtonContent.AutoSizeAxes = Axes.X;
         }
 
         [BackgroundDependencyLoader]
@@ -99,6 +99,7 @@ namespace osu.Game.Overlays.Toolbar
 
             switch (state.NewValue)
             {
+                case APIState.RequiresSecondFactorAuth:
                 case APIState.Connecting:
                     TooltipText = ToolbarStrings.Connecting;
                     spinner.Show();

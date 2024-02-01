@@ -11,7 +11,8 @@ using osu.Game.Localisation;
 using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
-using osu.Game.Online.Notifications;
+using osu.Game.Online.Chat;
+using osu.Game.Online.Notifications.WebSocket;
 using osu.Game.Overlays.Notifications;
 using osu.Game.Users;
 
@@ -68,7 +69,7 @@ namespace osu.Game.Tournament.Screens
             LocalConfig.SetValue(OsuSetting.ShowFirstRunSetup, false);
             Notifications.Post(new SimpleNotification
             {
-                Text = "不要用主菜单的退出按钮，会退出整个比赛端\n\nDon't use the exit button. It will close the entire tourney client."
+                Text = "不要用主菜单的退出按钮，会退出整个比赛端"
             });
         }
     }
@@ -85,6 +86,7 @@ namespace osu.Game.Tournament.Screens
         public IBindable<APIUser> LocalUser => api.LocalUser;
         public IBindableList<APIUser> Friends => api.Friends;
         public IBindable<UserActivity> Activity => api.Activity;
+        public IBindable<UserStatistics?> Statistics => api.Statistics;
         public Language Language => api.Language;
         public string AccessToken => api.AccessToken;
         public bool IsLoggedIn => api.IsLoggedIn;
@@ -115,9 +117,19 @@ namespace osu.Game.Tournament.Screens
             api.Login(username, password);
         }
 
+        public void AuthenticateSecondFactor(string code)
+        {
+            api.AuthenticateSecondFactor(code);
+        }
+
         public void Logout()
         {
             api.Logout();
+        }
+
+        public void UpdateStatistics(UserStatistics newStatistics)
+        {
+            api.UpdateStatistics(newStatistics);
         }
 
         public IHubClientConnector? GetHubConnector(string clientName, string endpoint, bool preferMessagePack = true)
@@ -125,9 +137,11 @@ namespace osu.Game.Tournament.Screens
             return api.GetHubConnector(clientName, endpoint, preferMessagePack);
         }
 
-        public NotificationsClientConnector GetNotificationsConnector()
+        public INotificationsClient NotificationsClient => api.NotificationsClient;
+
+        public IChatClient GetChatClient()
         {
-            return api.GetNotificationsConnector();
+            return api.GetChatClient();
         }
 
         public RegistrationRequest.RegistrationRequestErrors? CreateAccount(string email, string username, string password)

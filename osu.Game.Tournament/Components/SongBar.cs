@@ -13,6 +13,7 @@ using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Legacy;
 using osu.Game.Extensions;
 using osu.Game.Graphics;
+using osu.Game.Models;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
 using osu.Game.Rulesets;
@@ -110,7 +111,27 @@ namespace osu.Game.Tournament.Components
         {
             if (beatmap == null)
             {
-                flow.Clear();
+                beatmap = new BeatmapInfo
+                {
+                    Metadata = new BeatmapMetadata
+                    {
+                        Artist = "unknown",
+                        Title = "no beatmap selected",
+                        Author = new RealmUser { Username = "unknown" },
+                    },
+                    DifficultyName = "unknown",
+                    BeatmapSet = new BeatmapSetInfo(),
+                    StarRating = 0,
+                    Difficulty = new BeatmapDifficulty
+                    {
+                        CircleSize = 0,
+                        DrainRate = 0,
+                        OverallDifficulty = 0,
+                        ApproachRate = 0,
+                    },
+                };
+
+                Schedule(postUpdate);
                 return;
             }
 

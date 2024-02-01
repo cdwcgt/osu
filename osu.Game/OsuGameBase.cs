@@ -101,7 +101,7 @@ namespace osu.Game
         public virtual bool UseDevelopmentServer => false;
 
         public virtual EndpointConfiguration CreateEndpoints() =>
-            UseDevelopmentServer ? new DevelopmentEndpointConfiguration() : new ExperimentalEndpointConfiguration();
+            UseDevelopmentServer ? new DevelopmentEndpointConfiguration() : new ProductionEndpointConfiguration();
 
         public virtual Version AssemblyVersion => Assembly.GetEntryAssembly()?.GetName().Version ?? new Version();
 
@@ -256,7 +256,7 @@ namespace osu.Game
         [BackgroundDependencyLoader]
         private void load(ReadableKeyCombinationProvider keyCombinationProvider, FrameworkConfigManager frameworkConfig)
         {
-            VersionHash = "fc03416f6dd857e98af54e00946b9b4c";
+            VersionHash = "5b5df7769b683a299b39490e2324c9af";
 
             Resources.AddStore(new DllResourceStore(OsuResources.ResourceAssembly));
             Resources.AddStore(new DllResourceStore(M.Resources.MResources.ResourceAssembly));
@@ -332,10 +332,6 @@ namespace osu.Game
 
             dependencies.Cache(beatmapCache = new BeatmapLookupCache());
             base.Content.Add(beatmapCache);
-
-            var scorePerformanceManager = new ScorePerformanceCache();
-            dependencies.Cache(scorePerformanceManager);
-            base.Content.Add(scorePerformanceManager);
 
             dependencies.CacheAs<IRulesetConfigCache>(rulesetConfigCache = new RulesetConfigCache(realm, RulesetStore));
 

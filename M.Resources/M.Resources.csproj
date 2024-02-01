@@ -10,6 +10,6 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Humanizer.Core" Version="2.14.1" />
-    <PackageReference Include="ppy.osu.Framework" Version="2023.1227.1" />
+    <PackageReference Include="ppy.osu.Framework" Version="2024.131.0" />
   </ItemGroup>
 </Project>
