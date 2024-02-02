@@ -9,6 +9,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Primitives;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Graphics.Textures;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Legacy;
 using osu.Game.Extensions;
@@ -17,7 +18,6 @@ using osu.Game.Models;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
 using osu.Game.Rulesets;
-using osu.Game.Screens.Menu;
 using osu.Game.Tournament.Models;
 using osuTK;
 using osuTK.Graphics;
@@ -77,6 +77,9 @@ namespace osu.Game.Tournament.Components
         // Todo: This is a hack for https://github.com/ppy/osu-framework/issues/3617 since this container is at the very edge of the screen and potentially initially masked away.
         protected override bool ComputeIsMaskedAway(RectangleF maskingBounds) => false;
 
+        [Resolved]
+        private LargeTextureStore store { get; set; } = null!;
+
         [BackgroundDependencyLoader]
         private void load(OsuColour colours)
         {
@@ -115,11 +118,11 @@ namespace osu.Game.Tournament.Components
                 {
                     Metadata = new BeatmapMetadata
                     {
-                        Artist = "unknown",
-                        Title = "no beatmap selected",
-                        Author = new RealmUser { Username = "unknown" },
+                        Artist = "未知",
+                        Title = "未选择谱面",
+                        Author = new RealmUser { Username = "未知" },
                     },
-                    DifficultyName = "unknown",
+                    DifficultyName = "未知",
                     BeatmapSet = new BeatmapSetInfo(),
                     StarRating = 0,
                     Difficulty = new BeatmapDifficulty
@@ -247,6 +250,7 @@ namespace osu.Game.Tournament.Components
                         new GridContainer
                         {
                             RelativeSizeAxes = Axes.Both,
+                            ColumnDimensions = new[] { new Dimension(GridSizeMode.Relative, 0.45f) },
 
                             Content = new[]
                             {
@@ -289,14 +293,13 @@ namespace osu.Game.Tournament.Components
                                                 RelativeSizeAxes = Axes.Both,
                                                 Alpha = 0.1f,
                                             },
-                                            new OsuLogo
+                                            new Sprite
                                             {
-                                                Triangles = false,
-                                                Scale = new Vector2(0.08f),
-                                                Margin = new MarginPadding(50),
-                                                X = -10,
-                                                Anchor = Anchor.CentreRight,
+                                                Texture = store.Get("hsc-logo"),
+                                                Size = new Vector2(40.96f),
+                                                Margin = new MarginPadding(20),
                                                 Origin = Anchor.CentreRight,
+                                                Anchor = Anchor.CentreRight,
                                             },
                                         }
                                     },

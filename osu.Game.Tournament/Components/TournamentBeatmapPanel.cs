@@ -10,6 +10,8 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Graphics.Sprites;
+using osu.Framework.Graphics.Textures;
 using osu.Framework.Localisation;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Drawables;
@@ -84,25 +86,25 @@ namespace osu.Game.Tournament.Components
                             {
                                 new TournamentSpriteText
                                 {
-                                    Text = "mapper",
+                                    Text = "谱师",
                                     Padding = new MarginPadding { Right = 5 },
                                     Font = OsuFont.Torus.With(weight: FontWeight.Regular, size: 14)
                                 },
                                 new TournamentSpriteText
                                 {
-                                    Text = Beatmap?.Metadata.Author.Username ?? "unknown",
+                                    Text = Beatmap?.Metadata.Author.Username ?? "未知",
                                     Padding = new MarginPadding { Right = 20 },
                                     Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 14)
                                 },
                                 new TournamentSpriteText
                                 {
-                                    Text = "difficulty",
+                                    Text = "难度",
                                     Padding = new MarginPadding { Right = 5 },
                                     Font = OsuFont.Torus.With(weight: FontWeight.Regular, size: 14)
                                 },
                                 new TournamentSpriteText
                                 {
-                                    Text = Beatmap?.DifficultyName ?? "unknown",
+                                    Text = Beatmap?.DifficultyName ?? "未知",
                                     Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 14)
                                 },
                             }
@@ -210,6 +212,26 @@ namespace osu.Game.Tournament.Components
             // Use DelayedLoadWrapper to avoid content unloading when switching away to another screen.
             protected override DelayedLoadWrapper CreateDelayedLoadWrapper(Func<Drawable> createContentFunc, double timeBeforeLoad)
                 => new DelayedLoadWrapper(createContentFunc(), timeBeforeLoad);
+
+            [Resolved]
+            private LargeTextureStore textures { get; set; } = null!;
+
+            protected override Drawable CreateDrawable(IBeatmapSetOnlineInfo model)
+            {
+                if (model == null)
+                {
+                    return new Sprite
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
+                        FillMode = FillMode.Fill,
+                        Texture = textures.Get("beatmap-empty")
+                    };
+                }
+
+                return base.CreateDrawable(model);
+            }
         }
     }
 }
