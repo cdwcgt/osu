@@ -18,7 +18,7 @@ using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Online.Spectator;
-using osu.Game.Rulesets.Scoring;
+//using osu.Game.Rulesets.Scoring;
 using osu.Game.Scoring;
 
 namespace osu.Game.Screens.Play
@@ -43,7 +43,7 @@ namespace osu.Game.Screens.Play
         private SessionStatics statics { get; set; }
 
         private readonly object scoreSubmissionLock = new object();
-        private TaskCompletionSource<bool> scoreSubmissionSource;
+        //private TaskCompletionSource<bool> scoreSubmissionSource;
 
         protected SubmittingPlayer(PlayerConfiguration configuration = null)
             : base(configuration)
@@ -240,7 +240,10 @@ namespace osu.Game.Screens.Play
 
         private Task submitScore(Score score)
         {
-            var masterClock = GameplayClockContainer as MasterGameplayClockContainer;
+            Logger.Log("Score submission disabled");
+            return Task.CompletedTask;
+
+            /*var masterClock = GameplayClockContainer as MasterGameplayClockContainer;
 
             if (masterClock?.PlaybackRateValid.Value != true)
             {
@@ -286,7 +289,7 @@ namespace osu.Game.Screens.Play
             };
 
             api.Queue(request);
-            return scoreSubmissionSource.Task;
+            return scoreSubmissionSource.Task;*/
         }
     }
 }
