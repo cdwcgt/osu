@@ -6,6 +6,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Sprites;
+using osu.Game.Configuration;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
@@ -14,9 +15,12 @@ using osu.Game.Screens.Play;
 namespace osu.Game.Skinning.Components
 {
     [UsedImplicitly]
-    public partial class PlayerName : FontAdjustableSkinComponent
+    public partial class PlayerName : FontAdjustableSkinComponent, ISpinnerAware
     {
         private readonly OsuSpriteText text;
+
+        [SettingSource("Hide when spinning")]
+        public Bindable<bool> HideWhenSpinning { get; } = new Bindable<bool>();
 
         [Resolved]
         private GameplayState? gameplayState { get; set; }

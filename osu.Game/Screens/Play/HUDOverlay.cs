@@ -243,6 +243,26 @@ namespace osu.Game.Screens.Play
         {
             base.Update();
 
+            bool spinning = drawableRuleset?.IsSpinning ?? false;
+
+            foreach (var c in mainComponents.Components)
+            {
+                if (c is Drawable drawable)
+                {
+                    if (drawable is ISpinnerAware spinnerAware)
+                    {
+                        if (spinnerAware.HideWhenSpinning.Value && spinning)
+                        {
+                            drawable.FadeOut(200);
+                        }
+                        else
+                        {
+                            drawable.FadeIn(200);
+                        }
+                    }
+                }
+            }
+
             if (drawableRuleset != null)
             {
                 Quad playfieldScreenSpaceDrawQuad = drawableRuleset.Playfield.SkinnableComponentScreenSpaceDrawQuad;

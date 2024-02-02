@@ -24,8 +24,11 @@ using osu.Game.Resources.Localisation.Web;
 namespace osu.Game.Skinning.Components
 {
     [UsedImplicitly]
-    public partial class BeatmapAttributeText : FontAdjustableSkinComponent
+    public partial class BeatmapAttributeText : FontAdjustableSkinComponent, ISpinnerAware
     {
+        [SettingSource("Hide when spinning")]
+        public Bindable<bool> HideWhenSpinning { get; } = new Bindable<bool>();
+
         [SettingSource(typeof(BeatmapAttributeTextStrings), nameof(BeatmapAttributeTextStrings.Attribute), nameof(BeatmapAttributeTextStrings.AttributeDescription))]
         public Bindable<BeatmapAttribute> Attribute { get; } = new Bindable<BeatmapAttribute>(BeatmapAttribute.StarRating);
 
