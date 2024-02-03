@@ -111,6 +111,8 @@ namespace osu.Game.Screens.Play
 
         private readonly Drawable playfieldComponents;
 
+        private bool wasSpnning = false;
+
         public HUDOverlay([CanBeNull] DrawableRuleset drawableRuleset, IReadOnlyList<Mod> mods, bool alwaysShowLeaderboard = true)
         {
             this.drawableRuleset = drawableRuleset;
@@ -243,25 +245,28 @@ namespace osu.Game.Screens.Play
         {
             base.Update();
 
-            bool spinning = drawableRuleset?.IsSpinning ?? false;
+            bool spinning = drawableRuleset?.SpinnerVisible ?? false;
 
-            foreach (var c in mainComponents.Components)
+            if (wasSpnning != spinning)
             {
-                if (c is Drawable drawable)
+                foreach (var c in mainComponents.Components)
                 {
-                    if (drawable is ISpinnerAware spinnerAware)
+                    if (c is not Drawable drawable) continue;
+
+                    if (drawable is not ISpinnerAware spinnerAware) continue;
+
+                    if (spinnerAware.HideWhenSpinning.Value && spinning)
                     {
-                        if (spinnerAware.HideWhenSpinning.Value && spinning)
-                        {
-                            drawable.FadeOut(200);
-                        }
-                        else
-                        {
-                            drawable.FadeIn(200);
-                        }
+                        drawable.FadeOut(300);
+                    }
+                    else
+                    {
+                        drawable.FadeIn(200);
                     }
                 }
             }
+
+            wasSpnning = spinning;
 
             if (drawableRuleset != null)
             {

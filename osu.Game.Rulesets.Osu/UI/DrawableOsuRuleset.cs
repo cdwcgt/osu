@@ -42,12 +42,15 @@ namespace osu.Game.Rulesets.Osu.UI
 
         protected override Playfield CreatePlayfield() => new OsuPlayfield();
 
-        public override bool IsSpinning
+        public override bool SpinnerVisible
         {
             get
             {
                 var h = Playfield.HitObjectContainer.AliveObjects.FirstOrDefault(h => h is DrawableSpinner) as DrawableSpinner;
-                return h?.RotationTracker.Tracking ?? false;
+                if (h == null)
+                    return false;
+
+                return h.HitObject.StartTime - h.HitObject.TimeFadeIn <= FrameStableClock.CurrentTime && h.HitObject.EndTime + 120 > FrameStableClock.CurrentTime;
             }
         }
 

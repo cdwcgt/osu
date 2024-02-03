@@ -433,7 +433,7 @@ namespace osu.Game.Rulesets.UI
         /// </summary>
         public readonly BindableBool IsPaused = new BindableBool();
 
-        public virtual bool IsSpinning => false;
+        public virtual bool SpinnerVisible => false;
 
         /// <summary>
         /// Audio adjustments which are applied to the playfield.
