@@ -12,6 +12,7 @@ using osu.Framework.Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.UserInterface;
+using osu.Framework.Input;
 using osu.Framework.Screens;
 using osu.Framework.Testing;
 using osu.Game.Beatmaps;
@@ -34,6 +35,7 @@ using osu.Game.Screens.OnlinePlay.Lounge;
 using osu.Game.Screens.OnlinePlay.Match.Components;
 using osu.Game.Screens.OnlinePlay.Playlists;
 using osu.Game.Screens.Play;
+using osu.Game.Screens.Play.HUD;
 using osu.Game.Screens.Ranking;
 using osu.Game.Screens.Select;
 using osu.Game.Screens.Select.Carousel;
@@ -142,13 +144,13 @@ namespace osu.Game.Tests.Visual.Navigation
 
             PushAndConfirm(() => songSelect = new TestPlaySongSelect());
 
-            AddStep("set filter", () => songSelect.ChildrenOfType<SearchTextBox>().Single().Current.Value = "test");
+            AddStep("set filter", () => filterControlTextBox().Current.Value = "test");
             AddStep("press back", () => InputManager.Click(MouseButton.Button1));
 
             AddAssert("still at song select", () => Game.ScreenStack.CurrentScreen == songSelect);
-            AddAssert("filter cleared", () => string.IsNullOrEmpty(songSelect.ChildrenOfType<SearchTextBox>().Single().Current.Value));
+            AddAssert("filter cleared", () => string.IsNullOrEmpty(filterControlTextBox().Current.Value));
 
-            AddStep("set filter again", () => songSelect.ChildrenOfType<SearchTextBox>().Single().Current.Value = "test");
+            AddStep("set filter again", () => filterControlTextBox().Current.Value = "test");
             AddStep("open collections dropdown", () =>
             {
                 InputManager.MoveMouseTo(songSelect.ChildrenOfType<CollectionDropdown>().Single());
@@ -162,10 +164,12 @@ namespace osu.Game.Tests.Visual.Navigation
                                                            .ChildrenOfType<Dropdown<CollectionFilterMenuItem>.DropdownMenu>().Single().State == MenuState.Closed);
 
             AddStep("press back a second time", () => InputManager.Click(MouseButton.Button1));
-            AddAssert("filter cleared", () => string.IsNullOrEmpty(songSelect.ChildrenOfType<SearchTextBox>().Single().Current.Value));
+            AddAssert("filter cleared", () => string.IsNullOrEmpty(filterControlTextBox().Current.Value));
 
             AddStep("press back a third time", () => InputManager.Click(MouseButton.Button1));
             ConfirmAtMainMenu();
+
+            TextBox filterControlTextBox() => songSelect.ChildrenOfType<FilterControl.FilterControlTextBox>().Single();
         }
 
         [Test]
@@ -796,11 +800,7 @@ namespace osu.Game.Tests.Visual.Navigation
                 });
             });
 
-            AddStep("attempt exit", () =>
-            {
-                for (int i = 0; i < 2; ++i)
-                    Game.ScreenStack.CurrentScreen.Exit();
-            });
+            AddRepeatStep("attempt force exit", () => Game.ScreenStack.CurrentScreen.Exit(), 2);
             AddUntilStep("stopped at exit confirm", () => Game.ChildrenOfType<DialogOverlay>().Single().CurrentDialog is ConfirmExitDialog);
         }
 
@@ -833,6 +833,157 @@ namespace osu.Game.Tests.Visual.Navigation
             pushEscape();
 
             AddAssert("exit dialog is shown", () => Game.Dependencies.Get<IDialogOverlay>().CurrentDialog is ConfirmExitDialog);
+        }
+
+        [Test]
+        public void TestQuickSkinEditorDoesntNukeSkin()
+        {
+            AddStep("import beatmap", () => BeatmapImportHelper.LoadQuickOszIntoOsu(Game).WaitSafely());
+
+            AddStep("open", () => InputManager.Key(Key.Space));
+            AddStep("skin", () => InputManager.Key(Key.E));
+            AddStep("editor", () => InputManager.Key(Key.S));
+            AddStep("and close immediately", () => InputManager.Key(Key.Escape));
+
+            AddStep("open again", () => InputManager.Key(Key.S));
+
+            Player player = null;
+
+            AddUntilStep("wait for player", () => (player = Game.ScreenStack.CurrentScreen as Player) != null);
+            AddUntilStep("wait for gameplay still has health bar", () => player.ChildrenOfType<ArgonHealthDisplay>().Any());
+        }
+
+        [Test]
+        public void TestTouchScreenDetectionAtSongSelect()
+        {
+            AddStep("touch logo", () =>
+            {
+                var button = Game.ChildrenOfType<OsuLogo>().Single();
+                var touch = new Touch(TouchSource.Touch1, button.ScreenSpaceDrawQuad.Centre);
+                InputManager.BeginTouch(touch);
+                InputManager.EndTouch(touch);
+            });
+            AddAssert("touch screen detected active", () => Game.Dependencies.Get<SessionStatics>().Get<bool>(Static.TouchInputActive), () => Is.True);
+
+            AddStep("click settings button", () =>
+            {
+                var button = Game.ChildrenOfType<MainMenuButton>().Last();
+                InputManager.MoveMouseTo(button);
+                InputManager.Click(MouseButton.Left);
+            });
+            AddAssert("touch screen detected inactive", () => Game.Dependencies.Get<SessionStatics>().Get<bool>(Static.TouchInputActive), () => Is.False);
+
+            AddStep("close settings sidebar", () => InputManager.Key(Key.Escape));
+
+            Screens.Select.SongSelect songSelect = null;
+            AddRepeatStep("go to solo", () => InputManager.Key(Key.P), 3);
+            AddUntilStep("wait for song select", () => (songSelect = Game.ScreenStack.CurrentScreen as Screens.Select.SongSelect) != null);
+            AddUntilStep("wait for beatmap sets loaded", () => songSelect.BeatmapSetsLoaded);
+
+            AddStep("switch to osu! ruleset", () =>
+            {
+                InputManager.PressKey(Key.LControl);
+                InputManager.Key(Key.Number1);
+                InputManager.ReleaseKey(Key.LControl);
+            });
+            AddStep("touch beatmap wedge", () =>
+            {
+                var wedge = Game.ChildrenOfType<BeatmapInfoWedge>().Single();
+                var touch = new Touch(TouchSource.Touch2, wedge.ScreenSpaceDrawQuad.Centre);
+                InputManager.BeginTouch(touch);
+                InputManager.EndTouch(touch);
+            });
+            AddUntilStep("touch device mod activated", () => Game.SelectedMods.Value, () => Has.One.InstanceOf<ModTouchDevice>());
+
+            AddStep("switch to mania ruleset", () =>
+            {
+                InputManager.PressKey(Key.LControl);
+                InputManager.Key(Key.Number4);
+                InputManager.ReleaseKey(Key.LControl);
+            });
+            AddUntilStep("touch device mod not activated", () => Game.SelectedMods.Value, () => Has.None.InstanceOf<ModTouchDevice>());
+            AddStep("touch beatmap wedge", () =>
+            {
+                var wedge = Game.ChildrenOfType<BeatmapInfoWedge>().Single();
+                var touch = new Touch(TouchSource.Touch2, wedge.ScreenSpaceDrawQuad.Centre);
+                InputManager.BeginTouch(touch);
+                InputManager.EndTouch(touch);
+            });
+            AddUntilStep("touch device mod not activated", () => Game.SelectedMods.Value, () => Has.None.InstanceOf<ModTouchDevice>());
+
+            AddStep("switch to osu! ruleset", () =>
+            {
+                InputManager.PressKey(Key.LControl);
+                InputManager.Key(Key.Number1);
+                InputManager.ReleaseKey(Key.LControl);
+            });
+            AddUntilStep("touch device mod activated", () => Game.SelectedMods.Value, () => Has.One.InstanceOf<ModTouchDevice>());
+
+            AddStep("click beatmap wedge", () =>
+            {
+                InputManager.MoveMouseTo(Game.ChildrenOfType<BeatmapInfoWedge>().Single());
+                InputManager.Click(MouseButton.Left);
+            });
+            AddUntilStep("touch device mod not activated", () => Game.SelectedMods.Value, () => Has.None.InstanceOf<ModTouchDevice>());
+        }
+
+        [Test]
+        public void TestTouchScreenDetectionInGame()
+        {
+            PushAndConfirm(() => new TestPlaySongSelect());
+            AddStep("import beatmap", () => BeatmapImportHelper.LoadQuickOszIntoOsu(Game).WaitSafely());
+            AddUntilStep("wait for selected", () => !Game.Beatmap.IsDefault);
+            AddStep("select", () => InputManager.Key(Key.Enter));
+
+            Player player = null;
+
+            AddUntilStep("wait for player", () =>
+            {
+                DismissAnyNotifications();
+                return (player = Game.ScreenStack.CurrentScreen as Player) != null;
+            });
+
+            AddUntilStep("wait for track playing", () => Game.Beatmap.Value.Track.IsRunning);
+
+            AddStep("touch", () =>
+            {
+                var touch = new Touch(TouchSource.Touch2, Game.ScreenSpaceDrawQuad.Centre);
+                InputManager.BeginTouch(touch);
+                InputManager.EndTouch(touch);
+            });
+            AddUntilStep("touch device mod added to score", () => player.Score.ScoreInfo.Mods, () => Has.One.InstanceOf<ModTouchDevice>());
+
+            AddStep("exit player", () => player.Exit());
+            AddUntilStep("touch device mod still active", () => Game.SelectedMods.Value, () => Has.One.InstanceOf<ModTouchDevice>());
+        }
+
+        [Test]
+        public void TestExitSongSelectAndImmediatelyClickLogo()
+        {
+            Screens.Select.SongSelect songSelect = null;
+            PushAndConfirm(() => songSelect = new TestPlaySongSelect());
+            AddUntilStep("wait for song select", () => songSelect.BeatmapSetsLoaded);
+
+            AddStep("import beatmap", () => BeatmapImportHelper.LoadQuickOszIntoOsu(Game).WaitSafely());
+
+            AddUntilStep("wait for selected", () => !Game.Beatmap.IsDefault);
+
+            AddStep("press escape and then click logo immediately", () =>
+            {
+                InputManager.Key(Key.Escape);
+                clickLogoWhenNotCurrent();
+            });
+
+            void clickLogoWhenNotCurrent()
+            {
+                if (songSelect.IsCurrentScreen())
+                    Scheduler.AddOnce(clickLogoWhenNotCurrent);
+                else
+                {
+                    InputManager.MoveMouseTo(Game.ChildrenOfType<OsuLogo>().Single());
+                    InputManager.Click(MouseButton.Left);
+                }
+            }
         }
 
         private Func<Player> playToResults()

@@ -11,6 +11,7 @@ using System.Linq;
 using JetBrains.Annotations;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Extensions.TypeExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Primitives;
@@ -139,7 +140,7 @@ namespace osu.Game.Rulesets.Objects.Drawables
 
         protected override bool RequiresChildrenUpdate => true;
 
-        public override bool IsPresent => base.IsPresent || (State.Value == ArmedState.Idle && Clock?.CurrentTime >= LifetimeStart);
+        public override bool IsPresent => base.IsPresent || (State.Value == ArmedState.Idle && Clock.IsNotNull() && Clock.CurrentTime >= LifetimeStart);
 
         private readonly Bindable<ArmedState> state = new Bindable<ArmedState>();
 
@@ -599,7 +600,9 @@ namespace osu.Game.Rulesets.Objects.Drawables
             float balanceAdjustAmount = positionalHitsoundsLevel.Value * 2;
             double returnedValue = balanceAdjustAmount * (position - 0.5f);
 
-            return returnedValue;
+            // Rounded to reduce the overhead of audio adjustments (which are currently bindable heavy).
+            // Balance is very hard to perceive in small increments anyways.
+            return Math.Round(returnedValue, 2);
         }
 
         /// <summary>
@@ -704,6 +707,7 @@ namespace osu.Game.Rulesets.Objects.Drawables
             }
 
             Result.RawTime = Time.Current;
+            Result.GameplayRate = (Clock as IGameplayClock)?.GetTrueGameplayRate() ?? Clock.Rate;
 
             if (Result.HasResult)
                 updateState(Result.IsHit ? ArmedState.Hit : ArmedState.Miss);
@@ -765,6 +769,13 @@ namespace osu.Game.Rulesets.Objects.Drawables
 
             if (CurrentSkin != null)
                 CurrentSkin.SourceChanged -= skinSourceChanged;
+
+            // Safeties against shooting in foot in cases where these are bound by external entities (like playfield) that don't clean up.
+            OnNestedDrawableCreated = null;
+            OnNewResult = null;
+            OnRevertResult = null;
+            DefaultsApplied = null;
+            HitObjectApplied = null;
         }
 
         public Bindable<double> AnimationStartTime { get; } = new BindableDouble();
