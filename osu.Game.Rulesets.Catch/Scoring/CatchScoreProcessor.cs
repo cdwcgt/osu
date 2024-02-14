@@ -32,6 +32,9 @@ namespace osu.Game.Rulesets.Catch.Scoring
         {
             base.Reset(storeResults);
 
+            if (!storeResults)
+                return;
+
             // large ticks are *purposefully* not counted to match stable
             int fruitTinyScaleDivisor = MaximumResultCounts.GetValueOrDefault(HitResult.SmallTickHit) + MaximumResultCounts.GetValueOrDefault(HitResult.Great);
             fruitTinyScale = fruitTinyScaleDivisor == 0
@@ -45,12 +48,13 @@ namespace osu.Game.Rulesets.Catch.Scoring
 
             double comboPortion = 1000000 - max_tiny_droplets_portion + max_tiny_droplets_portion * (1 - fruitTinyScale);
             double dropletsPortion = max_tiny_droplets_portion * fruitTinyScale;
-            double dropletsHit = MaximumResultCounts.GetValueOrDefault(HitResult.SmallTickHit) == 0
+            double dropletsHit = CurrentScoreMaximumResultCounts.GetValueOrDefault(HitResult.SmallTickHit) == 0
                 ? 0
-                : (double)ScoreResultCounts.GetValueOrDefault(HitResult.SmallTickHit) / MaximumResultCounts.GetValueOrDefault(HitResult.SmallTickHit);
+                : (double)ScoreResultCounts.GetValueOrDefault(HitResult.SmallTickHit) / CurrentScoreMaximumResultCounts.GetValueOrDefault(HitResult.SmallTickHit);
+            double dropletsProgress = (double)CurrentScoreMaximumResultCounts.GetValueOrDefault(HitResult.SmallTickHit) / MaximumResultCounts.GetValueOrDefault(HitResult.SmallTickHit);
 
             return comboPortion * comboProgress
-                   + dropletsPortion * dropletsHit
+                   + dropletsPortion * dropletsHit * dropletsProgress
                    + bonusPortion;
         }
 

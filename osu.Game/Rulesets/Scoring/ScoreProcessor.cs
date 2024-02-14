@@ -88,12 +88,24 @@ namespace osu.Game.Rulesets.Scoring
         /// </summary>
         public IBindable<ScoreRank> Rank => rank;
 
+        /// <summary>
+        /// The possible achievable total score current time.
+        /// Calculate by <see cref="TotalScore"/> divide by current maximum total score and multiply by <see cref="MaximumTotalScore"/>
+        /// </summary>
+        public Bindable<long> CurrentPossibleTotalScore = new BindableLong { MinValue = 0 };
+
         private readonly Bindable<ScoreRank> rank = new Bindable<ScoreRank>(ScoreRank.X);
 
         /// <summary>
         /// The highest combo achieved by this score.
         /// </summary>
         public readonly BindableInt HighestCombo = new BindableInt();
+
+        /// <summary>
+        /// The highest combo can be achieved at the current point in time.
+        /// Assumes that all objects that have been judged receive the maximum hit result.
+        /// </summary>
+        public readonly BindableInt CurrentPossibleMaxCombo = new BindableInt();
 
         /// <summary>
         /// The <see cref="HitEvent"/>s collected during gameplay thus far.
@@ -148,6 +160,11 @@ namespace osu.Game.Rulesets.Scoring
         private double maximumComboPortion;
 
         /// <summary>
+        /// The maximum combo score at this time.
+        /// </summary>
+        private double currentMaximumComboPortion;
+
+        /// <summary>
         /// The combo score at the current point in time.
         /// </summary>
         private double currentComboPortion;
@@ -175,7 +192,20 @@ namespace osu.Game.Rulesets.Scoring
 
         private bool beatmapApplied;
 
+        /// <summary>
+        /// The hit result counts which judged by this score.
+        /// </summary>
         protected readonly Dictionary<HitResult, int> ScoreResultCounts = new Dictionary<HitResult, int>();
+
+        /// <summary>
+        /// The maximum hit result counts which judged by this score.
+        /// Assumes that all objects that have been judged receive the maximum hit result.
+        /// </summary>
+        protected readonly Dictionary<HitResult, int> CurrentScoreMaximumResultCounts = new Dictionary<HitResult, int>();
+
+        /// <summary>
+        /// The maximum achievable hit result.
+        /// </summary>
         protected readonly Dictionary<HitResult, int> MaximumResultCounts = new Dictionary<HitResult, int>();
 
         private readonly List<HitEvent> hitEvents = new List<HitEvent>();
@@ -217,11 +247,15 @@ namespace osu.Game.Rulesets.Scoring
                 return;
 
             ScoreResultCounts[result.Type] = ScoreResultCounts.GetValueOrDefault(result.Type) + 1;
+            CurrentScoreMaximumResultCounts[result.Judgement.MaxResult] = CurrentScoreMaximumResultCounts.GetValueOrDefault(result.Judgement.MaxResult) + 1;
 
             if (result.Type.IncreasesCombo())
                 Combo.Value++;
             else if (result.Type.BreaksCombo())
                 Combo.Value = 0;
+
+            if (result.Type.AffectsCombo())
+                CurrentPossibleMaxCombo.Value++;
 
             result.ComboAfterJudgement = Combo.Value;
 
@@ -237,7 +271,16 @@ namespace osu.Game.Rulesets.Scoring
             if (result.Type.IsBonus())
                 currentBonusPortion += GetBonusScoreChange(result);
             else if (result.Type.IsScorable())
+            {
                 currentComboPortion += GetComboScoreChange(result);
+
+                var fakeJudgementResult = new JudgementResult(result.HitObject, result.Judgement)
+                {
+                    ComboAfterJudgement = CurrentPossibleMaxCombo.Value,
+                    Type = result.Judgement.MaxResult
+                };
+                currentMaximumComboPortion += GetComboScoreChange(fakeJudgementResult);
+            }
 
             ApplyScoreChange(result);
 
@@ -273,6 +316,10 @@ namespace osu.Game.Rulesets.Scoring
                 return;
 
             ScoreResultCounts[result.Type] = ScoreResultCounts.GetValueOrDefault(result.Type) - 1;
+            CurrentScoreMaximumResultCounts[result.Judgement.MaxResult] = CurrentScoreMaximumResultCounts.GetValueOrDefault(result.Judgement.MaxResult) - 1;
+
+            if (result.Type.AffectsCombo())
+                CurrentPossibleMaxCombo.Value--;
 
             if (result.Judgement.MaxResult.AffectsAccuracy())
             {
@@ -286,7 +333,16 @@ namespace osu.Game.Rulesets.Scoring
             if (result.Type.IsBonus())
                 currentBonusPortion -= GetBonusScoreChange(result);
             else if (result.Type.IsScorable())
+            {
                 currentComboPortion -= GetComboScoreChange(result);
+
+                var fakeJudgementResult = new JudgementResult(result.HitObject, result.Judgement)
+                {
+                    ComboAfterJudgement = CurrentPossibleMaxCombo.Value,
+                    Type = result.Judgement.MaxResult
+                };
+                currentMaximumComboPortion -= GetComboScoreChange(fakeJudgementResult);
+            }
 
             RemoveScoreChange(result);
 
@@ -362,8 +418,11 @@ namespace osu.Game.Rulesets.Scoring
 
             double comboProgress = maximumComboPortion > 0 ? currentComboPortion / maximumComboPortion : 1;
             double accuracyProcess = maximumAccuracyJudgementCount > 0 ? (double)currentAccuracyJudgementCount / maximumAccuracyJudgementCount : 1;
+            double maxComboProgress = maximumComboPortion > 0 ? currentMaximumComboPortion / maximumComboPortion : 1;
+            double possibleComboProgress = maxComboProgress > 0 ? comboProgress / maxComboProgress : 1;
 
             TotalScore.Value = (long)Math.Round(ComputeTotalScore(comboProgress, accuracyProcess, currentBonusPortion) * scoreMultiplier);
+            CurrentPossibleTotalScore.Value = (long)Math.Round(ComputeTotalScore(possibleComboProgress, 1, currentBonusPortion) * scoreMultiplier);
         }
 
         private void updateRank()
@@ -412,16 +471,20 @@ namespace osu.Game.Rulesets.Scoring
             }
 
             ScoreResultCounts.Clear();
+            CurrentScoreMaximumResultCounts.Clear();
 
             currentBaseScore = 0;
             currentMaximumBaseScore = 0;
             currentAccuracyJudgementCount = 0;
             currentComboPortion = 0;
+            currentMaximumComboPortion = 0;
             currentBonusPortion = 0;
 
             TotalScore.Value = 0;
+            CurrentPossibleTotalScore.Value = 0;
             Accuracy.Value = 1;
             Combo.Value = 0;
+            CurrentPossibleMaxCombo.Value = 0;
             HighestCombo.Value = 0;
             updateRank();
         }
