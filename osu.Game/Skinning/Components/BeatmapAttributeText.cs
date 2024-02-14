@@ -20,6 +20,8 @@ using osu.Game.Graphics.Sprites;
 using osu.Game.Localisation;
 using osu.Game.Localisation.SkinComponents;
 using osu.Game.Resources.Localisation.Web;
+using osu.Game.Rulesets;
+using osu.Game.Rulesets.Mods;
 
 namespace osu.Game.Skinning.Components
 {
@@ -37,6 +39,19 @@ namespace osu.Game.Skinning.Components
 
         [Resolved]
         private IBindable<WorkingBeatmap> beatmap { get; set; } = null!;
+
+        [Resolved]
+        private Bindable<IReadOnlyList<Mod>> mods { get; set; } = null!;
+
+        [Resolved]
+        private BeatmapDifficultyCache difficultyCache { get; set; } = null!;
+
+        [Resolved]
+        private OsuGameBase game { get; set; } = null!;
+
+        private IBindable<RulesetInfo> gameRuleset = null!;
+
+        private IBindable<StarDifficulty?> starDifficulty = null!;
 
         private readonly Dictionary<BeatmapAttribute, LocalisableString> valueDictionary = new Dictionary<BeatmapAttribute, LocalisableString>();
 
@@ -78,6 +93,7 @@ namespace osu.Game.Skinning.Components
 
             Attribute.BindValueChanged(_ => updateLabel());
             Template.BindValueChanged(_ => updateLabel());
+            gameRuleset = game.Ruleset.GetBoundCopy();
             beatmap.BindValueChanged(b =>
             {
                 updateBeatmapContent(b.NewValue);
@@ -87,18 +103,39 @@ namespace osu.Game.Skinning.Components
 
         private void updateBeatmapContent(WorkingBeatmap workingBeatmap)
         {
+            BeatmapDifficulty originalDifficulty = new BeatmapDifficulty(workingBeatmap.BeatmapInfo.Difficulty);
+
+            foreach (var mod in mods.Value.OfType<IApplicableToDifficulty>())
+                mod.ApplyToDifficulty(originalDifficulty);
+
+            Ruleset ruleset = gameRuleset.Value.CreateInstance();
+
+            double rate = 1;
+            foreach (var mod in mods.Value.OfType<IApplicableToRate>())
+                rate = mod.ApplyToRate(0, rate);
+
+            BeatmapDifficulty adjustedDifficulty = ruleset.GetRateAdjustedDisplayDifficulty(originalDifficulty, rate);
+
             valueDictionary[BeatmapAttribute.Title] = new RomanisableString(workingBeatmap.BeatmapInfo.Metadata.TitleUnicode, workingBeatmap.BeatmapInfo.Metadata.Title);
             valueDictionary[BeatmapAttribute.Artist] = new RomanisableString(workingBeatmap.BeatmapInfo.Metadata.ArtistUnicode, workingBeatmap.BeatmapInfo.Metadata.Artist);
             valueDictionary[BeatmapAttribute.DifficultyName] = workingBeatmap.BeatmapInfo.DifficultyName;
             valueDictionary[BeatmapAttribute.Creator] = workingBeatmap.BeatmapInfo.Metadata.Author.Username;
-            valueDictionary[BeatmapAttribute.Length] = TimeSpan.FromMilliseconds(workingBeatmap.BeatmapInfo.Length).ToFormattedDuration();
+            valueDictionary[BeatmapAttribute.Length] = TimeSpan.FromMilliseconds(workingBeatmap.BeatmapInfo.Length / rate).ToFormattedDuration();
             valueDictionary[BeatmapAttribute.RankedStatus] = workingBeatmap.BeatmapInfo.Status.GetLocalisableDescription();
-            valueDictionary[BeatmapAttribute.BPM] = workingBeatmap.BeatmapInfo.BPM.ToLocalisableString(@"F2");
-            valueDictionary[BeatmapAttribute.CircleSize] = ((double)workingBeatmap.BeatmapInfo.Difficulty.CircleSize).ToLocalisableString(@"F2");
-            valueDictionary[BeatmapAttribute.HPDrain] = ((double)workingBeatmap.BeatmapInfo.Difficulty.DrainRate).ToLocalisableString(@"F2");
-            valueDictionary[BeatmapAttribute.Accuracy] = ((double)workingBeatmap.BeatmapInfo.Difficulty.OverallDifficulty).ToLocalisableString(@"F2");
-            valueDictionary[BeatmapAttribute.ApproachRate] = ((double)workingBeatmap.BeatmapInfo.Difficulty.ApproachRate).ToLocalisableString(@"F2");
-            valueDictionary[BeatmapAttribute.StarRating] = workingBeatmap.BeatmapInfo.StarRating.ToLocalisableString(@"F2");
+            valueDictionary[BeatmapAttribute.BPM] = (workingBeatmap.BeatmapInfo.BPM * rate).ToLocalisableString(@"0.##");
+            valueDictionary[BeatmapAttribute.CircleSize] = ((double)adjustedDifficulty.CircleSize).ToLocalisableString(@"0.##");
+            valueDictionary[BeatmapAttribute.HPDrain] = ((double)adjustedDifficulty.DrainRate).ToLocalisableString(@"0.##");
+            valueDictionary[BeatmapAttribute.Accuracy] = ((double)adjustedDifficulty.OverallDifficulty).ToLocalisableString(@"0.##");
+            valueDictionary[BeatmapAttribute.ApproachRate] = ((double)adjustedDifficulty.ApproachRate).ToLocalisableString(@"0.##");
+            valueDictionary[BeatmapAttribute.StarRating] = workingBeatmap.BeatmapInfo.StarRating.ToLocalisableString(@"0.##");
+
+            starDifficulty = difficultyCache.GetBindableDifficulty(workingBeatmap.BeatmapInfo);
+            starDifficulty.BindValueChanged(s =>
+            {
+                valueDictionary[BeatmapAttribute.StarRating] = (s.NewValue ?? default).Stars.ToLocalisableString("0.##");
+
+                updateLabel();
+            });
         }
 
         private void updateLabel()

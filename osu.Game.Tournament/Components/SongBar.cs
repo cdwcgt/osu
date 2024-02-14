@@ -296,7 +296,7 @@ namespace osu.Game.Tournament.Components
                                             new Sprite
                                             {
                                                 Texture = store.Get("hsc-logo"),
-                                                Size = new Vector2(40.96f),
+                                                Scale = new Vector2(0.32f),
                                                 Margin = new MarginPadding(20),
                                                 Origin = Anchor.CentreRight,
                                                 Anchor = Anchor.CentreRight,

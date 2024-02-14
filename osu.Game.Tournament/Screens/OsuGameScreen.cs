@@ -69,7 +69,7 @@ namespace osu.Game.Tournament.Screens
             LocalConfig.SetValue(OsuSetting.ShowFirstRunSetup, false);
             Notifications.Post(new SimpleNotification
             {
-                Text = "不要用主菜单的退出按钮，会退出整个比赛端"
+                Text = "不要用主菜单的退出按钮\n会退出整个比赛端"
             });
         }
     }
