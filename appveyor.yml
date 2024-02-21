@@ -20,11 +20,11 @@ build_script:
     dotnet build osu.Desktop -c Release -r linux-arm
 test: off
 artifacts:
-- path: ./osu.Desktop/bin/Release/net6.0/win-x64
+- path: ./osu.Desktop/bin/Release/net8.0/win-x64
   name: osu-windows
-- path: ./osu.Desktop/bin/Release/net6.0/linux-x64
+- path: ./osu.Desktop/bin/Release/net8.0/linux-x64
   name: osu-linux-x64
-- path: ./osu.Desktop/bin/Release/net6.0/linux-arm
+- path: ./osu.Desktop/bin/Release/net8.0/linux-arm
   name: osu-linux-arm
 deploy:
 - provider: GitHub
