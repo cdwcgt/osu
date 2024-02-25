@@ -32,6 +32,18 @@ namespace osu.Game.Rulesets.Osu.Replays
         protected List<ReplayFrame> Frames => Replay.Frames;
         private readonly IReadOnlyList<IApplicableToRate> timeAffectingMods;
 
+        /// <summary>
+        /// Which button (left or right) to use for the current hitobject.
+        /// Even means LMB will be used to click, odd means RMB will be used.
+        /// This keeps track of the button previously used for alt/singletap logic.
+        /// </summary>
+        protected int ButtonIndex;
+
+        /// <summary>
+        /// The frame rate that replay be.
+        /// </summary>
+        protected virtual int FrameRate => 60;
+
         protected OsuAutoGeneratorBase(IBeatmap beatmap, IReadOnlyList<Mod> mods)
             : base(beatmap)
         {
@@ -78,7 +90,7 @@ namespace osu.Game.Rulesets.Osu.Replays
         /// </summary>
         /// <param name="time">The time of the previous frame.</param>
         protected double GetFrameDelay(double time)
-            => ApplyModsToRate(time, 1000.0 / 60);
+            => ApplyModsToRate(time, 1000.0 / FrameRate);
 
         private class ReplayFrameComparer : IComparer<ReplayFrame>
         {

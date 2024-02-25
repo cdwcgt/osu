@@ -57,19 +57,12 @@ namespace osu.Game.Rulesets.Osu.Replays
 
         #region Generator
 
-        /// <summary>
-        /// Which button (left or right) to use for the current hitobject.
-        /// Even means LMB will be used to click, odd means RMB will be used.
-        /// This keeps track of the button previously used for alt/singletap logic.
-        /// </summary>
-        private int buttonIndex;
-
         public override Replay Generate()
         {
             if (Beatmap.HitObjects.Count == 0)
                 return Replay;
 
-            buttonIndex = 0;
+            ButtonIndex = 0;
 
             AddFrameToReplay(new OsuReplayFrame(Beatmap.HitObjects[0].StartTime - 1500, new Vector2(256, 500)));
 
@@ -155,7 +148,7 @@ namespace osu.Game.Rulesets.Osu.Replays
                 if (spinner.SpinsRequired == 0)
                     return;
 
-                calcSpinnerStartPosAndDirection(((OsuReplayFrame)Frames[^1]).Position, out startPosition, out spinnerDirection);
+                CalcSpinnerStartPosAndDirection(((OsuReplayFrame)Frames[^1]).Position, out startPosition, out spinnerDirection);
 
                 Vector2 spinCentreOffset = SPINNER_CENTRE - ((OsuReplayFrame)Frames[^1]).Position;
 
@@ -173,14 +166,14 @@ namespace osu.Game.Rulesets.Osu.Replays
             }
 
             // Add frames to click the hitobject
-            addHitObjectClickFrames(h, startPosition, spinnerDirection);
+            AddHitObjectClickFrames(h, startPosition, spinnerDirection);
         }
 
         #endregion
 
         #region Helper subroutines
 
-        private static void calcSpinnerStartPosAndDirection(Vector2 prevPos, out Vector2 startPosition, out float spinnerDirection)
+        protected static void CalcSpinnerStartPosAndDirection(Vector2 prevPos, out Vector2 startPosition, out float spinnerDirection)
         {
             Vector2 spinCentreOffset = SPINNER_CENTRE - prevPos;
             float distFromCentre = spinCentreOffset.Length;
@@ -267,9 +260,9 @@ namespace osu.Game.Rulesets.Osu.Replays
 
             // Start alternating once the time separation is too small (faster than ~225BPM).
             if (timeDifference > 0 && timeDifference < 266)
-                buttonIndex++;
+                ButtonIndex++;
             else
-                buttonIndex = 0;
+                ButtonIndex = 0;
         }
 
         /// <summary>
@@ -281,11 +274,11 @@ namespace osu.Game.Rulesets.Osu.Replays
         private double getReactionTime(double timeInstant) => ApplyModsToRate(timeInstant, 100);
 
         // Add frames to click the hitobject
-        private void addHitObjectClickFrames(OsuHitObject h, Vector2 startPosition, float spinnerDirection)
+        protected void AddHitObjectClickFrames(OsuHitObject h, Vector2 startPosition, float spinnerDirection)
         {
             // Time to insert the first frame which clicks the object
             // Here we mainly need to determine which button to use
-            var action = buttonIndex % 2 == 0 ? OsuAction.LeftButton : OsuAction.RightButton;
+            var action = ButtonIndex % 2 == 0 ? OsuAction.LeftButton : OsuAction.RightButton;
 
             var startFrame = new OsuReplayFrame(h.StartTime, new Vector2(startPosition.X, startPosition.Y), action);
 
