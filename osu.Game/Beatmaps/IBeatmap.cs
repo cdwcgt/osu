@@ -94,7 +94,7 @@ namespace osu.Game.Beatmaps
 
             static void addCombo(HitObject hitObject, ref int combo)
             {
-                if (hitObject.CreateJudgement().MaxResult.AffectsCombo())
+                if (hitObject.Judgement.MaxResult.AffectsCombo())
                     combo++;
 
                 foreach (var nested in hitObject.NestedHitObjects)
@@ -109,6 +109,11 @@ namespace osu.Game.Beatmaps
         /// This is cached to <see cref="BeatmapInfo.Length"/>, so using that is preferable when available.
         /// </remarks>
         public static double CalculatePlayableLength(this IBeatmap beatmap) => CalculatePlayableLength(beatmap.HitObjects);
+
+        /// <summary>
+        /// Find the total milliseconds between the first and last hittable objects, excluding any break time.
+        /// </summary>
+        public static double CalculateDrainLength(this IBeatmap beatmap) => CalculatePlayableLength(beatmap.HitObjects) - beatmap.TotalBreakTime;
 
         /// <summary>
         /// Find the timestamps in milliseconds of the start and end of the playable region.
