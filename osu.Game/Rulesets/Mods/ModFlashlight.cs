@@ -4,6 +4,7 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text.Json.Serialization;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -44,9 +45,11 @@ namespace osu.Game.Rulesets.Mods
         [SettingSource("Change size based on combo", "Decrease the flashlight size as combo increases.")]
         public abstract BindableBool ComboBasedSize { get; }
 
+        [JsonIgnore]
         [SettingSource("Use Max Combo")]
         public BindableBool UseMaxCombo { get; } = new BindableBool();
 
+        [JsonIgnore]
         [SettingSource("DefaultCombo")]
         public BindableInt DefaultCombo { get; } = new BindableInt
         {
