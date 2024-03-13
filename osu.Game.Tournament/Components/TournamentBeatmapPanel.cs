@@ -193,6 +193,14 @@ namespace osu.Game.Tournament.Components
                                     Blending = BlendingParameters.Additive,
                                     Alpha = 0,
                                 },
+                                modContainer = new Container
+                                {
+                                    Anchor = Anchor.CentreRight,
+                                    Origin = Anchor.CentreRight,
+                                    Margin = new MarginPadding(10),
+                                    Width = 100,
+                                    RelativeSizeAxes = Axes.Y,
+                                }
                             }
                         },
                         new Container
@@ -221,18 +229,6 @@ namespace osu.Game.Tournament.Components
                         }
                     }
                 },
-            });
-
-            if (!string.IsNullOrEmpty(mod))
-            {
-                container.Add(new TournamentModIcon(mod)
-                {
-                    Anchor = Anchor.CentreRight,
-                    Origin = Anchor.CentreRight,
-                    Margin = new MarginPadding(10),
-                    Width = 100,
-                    RelativeSizeAxes = Axes.Y,
-                }
             });
 
             if (!string.IsNullOrEmpty(mod))
@@ -326,8 +322,8 @@ namespace osu.Game.Tournament.Components
                         break;
 
                     case ChoiceType.Protected:
-                        Alpha = 1f;
-                        BorderThickness = 0;
+                        container.Alpha = 1f;
+                        container.BorderThickness = 0;
                         break;
                 }
             }
