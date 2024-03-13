@@ -30,7 +30,9 @@ namespace osu.Game.Tournament.Components
                 {
                     FillMode = FillMode.Fit,
                     RelativeSizeAxes = Axes.Both,
-                    Texture = customTexture
+                    Texture = customTexture,
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.CentreLeft
                 });
             }
 

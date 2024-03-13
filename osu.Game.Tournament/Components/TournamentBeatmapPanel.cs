@@ -198,7 +198,7 @@ namespace osu.Game.Tournament.Components
                                     Anchor = Anchor.CentreRight,
                                     Origin = Anchor.CentreRight,
                                     Margin = new MarginPadding(10),
-                                    Width = 100,
+                                    Width = 76,
                                     RelativeSizeAxes = Axes.Y,
                                 }
                             }
@@ -237,7 +237,7 @@ namespace osu.Game.Tournament.Components
                 {
                     Anchor = Anchor.CentreRight,
                     Origin = Anchor.CentreRight,
-                    Width = 60,
+                    Width = 55,
                     RelativeSizeAxes = Axes.Y,
                 });
             }
@@ -277,7 +277,7 @@ namespace osu.Game.Tournament.Components
                 {
                     Anchor = Anchor.CentreLeft,
                     Origin = Anchor.CentreLeft,
-                    Width = 40,
+                    Width = 21,
                     RelativeSizeAxes = Axes.Y,
                 });
             }
