@@ -17,6 +17,7 @@ using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Drawables;
 using osu.Game.Graphics;
 using osu.Game.Tournament.Models;
+using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Components
@@ -34,7 +35,7 @@ namespace osu.Game.Tournament.Components
         private Box flash = null!;
         private TournamentProtectIcon? protectIcon;
         private TournamentModIcon? modIcon;
-        private Container modContainer = null!;
+        private FillFlowContainer modContainer = null!;
 
         public TournamentBeatmapPanel(RoundBeatmap beatmap, int? id = null)
             : this(beatmap.Beatmap, beatmap.Mods)
@@ -193,13 +194,14 @@ namespace osu.Game.Tournament.Components
                                     Blending = BlendingParameters.Additive,
                                     Alpha = 0,
                                 },
-                                modContainer = new Container
+                                modContainer = new FillFlowContainer
                                 {
                                     Anchor = Anchor.CentreRight,
                                     Origin = Anchor.CentreRight,
                                     Margin = new MarginPadding(10),
                                     Width = 76,
                                     RelativeSizeAxes = Axes.Y,
+                                    Spacing = new Vector2(-1, 0)
                                 }
                             }
                         },
@@ -275,8 +277,8 @@ namespace osu.Game.Tournament.Components
             {
                 modContainer.Add(protectIcon = new TournamentProtectIcon(foundProtected.Team)
                 {
-                    Anchor = Anchor.CentreLeft,
-                    Origin = Anchor.CentreLeft,
+                    Anchor = Anchor.CentreRight,
+                    Origin = Anchor.CentreRight,
                     Width = 21,
                     RelativeSizeAxes = Axes.Y,
                 });
