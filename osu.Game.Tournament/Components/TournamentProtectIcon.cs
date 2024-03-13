@@ -7,7 +7,6 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
 using osu.Game.Tournament.Models;
-using osuTK;
 
 namespace osu.Game.Tournament.Components
 {
@@ -31,20 +30,71 @@ namespace osu.Game.Tournament.Components
                 {
                     FillMode = FillMode.Fit,
                     RelativeSizeAxes = Axes.Both,
-                    Anchor = Anchor.CentreRight,
-                    Origin = Anchor.CentreRight,
                     Texture = customTexture
                 });
-                return;
             }
 
-            AddInternal(new SpriteIcon
-            {
-                Origin = Anchor.Centre,
-                Anchor = Anchor.Centre,
-                Size = new Vector2(45),
-                Icon = FontAwesome.Solid.Question
-            });
+            //AddInternal(new PadLock(color)
+            //{
+            //    Origin = Anchor.Centre,
+            //    Anchor = Anchor.Centre,
+            //    Size = new Vector2(45),
+            //});
         }
+
+        //private partial class PadLock : Container
+        //{
+        //    [Resolved]
+        //    private OsuColour osuColour { get; set; } = null!;
+        //
+        //    private TeamColour team;
+        //
+        //    public TeamColour Team
+        //    {
+        //        set
+        //        {
+        //            if (!IsLoaded)
+        //                return;
+        //
+        //            team = value;
+        //
+        //            lockIcon.Colour = value == TeamColour.Red ? osuColour.TeamColourRed : osuColour.TeamColourBlue;
+        //        }
+        //    }
+        //
+        //    private Sprite background = null!;
+        //    private SpriteIcon lockIcon = null!;
+        //
+        //    public PadLock(TeamColour color)
+        //    {
+        //        team = color;
+        //    }
+        //
+        //    [BackgroundDependencyLoader]
+        //    private void load(TextureStore textures)
+        //    {
+        //        Children = new Drawable[]
+        //        {
+        //            background = new Sprite
+        //            {
+        //                RelativeSizeAxes = Axes.Both,
+        //                FillMode = FillMode.Fit,
+        //                Texture = textures.Get("Icons/BeatmapDetails/mod-icon"),
+        //                Anchor = Anchor.Centre,
+        //                Origin = Anchor.Centre,
+        //            },
+        //            lockIcon = new SpriteIcon
+        //            {
+        //                Origin = Anchor.Centre,
+        //                Anchor = Anchor.Centre,
+        //                Size = new Vector2(15),
+        //                Icon = FontAwesome.Solid.ShieldAlt,
+        //                Shadow = true,
+        //            }
+        //        };
+        //
+        //        lockIcon.Colour = team == TeamColour.Red ? osuColour.TeamColourRed : osuColour.TeamColourBlue;
+        //    }
+        //}
     }
 }
