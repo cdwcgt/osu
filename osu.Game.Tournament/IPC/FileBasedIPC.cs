@@ -88,7 +88,15 @@ namespace osu.Game.Tournament.IPC
                                     var existing = ladder.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(b => b.ID == beatmapId);
 
                                     if (existing != null)
+                                    {
                                         Beatmap.Value = existing.Beatmap;
+                                        var ruleset = ladder.Ruleset.Value?.CreateInstance();
+                                        string modStr = existing?.Mods ?? string.Empty;
+
+                                        var mod = ruleset!.CreateModFromAcronym(modStr);
+
+                                        Mods.Value = mod != null ? ruleset.ConvertToLegacyMods(new[] { mod }) : 0;
+                                    }
                                     else
                                     {
                                         beatmapLookupRequest = new GetBeatmapRequest(new APIBeatmap { OnlineID = beatmapId });
@@ -103,10 +111,9 @@ namespace osu.Game.Tournament.IPC
                                                 Beatmap.Value = null;
                                         };
                                         API.Queue(beatmapLookupRequest);
+                                        Mods.Value = (LegacyMods)mods;
                                     }
                                 }
-
-                                Mods.Value = (LegacyMods)mods;
                             }
                         }
                         catch

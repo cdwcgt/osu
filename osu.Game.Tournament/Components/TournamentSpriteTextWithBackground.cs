@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Game.Graphics;
@@ -13,6 +14,12 @@ namespace osu.Game.Tournament.Components
         public readonly TournamentSpriteText Text;
 
         protected readonly Box Background;
+
+        public ColourInfo BackgroundColor
+        {
+            get => Background.Colour;
+            set => Background.Colour = value;
+        }
 
         public TournamentSpriteTextWithBackground(string text = "")
         {
@@ -29,7 +36,7 @@ namespace osu.Game.Tournament.Components
                 {
                     Colour = TournamentGame.ELEMENT_FOREGROUND_COLOUR,
                     Font = OsuFont.Torus.With(weight: FontWeight.SemiBold, size: 50),
-                    Padding = new MarginPadding { Left = 10, Right = 20 },
+                    Padding = new MarginPadding { Horizontal = 10 },
                     Text = text,
                 }
             };

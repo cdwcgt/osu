@@ -307,7 +307,7 @@ namespace osu.Game.Rulesets.Scoring
         /// Gets the final score change to be applied to the combo portion of the score.
         /// </summary>
         /// <param name="result">The judgement result.</param>
-        protected virtual double GetComboScoreChange(JudgementResult result) => GetBaseScoreForResult(result.Judgement.MaxResult) * Math.Pow(result.ComboAfterJudgement, COMBO_EXPONENT);
+        protected virtual double GetComboScoreChange(JudgementResult result) => GetBaseScoreForResult(result.Type) * (1 + result.ComboAfterJudgement / 10d);
 
         public virtual int GetBaseScoreForResult(HitResult result)
         {
@@ -342,7 +342,7 @@ namespace osu.Game.Rulesets.Scoring
                     return 10;
 
                 case HitResult.LargeBonus:
-                    return 50;
+                    return 500;
             }
         }
 
@@ -379,9 +379,8 @@ namespace osu.Game.Rulesets.Scoring
 
         protected virtual double ComputeTotalScore(double comboProgress, double accuracyProgress, double bonusPortion)
         {
-            return 500000 * Accuracy.Value * comboProgress +
-                   500000 * Math.Pow(Accuracy.Value, 5) * accuracyProgress +
-                   bonusPortion;
+            return 700000 * comboProgress +
+                   300000 * Math.Pow(Accuracy.Value, 10) * accuracyProgress + bonusPortion;
         }
 
         /// <summary>

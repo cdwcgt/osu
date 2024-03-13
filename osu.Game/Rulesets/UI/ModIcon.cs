@@ -15,6 +15,7 @@ using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Rulesets.Mods;
+using osu.Game.Skinning;
 using osuTK;
 using osuTK.Graphics;
 
@@ -58,6 +59,9 @@ namespace osu.Game.Rulesets.UI
         [Resolved]
         private OsuColour colours { get; set; } = null!;
 
+        [Resolved]
+        private ISkinSource skin { get; set; } = null!;
+
         private Color4 backgroundColour;
 
         private Sprite extendedBackground = null!;
@@ -67,6 +71,8 @@ namespace osu.Game.Rulesets.UI
         private Container extendedContent = null!;
 
         private ModSettingChangeTracker? modSettingsChangeTracker;
+        private readonly bool allowLegacy;
+        private Sprite legacyIcon = null!;
 
         /// <summary>
         /// Construct a new instance.
@@ -74,7 +80,8 @@ namespace osu.Game.Rulesets.UI
         /// <param name="mod">The mod to be displayed</param>
         /// <param name="showTooltip">Whether a tooltip describing the mod should display on hover.</param>
         /// <param name="showExtendedInformation">Whether to display a mod's extended information, if available.</param>
-        public ModIcon(IMod mod, bool showTooltip = true, bool showExtendedInformation = true)
+        /// <param name="allowLegacy">Whether to display a mod's extended information, if available.</param>
+        public ModIcon(IMod mod, bool showTooltip = true, bool showExtendedInformation = true, bool allowLegacy = false)
         {
             // May expand due to expanded content, so autosize here.
             AutoSizeAxes = Axes.X;
@@ -83,6 +90,7 @@ namespace osu.Game.Rulesets.UI
             this.mod = mod ?? throw new ArgumentNullException(nameof(mod));
             this.showTooltip = showTooltip;
             this.showExtendedInformation = showExtendedInformation;
+            this.allowLegacy = allowLegacy;
         }
 
         [BackgroundDependencyLoader]
@@ -117,6 +125,20 @@ namespace osu.Game.Rulesets.UI
                             Origin = Anchor.Centre,
                         },
                     }
+                },
+                new Container
+                {
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.CentreLeft,
+                    Name = "legacy icon",
+                    Size = allowLegacy ? new Vector2(96) : Vector2.Zero,
+                    Child = legacyIcon = new Sprite
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        FillMode = FillMode.Fit,
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
+                    },
                 },
                 new Container
                 {
@@ -176,16 +198,27 @@ namespace osu.Game.Rulesets.UI
 
             modAcronym.Text = value.Acronym;
             modIcon.Icon = value.Icon ?? FontAwesome.Solid.Question;
+            var legacyTexture = skin.GetTexture($"selection-mod-{value.Name.Replace(" ", string.Empty)}");
 
-            if (value.Icon is null)
+            if (legacyTexture == null || !allowLegacy)
             {
-                modIcon.FadeOut();
-                modAcronym.FadeIn();
+                if (value.Icon is null)
+                {
+                    modIcon.FadeOut();
+                    modAcronym.FadeIn();
+                }
+                else
+                {
+                    modIcon.FadeIn();
+                    modAcronym.FadeOut();
+                }
             }
             else
             {
-                modIcon.FadeIn();
+                background.FadeOut();
+                modIcon.FadeOut();
                 modAcronym.FadeOut();
+                legacyIcon.Texture = legacyTexture;
             }
 
             backgroundColour = colours.ForModType(value.Type);

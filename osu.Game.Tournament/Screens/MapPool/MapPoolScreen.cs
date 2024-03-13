@@ -20,7 +20,7 @@ using osuTK.Input;
 
 namespace osu.Game.Tournament.Screens.MapPool
 {
-    public partial class MapPoolScreen : TournamentMatchScreen
+    public partial class MapPoolScreen : BeatmapInfoScreen
     {
         private FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>> mapFlows = null!;
 
@@ -117,6 +117,11 @@ namespace osu.Game.Tournament.Screens.MapPool
                         {
                             LabelText = "Split display by mods",
                             Current = LadderInfo.SplitMapPoolByMods,
+                        },
+                        new ControlPanel.Spacer(),
+                        new MatchRoundNameTextBox
+                        {
+                            RelativeSizeAxes = Axes.X,
                         },
                     },
                 }
@@ -300,6 +305,9 @@ namespace osu.Game.Tournament.Screens.MapPool
                 FillFlowContainer<TournamentBeatmapPanel>? currentFlow = null;
                 string? currentMods = null;
                 int flowCount = 0;
+                int currentModCount = 1;
+
+                var g = CurrentMatch.Value.Round.Value.Beatmaps.GroupBy(b => b.Mods).ToDictionary(f => f.Key, f => f.Count());
 
                 foreach (var b in CurrentMatch.Value.Round.Value.Beatmaps)
                 {
@@ -317,15 +325,32 @@ namespace osu.Game.Tournament.Screens.MapPool
 
                         totalRows++;
                         flowCount = 0;
+                        currentModCount = 0;
                     }
 
                     if (++flowCount > 2)
                     {
                         totalRows++;
                         flowCount = 1;
+
+                        if (g[b.Mods] % 3 == 1)
+                        {
+                            mapFlows.Add(currentFlow = new FillFlowContainer<TournamentBeatmapPanel>
+                            {
+                                Spacing = new Vector2(10, 5),
+                                Direction = FillDirection.Full,
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+                                Padding = new MarginPadding
+                                {
+                                    // remove horizontal padding to increase flow width to 3 panels
+                                    Horizontal = 100
+                                }
+                            });
+                        }
                     }
 
-                    currentFlow.Add(new TournamentBeatmapPanel(b.Beatmap, b.Mods)
+                    currentFlow.Add(new TournamentBeatmapPanel(b, g[b.Mods] > 1 ? ++currentModCount : null)
                     {
                         Anchor = Anchor.TopCentre,
                         Origin = Anchor.TopCentre,

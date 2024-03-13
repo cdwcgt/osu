@@ -55,6 +55,9 @@ namespace osu.Game.Tournament.Models
             MaxValue = 256
         };
 
+        public BindableColour4 Color = new BindableColour4();
+        public BindableBool InverseTextColor = new BindableBool(false);
+
         [JsonProperty]
         public BindableList<TournamentUser> Players { get; } = new BindableList<TournamentUser>();
 

@@ -4,7 +4,9 @@
 #nullable disable
 
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics.Containers;
+using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Rulesets.Judgements;
 using osu.Game.Rulesets.Scoring;
@@ -14,8 +16,11 @@ using osuTK.Graphics;
 
 namespace osu.Game.Screens.Play.HUD.HitErrorMeters
 {
-    public abstract partial class HitErrorMeter : CompositeDrawable, ISerialisableDrawable
+    public abstract partial class HitErrorMeter : CompositeDrawable, ISerialisableDrawable, ISpinnerAware
     {
+        [SettingSource("Hide when spinning")]
+        public Bindable<bool> HideWhenSpinning { get; } = new Bindable<bool>();
+
         protected HitWindows HitWindows { get; private set; }
 
         [Resolved]

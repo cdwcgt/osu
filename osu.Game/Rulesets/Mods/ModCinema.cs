@@ -38,7 +38,7 @@ namespace osu.Game.Rulesets.Mods
             overlay.ShowHud.Disabled = true;
         }
 
-        public void ApplyToPlayer(Player player)
+        public override void ApplyToPlayer(Player player)
         {
             player.ApplyToBackground(b => b.IgnoreUserSettings.Value = true);
             player.DimmableStoryboard.IgnoreUserSettings.Value = true;

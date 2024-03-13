@@ -23,6 +23,7 @@ namespace osu.Game.Rulesets.Osu.Configuration
             SetDefault(OsuRulesetSetting.SnakingOutSliders, true);
             SetDefault(OsuRulesetSetting.ShowCursorTrail, true);
             SetDefault(OsuRulesetSetting.ShowCursorRipples, false);
+            SetDefault(OsuRulesetSetting.NoDraw300, false);
             SetDefault(OsuRulesetSetting.PlayfieldBorderStyle, PlayfieldBorderStyle.None);
         }
     }
@@ -34,5 +35,6 @@ namespace osu.Game.Rulesets.Osu.Configuration
         ShowCursorTrail,
         ShowCursorRipples,
         PlayfieldBorderStyle,
+        NoDraw300
     }
 }

@@ -3,15 +3,18 @@
 
 using System;
 using System.Collections.Generic;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Localisation;
 using osu.Game.Beatmaps;
+using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Replays;
+using osu.Game.Screens.Play;
 
 namespace osu.Game.Rulesets.Mods
 {
-    public abstract class ModAutoplay : Mod, ICreateReplayData
+    public abstract class ModAutoplay : Mod, ICreateReplayData, IApplicableToPlayer
     {
         public override string Name => "Autoplay";
         public override string Acronym => "AT";
@@ -28,6 +31,17 @@ namespace osu.Game.Rulesets.Mods
 
         public override bool HasImplementation => GetType().GenericTypeArguments.Length == 0;
 
+        [SettingSource("Save score")]
+        public Bindable<bool> SaveScore { get; } = new BindableBool();
+
         public virtual ModReplayData CreateReplayData(IBeatmap beatmap, IReadOnlyList<Mod> mods) => new ModReplayData(new Replay(), new ModCreatedUser { Username = @"autoplay" });
+
+        public virtual void ApplyToPlayer(Player player)
+        {
+            if (player is ReplayPlayer replayPlayer)
+            {
+                replayPlayer.SaveScore = SaveScore.Value;
+            }
+        }
     }
 }

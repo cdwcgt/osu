@@ -110,7 +110,7 @@ namespace osu.Game.Tournament.Screens.TeamWin
                         },
                         new TournamentSpriteText
                         {
-                            Text = "WINNER",
+                            Text = "获胜方",
                             Font = OsuFont.Torus.With(size: 100, weight: FontWeight.Bold),
                             Margin = new MarginPadding { Bottom = 50 },
                         },

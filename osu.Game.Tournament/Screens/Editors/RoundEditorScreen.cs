@@ -163,6 +163,10 @@ namespace osu.Game.Tournament.Screens.Editors
 
                     private readonly Bindable<string> mods = new Bindable<string>(string.Empty);
 
+                    private readonly Bindable<string> textColor = new Bindable<string>("#FFFFFF");
+
+                    private readonly Bindable<string> backgroundColor = new Bindable<string>("#000000");
+
                     private readonly Container drawableContainer;
 
                     public RoundBeatmapRow(TournamentRound team, RoundBeatmap beatmap)
@@ -188,7 +192,7 @@ namespace osu.Game.Tournament.Screens.Editors
                             {
                                 Margin = new MarginPadding(5),
                                 Padding = new MarginPadding { Right = 160 },
-                                Spacing = new Vector2(5),
+                                Spacing = new Vector2(1),
                                 Direction = FillDirection.Horizontal,
                                 AutoSizeAxes = Axes.Both,
                                 Children = new Drawable[]
@@ -206,6 +210,20 @@ namespace osu.Game.Tournament.Screens.Editors
                                         RelativeSizeAxes = Axes.None,
                                         Width = 200,
                                         Current = mods,
+                                    },
+                                    new SettingsTextBox
+                                    {
+                                        LabelText = "文本颜色",
+                                        RelativeSizeAxes = Axes.None,
+                                        Width = 120,
+                                        Current = textColor
+                                    },
+                                    new SettingsTextBox
+                                    {
+                                        LabelText = "背景色",
+                                        RelativeSizeAxes = Axes.None,
+                                        Width = 120,
+                                        Current = backgroundColor
                                     },
                                     drawableContainer = new Container
                                     {
@@ -265,6 +283,22 @@ namespace osu.Game.Tournament.Screens.Editors
 
                         mods.Value = Model.Mods;
                         mods.BindValueChanged(modString => Model.Mods = modString.NewValue);
+                        textColor.Value = Model.TextColor.ToHex();
+                        backgroundColor.Value = Model.BackgroundColor.ToHex();
+                        textColor.BindValueChanged(c =>
+                        {
+                            if (Colour4.TryParseHex(c.NewValue, out var colour))
+                            {
+                                Model.TextColor = colour;
+                            }
+                        });
+                        backgroundColor.BindValueChanged(c =>
+                        {
+                            if (Colour4.TryParseHex(c.NewValue, out var colour))
+                            {
+                                Model.BackgroundColor = colour;
+                            }
+                        });
                     }
 
                     private void updatePanel() => Schedule(() =>

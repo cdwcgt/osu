@@ -5,17 +5,21 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
+using osu.Framework.Screens;
 using osu.Game.Beatmaps;
 using osu.Game.Configuration;
 using osu.Game.Input.Bindings;
+using osu.Game.IO.Archives;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Scoring;
+using osu.Game.Scoring.Legacy;
 using osu.Game.Screens.Play.HUD;
 using osu.Game.Screens.Play.PlayerSettings;
 using osu.Game.Screens.Ranking;
@@ -31,6 +35,11 @@ namespace osu.Game.Screens.Play
         private readonly Func<IBeatmap, IReadOnlyList<Mod>, Score> createScore;
 
         private readonly bool replayIsFailedScore;
+
+        [Resolved]
+        private ScoreManager scoreManager { get; set; }
+
+        public bool SaveScore { get; set; } = false;
 
         protected override UserActivity InitialActivity => new UserActivity.WatchingReplay(Score.ScoreInfo);
 
@@ -76,6 +85,32 @@ namespace osu.Game.Screens.Play
         protected override void PrepareReplay()
         {
             DrawableRuleset?.SetReplayScore(Score);
+        }
+
+        public override void OnEntering(ScreenTransitionEvent e)
+        {
+            base.OnEntering(e);
+
+            if (SaveScore)
+            {
+                var mods = Score.ScoreInfo.Mods.ToArray();
+                var score = Score.DeepClone();
+
+                foreach (var m in mods)
+                {
+                    if (m is ModAutoplay autoplay)
+                        autoplay.SaveScore.Value = false;
+                }
+
+                score.ScoreInfo.Mods = mods;
+
+                using (var stream = new MemoryStream())
+                {
+                    new LegacyScoreEncoder(score, GameplayState.Beatmap).Encode(stream);
+                    var replayReader = new ByteArrayArchiveReader(stream.ToArray(), "replay.osr");
+                    scoreManager.Import(score.ScoreInfo, replayReader);
+                }
+            }
         }
 
         protected override Score CreateScore(IBeatmap beatmap) => createScore(beatmap, Mods.Value);

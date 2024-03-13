@@ -129,7 +129,7 @@ namespace osu.Game.Screens.Play
         private SkipOverlay skipIntroOverlay;
         private SkipOverlay skipOutroOverlay;
 
-        protected ScoreProcessor ScoreProcessor { get; private set; }
+        public ScoreProcessor ScoreProcessor { get; private set; }
 
         protected HealthProcessor HealthProcessor { get; private set; }
 

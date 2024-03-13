@@ -34,6 +34,7 @@ using osu.Game.Screens.Edit;
 using osu.Game.Screens.OnlinePlay.Multiplayer;
 using osu.Game.Screens.OnlinePlay.Playlists;
 using osu.Game.Screens.Select;
+using osu.Game.Screens.ReplayVs;
 using osuTK;
 using osuTK.Graphics;
 
@@ -147,6 +148,7 @@ namespace osu.Game.Screens.Menu
                             OnSolo = loadSoloSongSelect,
                             OnMultiplayer = () => this.Push(new Multiplayer()),
                             OnPlaylists = () => this.Push(new Playlists()),
+                            OnReplayVs = () => this.Push(new ReplayVsSelectScreen()),
                             OnExit = () =>
                             {
                                 exitConfirmedViaHoldOrClick = true;

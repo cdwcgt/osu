@@ -14,6 +14,7 @@ using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Objects.Drawables;
 using osu.Game.Rulesets.Osu.Configuration;
 using osu.Game.Rulesets.Osu.Objects;
+using osu.Game.Rulesets.Osu.Objects.Drawables;
 using osu.Game.Rulesets.Osu.Replays;
 using osu.Game.Rulesets.UI;
 using osu.Game.Scoring;
@@ -40,6 +41,18 @@ namespace osu.Game.Rulesets.Osu.UI
         public override bool ReceivePositionalInputAt(Vector2 screenSpacePos) => true; // always show the gameplay cursor
 
         protected override Playfield CreatePlayfield() => new OsuPlayfield();
+
+        public override bool SpinnerVisible
+        {
+            get
+            {
+                var h = Playfield.HitObjectContainer.AliveObjects.FirstOrDefault(h => h is DrawableSpinner) as DrawableSpinner;
+                if (h == null)
+                    return false;
+
+                return h.HitObject.StartTime - h.HitObject.TimeFadeIn <= FrameStableClock.CurrentTime && h.HitObject.EndTime + 120 > FrameStableClock.CurrentTime;
+            }
+        }
 
         protected override PassThroughInputManager CreateInputManager() => new OsuInputManager(Ruleset.RulesetInfo);
 

@@ -11,6 +11,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
     public partial class MatchRoundDisplay : TournamentSpriteTextWithBackground
     {
         private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
+        private readonly Bindable<TournamentRound?> currentRound = new Bindable<TournamentRound?>();
 
         [BackgroundDependencyLoader]
         private void load(LadderInfo ladder)
@@ -19,7 +20,15 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             currentMatch.BindTo(ladder.CurrentMatch);
         }
 
-        private void matchChanged(ValueChangedEvent<TournamentMatch?> match) =>
-            Text.Text = match.NewValue?.Round.Value?.Name.Value ?? "Unknown Round";
+        private void matchChanged(ValueChangedEvent<TournamentMatch?> match)
+        {
+            currentRound.Value = match.NewValue?.Round.Value;
+            currentRound.Value?.Name.BindValueChanged(_ => Schedule(updateText), true);
+        }
+
+        private void updateText()
+        {
+            Text.Text = currentMatch.Value?.Round.Value?.Name.Value ?? "Unknown Round";
+        }
     }
 }

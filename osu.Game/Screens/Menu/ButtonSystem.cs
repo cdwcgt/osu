@@ -13,6 +13,7 @@ using osu.Framework.Extensions.IEnumerableExtensions;
 using osu.Framework.Extensions.LocalisationExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Framework.Logging;
@@ -46,6 +47,7 @@ namespace osu.Game.Screens.Menu
         public Action? OnSettings;
         public Action? OnMultiplayer;
         public Action? OnPlaylists;
+        public Action? OnReplayVs;
 
         private readonly IBindable<bool> isIdle = new BindableBool();
 
@@ -130,6 +132,8 @@ namespace osu.Game.Screens.Menu
             buttonsPlay.Add(new MainMenuButton(ButtonSystemStrings.Solo, @"button-default-select", OsuIcon.Player, new Color4(102, 68, 204, 255), () => OnSolo?.Invoke(), WEDGE_WIDTH, Key.P));
             buttonsPlay.Add(new MainMenuButton(ButtonSystemStrings.Multi, @"button-default-select", OsuIcon.Online, new Color4(94, 63, 186, 255), onMultiplayer, 0, Key.M));
             buttonsPlay.Add(new MainMenuButton(ButtonSystemStrings.Playlists, @"button-default-select", OsuIcon.Tournament, new Color4(94, 63, 186, 255), onPlaylists, 0, Key.L));
+            buttonsPlay.Add(new MainMenuButton(@"replay compare", @"button-default-select", FontAwesome.Brands.Microsoft, new Color4(0, 86, 73, 255), () => OnReplayVs?.Invoke()));
+
             buttonsPlay.ForEach(b => b.VisibleState = ButtonSystemState.Play);
 
             buttonsEdit.Add(new MainMenuButton(EditorStrings.BeatmapEditor.ToLower(), @"button-default-select", OsuIcon.Beatmap, new Color4(238, 170, 0, 255), () => OnEditBeatmap?.Invoke(), WEDGE_WIDTH, Key.B, Key.E));

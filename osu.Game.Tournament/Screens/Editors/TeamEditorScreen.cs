@@ -13,8 +13,10 @@ using osu.Framework.Graphics.Shapes;
 using osu.Framework.Localisation;
 using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Settings;
+using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Editors.Components;
 using osu.Game.Tournament.Screens.Drawings.Components;
@@ -133,8 +135,35 @@ namespace osu.Game.Tournament.Screens.Editors
                             new SettingsSlider<int, LastYearPlacementSlider>
                             {
                                 LabelText = "Last Year Placement",
-                                Width = 0.33f,
+                                Width = 0.2f,
                                 Current = Model.LastYearPlacing
+                            },
+                            new FillFlowContainer
+                            {
+                                Width = 0.2f,
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+                                Direction = FillDirection.Vertical,
+                                Spacing = new Vector2(5),
+                                Margin = new MarginPadding { Right = 25 },
+                                Children = new Drawable[]
+                                {
+                                    new OsuHexColourPicker
+                                    {
+                                        Current = team.Color,
+                                        Padding = new MarginPadding { Vertical = 20, Horizontal = 10 }
+                                    },
+                                    new LabelledSwitchButton
+                                    {
+                                        Label = "Inverse team name color",
+                                        Current = team.InverseTextColor
+                                    },
+                                }
+                            },
+                            new DrawableTeamTitle(team)
+                            {
+                                Scale = new Vector2(0.5f),
+                                Margin = new MarginPadding { Vertical = 20, Left = 40 },
                             },
                             new SettingsButton
                             {
