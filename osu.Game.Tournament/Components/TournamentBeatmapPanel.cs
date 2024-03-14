@@ -17,7 +17,6 @@ using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Drawables;
 using osu.Game.Graphics;
 using osu.Game.Tournament.Models;
-using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Components
@@ -33,7 +32,7 @@ namespace osu.Game.Tournament.Components
         private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
 
         private Box flash = null!;
-        private TournamentProtectIcon? protectIcon;
+        private TournamentProtectIcon protectIcon = null!;
         private TournamentModIcon? modIcon;
         private FillFlowContainer modContainer = null!;
 
@@ -198,10 +197,22 @@ namespace osu.Game.Tournament.Components
                                 {
                                     Anchor = Anchor.CentreRight,
                                     Origin = Anchor.CentreRight,
-                                    Margin = new MarginPadding(10),
-                                    Width = 76,
+                                    AutoSizeAxes = Axes.X,
                                     RelativeSizeAxes = Axes.Y,
-                                    Spacing = new Vector2(-1, 0)
+                                    Direction = FillDirection.Horizontal,
+                                    Margin = new MarginPadding(10),
+                                    Children =
+                                    [
+                                        protectIcon = new TournamentProtectIcon
+                                        {
+                                            RelativeSizeAxes = Axes.Y,
+                                            Anchor = Anchor.CentreRight,
+                                            Origin = Anchor.CentreRight,
+                                            AlwaysPresent = true,
+                                            Width = 21,
+                                            Alpha = 0
+                                        }
+                                    ]
                                 }
                             }
                         },
@@ -273,20 +284,14 @@ namespace osu.Game.Tournament.Components
 
             bool shouldFlash = lastFound != choice;
 
-            if (protectIcon == null && foundProtected != null)
+            if (foundProtected != null)
             {
-                modContainer.Add(protectIcon = new TournamentProtectIcon(foundProtected.Team)
-                {
-                    Anchor = Anchor.CentreRight,
-                    Origin = Anchor.CentreRight,
-                    Width = 21,
-                    RelativeSizeAxes = Axes.Y,
-                });
+                protectIcon.Team = foundProtected.Team;
+                protectIcon.Show();
             }
-            else if (protectIcon != null && foundProtected == null)
+            else
             {
-                modContainer.Remove(protectIcon, true);
-                protectIcon = null;
+                protectIcon.Hide();
             }
 
             if (lastFound != null)
@@ -324,7 +329,7 @@ namespace osu.Game.Tournament.Components
                         break;
 
                     case ChoiceType.Protected:
-                        container.Alpha = 1f;
+                        container.Alpha = 1;
                         container.BorderThickness = 0;
                         break;
                 }

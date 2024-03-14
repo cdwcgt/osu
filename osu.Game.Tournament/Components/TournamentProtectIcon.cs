@@ -12,36 +12,36 @@ namespace osu.Game.Tournament.Components
 {
     public partial class TournamentProtectIcon : CompositeDrawable
     {
-        private readonly TeamColour color;
+        private TeamColour team = TeamColour.Red;
+        private Sprite sprite = null!;
 
-        public TournamentProtectIcon(TeamColour colour)
-        {
-            this.color = colour;
-        }
+        [Resolved]
+        private TextureStore textures { get; set; } = null!;
 
         [BackgroundDependencyLoader]
-        private void load(TextureStore textures)
+        private void load()
         {
-            var customTexture = textures.Get($"Protect/team-{(color == TeamColour.Red ? "red" : "blue")}");
-
-            if (customTexture != null)
+            AddInternal(sprite = new Sprite
             {
-                AddInternal(new Sprite
-                {
-                    FillMode = FillMode.Fit,
-                    RelativeSizeAxes = Axes.Both,
-                    Texture = customTexture,
-                    Anchor = Anchor.CentreLeft,
-                    Origin = Anchor.CentreLeft
-                });
-            }
+                Texture = textures.Get("Protect/team-red"),
+                FillMode = FillMode.Fit,
+                RelativeSizeAxes = Axes.Both,
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight
+            });
+        }
 
-            //AddInternal(new PadLock(color)
-            //{
-            //    Origin = Anchor.Centre,
-            //    Anchor = Anchor.Centre,
-            //    Size = new Vector2(45),
-            //});
+        public TeamColour Team
+        {
+            get => team;
+            set
+            {
+                if (team == value)
+                    return;
+
+                team = value;
+                sprite.Texture = textures.Get($"Protect/team-{team.ToString().ToLowerInvariant()}");
+            }
         }
 
         //private partial class PadLock : Container
