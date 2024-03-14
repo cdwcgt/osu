@@ -191,7 +191,7 @@ namespace osu.Game.Rulesets.Osu.Statistics
 
                 for (int c = 0; c < points_per_dimension; c++)
                 {
-                    HitPointType pointType = Vector2.Distance(new Vector2(c, r), centre) <= innerRadius
+                    HitPointType pointType = Vector2.Distance(new Vector2(c + 0.5f, r + 0.5f), centre) <= innerRadius
                         ? HitPointType.Hit
                         : HitPointType.Miss;
 
@@ -246,7 +246,7 @@ namespace osu.Game.Rulesets.Osu.Statistics
             // Likewise sin(pi/2)=1 and sin(3pi/2)=-1, whereas we actually want these values to appear on the bottom/top respectively, so the y-coordinate also needs to be inverted.
             //
             // We also need to apply the anti-clockwise rotation.
-            double rotatedAngle = finalAngle - MathUtils.DegreesToRadians(rotation);
+            double rotatedAngle = finalAngle - float.DegreesToRadians(rotation);
             var rotatedCoordinate = -1 * new Vector2((float)Math.Cos(rotatedAngle), (float)Math.Sin(rotatedAngle));
 
             Vector2 localCentre = new Vector2(points_per_dimension - 1) / 2;
