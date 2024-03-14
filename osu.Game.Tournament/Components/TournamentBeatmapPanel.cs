@@ -202,6 +202,7 @@ namespace osu.Game.Tournament.Components
                                     RelativeSizeAxes = Axes.Y,
                                     Direction = FillDirection.Horizontal,
                                     Margin = new MarginPadding(10),
+                                    Spacing = new Vector2(-1, 0),
                                     Child = protectIcon = new TournamentProtectIcon
                                     {
                                         RelativeSizeAxes = Axes.Y,
