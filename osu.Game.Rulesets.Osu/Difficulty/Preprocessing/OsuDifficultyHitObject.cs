@@ -31,11 +31,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
 
         /// <summary>
         /// Normalized distance from the end position of the previous <see cref="OsuDifficultyHitObject"/> to the start position of this <see cref="OsuDifficultyHitObject"/>.
+        /// 和上面不同的是会根据圈大小调整
         /// </summary>
         public double JumpDistance { get; private set; }
 
         /// <summary>
-        /// Normalized distance from the end position of the previous <see cref="OsuDifficultyHitObject"/> to the start position of this <see cref="OsuDifficultyHitObject"/>.
+        /// 与上一个 <see cref="OsuDifficultyHitObject"/> 之间的时间差.
         /// </summary>
         public readonly double StrainTime;
 
@@ -123,6 +124,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
             setFlowValues();
         }
 
+        // 貌似没用 ppv2的东西 ppp没用到
         public double OpacityAt(double time, bool hidden)
         {
             if (time > BaseObject.StartTime)
@@ -190,42 +192,56 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
             }
         }
 
+        // 计算滑条距离参数
         private void computeSliderCursorPosition(Slider slider)
         {
             if (slider.LazyEndPosition != null)
                 return;
 
+            // 滑条头位置
             slider.LazyEndPosition = slider.StackedPosition;
 
             float approxFollowCircleRadius = (float)(slider.Radius * 3);
-            var computeVertex = new Action<double>(t =>
-            {
-                double progress = (t - slider.StartTime) / slider.SpanDuration;
-                if (progress % 2 >= 1)
-                    progress = 1 - progress % 1;
-                else
-                    progress %= 1;
-
-                // ReSharper disable once PossibleInvalidOperationException (bugged in current r# version)
-                var diff = slider.StackedPosition + slider.Path.PositionAt(progress) - slider.LazyEndPosition.Value;
-                float dist = diff.Length;
-
-                if (dist > approxFollowCircleRadius)
-                {
-                    // The cursor would be outside the follow circle, we need to move it
-                    diff.Normalize(); // Obtain direction of diff
-                    dist -= approxFollowCircleRadius;
-                    slider.LazyEndPosition = slider.LazyEndPosition! + diff * dist;
-                    slider.LazyTravelDistance += dist;
-                }
-            });
 
             // Skip the head circle
             var scoringTimes = slider.NestedHitObjects.Skip(1).Select(t => t.StartTime);
             foreach (var time in scoringTimes)
                 computeVertex(time);
+
+            // 本地方法
+            void computeVertex(double t)
+            {
+                //滑条进度 [0,1]
+                double progress = (t - slider.StartTime) / slider.SpanDuration;
+
+                if (progress % 2 >= 1)
+                    progress = 1 - progress % 1;
+                else
+                    progress %= 1;
+
+                // 二维坐标
+                Vector2 diff = slider.StackedPosition + slider.Path.PositionAt(progress) - slider.LazyEndPosition.Value;
+                // 坐标与零点之间的长度 (float)Math.Sqrt(X * X + Y * Y)
+                float dist = diff.Length;
+
+                if (dist > approxFollowCircleRadius)
+                {
+                    // The cursor would be outside the follow circle, we need to move it
+                    // 将坐标标准化到单位圆
+                    diff.Normalize(); // Obtain direction of diff
+                    dist -= approxFollowCircleRadius;
+                    slider.LazyEndPosition = slider.LazyEndPosition! + diff * dist;
+                    slider.LazyTravelDistance += dist;
+                }
+            }
         }
 
+        /// <summary>
+        /// 获取物件结束后的位置
+        /// 滑条就是滑条尾的坐标，圈就是圈的位置
+        /// </summary>
+        /// <param name="hitObject"></param>
+        /// <returns></returns>
         private Vector2 getEndCursorPosition(OsuHitObject hitObject)
         {
             Vector2 pos = hitObject.StackedPosition;
@@ -247,9 +263,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
 
         private double calculateBaseFlow()
         {
+            // 当上一个物件的 StrainTime 乘以 ratio (第一个参数) 大于这个物件的 StrainTime 时返回true
             if (lastDifficultyObject == null || Utils.IsRatioEqualLess(0.667, StrainTime, lastDifficultyObject.StrainTime))
                 return calculateSpeedFlow() * calculateDistanceFlow(); // No angle checks for the first actual note of the stream.
 
+            // a * 1.25 > b && a / 1.25 < b;
             if (Utils.IsRoughlyEqual(StrainTime, lastDifficultyObject.StrainTime))
                 return calculateSpeedFlow() * calculateDistanceFlow(calculateAngleScalingFactor(Angle));
 
@@ -258,6 +276,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
 
         private double calculateSpeedFlow()
         {
+            // 布尔函数
+            // TransitionToTrue(double value, double transitionStart, double transitionInterval)
+            // (-Math.Cos((value - transitionStart) * Math.PI / transitionInterval) + 1) / 2;
+            // 最大为 1 最低为 0
+            // 详见 Utils.cs
+
             // Sine curve transition from 0 to 1 starting at 90 BPM, reaching 1 at 90 + 30 = 120 BPM.
             return Utils.TransitionToTrue(streamBpm, 90, 30);
         }
@@ -265,11 +289,19 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
         private double calculateDistanceFlow(double angleScalingFactor = 1)
         {
             double distanceOffset = (Math.Tanh((streamBpm - 140) / 20) + 2) * NORMALISED_RADIUS;
+
+            // TransitionToTrue 函数一致，但是取相反值
             return Utils.TransitionToFalse(JumpDistance, distanceOffset * angleScalingFactor, distanceOffset);
         }
 
+        /// <summary>
+        /// 角度缩放因子
+        /// </summary>
+        /// <param name="angle"></param>
+        /// <returns></returns>
         private double calculateAngleScalingFactor(double? angle)
         {
+            // 检查 angle 是否是有效数字
             if (!Utils.IsNullOrNaN(angle))
             {
                 double angleScalingFactor = (-Math.Sin(Math.Cos(angle!.Value) * Math.PI / 2) + 3) / 4;
@@ -305,10 +337,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
                 irregularFlow = 0;
 
             if (lastLastDifficultyObject != null)
-            if (Utils.IsRoughlyEqual(StrainTime, lastLastDifficultyObject.StrainTime))
-                irregularFlow *= lastLastDifficultyObject.BaseFlow;
-            else
-                irregularFlow = 0;
+            {
+                if (Utils.IsRoughlyEqual(StrainTime, lastLastDifficultyObject.StrainTime))
+                    irregularFlow *= lastLastDifficultyObject.BaseFlow;
+                else
+                    irregularFlow = 0;
+            }
 
             return irregularFlow;
         }
