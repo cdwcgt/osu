@@ -23,11 +23,11 @@ namespace osu.Game.Tournament.Components
         {
             AddInternal(sprite = new Sprite
             {
-                Texture = textures.Get("Protect/team-red"),
                 FillMode = FillMode.Fit,
                 RelativeSizeAxes = Axes.Both,
                 Anchor = Anchor.CentreRight,
-                Origin = Anchor.CentreRight
+                Origin = Anchor.CentreRight,
+                Texture = textures.Get("Protect/team-red"),
             });
         }
 

@@ -17,6 +17,7 @@ using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Drawables;
 using osu.Game.Graphics;
 using osu.Game.Tournament.Models;
+using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Components
@@ -201,18 +202,15 @@ namespace osu.Game.Tournament.Components
                                     RelativeSizeAxes = Axes.Y,
                                     Direction = FillDirection.Horizontal,
                                     Margin = new MarginPadding(10),
-                                    Children =
-                                    [
-                                        protectIcon = new TournamentProtectIcon
-                                        {
-                                            RelativeSizeAxes = Axes.Y,
-                                            Anchor = Anchor.CentreRight,
-                                            Origin = Anchor.CentreRight,
-                                            AlwaysPresent = true,
-                                            Width = 21,
-                                            Alpha = 0
-                                        }
-                                    ]
+                                    Child = protectIcon = new TournamentProtectIcon
+                                    {
+                                        RelativeSizeAxes = Axes.Y,
+                                        Anchor = Anchor.CentreLeft,
+                                        Origin = Anchor.CentreLeft,
+                                        AlwaysPresent = true,
+                                        Width = 21,
+                                        Alpha = 0
+                                    }
                                 }
                             }
                         },
@@ -248,8 +246,8 @@ namespace osu.Game.Tournament.Components
             {
                 modContainer.Add(modIcon = new TournamentModIcon(mod)
                 {
-                    Anchor = Anchor.CentreRight,
-                    Origin = Anchor.CentreRight,
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.CentreLeft,
                     Width = 55,
                     RelativeSizeAxes = Axes.Y,
                 });
