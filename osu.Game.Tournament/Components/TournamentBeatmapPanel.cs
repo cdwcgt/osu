@@ -17,6 +17,7 @@ using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Drawables;
 using osu.Game.Graphics;
 using osu.Game.Tournament.Models;
+using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Components
@@ -32,6 +33,9 @@ namespace osu.Game.Tournament.Components
         private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
 
         private Box flash = null!;
+        private TournamentProtectIcon protectIcon = null!;
+        private TournamentModIcon? modIcon;
+        private FillFlowContainer modContainer = null!;
 
         public TournamentBeatmapPanel(RoundBeatmap beatmap, int? id = null)
             : this(beatmap.Beatmap, beatmap.Mods)
@@ -190,6 +194,25 @@ namespace osu.Game.Tournament.Components
                                     Blending = BlendingParameters.Additive,
                                     Alpha = 0,
                                 },
+                                modContainer = new FillFlowContainer
+                                {
+                                    Anchor = Anchor.CentreRight,
+                                    Origin = Anchor.CentreRight,
+                                    AutoSizeAxes = Axes.X,
+                                    RelativeSizeAxes = Axes.Y,
+                                    Direction = FillDirection.Horizontal,
+                                    Margin = new MarginPadding(10),
+                                    Spacing = new Vector2(-1, 0),
+                                    Child = protectIcon = new TournamentProtectIcon
+                                    {
+                                        RelativeSizeAxes = Axes.Y,
+                                        Anchor = Anchor.CentreLeft,
+                                        Origin = Anchor.CentreLeft,
+                                        AlwaysPresent = true,
+                                        Width = 21,
+                                        Alpha = 0
+                                    }
+                                }
                             }
                         },
                         new Container
@@ -222,12 +245,11 @@ namespace osu.Game.Tournament.Components
 
             if (!string.IsNullOrEmpty(mod))
             {
-                container.Add(new TournamentModIcon(mod)
+                modContainer.Add(modIcon = new TournamentModIcon(mod)
                 {
-                    Anchor = Anchor.CentreRight,
-                    Origin = Anchor.CentreRight,
-                    Margin = new MarginPadding(10),
-                    Width = 60,
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.CentreLeft,
+                    Width = 55,
                     RelativeSizeAxes = Axes.Y,
                 });
             }
@@ -255,20 +277,32 @@ namespace osu.Game.Tournament.Components
                 return;
             }
 
-            var newChoice = currentMatch.Value.PicksBans.FirstOrDefault(p => p.BeatmapID == Beatmap?.OnlineID);
+            var found = currentMatch.Value.PicksBans.Where(p => p.BeatmapID == Beatmap?.OnlineID).ToList();
+            var foundProtected = found.FirstOrDefault(s => s.Type == ChoiceType.Protected);
+            var lastFound = found.LastOrDefault();
 
-            bool shouldFlash = newChoice != choice;
+            bool shouldFlash = lastFound != choice;
 
-            if (newChoice != null)
+            if (foundProtected != null)
+            {
+                protectIcon.Team = foundProtected.Team;
+                protectIcon.Show();
+            }
+            else
+            {
+                protectIcon.Hide();
+            }
+
+            if (lastFound != null)
             {
                 if (shouldFlash)
                     flash.FadeOutFromOne(500).Loop(0, 10);
 
                 container.BorderThickness = 6;
 
-                container.BorderColour = TournamentGame.GetTeamColour(newChoice.Team);
+                container.BorderColour = TournamentGame.GetTeamColour(lastFound.Team);
 
-                switch (newChoice.Type)
+                switch (lastFound.Type)
                 {
                     case ChoiceType.Pick:
                         container.Colour = Color4.White;
@@ -292,6 +326,11 @@ namespace osu.Game.Tournament.Components
                         container.Colour = Color4.Gray;
                         container.Alpha = 0.5f;
                         break;
+
+                    case ChoiceType.Protected:
+                        container.Alpha = 1;
+                        container.BorderThickness = 0;
+                        break;
                 }
             }
             else
@@ -302,7 +341,7 @@ namespace osu.Game.Tournament.Components
                 container.Alpha = 1;
             }
 
-            choice = newChoice;
+            choice = lastFound;
         }
 
         private partial class NoUnloadBeatmapSetCover : UpdateableOnlineBeatmapSetCover
