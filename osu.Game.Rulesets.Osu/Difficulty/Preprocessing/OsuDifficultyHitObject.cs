@@ -36,7 +36,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
         public double JumpDistance { get; private set; }
 
         /// <summary>
-        /// 与上一个 <see cref="OsuDifficultyHitObject"/> 之间的时间差.
+        /// 与上一个 <see cref="OsuDifficultyHitObject"/> 之间的时间差，至少为50，单位ms.
         /// </summary>
         public readonly double StrainTime;
 
@@ -78,6 +78,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
 
         /// <summary>
         /// Milliseconds elapsed since the end time of the previous <see cref="OsuDifficultyHitObject"/>, with a minimum of 50ms.
+        /// 上一个物件的结尾时间与这个物件之间的时间差，最小为50
         /// </summary>
         public double GapTime { get; private set; }
 
@@ -102,7 +103,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
             setDistances(clockRate);
 
             // Capped to 25ms to prevent difficulty calculation breaking from simultaneous objects.
-            StrainTime = Math.Max(DeltaTime, min_delta_time);
+            //应该是ppv2的，下面ppp的覆盖了
+            //StrainTime = Math.Max(DeltaTime, min_delta_time);
 
             Preempt = ((OsuHitObject)hitObject).TimePreempt / clockRate;
 
