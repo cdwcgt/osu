@@ -78,7 +78,7 @@ namespace osu.Game.Tournament.Components
         protected override bool ComputeIsMaskedAway(RectangleF maskingBounds) => false;
 
         [Resolved]
-        private LargeTextureStore store { get; set; } = null!;
+        private TextureStore store { get; set; } = null!;
 
         [BackgroundDependencyLoader]
         private void load(OsuColour colours)
