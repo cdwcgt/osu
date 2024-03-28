@@ -176,17 +176,11 @@ namespace osu.Game.Tournament.Screens.MapPool
 
             TeamColour nextColour;
 
-            bool hasAllProtected = CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Protected) >= 2;
+            //bool hasAllProtected = CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Protected) >= 2;
 
             bool hasAllBans = CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Ban) >= totalBansRequired;
 
-            if (!hasAllProtected)
-            {
-                nextColour = CurrentMatch.Value.PicksBans.Count % 2 == 1
-                    ? getOppositeTeamColour(lastPickColour)
-                    : lastPickColour;
-            }
-            else if (!hasAllBans)
+            if (!hasAllBans)
             {
                 // Ban phase: switch teams every second ban.
                 nextColour = CurrentMatch.Value.PicksBans.Count % 2 == 1
@@ -201,7 +195,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                     : lastPickColour;
             }
 
-            ChoiceType nextMode = !hasAllProtected ? ChoiceType.Protected : !hasAllBans ? ChoiceType.Ban : ChoiceType.Pick;
+            ChoiceType nextMode = !hasAllBans ? ChoiceType.Ban : ChoiceType.Pick;
 
             setMode(nextColour, nextMode);
 
