@@ -104,6 +104,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
 
             // Capped to 25ms to prevent difficulty calculation breaking from simultaneous objects.
             //应该是ppv2的，下面ppp的覆盖了
+
             //StrainTime = Math.Max(DeltaTime, min_delta_time);
 
             Preempt = ((OsuHitObject)hitObject).TimePreempt / clockRate;

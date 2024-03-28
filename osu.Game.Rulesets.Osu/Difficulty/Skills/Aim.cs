@@ -26,15 +26,21 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         /// <summary>
         /// Collection of objects that have yet to be hit when the current object's preempt begins
+        /// 当前物件开始显示时还没有命中的物件队列
+        /// 为反转队列，即最后添加的物件索引为0
         /// </summary>
         private ReverseQueue<OsuDifficultyHitObject> preemptHitObjects = new ReverseQueue<OsuDifficultyHitObject>(10);
+
         private double skillMultiplier => 1059;
         private double strainDecayBase => 0.15;
 
         private double currentStrain;
 
+        // 应变衰减的算法
+        // 两个物件相隔时间越短值越接近1
         private double strainDecay(double ms) => Math.Pow(strainDecayBase, ms / 1000);
 
+        // 计算初始应变值
         protected override double CalculateInitialStrain(double time, DifficultyHitObject current) => currentStrain * strainDecay(time - current.Previous(0).StartTime);
 
         protected override double StrainValueAt(DifficultyHitObject current)
@@ -73,10 +79,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             OsuDifficultyHitObject? previousObject = null;
 
             double locationWeight = 1;
+
+            // 如果不是第一个物件
             if (current.Index > 0)
             {
                 previousObject = (OsuDifficultyHitObject)current.Previous(0);
                 locationWeight = calculateLocationWeight(((OsuHitObject)current.BaseObject).Position, ((OsuHitObject)previousObject.BaseObject).Position);
+
+                // 如果不是第二个物件
                 if (current.Index > 1)
                 {
                     previousTwoObjects = new OsuDifficultyHitObject[] { previousObject, (OsuDifficultyHitObject)current.Previous(1) };
@@ -87,9 +97,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 }
             }
 
-
-
             double angleWeight = calculateJumpAngleWeight(current.Angle, current.StrainTime, previousObject?.StrainTime ?? 0, previousObject?.JumpDistance ?? 0);
+
+            // 向前追踪最多两个物件，计算跳跃排列难度
             double patternWeight = calculateJumpPatternWeight(current, previousTwoObjects);
 
             double jumpAim = jumpAimBase * angleWeight * patternWeight * locationWeight;
@@ -110,6 +120,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             double locationWeight = 1;
             OsuDifficultyHitObject? previousObject = null;
+
             if (current.Index > 0)
             {
                 previousObject = (OsuDifficultyHitObject)current.Previous(0);
@@ -126,6 +137,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private double calculateReadingMultiplier(OsuDifficultyHitObject current, bool hiddenEnabled, bool flashlightEnabled)
         {
             // Remove objects that were hit before the current preempt begun
+            // 最后一个物件的开始时间如果小于当前物件能看见的时间(当前物件的时间减去提前显示的时间（AR）)则移除队列
+            // 注意为反转队列，所以队列的最后一个应该是队列中时间最早的物件。
             while (preemptHitObjects.Count > 0 && preemptHitObjects[^1].StartTime < current.StartTime - current.Preempt)
                 preemptHitObjects.Dequeue();
 
@@ -146,6 +159,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             double flashlightMultiplier = calculateFlashlightMultiplier(flashlightEnabled, current.RawJumpDistance, ((OsuHitObject)current.BaseObject).Radius);
             double highApproachRateMultiplier = calculateHighApproachRateMultiplier(current.Preempt);
 
+            // 将当前物件加入队列
             preemptHitObjects.Enqueue(current);
 
             return readingMultipler * flashlightMultiplier * highApproachRateMultiplier;
@@ -154,9 +168,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private static double calculateJumpPatternWeight(OsuDifficultyHitObject current, OsuDifficultyHitObject[] previousTwoObjects)
         {
             double jumpPatternWeight = 1;
+
+            // 按顺序遍历 previousTwoObjects 里的物件，i 为索引
             foreach (var (previousObject, i) in previousTwoObjects.Select((o, i) => (o, i)))
             {
                 double velocityWeight = 1.05;
+
                 if (previousObject.JumpDistance > 0)
                 {
                     double velocityRatio = (current.JumpDistance / current.StrainTime) / (previousObject.JumpDistance / previousObject.StrainTime) - 1;
@@ -167,6 +184,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 }
 
                 double angleWeight = 1;
+
                 // An additional restriction to stop jumps that come after triples/streams from getting bonuses for the change in angles.
                 if (Utils.IsRatioEqual(1, current.StrainTime, previousObject.StrainTime) && !Utils.IsNullOrNaN(current.Angle) && !Utils.IsNullOrNaN(previousObject.Angle))
                 {
@@ -193,7 +211,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 return 1;
 
             double distanceRatio = 1;
-            if (previousObject.JumpDistance > 0)    
+            if (previousObject.JumpDistance > 0)
                 distanceRatio = current.JumpDistance / previousObject.JumpDistance - 1;
 
             double distanceBonus = 1;
@@ -203,6 +221,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 distanceBonus = (-Math.Cos(distanceRatio * Math.PI) + 1) / 2;
 
             double angleBonus = 0;
+
             if (!Utils.IsNullOrNaN(current.Angle) && !Utils.IsNullOrNaN(previousObject.Angle))
             {
                 // Only the change relative to a straight line is considred when the angle changes towards the opposite direction.

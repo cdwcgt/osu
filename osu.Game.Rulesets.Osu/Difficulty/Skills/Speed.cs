@@ -25,6 +25,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         protected double StrainDecay(double ms) => Math.Pow(StrainDecayBase, ms / 1000);
 
         protected override double CalculateInitialStrain(double time, DifficultyHitObject current) => currentStrain * StrainDecay(time - current.Previous(0).StartTime);
+
         protected override double StrainValueAt(DifficultyHitObject current)
         {
             currentStrain *= StrainDecay(((OsuDifficultyHitObject)current).StrainTime);

@@ -17,6 +17,7 @@ namespace osu.Game.Rulesets.Difficulty.Preprocessing
 
         /// <summary>
         /// The index of this <see cref="DifficultyHitObject"/> in the list of all <see cref="DifficultyHitObject"/>s.
+        /// 从0开始
         /// </summary>
         public int Index;
 

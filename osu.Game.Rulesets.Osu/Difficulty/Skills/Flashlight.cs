@@ -14,6 +14,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     /// <summary>
     /// Represents the skill required to memorise and hit every object in a map with the Flashlight mod enabled.
     /// </summary>
+    /// 没用
     public class Flashlight : StrainSkill
     {
         private readonly bool hasHiddenMod;
