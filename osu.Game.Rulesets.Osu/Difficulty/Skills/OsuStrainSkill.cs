@@ -8,16 +8,21 @@ using System.Linq;
 
 namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 {
+    /// <summary>
+    /// 基于应变的skill基类
+    /// </summary>
     public abstract class OsuStrainSkill : StrainSkill
     {
         /// <summary>
         /// The default multiplier applied by <see cref="OsuStrainSkill"/> to the final difficulty value after all other calculations.
         /// May be overridden via <see cref="DifficultyMultiplier"/>.
+        /// 默认的难度乘数值，可以被DifficultyMultiplier改写
         /// </summary>
         public const double DEFAULT_DIFFICULTY_MULTIPLIER = 1.00;
 
         /// <summary>
         /// The final multiplier to be applied to <see cref="DifficultyValue"/> after all other calculations.
+        /// 最终会应用的难度乘数
         /// </summary>
         protected virtual double DifficultyMultiplier => DEFAULT_DIFFICULTY_MULTIPLIER;
 

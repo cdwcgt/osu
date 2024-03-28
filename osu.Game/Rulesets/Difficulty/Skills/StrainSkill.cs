@@ -12,19 +12,24 @@ namespace osu.Game.Rulesets.Difficulty.Skills
     /// <summary>
     /// Used to processes strain values of <see cref="DifficultyHitObject"/>s, keep track of strain levels caused by the processed objects
     /// and to calculate a final difficulty value representing the difficulty of hitting all the processed objects.
+    /// 用于处理计算物件的应变值，持续追踪每一个物件会造成的应对难度，并且计算所有已处理命中物件的最终应对值
     /// </summary>
     public abstract class StrainSkill : Skill
     {
         /// <summary>
         /// The weight by which each strain value decays.
+        /// 应对值衰减权重
         /// </summary>
         protected virtual double DecayWeight => 0.9;
 
         /// <summary>
         /// The length of each strain section.
+        /// 当前应变区间往后的时间，例如当前区间最后一个物件后400ms没有物件，则下一个物件视为新的一个区间
+        /// 可被重写
         /// </summary>
         protected virtual int SectionLength => 400;
 
+        // 当前区间应对值最高值
         private double currentSectionPeak; // We also keep track of the peak strain level in the current section.
 
         private double currentSectionEnd;
@@ -48,11 +53,13 @@ namespace osu.Game.Rulesets.Difficulty.Skills
         {
             // The first object doesn't generate a strain, so we begin with an incremented section end
             if (current.Index == 0)
+                // Ceiling为返回大于传入数字的最大整数，例如 5.5 返回 6，-5.5 返回 -5。
                 currentSectionEnd = Math.Ceiling(current.StartTime / SectionLength) * SectionLength;
 
             while (current.StartTime > currentSectionEnd)
             {
                 saveCurrentPeak();
+                // 初始化新的区间
                 startNewSectionFrom(currentSectionEnd, current);
                 currentSectionEnd += SectionLength;
             }
@@ -97,6 +104,7 @@ namespace osu.Game.Rulesets.Difficulty.Skills
         /// <summary>
         /// Returns the calculated difficulty value representing all <see cref="DifficultyHitObject"/>s that have been processed up to this point.
         /// </summary>
+        /// 在osu模式中被单独重写，没有参考价值
         public override double DifficultyValue()
         {
             double difficulty = 0;
