@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Objects;
@@ -85,14 +86,15 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
         /// <summary>
         /// Retrieves the full hit window for a Great <see cref="HitResult"/>.
         /// </summary>
+        /// pp+里没用
         public double HitWindowGreat { get; private set; }
 
         private readonly OsuHitObject? lastLastObject;
         private readonly OsuHitObject lastObject;
-        private readonly OsuDifficultyHitObject lastLastDifficultyObject;
-        private readonly OsuDifficultyHitObject lastDifficultyObject;
+        private readonly OsuDifficultyHitObject? lastLastDifficultyObject;
+        private readonly OsuDifficultyHitObject? lastDifficultyObject;
 
-        public OsuDifficultyHitObject(HitObject hitObject, HitObject lastLastObject, HitObject lastObject, OsuDifficultyHitObject lastLastDifficultyObject, OsuDifficultyHitObject lastDifficultyObject, double clockRate, List<DifficultyHitObject> objects, int index)
+        public OsuDifficultyHitObject(HitObject hitObject, HitObject? lastLastObject, HitObject lastObject, OsuDifficultyHitObject? lastLastDifficultyObject, OsuDifficultyHitObject? lastDifficultyObject, double clockRate, List<DifficultyHitObject> objects, int index)
             : base(hitObject, lastObject, clockRate, objects, index)
         {
             this.lastLastObject = lastLastObject as OsuHitObject;
@@ -100,7 +102,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
             this.lastLastDifficultyObject = lastLastDifficultyObject;
             this.lastDifficultyObject = lastDifficultyObject;
 
-            setDistances(clockRate);
+            setDistances();
 
             // Capped to 25ms to prevent difficulty calculation breaking from simultaneous objects.
             //应该是ppv2的，下面ppp的覆盖了
@@ -157,7 +159,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
             return Math.Clamp((time - fadeInStartTime) / fadeInDuration, 0.0, 1.0);
         }
 
-        private void setDistances(double clockRate)
+        private void setDistances()
         {
             // We will scale distances by this factor, so we can assume a uniform CircleSize among beatmaps.
             float scalingFactor = NORMALISED_RADIUS / (float)BaseObject.Radius;
@@ -304,6 +306,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
         /// <returns></returns>
         private double calculateAngleScalingFactor(double? angle)
         {
+            Debug.Assert(lastDifficultyObject != null);
+
             // 检查 angle 是否是有效数字
             if (!Utils.IsNullOrNaN(angle))
             {
@@ -333,6 +337,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
         private double calculateIrregularFlow()
         {
             double irregularFlow = calculateExtendedDistanceFlow();
+
+            Debug.Assert(lastDifficultyObject != null);
 
             if (Utils.IsRoughlyEqual(StrainTime, lastDifficultyObject.StrainTime))
                 irregularFlow *= lastDifficultyObject.BaseFlow;

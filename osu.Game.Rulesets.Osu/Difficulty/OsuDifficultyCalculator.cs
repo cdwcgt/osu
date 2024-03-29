@@ -47,8 +47,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             double accuracyRating = skills[6].DifficultyValue();
 
-            double starRating = Math.Pow(Math.Pow(aimRating, 3) + Math.Pow(Math.Max(speedRating, staminaRating), 3), 1 / 3.0) * 1.6;
-
             if (mods.Any(m => m is OsuModTouchDevice))
             {
                 aimRating = Math.Pow(aimRating, 0.8);
@@ -60,17 +58,22 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 speedRating = 0.0;
             }
 
+            double starRating = Math.Pow(Math.Pow(aimRating, 3) + Math.Pow(Math.Max(speedRating, staminaRating), 3), 1 / 3.0) * 1.6;
+
             double preempt = IBeatmapDifficultyInfo.DifficultyRange(beatmap.Difficulty.ApproachRate, 1800, 1200, 450) / clockRate;
+            // 没用
             double drainRate = beatmap.Difficulty.DrainRate;
             int maxCombo = beatmap.GetMaxCombo();
 
             int hitCirclesCount = beatmap.HitObjects.Count(h => h is HitCircle);
+            // 没用
             int sliderCount = beatmap.HitObjects.Count(h => h is Slider);
             int spinnerCount = beatmap.HitObjects.Count(h => h is Spinner);
 
             HitWindows hitWindows = new OsuHitWindows();
             hitWindows.SetDifficulty(beatmap.Difficulty.OverallDifficulty);
 
+            // 没用
             double hitWindowGreat = hitWindows.WindowFor(HitResult.Great) / clockRate;
 
             OsuDifficultyAttributes attributes = new OsuDifficultyAttributes
