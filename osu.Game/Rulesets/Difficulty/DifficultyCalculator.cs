@@ -62,18 +62,24 @@ namespace osu.Game.Rulesets.Difficulty
         public DifficultyAttributes Calculate([NotNull] IEnumerable<Mod> mods, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            // 预处理，获取mod以及mod应用后的时钟速度
             preProcess(mods, cancellationToken);
 
             var skills = CreateSkills(Beatmap, playableMods, clockRate);
 
             if (!Beatmap.HitObjects.Any())
+                // 若谱面没有任何物件
                 return CreateDifficultyAttributes(Beatmap, playableMods, skills, clockRate);
 
+            // 将每个物件转换为 DifficultyHitObjects
+            // 即有额外信息帮助计算的物件
             foreach (var hitObject in getDifficultyHitObjects())
             {
                 foreach (var skill in skills)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+                    // 将每一个物件分别传给每一个skill进行处理
                     skill.Process(hitObject);
                 }
             }
