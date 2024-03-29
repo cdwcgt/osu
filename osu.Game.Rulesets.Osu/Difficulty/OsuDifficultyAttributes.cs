@@ -10,7 +10,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         public double AimStrain;
         public double JumpAimStrain;
         public double FlowAimStrain;
-        public double PrecisionStrain;
+        public double RawAimStrain;
         public double SpeedStrain;
         public double StaminaStrain;
         public double AccuracyStrain;
