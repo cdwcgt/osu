@@ -14,15 +14,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     public class Speed : OsuStrainSkill
     {
         protected virtual double SkillMultiplier => 2600;
-        protected virtual double StrainDecayBase => 0.1;
+        protected override double StrainDecayBase => 0.1;
 
         private double currentStrain;
 
-        public Speed(Mod[] mods) : base(mods)
+        public Speed(Mod[] mods)
+            : base(mods)
         {
         }
-
-        protected double StrainDecay(double ms) => Math.Pow(StrainDecayBase, ms / 1000);
 
         protected override double CalculateInitialStrain(double time, DifficultyHitObject current) => currentStrain * StrainDecay(time - current.Previous(0).StartTime);
 

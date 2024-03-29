@@ -14,7 +14,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         private double currentStrain;
 
-        public Stamina(Mod[] mods) : base(mods)
+        public Stamina(Mod[] mods)
+            : base(mods)
         {
         }
 

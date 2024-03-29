@@ -32,20 +32,16 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private ReverseQueue<OsuDifficultyHitObject> preemptHitObjects = new ReverseQueue<OsuDifficultyHitObject>(10);
 
         private double skillMultiplier => 1059;
-        private double strainDecayBase => 0.15;
+        protected override double StrainDecayBase => 0.15;
 
         private double currentStrain;
 
-        // 应变衰减的算法
-        // 两个物件相隔时间越短值越接近1
-        private double strainDecay(double ms) => Math.Pow(strainDecayBase, ms / 1000);
-
         // 计算初始应变值
-        protected override double CalculateInitialStrain(double time, DifficultyHitObject current) => currentStrain * strainDecay(time - current.Previous(0).StartTime);
+        protected override double CalculateInitialStrain(double time, DifficultyHitObject current) => currentStrain * StrainDecay(time - current.Previous(0).StartTime);
 
         protected override double StrainValueAt(DifficultyHitObject current)
         {
-            currentStrain *= strainDecay(current.DeltaTime);
+            currentStrain *= StrainDecay(current.DeltaTime);
 
             var osuCurrent = (OsuDifficultyHitObject)current;
 

@@ -22,6 +22,8 @@ namespace osu.Game.Rulesets.Difficulty.Skills
         /// </summary>
         protected virtual double DecayWeight => 0.9;
 
+        protected virtual double StrainDecayBase => 0.1;
+
         /// <summary>
         /// The length of each strain section.
         /// 当前应变区间往后的时间，例如当前区间最后一个物件后400ms没有物件，则下一个物件视为新的一个区间
