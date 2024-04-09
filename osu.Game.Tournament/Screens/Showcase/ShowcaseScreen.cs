@@ -7,6 +7,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Game.Tournament.Components;
 using osu.Framework.Graphics.Shapes;
+using osu.Game.Beatmaps.Legacy;
 using osu.Game.Tournament.Models;
 using osuTK.Graphics;
 
@@ -38,9 +39,39 @@ namespace osu.Game.Tournament.Screens.Showcase
                         RelativeSizeAxes = Axes.Both,
                         Colour = new Color4(0, 255, 0, 255),
                     }
+                },
+                new ControlPanel
+                {
+                    Children = new Drawable[]
+                    {
+                        new TournamentSpriteText
+                        {
+                            Text = "Set Mods"
+                        },
+                        new TourneyButton
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Text = "Set HR",
+                            Action = () => setMods(LegacyMods.HardRock)
+                        },
+                        new TourneyButton
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Text = "Set DT",
+                            Action = () => setMods(LegacyMods.DoubleTime)
+                        },
+                        new TourneyButton
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Text = "Set NM",
+                            Action = () => setMods(0)
+                        },
+                    }
                 }
             });
         }
+
+        private void setMods(LegacyMods mods) => SongBar.Mods = mods;
 
         protected override void CurrentMatchChanged(ValueChangedEvent<TournamentMatch?> match)
         {
