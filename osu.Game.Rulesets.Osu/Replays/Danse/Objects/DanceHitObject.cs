@@ -24,6 +24,10 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Objects
             EndPos = BaseObject.StackedEndPosition;
         }
 
-        public virtual Vector2 PositionAt(double time) => StartPos;
+        public virtual Vector2 PositionAt(double time) => BaseObject switch
+        {
+            Slider slider => slider.StackedPositionAt(time),
+            _ => StartPos
+        };
     }
 }

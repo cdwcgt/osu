@@ -22,14 +22,19 @@ namespace osu.Game.Overlays.Settings.Sections.Mf
             {
                 new SettingsEnumDropdown<OsuDanceMover>
                 {
-                    LabelText = "Dance mover",
+                    LabelText = "Dance Mover",
                     Current = config.GetBindable<OsuDanceMover>(MSetting.DanceMover)
                 },
-                new SettingsSlider<float, FramerateSlider>
+                new SettingsEnumDropdown<OsuDanceSpinnerMover>
                 {
-                    LabelText = "Replay framerate",
-                    Current = config.GetBindable<float>(MSetting.ReplayFramerate),
-                    KeyboardStep = 10f
+                    LabelText = "Dance Spinner Mover",
+                    Current = config.GetBindable<OsuDanceSpinnerMover>(MSetting.DanceSpinnerMover)
+                },
+                new SettingsSlider<double, FramerateSlider>
+                {
+                    LabelText = "Replay Framerate",
+                    Current = config.GetBindable<double>(MSetting.ReplayFramerate),
+                    KeyboardStep = 10
                 },
                 new SettingsCheckbox
                 {
@@ -217,7 +222,7 @@ namespace osu.Game.Overlays.Settings.Sections.Mf
             public override LocalisableString TooltipText => (Current.Value * 180).ToString("g2") + "deg";
         }
 
-        private partial class FramerateSlider : RoundedSliderBar<float>
+        private partial class FramerateSlider : RoundedSliderBar<double>
         {
             public override LocalisableString TooltipText => Current.Value.ToString("g0") + "fps";
         }

@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using osu.Framework.Utils;
 using osu.Game.Beatmaps;
 using osu.Game.Configuration;
 using osu.Game.Replays;
@@ -12,6 +11,7 @@ using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Osu.Beatmaps;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Osu.Replays.Danse.Movers;
+using osu.Game.Rulesets.Osu.Replays.Danse.Movers.Spinners;
 using osu.Game.Rulesets.Osu.Replays.Danse.Objects;
 using osu.Game.Rulesets.Osu.UI;
 using static osu.Game.Configuration.OsuDanceMover;
@@ -33,27 +33,36 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
                 _ => new MomentumMover()
             };
 
+        public static SpinnerMover GetSpinnerMover(OsuDanceSpinnerMover mover, Spinner spinner, float spinRadiusStart, float spinRadiusEnd) =>
+            mover switch
+            {
+                OsuDanceSpinnerMover.Pippi => new PippiSpinnerMover(spinner, spinRadiusStart, spinRadiusEnd),
+                _ => new CircleSpinnerMover(spinner, spinRadiusStart, spinRadiusEnd)
+            };
+
         public new OsuBeatmap Beatmap => (OsuBeatmap)base.Beatmap;
         private readonly Mover mover;
+        private readonly OsuDanceSpinnerMover spinnerMover;
         private readonly float spinRadiusStart;
         private readonly float spinRadiusEnd;
         private readonly bool sliderDance;
         private readonly bool skipShortSliders;
         private readonly bool spinnerChangeFramerate;
+        private readonly bool borderBounce;
         private readonly MConfigManager config;
         private readonly double normalFrameDelay;
         private double frameDelay;
         private InputProcessor input = null!;
         private List<DanceHitObject> hitObjects = null!;
-        private bool borderBounce;
 
         public OsuDanceGenerator(IBeatmap beatmap, IReadOnlyList<Mod> mods)
             : base(beatmap, mods)
         {
             config = MConfigManager.Instance;
             mover = GetMover(config.Get<OsuDanceMover>(MSetting.DanceMover));
+            spinnerMover = config.Get<OsuDanceSpinnerMover>(MSetting.DanceSpinnerMover);
             borderBounce = config.Get<bool>(MSetting.BorderBounce);
-            frameDelay = normalFrameDelay = 1000.0 / config.Get<float>(MSetting.ReplayFramerate);
+            frameDelay = normalFrameDelay = 1000.0 / config.Get<double>(MSetting.ReplayFramerate);
             spinRadiusStart = config.Get<float>(MSetting.SpinnerRadiusStart);
             spinRadiusEnd = config.Get<float>(MSetting.SpinnerRadiusEnd);
             sliderDance = config.Get<bool>(MSetting.SliderDance);
@@ -65,7 +74,17 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
 
         private void preProcessObjects()
         {
-            hitObjects = Beatmap.HitObjects.SkipWhile(h => h is Spinner { SpinsRequired: 0 }).Select(h => new DanceHitObject(h)).ToList();
+            hitObjects = Beatmap.HitObjects.SkipWhile(h => h is Spinner { SpinsRequired: 0 }).Select(h =>
+            {
+                switch (h)
+                {
+                    case Spinner spinner:
+                        return new DanceSpinner(spinner, GetSpinnerMover(spinnerMover, spinner, spinRadiusStart, spinRadiusEnd));
+
+                    default:
+                        return new DanceHitObject(h);
+                }
+            }).ToList();
 
             for (int i = 0; i < hitObjects.Count; i++)
             {
@@ -83,8 +102,8 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
                         break;
                     }
 
-                    case Spinner spinner:
-                        h.StartPos = SPINNER_CENTRE + MoverUtilExtensions.V2FromRad(0, spinRadiusStart);
+                    case Spinner:
+                        h.StartPos = h.PositionAt(h.StartTime);
 
                         if (i > 0)
                         {
@@ -93,7 +112,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
                                 h.StartPos = last.EndPos;
                         }
 
-                        h.EndPos = SPINNER_CENTRE + MoverUtilExtensions.V2FromRad((float)(0.00795 * spinner.Duration * 2 * Math.PI), spinRadiusEnd);
+                        h.EndPos = h.PositionAt(h.EndTime);
                         break;
                 }
             }
@@ -248,8 +267,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
 
                             case Spinner:
                                 frameDelay = spinnerChangeFramerate ? normalFrameDelay : GetFrameDelay(time);
-                                float r = Interpolation.ValueAt(time, spinRadiusStart, spinRadiusEnd, h.StartTime, h.EndTime);
-                                AddFrameToReplay(new OsuReplayFrame(time, SPINNER_CENTRE + MoverUtilExtensions.V2FromRad((float)(0.00795 * (time - h.StartTime) * 2 * Math.PI), r), action));
+                                AddFrameToReplay(new OsuReplayFrame(time, h.PositionAt(time), action));
                                 break;
 
                             default:

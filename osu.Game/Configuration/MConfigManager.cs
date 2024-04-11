@@ -25,7 +25,8 @@ namespace osu.Game.Configuration
 
             //Dance settings
             SetDefault(MSetting.DanceMover, OsuDanceMover.Momentum);
-            SetDefault(MSetting.ReplayFramerate, 120f, 15f, 1000f, 1f);
+            SetDefault(MSetting.DanceSpinnerMover, OsuDanceSpinnerMover.Circle);
+            SetDefault(MSetting.ReplayFramerate, 120.0, 15, 1000, 1);
             SetDefault(MSetting.SpinnerChangeFramerate, false);
             SetDefault(MSetting.SpinnerRadiusStart, 50, 5f, 350f, 1f);
             SetDefault(MSetting.SpinnerRadiusEnd, 50, 5f, 350f, 1f);
@@ -69,6 +70,7 @@ namespace osu.Game.Configuration
     {
         //Dance settings
         DanceMover,
+        DanceSpinnerMover,
         ReplayFramerate,
         SpinnerChangeFramerate,
         SpinnerRadiusStart,
@@ -119,5 +121,11 @@ namespace osu.Game.Configuration
         Pippi,
         Linear,
         Momentum
+    }
+
+    public enum OsuDanceSpinnerMover
+    {
+        Circle,
+        Pippi
     }
 }
