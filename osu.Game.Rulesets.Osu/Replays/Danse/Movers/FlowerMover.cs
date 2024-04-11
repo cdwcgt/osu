@@ -1,12 +1,11 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-#nullable disable
-
 using System;
 using System.Collections.Generic;
 using osu.Game.Configuration;
 using osu.Game.Rulesets.Osu.Objects;
+using osu.Game.Rulesets.Osu.Replays.Danse.Objects;
 using osuTK;
 using static osu.Game.Rulesets.Osu.Replays.Danse.Movers.MoverUtilExtensions;
 
@@ -32,7 +31,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
             offsetMult = config.Get<float>(MSetting.AngleOffset);
         }
 
-        public override void SetObjects(List<DanceHitObject> objects)
+        public override int SetObjects(List<DanceHitObject> objects)
         {
             base.SetObjects(objects);
 
@@ -41,8 +40,8 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
             float scaled = mult * dist;
             float next = nextMult * dist;
 
-            Slider start = Start.BaseObject as Slider;
-            Slider end = End.BaseObject as Slider;
+            Slider? start = Start.BaseObject as Slider;
+            Slider? end = End.BaseObject as Slider;
 
             float newAngle = offset * invert;
 
@@ -80,6 +79,8 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
 
             lastPoint = StartPos;
             curve = new BezierCurveCubic(StartPos, EndPos, p1, p2);
+
+            return 2;
         }
 
         public override Vector2 Update(double time) => curve.CalculatePoint(ProgressAt(time));

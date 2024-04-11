@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using osu.Game.Configuration;
 using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Rulesets.Osu.Objects;
+using osu.Game.Rulesets.Osu.Replays.Danse.Objects;
 using osuTK;
 using static osu.Game.Rulesets.Osu.Replays.Danse.Movers.MoverUtilExtensions;
 
@@ -67,7 +68,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
             return o1.StackedPosition == o2.StackedPosition || (skipStacks && o1.Position == o2.Position);
         }
 
-        public override void SetObjects(List<DanceHitObject> objects)
+        public override int SetObjects(List<DanceHitObject> objects)
         {
             base.SetObjects(objects);
             OsuHitObject? next = null;
@@ -194,6 +195,8 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
 
             curve = new BezierCurveCubic(StartPos, EndPos, p1, p2);
             first = false;
+
+            return 2;
         }
 
         private float anorm(float a)

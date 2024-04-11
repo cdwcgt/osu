@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Collections.Generic;
+using osu.Game.Rulesets.Osu.Replays.Danse.Objects;
 using osuTK;
 using static osu.Game.Rulesets.Osu.Replays.Danse.Movers.MoverUtilExtensions;
 
@@ -11,7 +12,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
     {
         public override Vector2 Update(double time) => ApplyPippiOffset(base.Update(time), time, -1);
 
-        public override void SetObjects(List<DanceHitObject> objects)
+        public override int SetObjects(List<DanceHitObject> objects)
         {
             base.SetObjects(objects);
             var start = objects[0];
@@ -23,6 +24,8 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
                 var end = objects[1];
                 end.StartPos = ApplyPippiOffset(end.StartPos, end.StartTime, -1);
             }
+
+            return 2;
         }
     }
 }

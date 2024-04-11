@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Types;
+using osu.Game.Rulesets.Osu.Replays.Danse.Objects;
 using osuTK;
 
 namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
@@ -13,7 +14,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
     {
         private SliderPath path = null!;
 
-        public override void SetObjects(List<DanceHitObject> objects)
+        public override int SetObjects(List<DanceHitObject> objects)
         {
             base.SetObjects(objects);
 
@@ -31,6 +32,8 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
                 new PathControlPoint(midP),
                 new PathControlPoint(EndPos)
             });
+
+            return 2;
         }
 
         public override Vector2 Update(double time) => path.PositionAt(ProgressAt(time));

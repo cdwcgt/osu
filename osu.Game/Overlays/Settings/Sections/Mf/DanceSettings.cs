@@ -87,16 +87,6 @@ namespace osu.Game.Overlays.Settings.Sections.Mf
                     LabelText = "Bounce on edges",
                     Current = config.GetBindable<bool>(MSetting.BorderBounce)
                 },
-                new SettingsCheckbox
-                {
-                    LabelText = "Force pippi mover for spinners",
-                    Current = config.GetBindable<bool>(MSetting.PippiSpinner)
-                },
-                new SettingsCheckbox
-                {
-                    LabelText = "Force pippi mover for streams",
-                    Current = config.GetBindable<bool>(MSetting.PippiStream)
-                },
                 new OsuSpriteText
                 {
                     Text = "Linear mover settings",

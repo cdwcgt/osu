@@ -36,9 +36,6 @@ namespace osu.Game.Configuration
             SetDefault(MSetting.SkipShortSlider, false);
             SetDefault(MSetting.SliderDance, true);
             SetDefault(MSetting.BorderBounce, true);
-            SetDefault(MSetting.PippiSpinner, false);
-            SetDefault(MSetting.PippiStream, false);
-
             //Linear mover settings
             SetDefault(MSetting.WaitForPreempt, true);
 
@@ -81,8 +78,6 @@ namespace osu.Game.Configuration
         NextJumpMult,
         BorderBounce,
         SkipStackAngles,
-        PippiSpinner,
-        PippiStream,
         SliderDance,
         SkipShortSlider,
 

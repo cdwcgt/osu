@@ -1,13 +1,12 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-#nullable disable
-
 using System;
 using System.Collections.Generic;
 using osu.Framework.Graphics;
 using osu.Framework.Utils;
 using osu.Game.Configuration;
+using osu.Game.Rulesets.Osu.Replays.Danse.Objects;
 using osuTK;
 
 namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
@@ -26,23 +25,20 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
             return rate;
         }
 
-        public override Vector2 Update(double time)
-        {
-            double waitTime = End.StartTime - Math.Max(0, End.BaseObject.TimePreempt - GetReactionTime(EndTime - End.BaseObject.TimePreempt));
+        public override Vector2 Update(double time) => Interpolation.ValueAt(time, StartPos, EndPos, StartTime, EndTime, Easing.Out);
 
-            if (WaitForPreempt && waitTime > time)
-            {
-                StartTime = waitTime;
-                return StartPos;
-            }
-
-            return Interpolation.ValueAt(time, StartPos, EndPos, StartTime, EndTime, Easing.Out);
-        }
-
-        public override void SetObjects(List<DanceHitObject> objects)
+        public override int SetObjects(List<DanceHitObject> objects)
         {
             base.SetObjects(objects);
+            double waitTime = End.StartTime - Math.Max(0, End.BaseObject.TimePreempt - GetReactionTime(EndTime - End.BaseObject.TimePreempt));
             StartTime = base.StartTime;
+
+            if (WaitForPreempt)
+            {
+                StartTime = waitTime;
+            }
+
+            return 2;
         }
     }
 }
