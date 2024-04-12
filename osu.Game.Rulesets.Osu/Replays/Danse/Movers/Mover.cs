@@ -1,10 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System;
 using System.Collections.Generic;
 using osu.Game.Rulesets.Mods;
-using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Osu.Replays.Danse.Objects;
 using osuTK;
 
@@ -25,13 +23,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
 
         public IReadOnlyList<IApplicableToRate> TimeAffectingMods { set; protected get; } = null!;
 
-        public virtual Vector2 GetObjectPosition(double time, DanceHitObject h) =>
-            h.BaseObject switch
-            {
-                Slider slider => slider.StackedPositionAt(time),
-                Spinner => h.PositionAt(time),
-                _ => h.StartPos
-            };
+        public virtual Vector2 GetObjectPosition(double time, DanceHitObject h) => h.PositionAt(time);
 
         public virtual int SetObjects(List<DanceHitObject> objects)
         {

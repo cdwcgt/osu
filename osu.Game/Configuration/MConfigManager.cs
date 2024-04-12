@@ -126,6 +126,8 @@ namespace osu.Game.Configuration
     public enum OsuDanceSpinnerMover
     {
         Circle,
-        Pippi
+        Pippi,
+        Heart,
+        Cube,
     }
 }

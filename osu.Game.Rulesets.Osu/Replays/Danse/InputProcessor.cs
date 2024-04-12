@@ -30,20 +30,72 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
             for (int i = 0; i < hitObjects.Count; i++)
             {
                 var h = hitObjects[i];
+                bool isDoubleClick = h.DoubleClick;
 
                 if (h.StartTime > time)
                     break;
 
                 if (lastTime < h.StartTime && time >= h.StartTime)
                 {
+                    double endTime = h.EndTime;
+                    double releaseAt = endTime + AutoGenerator.KEY_UP_DELAY;
+
+                    if (i + 1 < hitObjects.Count)
+                    {
+                        int j = i + 1;
+
+                        for (; j < hitObjects.Count; j++)
+                        {
+                            var c = hitObjects[j];
+
+                            if (c.SliderPoint && !c.SliderPointStart)
+                            {
+                                endTime = c.EndTime;
+                                releaseAt = endTime + AutoGenerator.KEY_UP_DELAY;
+                            }
+                            else
+                                break;
+                        }
+
+                        if (j > i + 1)
+                            hitObjects.RemoveRange(i + 1, j - (i + 1));
+
+                        if (i + 1 < hitObjects.Count)
+                        {
+                            DanceHitObject? obj = null;
+
+                            if (isDoubleClick || hitObjects[i + 1].DoubleClick)
+                            {
+                                obj = hitObjects[i + 1];
+                            }
+                            else if (i + 2 < hitObjects.Count)
+                            {
+                                obj = hitObjects[i + 2];
+                            }
+
+                            if (obj != null)
+                            {
+                                double nTime = obj.StartTime;
+                                releaseAt = Math.Clamp(nTime - 1, endTime + 1, releaseAt);
+                            }
+                        }
+                    }
+
                     double timeDifference = applyModsToTimeDelta(previousEnd, h.StartTime);
                     bool shouldBeLeft = !wasLeftBefore && timeDifference < 266;
 
-                    var action = shouldBeLeft ? OsuAction.LeftButton : OsuAction.RightButton;
-                    keyUpTime[(int)action] = h.EndTime + AutoGenerator.KEY_UP_DELAY;
+                    if (isDoubleClick)
+                    {
+                        keyUpTime[0] = keyUpTime[1] = releaseAt;
+                    }
+                    else
+                    {
+                        int action = (int)(shouldBeLeft ? OsuAction.LeftButton : OsuAction.RightButton);
+                        keyUpTime[action] = releaseAt;
+                    }
 
                     wasLeftBefore = shouldBeLeft;
-                    previousEnd = h.EndTime;
+                    previousEnd = endTime;
                     hitObjects.RemoveAt(i);
                     i--;
                 }
@@ -53,8 +105,6 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
                 actions.Add(OsuAction.LeftButton);
             if (time < keyUpTime[1])
                 actions.Add(OsuAction.RightButton);
-            if (actions.Count == 2)
-                keyUpTime[(int)(wasLeftBefore ? OsuAction.RightButton : OsuAction.LeftButton)] = time;
 
             lastTime = time;
             return actions.ToArray();

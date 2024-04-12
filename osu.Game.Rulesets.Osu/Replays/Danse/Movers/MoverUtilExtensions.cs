@@ -4,8 +4,8 @@
 using System;
 using osu.Framework.Utils;
 using osu.Game.Configuration;
-using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Osu.Objects;
+using osu.Game.Rulesets.Osu.Replays.Danse.Objects;
 using osuTK;
 
 namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
@@ -33,7 +33,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
             return MathF.Acos((a * a + b * b - c * c) / (2 * a * b));
         }
 
-        public static bool IsStream(params OsuHitObject[] hitObjects)
+        public static bool IsStream(params DanceHitObject[] hitObjects)
         {
             var config = MConfigManager.Instance;
             float max = config.Get<float>(MSetting.StreamMaximum);
@@ -45,10 +45,10 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
             for (int i = 0; i < hitObjects.Length - 1; i++)
             {
                 var next = hitObjects[i + 1];
-                float distanceSquared = Vector2.DistanceSquared(next.StackedPosition, h.StackedEndPosition);
-                double timeDifference = next.StartTime - h.GetEndTime();
+                float distanceSquared = Vector2.DistanceSquared(next.StartPos, h.EndPos);
+                double timeDifference = next.StartTime - h.EndTime;
 
-                isStream = distanceSquared >= min && distanceSquared <= max && timeDifference < 200 && h is HitCircle && next is HitCircle;
+                isStream = distanceSquared >= min && distanceSquared <= max && timeDifference < 200 && h.BaseObject is HitCircle && next.BaseObject is HitCircle;
                 h = next;
             }
 

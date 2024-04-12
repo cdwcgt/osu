@@ -9,6 +9,8 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers.Spinners
 {
     public abstract class SpinnerMover
     {
+        protected const float RPMS = 0.00795f;
+
         protected Spinner Spinner { get; set; }
         protected float SpinRadiusStart { get; set; }
         protected float SpinRadiusEnd { get; set; }

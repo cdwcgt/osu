@@ -61,19 +61,21 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
             invertAngleInterpolation = config.Get<bool>(MSetting.InvertAngleInterpolation);
         }
 
-        private bool isSame(DanceHitObject o1, DanceHitObject o2) => isSame(o1.BaseObject, o2.BaseObject, skipStacks);
+        private bool isSame(DanceHitObject o1, DanceHitObject o2) => isSame(o1, o2, skipStacks);
 
-        private bool isSame(OsuHitObject o1, OsuHitObject o2, bool skipStacks)
+        private bool isSame(DanceHitObject o1, DanceHitObject o2, bool skipStacks)
         {
-            return o1.StackedPosition == o2.StackedPosition || (skipStacks && o1.Position == o2.Position);
+            var o1BaseObject = o1.BaseObject;
+            var o2BaseObject = o2.BaseObject;
+            return o1.StartPos == o2.StartPos || (skipStacks && o1.BaseObject.Radius == o2.BaseObject.Radius);
         }
 
         public override int SetObjects(List<DanceHitObject> objects)
         {
             base.SetObjects(objects);
-            OsuHitObject? next = null;
+            DanceHitObject? next = null;
 
-            if (objects.Count > 2) next = objects[2].BaseObject;
+            if (objects.Count > 2) next = objects[2];
 
             float area = restrictArea * MathF.PI / 180f;
             float sarea = streamArea * MathF.PI / 180f;
@@ -128,9 +130,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
 
             if (next != null)
             {
-                stream = IsStream(Start.BaseObject, End.BaseObject, next) && streamRestrict;
+                stream = IsStream(Start, End, next) && streamRestrict;
                 sq1 = Vector2.DistanceSquared(StartPos, EndPos);
-                sq2 = Vector2.DistanceSquared(EndPos, next.StackedPosition);
+                sq2 = Vector2.DistanceSquared(EndPos, next.StartPos);
             }
 
             float a1 = (Start.BaseObject as Slider)?.GetEndAngle() ?? (first ? a2 + MathF.PI : StartPos.AngleRV(last));
@@ -173,7 +175,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
                 mult = offsetMult;
             }
 
-            bool bounce = !(End.BaseObject is IHasDuration) && isSame(Start.BaseObject, End.BaseObject, true);
+            bool bounce = !(End.BaseObject is IHasDuration) && isSame(Start, End, true);
 
             if (equalPosBounce > 0 && bounce)
             {

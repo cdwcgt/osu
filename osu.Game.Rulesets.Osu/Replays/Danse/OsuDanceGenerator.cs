@@ -8,6 +8,7 @@ using osu.Game.Beatmaps;
 using osu.Game.Configuration;
 using osu.Game.Replays;
 using osu.Game.Rulesets.Mods;
+using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Osu.Beatmaps;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Osu.Replays.Danse.Movers;
@@ -37,6 +38,8 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
             mover switch
             {
                 OsuDanceSpinnerMover.Pippi => new PippiSpinnerMover(spinner, spinRadiusStart, spinRadiusEnd),
+                OsuDanceSpinnerMover.Heart => new HeartSpinnerMover(spinner, spinRadiusStart, spinRadiusEnd),
+                OsuDanceSpinnerMover.Cube => new CubeSpinnerMover(spinner, spinRadiusStart, spinRadiusEnd),
                 _ => new CircleSpinnerMover(spinner, spinRadiusStart, spinRadiusEnd)
             };
 
@@ -88,53 +91,21 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
 
             for (int i = 0; i < hitObjects.Count; i++)
             {
-                var h = hitObjects[i];
-
-                switch (h.BaseObject)
-                {
-                    case Slider slider:
-                    {
-                        if (slider.IsRetarded())
-                        {
-                            replaceSlider(i, ref hitObjects);
-                        }
-
-                        break;
-                    }
-
-                    case Spinner:
-                        h.StartPos = h.PositionAt(h.StartTime);
-
-                        if (i > 0)
-                        {
-                            var last = hitObjects[i - 1];
-                            if (last.BaseObject is Spinner)
-                                h.StartPos = last.EndPos;
-                        }
-
-                        h.EndPos = h.PositionAt(h.EndTime);
-                        break;
-                }
-            }
-
-            /*
-            for (int i = 0; i < hitObjects.Count; i++)
-            {
                 var h = hitObjects[i].BaseObject;
 
-                bool found = false;
-
-                if (h is Slider)
+                if (h is Slider s)
                 {
+                    bool found = false;
+
                     // Resolving 2B conflicts
                     for (int j = i - 1; j >= 0; j--)
                     {
-                        var o = hitObjects[Math.Max(0, i - 1)].BaseObject;
+                        var o = hitObjects[i - 1];
 
-                        if (o.GetEndTime() >= h.StartTime)
+                        if (o.EndTime >= h.StartTime)
                         {
                             found = true;
-                            replaceSlider(i, hitObjects);
+                            replaceSlider(i, ref hitObjects);
 
                             break;
                         }
@@ -142,15 +113,15 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
 
                     if (!found && i + 1 < hitObjects.Count)
                     {
-                        var o = hitObjects[Math.Min(hitObjects.Count, i + 1)];
+                        var o = hitObjects[i + 1];
 
-                        if (o.StartTime <= h.GetEndTime())
+                        if (o.StartTime <= s.EndTime)
                         {
-                            replaceSlider(i, hitObjects);
+                            replaceSlider(i, ref hitObjects);
                         }
                     }
                 }
-            }*/
+            }
 
             // Second 2B pass for spinners
             for (int i = 0; i < hitObjects.Count; i++)
@@ -184,9 +155,65 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
                         }
 
                         hitObjects.RemoveAt(i);
-                        hitObjects.InsertRange(i, subSpinners.Select(h => new DanceHitObject(h)));
+                        hitObjects.InsertRange(i, subSpinners.Select(h => new DanceSpinner(h, GetSpinnerMover(spinnerMover, h, spinRadiusStart, spinRadiusEnd))));
 
                         hitObjects = hitObjects.OrderBy(h => h.StartTime).ToList();
+                    }
+                }
+            }
+
+            for (int i = 0; i < hitObjects.Count; i++)
+            {
+                var h = hitObjects[i];
+
+                switch (h.BaseObject)
+                {
+                    case Slider slider:
+                    {
+                        if (slider.IsRetarded() || sliderDance)
+                        {
+                            replaceSlider(i, ref hitObjects);
+                        }
+
+                        break;
+                    }
+
+                    case Spinner:
+                        h.StartPos = h.PositionAt(h.StartTime);
+
+                        if (i > 0)
+                        {
+                            var last = hitObjects[i - 1];
+                            if (last.BaseObject is Spinner)
+                                h.StartPos = last.EndPos;
+                        }
+
+                        h.EndPos = h.PositionAt(h.EndTime);
+                        break;
+
+                    default:
+                        h.StartPos = h.PositionAt(h.StartTime);
+                        break;
+                }
+            }
+
+            for (int i = 0; i < hitObjects.Count - 1; i++)
+            {
+                var current = hitObjects[i];
+                var next = hitObjects[i + 1];
+
+                if (current.BaseObject is HitCircle circle && next.BaseObject is HitCircle &&
+                    (!current.SliderPoint || current.SliderPointStart) && (!next.SliderPoint || next.SliderPointStart))
+                {
+                    float dst = (current.EndPos - next.StartPos).LengthSquared;
+
+                    if (dst <= circle.Radius * 1.995 && next.StartTime - current.EndTime <= 3)
+                    {
+                        double sTime = (next.StartTime + current.EndTime) / 2;
+                        current.DoubleClick = true;
+                        current.StartTime = sTime;
+                        current.StartPos = current.EndPos = (current.EndPos + next.StartPos) * 0.5f;
+                        hitObjects.RemoveAt(i + 1);
                     }
                 }
             }
@@ -198,13 +225,13 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
 
                 for (int j = i + 1; j < hitObjects.Count; j++)
                 {
-                    var o = hitObjects[j].BaseObject;
+                    var o = hitObjects[j];
 
-                    if (current.EndTime < hitObjects[j].StartTime) break;
+                    if (current.EndTime < o.StartTime) break;
 
-                    if (o is HitCircle || o is Slider)
+                    if (!o.SliderPoint || o.SliderPointStart)
                     {
-                        hitObjects[j].StartTime++;
+                        hitObjects[j].StartTime += frameDelay;
                     }
                 }
             }
@@ -220,8 +247,36 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
             if (queue[index].BaseObject is Slider s)
             {
                 queue.RemoveAt(index);
-                queue.InsertRange(index, s.NestedHitObjects.Cast<OsuHitObject>().Select(h => new DanceHitObject(h)));
 
+                if (s.IsRetarded())
+                {
+                    queue.Insert(index, new DanceHitObject(new HitCircle { Position = s.Position, StartTime = s.StartTime, StackHeight = s.StackHeight }) { SliderPoint = true, SliderPointStart = true});
+                    return;
+                }
+
+                var p = s.NestedHitObjects.Cast<OsuHitObject>().Select(h =>
+                {
+                    var d = new DanceHitObject(new HitCircle { Position = h.Position, StartTime = h.StartTime, StackHeight = h.StackHeight })
+                    {
+                        SliderPoint = true
+                    };
+
+                    switch (h)
+                    {
+                        case SliderHeadCircle:
+                            d.SliderPointStart = true;
+                            break;
+
+                        case SliderTailCircle:
+                            d.StartTime += SliderEventGenerator.TAIL_LENIENCY;
+                            d.EndTime += SliderEventGenerator.TAIL_LENIENCY;
+                            d.SliderPointEnd = true;
+                            break;
+                    }
+
+                    return d;
+                });
+                queue.InsertRange(index, p);
                 queue = queue.OrderBy(h => h.StartTime).ToList();
             }
         }
@@ -239,7 +294,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
             float y0 = (baseSize.Y - yf) / 2f;
             float y1 = yf + y0;
 
-            double endTime = hitObjects[^1].EndTime;
+            double endTime = hitObjects[^1].EndTime + frameDelay * 5;
 
             for (double time = hitObjects[0].StartTime; time <= endTime; time += frameDelay)
             {
@@ -261,24 +316,21 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
 
                         switch (h.BaseObject)
                         {
-                            case Slider slider:
-                                AddFrameToReplay(new OsuReplayFrame(time, slider.StackedPositionAt((time - h.StartTime) / slider.Duration), action));
-                                break;
-
                             case Spinner:
                                 frameDelay = spinnerChangeFramerate ? normalFrameDelay : GetFrameDelay(time);
-                                AddFrameToReplay(new OsuReplayFrame(time, h.PositionAt(time), action));
+                                AddFrameToReplay(new OsuReplayFrame(time, mover.GetObjectPosition(time, h), action));
                                 break;
 
                             default:
-                                AddFrameToReplay(new OsuReplayFrame(time, mover.Update(time), action));
+                                AddFrameToReplay(new OsuReplayFrame(time, mover.GetObjectPosition(time, h), action));
                                 break;
                         }
                     }
 
                     if (time > h.EndTime)
                     {
-                        AddFrameToReplay(new OsuReplayFrame(h.StartTime, mover.Update(h.StartTime), input.Update(h.StartTime)));
+                        // Ensure object is hit on time
+                        AddFrameToReplay(new OsuReplayFrame(h.StartTime, mover.GetObjectPosition(h.StartTime, h), input.Update(h.StartTime)));
                         int upperLimit = hitObjects.Count;
 
                         for (int j = i; j < hitObjects.Count; j++)

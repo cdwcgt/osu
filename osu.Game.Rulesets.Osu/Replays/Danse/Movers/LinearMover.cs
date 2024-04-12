@@ -30,12 +30,11 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
         public override int SetObjects(List<DanceHitObject> objects)
         {
             base.SetObjects(objects);
-            double waitTime = End.StartTime - Math.Max(0, End.BaseObject.TimePreempt - GetReactionTime(EndTime - End.BaseObject.TimePreempt));
             StartTime = base.StartTime;
 
             if (WaitForPreempt)
             {
-                StartTime = waitTime;
+                StartTime = Math.Max(StartTime, EndTime - End.BaseObject.TimePreempt - GetReactionTime(EndTime - End.BaseObject.TimePreempt));
             }
 
             return 2;

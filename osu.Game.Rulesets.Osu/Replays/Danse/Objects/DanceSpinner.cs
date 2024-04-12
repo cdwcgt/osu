@@ -17,9 +17,6 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Objects
             this.mover = mover;
         }
 
-        public override Vector2 PositionAt(double time)
-        {
-            return mover.PositionAt(time);
-        }
+        public override Vector2 PositionAt(double time) => mover.PositionAt(time);
     }
 }

@@ -15,8 +15,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers.Spinners
         }
 
         public override Vector2 PositionAt(double time)
-        {
-            return OsuAutoGeneratorBase.SPINNER_CENTRE + MoverUtilExtensions.V2FromRad((float)(0.00795 * (time - Spinner.StartTime) * 2 * Math.PI), RadiusAt(time));
-        }
+            => OsuAutoGeneratorBase.SPINNER_CENTRE
+               + MoverUtilExtensions.V2FromRad((float)(RPMS * (time - Spinner.StartTime) * 2 * Math.PI), RadiusAt(time));
     }
 }

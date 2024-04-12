@@ -13,9 +13,6 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers.Spinners
         {
         }
 
-        public override Vector2 PositionAt(double time)
-        {
-            return MoverUtilExtensions.ApplyPippiOffset(base.PositionAt(time), time, 100);
-        }
+        public override Vector2 PositionAt(double time) => MoverUtilExtensions.ApplyPippiOffset(base.PositionAt(time), time, 100);
     }
 }

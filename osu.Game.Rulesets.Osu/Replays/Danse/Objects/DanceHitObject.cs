@@ -14,6 +14,10 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Objects
         public Vector2 EndPos;
         public double StartTime;
         public double EndTime;
+        public bool SliderPoint;
+        public bool SliderPointStart;
+        public bool SliderPointEnd;
+        public bool DoubleClick;
 
         public DanceHitObject(OsuHitObject baseObject)
         {
@@ -26,8 +30,8 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Objects
 
         public virtual Vector2 PositionAt(double time) => BaseObject switch
         {
-            Slider slider => slider.StackedPositionAt(time),
-            _ => StartPos
+            Slider slider => slider.StackedPositionAt((time - StartTime) / slider.Duration),
+            _ => EndPos
         };
     }
 }
