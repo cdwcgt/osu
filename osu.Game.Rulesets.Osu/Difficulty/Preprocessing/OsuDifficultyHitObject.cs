@@ -128,8 +128,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
 
             // Don't need to jump to reach spinners
             if (!(BaseObject is Spinner))
+            {
                 RawJumpDistance = (BaseObject.StackedPosition - lastCursorPosition).Length;
-            JumpDistance = (BaseObject.StackedPosition * scalingFactor - lastCursorPosition * scalingFactor).Length;
+                JumpDistance = RawJumpDistance * scalingFactor;
+            }
+
 
             if (lastLastObject != null)
             {

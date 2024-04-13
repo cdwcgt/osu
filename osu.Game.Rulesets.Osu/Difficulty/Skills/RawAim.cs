@@ -10,6 +10,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     {
         protected override double CalculateAimValue(OsuDifficultyHitObject current) => CalculateJumpAimValue(current) + CalculateFlowAimValue(current);
 
+        protected override double GetDistance(OsuDifficultyHitObject current) => current.RawJumpDistance;
+
         public RawAim(Mod[] mods) : base(mods)
         {
         }
