@@ -17,6 +17,7 @@ using osu.Game.Rulesets.Osu.Replays.Danse.Objects;
 using osu.Game.Rulesets.Osu.UI;
 using static osu.Game.Configuration.OsuDanceMover;
 
+// Credit to danser-go https://github.com/Wieku/danser-go
 namespace osu.Game.Rulesets.Osu.Replays.Danse
 {
     public class OsuDanceGenerator : OsuAutoGeneratorBase
@@ -227,7 +228,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
                 {
                     var o = hitObjects[j];
 
-                    if (current.EndTime < o.StartTime) break;
+                    if (current.EndTime + frameDelay < o.StartTime) break;
 
                     if (!o.SliderPoint || o.SliderPointStart)
                     {
@@ -268,8 +269,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
                             break;
 
                         case SliderTailCircle:
-                            d.StartTime += SliderEventGenerator.TAIL_LENIENCY;
-                            d.EndTime += SliderEventGenerator.TAIL_LENIENCY;
+                            double t = Math.Max(s.StartTime + s.Duration / 2, s.EndTime + SliderEventGenerator.TAIL_LENIENCY);
+                            d.StartTime = d.EndTime = t;
+                            d.StartPos = d.EndPos = s.StackedPositionAt((t - s.StartTime) / s.Duration);
                             d.SliderPointEnd = true;
                             break;
                     }
