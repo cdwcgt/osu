@@ -15,13 +15,18 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
         public static float AngleRV(this Vector2 v1, Vector2 v2) => MathF.Atan2(v1.Y - v2.Y, v1.X - v2.X);
         public static Vector2 V2FromRad(float rad, float radius) => new Vector2(MathF.Cos(rad), MathF.Sin(rad)) * radius;
 
-        public static float GetEndAngle(this Slider s) => s.GetAngle();
-        public static float GetStartAngle(this Slider s) => s.GetAngle(true);
+        public static float GetEndAngle(this DanceHitObject s) => s.GetAngle();
+        public static float GetStartAngle(this DanceHitObject s) => s.GetAngle(true);
 
-        public static float GetAngle(this Slider s, bool start = false) =>
-            (start ? s.StackedPosition : s.StackedEndPosition).AngleRV(s.StackedPositionAt(
+        public static float GetAngle(this DanceHitObject s, bool start = false)
+        {
+            if (s.BaseObject is not Slider)
+                ThrowHelper.ThrowInvalidOperationException($"Only call {nameof(GetAngle)} on Sliders");
+
+            return (start ? s.StartPos : s.EndPos).AngleRV(s.PositionAt(
                 start ? 1 / s.Duration : (s.Duration - 1) / s.Duration
             ));
+        }
 
         public static bool IsRetarded(this Slider s) => s.Distance == 0 || Precision.AlmostEquals(s.StartTime, s.EndTime);
 

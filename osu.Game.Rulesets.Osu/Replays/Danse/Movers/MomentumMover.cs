@@ -63,12 +63,8 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
 
         private bool isSame(DanceHitObject o1, DanceHitObject o2) => isSame(o1, o2, skipStacks);
 
-        private bool isSame(DanceHitObject o1, DanceHitObject o2, bool skipStacks)
-        {
-            var o1BaseObject = o1.BaseObject;
-            var o2BaseObject = o2.BaseObject;
-            return o1.StartPos == o2.StartPos || (skipStacks && o1.BaseObject.Radius == o2.BaseObject.Radius);
-        }
+        private bool isSame(DanceHitObject o1, DanceHitObject o2, bool skipStacks) =>
+            o1.StartPos == o2.StartPos || (skipStacks && o1.BaseObject.Position == o2.BaseObject.Position);
 
         public override int SetObjects(List<DanceHitObject> objects)
         {
@@ -89,9 +85,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
             {
                 var o = objects[i];
 
-                if (o.BaseObject is Slider s)
+                if (o.BaseObject is Slider)
                 {
-                    a2 = s.GetStartAngle();
+                    a2 = o.GetStartAngle();
                     fromLong = true;
                     break;
                 }
@@ -107,11 +103,11 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
 
                 if (!isSame(o, o2))
                 {
-                    if (o2.BaseObject is Slider s2 && sliderPredict)
+                    if (o2.BaseObject is Slider && sliderPredict)
                     {
                         var pos = StartPos;
                         var pos2 = EndPos;
-                        float s2a = s2.GetStartAngle();
+                        float s2a = o2.GetStartAngle();
                         float dst2 = Vector2.Distance(pos, pos2);
                         pos2 = new Vector2(s2a, dst2 * mult) + pos2;
                         a2 = pos.AngleRV(pos2);
@@ -135,7 +131,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
                 sq2 = Vector2.DistanceSquared(EndPos, next.StartPos);
             }
 
-            float a1 = (Start.BaseObject as Slider)?.GetEndAngle() ?? (first ? a2 + MathF.PI : StartPos.AngleRV(last));
+            float a1 = Start.BaseObject is Slider ? Start.GetEndAngle() : (first ? a2 + MathF.PI : StartPos.AngleRV(last));
             float ac = a2 - EndPos.AngleRV(StartPos);
 
             if (sarea > 0 && stream && anorm(ac) < anorm(2 * MathF.PI - sarea))

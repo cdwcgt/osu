@@ -18,6 +18,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Objects
         public bool SliderPointStart;
         public bool SliderPointEnd;
         public bool DoubleClick;
+        public double Duration => EndTime - StartTime;
 
         public DanceHitObject(OsuHitObject baseObject)
         {

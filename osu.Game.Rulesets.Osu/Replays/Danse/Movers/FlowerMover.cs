@@ -48,22 +48,22 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
             if (start != null && end != null)
             {
                 invert *= -1;
-                p1 = V2FromRad(start.GetEndAngle(), scaled) + StartPos;
-                p2 = V2FromRad(end.GetStartAngle(), next) + EndPos;
+                p1 = V2FromRad(Start.GetEndAngle(), scaled) + StartPos;
+                p2 = V2FromRad(End.GetStartAngle(), next) + EndPos;
             }
             else if (start != null)
             {
                 invert *= -1;
                 lastAngle = StartPos.AngleRV(EndPos) - newAngle;
 
-                p1 = V2FromRad(start.GetEndAngle(), scaled) + StartPos;
+                p1 = V2FromRad(Start.GetEndAngle(), scaled) + StartPos;
                 p2 = V2FromRad(lastAngle, next) + EndPos;
             }
             else if (end != null)
             {
                 lastAngle += MathF.PI;
                 p1 = V2FromRad(lastAngle, scaled) + StartPos;
-                p2 = V2FromRad(end.GetStartAngle(), next) + EndPos;
+                p2 = V2FromRad(End.GetStartAngle(), next) + EndPos;
             }
             else
             {

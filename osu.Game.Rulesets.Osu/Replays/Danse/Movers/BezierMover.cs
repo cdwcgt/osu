@@ -46,13 +46,13 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
             if (s1 != null)
             {
                 dst = Vector2.Distance(s1.StackedPositionAt((StartTime - 10 - s1.StartTime) / s1.Duration), StartPos);
-                endAngle = s1.GetEndAngle();
+                endAngle = Start.GetEndAngle();
             }
 
             if (s2 != null)
             {
                 dst2 = Vector2.Distance(s2.StackedPositionAt((EndTime + 10 - s2.StartTime) / s2.Duration), EndPos);
-                startAngle = s2.GetStartAngle();
+                startAngle = End.GetStartAngle();
             }
 
             if (StartPos == EndPos)

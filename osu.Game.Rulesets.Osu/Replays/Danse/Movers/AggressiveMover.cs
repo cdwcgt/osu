@@ -22,8 +22,8 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
             float scaledDistance = StartPos == EndPos ? 1 : (float)(EndTime - StartTime);
             float newAngle = lastAngle + MathF.PI;
 
-            if (Start.BaseObject is Slider start)
-                newAngle = start.GetEndAngle();
+            if (Start.BaseObject is Slider)
+                newAngle = Start.GetEndAngle();
 
             var p1 = V2FromRad(newAngle, scaledDistance) + StartPos;
             var p2 = Vector2.Zero;
@@ -31,9 +31,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
             if (scaledDistance > 1)
                 lastAngle = p1.AngleRV(EndPos);
 
-            if (End.BaseObject is Slider end)
+            if (End.BaseObject is Slider)
             {
-                p2 = V2FromRad(end.GetStartAngle(), scaledDistance) + EndPos;
+                p2 = V2FromRad(End.GetStartAngle(), scaledDistance) + EndPos;
             }
 
             curve = new BezierCurve(StartPos, p1);
