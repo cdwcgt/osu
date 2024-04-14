@@ -52,7 +52,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             double aimValue = calculateSkillValue(osuAttributes.AimStrain) * aimWeight;
             double jumpAimValue = calculateSkillValue(osuAttributes.JumpAimStrain) * aimWeight;
             double flowAimValue = calculateSkillValue(osuAttributes.FlowAimStrain) * aimWeight;
-            double precisionValue = (calculateSkillValue(osuAttributes.AimStrain) - calculateSkillValue(osuAttributes.RawAimStrain)) * aimWeight * 2;
+            double precisionValue = calculateSkillValue(osuAttributes.PrecisionStrain) * aimWeight;
             double speedValue = calculateSkillValue(osuAttributes.SpeedStrain) * speedWeight;
             double staminaValue = calculateSkillValue(osuAttributes.StaminaStrain) * speedWeight;
             double accuracyValue = calculateAccuracyValue(normalisedHitError) * osuAttributes.AccuracyStrain * accuracyWeight;

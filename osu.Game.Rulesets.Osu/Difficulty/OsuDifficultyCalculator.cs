@@ -40,7 +40,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             double jumpAimRating = Math.Sqrt(skills[2].DifficultyValue()) * difficulty_multiplier;
             double flowAimRating = Math.Sqrt(skills[3].DifficultyValue()) * difficulty_multiplier;
-            double rawAimStrain = Math.Sqrt(skills[1].DifficultyValue()) * difficulty_multiplier;
+            double precisionRating = Math.Sqrt(Math.Max(0, skills[0].DifficultyValue() - skills[1].DifficultyValue())) * difficulty_multiplier;
 
             double speedRating = Math.Sqrt(skills[4].DifficultyValue()) * difficulty_multiplier;
             double staminaRating = Math.Sqrt(skills[5].DifficultyValue()) * difficulty_multiplier;
@@ -83,7 +83,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 AimStrain = aimRating,
                 JumpAimStrain = jumpAimRating,
                 FlowAimStrain = flowAimRating,
-                RawAimStrain = rawAimStrain,
+                PrecisionStrain = precisionRating,
                 SpeedStrain = speedRating,
                 StaminaStrain = staminaRating,
                 AccuracyStrain = accuracyRating,
