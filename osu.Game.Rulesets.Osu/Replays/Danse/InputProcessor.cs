@@ -13,14 +13,16 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
         private bool wasLeftBefore;
         private double lastTime = double.NegativeInfinity;
         private double previousEnd = double.NegativeInfinity;
+        private readonly double frameDelay;
         private readonly List<DanceHitObject> hitObjects;
         private readonly Func<double, double, double> applyModsToTimeDelta;
         private readonly double[] keyUpTime = { double.NegativeInfinity, double.NegativeInfinity };
 
-        public InputProcessor(Func<double, double, double> applyModsToTimeDelta, List<DanceHitObject> hitObjects)
+        public InputProcessor(List<DanceHitObject> hitObjects, double frameDelay, Func<double, double, double> applyModsToTimeDelta)
         {
-            this.applyModsToTimeDelta = applyModsToTimeDelta;
             this.hitObjects = hitObjects;
+            this.frameDelay = frameDelay;
+            this.applyModsToTimeDelta = applyModsToTimeDelta;
         }
 
         public OsuAction[] Update(double time)
@@ -76,7 +78,8 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
                             if (obj != null)
                             {
                                 double nTime = obj.StartTime;
-                                releaseAt = Math.Clamp(nTime - 1, endTime + 1, releaseAt);
+                                // The minimum time we can delay is one frame
+                                releaseAt = Math.Clamp(nTime - frameDelay, endTime + frameDelay, releaseAt);
                             }
                         }
                     }

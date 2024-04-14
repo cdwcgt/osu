@@ -206,13 +206,13 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
                 if (current.BaseObject is HitCircle circle && next.BaseObject is HitCircle &&
                     (!current.SliderPoint || current.SliderPointStart) && (!next.SliderPoint || next.SliderPointStart))
                 {
-                    float dst = (current.EndPos - next.StartPos).LengthSquared;
+                    float dst = (next.StartPos - current.EndPos).Length;
 
-                    if (dst <= circle.Radius * 1.995 && next.StartTime - current.EndTime <= 3)
+                    if (dst <= circle.Radius * 1.995 && next.StartTime - current.EndTime <= Math.Max(frameDelay, 3))
                     {
                         double sTime = (next.StartTime + current.EndTime) / 2;
                         current.DoubleClick = true;
-                        current.StartTime = sTime;
+                        current.StartTime = current.EndTime = sTime;
                         current.StartPos = current.EndPos = (current.EndPos + next.StartPos) * 0.5f;
                         hitObjects.RemoveAt(i + 1);
                     }
@@ -232,12 +232,14 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
 
                     if (!o.SliderPoint || o.SliderPointStart)
                     {
+                        // The minimum time we can delay is one frame
                         hitObjects[j].StartTime += frameDelay;
                     }
                 }
             }
 
-            input = new InputProcessor(ApplyModsToTimeDelta, hitObjects.ToList());
+            hitObjects = hitObjects.OrderBy(h => h.StartTime).ToList();
+            input = new InputProcessor(hitObjects.ToList(), frameDelay, ApplyModsToTimeDelta);
             hitObjects.Insert(0, new DanceHitObject(new HitCircle { Position = hitObjects[0].StartPos, StartTime = -500 }));
             int toRemove = mover.SetObjects(hitObjects) - 1;
             hitObjects = hitObjects[toRemove..];
