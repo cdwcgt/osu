@@ -61,12 +61,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             return (jumpAim + flowAim) * CalculateSmallCircleBonus(((OsuHitObject)current.BaseObject).Radius);
         }
 
+        protected virtual double GetDistance(OsuDifficultyHitObject current) => current.JumpDistance;
+
         protected double CalculateJumpAimValue(OsuDifficultyHitObject current)
         {
             if (current.Flow == 1)
                 return 0;
 
-            double distance = current.JumpDistance / OsuDifficultyHitObject.NORMALISED_RADIUS;
+            double distance = GetDistance(current) / OsuDifficultyHitObject.NORMALISED_RADIUS;
 
             double jumpAimBase = distance / current.StrainTime;
 

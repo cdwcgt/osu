@@ -27,6 +27,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         /// </summary>
         protected virtual double DifficultyMultiplier => DEFAULT_DIFFICULTY_MULTIPLIER;
 
+        protected abstract double StrainDecayBase { get; }
+
         // 应变衰减的算法
         // 两个物件相隔时间越短值越接近1
         protected double StrainDecay(double ms) => Math.Pow(StrainDecayBase, ms / 1000);

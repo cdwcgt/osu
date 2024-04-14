@@ -13,5 +13,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         public RawAim(Mod[] mods) : base(mods)
         {
         }
+
+        protected override double GetDistance(OsuDifficultyHitObject current) => current.RawJumpDistance;
     }
 }
