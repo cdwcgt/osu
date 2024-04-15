@@ -128,6 +128,8 @@ namespace osu.Game.Configuration
         Circle,
         Pippi,
         Heart,
+        Square,
+        Triangle,
         Cube,
     }
 }

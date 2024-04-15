@@ -40,6 +40,8 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
             {
                 OsuDanceSpinnerMover.Pippi => new PippiSpinnerMover(spinner, spinRadiusStart, spinRadiusEnd),
                 OsuDanceSpinnerMover.Heart => new HeartSpinnerMover(spinner, spinRadiusStart, spinRadiusEnd),
+                OsuDanceSpinnerMover.Square => new SquareSpinnerMover(spinner, spinRadiusStart, spinRadiusEnd),
+                OsuDanceSpinnerMover.Triangle => new TriangleSpinnerMover(spinner, spinRadiusStart, spinRadiusEnd),
                 OsuDanceSpinnerMover.Cube => new CubeSpinnerMover(spinner, spinRadiusStart, spinRadiusEnd),
                 _ => new CircleSpinnerMover(spinner, spinRadiusStart, spinRadiusEnd)
             };
