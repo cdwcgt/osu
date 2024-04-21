@@ -13,7 +13,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
     public class BezierMover : Mover
     {
         private BezierCurve curve;
-        private Vector2 pt = new Vector2(512f / 2f, 384 / 2f);
+        private Vector2 pt = OsuAutoGeneratorBase.SPINNER_CENTRE;
         private float previousSpeed;
         private readonly float aggressiveness;
         private readonly float sliderAggressiveness;
@@ -37,21 +37,20 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
             }
 
             float genScale = previousSpeed;
-            var s1 = Start.BaseObject as Slider;
-            var s2 = End.BaseObject as Slider;
-            bool ok1 = s1 != null;
-            bool ok2 = s2 != null;
+
+            bool ok1 = Start.BaseObject is Slider;
+            bool ok2 = End.BaseObject is Slider;
             float dst = 0, dst2 = 0, startAngle = 0, endAngle = 0;
 
-            if (s1 != null)
+            if (ok1)
             {
-                dst = Vector2.Distance(s1.StackedPositionAt((StartTime - 10 - s1.StartTime) / s1.Duration), StartPos);
+                dst = Vector2.Distance(Start.PositionAt((StartTime - 10 - Start.StartTime) / Start.Duration), StartPos);
                 endAngle = Start.GetEndAngle();
             }
 
-            if (s2 != null)
+            if (ok2)
             {
-                dst2 = Vector2.Distance(s2.StackedPositionAt((EndTime + 10 - s2.StartTime) / s2.Duration), EndPos);
+                dst2 = Vector2.Distance(End.PositionAt((EndTime + 10 - End.StartTime) / End.Duration), EndPos);
                 startAngle = End.GetStartAngle();
             }
 
