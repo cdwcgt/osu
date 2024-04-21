@@ -2,20 +2,19 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using osu.Game.Rulesets.Osu.Objects;
 using osuTK;
 
 namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers.Spinners
 {
     public class CircleSpinnerMover : SpinnerMover
     {
-        public CircleSpinnerMover(Spinner spinner, float spinRadiusStart, float spinRadiusEnd)
-            : base(spinner, spinRadiusStart, spinRadiusEnd)
+        public CircleSpinnerMover(double startTime, double endTime, float spinRadiusStart, float spinRadiusEnd)
+            : base(startTime, endTime, spinRadiusStart, spinRadiusEnd)
         {
         }
 
         public override Vector2 PositionAt(double time)
             => OsuAutoGeneratorBase.SPINNER_CENTRE
-               + MoverUtilExtensions.V2FromRad((float)(RPMS * (time - Spinner.StartTime) * 2 * Math.PI), RadiusAt(time));
+               + MoverUtilExtensions.V2FromRad(StartAngle + (float)(RPMS * (time - StartTime) * 2 * Math.PI), RadiusAt(time));
     }
 }

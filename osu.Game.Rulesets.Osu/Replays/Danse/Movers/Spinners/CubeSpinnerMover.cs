@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using osu.Game.Rulesets.Osu.Objects;
 using osuTK;
 
 namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers.Spinners
@@ -23,14 +22,14 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers.Spinners
 
         private int[] cubeIndices = { 0, 1, 2, 3, 0, 4, 5, 1, 5, 6, 2, 6, 7, 3, 7, 4 };
 
-        public CubeSpinnerMover(Spinner spinner, float spinRadiusStart, float spinRadiusEnd)
-            : base(spinner, spinRadiusStart, spinRadiusEnd)
+        public CubeSpinnerMover(double startTime, double endTime, float spinRadiusStart, float spinRadiusEnd)
+            : base(startTime, endTime, spinRadiusStart, spinRadiusEnd)
         {
         }
 
         public override Vector2 PositionAt(double time)
         {
-            double duration = time - Spinner.StartTime;
+            double duration = time - StartTime;
             float radY = MathF.Sin((float)duration / 9000f * 2 * MathF.PI) * 3.0f / 18 * MathF.PI;
             float radX = MathF.Sin((float)duration / 5000f * 2 * MathF.PI) * 3.0f / 18 * MathF.PI;
             float scale = (1.0f + MathF.Sin((float)duration / 4500 * 2 * MathF.PI) * 0.3f) * RadiusAt(time);

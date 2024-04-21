@@ -9,14 +9,14 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Objects
 {
     public class DanceSpinner : DanceHitObject
     {
-        private readonly SpinnerMover mover;
+        public readonly SpinnerMover Mover;
 
         public DanceSpinner(Spinner baseObject, SpinnerMover mover)
             : base(baseObject)
         {
-            this.mover = mover;
+            Mover = mover;
         }
 
-        public override Vector2 PositionAt(double time) => mover.PositionAt(time);
+        public override Vector2 PositionAt(double time) => Mover.PositionAt(time);
     }
 }

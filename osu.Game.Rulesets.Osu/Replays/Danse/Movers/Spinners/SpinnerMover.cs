@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Utils;
-using osu.Game.Rulesets.Osu.Objects;
 using osuTK;
 
 namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers.Spinners
@@ -11,19 +10,22 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers.Spinners
     {
         protected const float RPMS = 0.00795f;
 
-        protected Spinner Spinner { get; set; }
+        public float StartAngle { get; set; }
+        protected double StartTime { get; set; }
+        protected double EndTime { get; set; }
         protected float SpinRadiusStart { get; set; }
         protected float SpinRadiusEnd { get; set; }
 
-        protected SpinnerMover(Spinner spinner, float spinRadiusStart, float spinRadiusEnd)
+        protected SpinnerMover(double startTime, double endTime, float spinRadiusStart, float spinRadiusEnd)
         {
-            Spinner = spinner;
+            StartTime = startTime;
+            EndTime = endTime;
             SpinRadiusStart = spinRadiusStart;
             SpinRadiusEnd = spinRadiusEnd;
         }
 
         public abstract Vector2 PositionAt(double time);
 
-        protected float RadiusAt(double time) => Interpolation.ValueAt(time, SpinRadiusStart, SpinRadiusEnd, Spinner.StartTime, Spinner.EndTime);
+        public float RadiusAt(double time) => Interpolation.ValueAt(time, SpinRadiusStart, SpinRadiusEnd, StartTime, EndTime);
     }
 }

@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using osu.Game.Rulesets.Osu.Objects;
 using osuTK;
 
 namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers.Spinners
@@ -14,14 +13,14 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers.Spinners
             new Vector3(-0.86602540378f, -0.5f, 0), new Vector3(0.86602540378f, -0.5f, 0), new Vector3(0, 1, 0)
         };
 
-        public TriangleSpinnerMover(Spinner spinner, float spinRadiusStart, float spinRadiusEnd)
-            : base(spinner, spinRadiusStart, spinRadiusEnd)
+        public TriangleSpinnerMover(double startTime, double endTime, float spinRadiusStart, float spinRadiusEnd)
+            : base(startTime, endTime, spinRadiusStart, spinRadiusEnd)
         {
         }
 
         public override Vector2 PositionAt(double time)
         {
-            double duration = time - Spinner.StartTime;
+            double duration = time - StartTime;
             var mat = Matrix3.CreateRotationZ((float)duration * 2000 * 2 * MathF.PI) * Matrix3.CreateScale(new Vector3(RadiusAt(time), RadiusAt(time), 1));
             int startIndex = ((int)(Math.Max(0, duration / 10)) % 3);
 

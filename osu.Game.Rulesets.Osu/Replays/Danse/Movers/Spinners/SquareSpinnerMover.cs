@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using osu.Game.Rulesets.Osu.Objects;
 using osuTK;
 
 namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers.Spinners
@@ -14,14 +13,14 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers.Spinners
             new Vector3(-1, -1, 0), new Vector3(1, -1, 0), new Vector3(1, 1, 0), new Vector3(-1, 1, 0)
         };
 
-        public SquareSpinnerMover(Spinner spinner, float spinRadiusStart, float spinRadiusEnd)
-            : base(spinner, spinRadiusStart, spinRadiusEnd)
+        public SquareSpinnerMover(double startTime, double endTime, float spinRadiusStart, float spinRadiusEnd)
+            : base(startTime, endTime, spinRadiusStart, spinRadiusEnd)
         {
         }
 
         public override Vector2 PositionAt(double time)
         {
-            double duration = time - Spinner.StartTime;
+            double duration = time - StartTime;
             var mat = Matrix3.CreateRotationZ((float)duration * 2000 * 2 * MathF.PI) * Matrix3.CreateScale(new Vector3(RadiusAt(time), RadiusAt(time), 1));
             int startIndex = (int)(Math.Max(0, duration / 10)) % 4;
 

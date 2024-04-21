@@ -34,7 +34,6 @@ namespace osu.Game.Configuration
             SetDefault(MSetting.JumpMult, 0.6f, 0f, 2f, 0.01f);
             SetDefault(MSetting.NextJumpMult, 0.25f, 0f, 2f, 0.01f);
             SetDefault(MSetting.SkipStackAngles, false);
-            SetDefault(MSetting.SkipShortSlider, false);
             SetDefault(MSetting.SliderDance, true);
             SetDefault(MSetting.BorderBounce, true);
             //Linear mover settings
@@ -81,7 +80,6 @@ namespace osu.Game.Configuration
         BorderBounce,
         SkipStackAngles,
         SliderDance,
-        SkipShortSlider,
 
         //Linear mover settings
         WaitForPreempt,

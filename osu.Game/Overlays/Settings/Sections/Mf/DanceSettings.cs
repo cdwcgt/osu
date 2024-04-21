@@ -79,11 +79,6 @@ namespace osu.Game.Overlays.Settings.Sections.Mf
                 },
                 new SettingsCheckbox
                 {
-                    LabelText = "Skip short sliders",
-                    Current = config.GetBindable<bool>(MSetting.SkipShortSlider)
-                },
-                new SettingsCheckbox
-                {
                     LabelText = "Skip stack angles",
                     Current = config.GetBindable<bool>(MSetting.SkipStackAngles)
                 },

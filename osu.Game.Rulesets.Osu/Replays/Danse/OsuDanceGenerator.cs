@@ -15,6 +15,7 @@ using osu.Game.Rulesets.Osu.Replays.Danse.Movers;
 using osu.Game.Rulesets.Osu.Replays.Danse.Movers.Spinners;
 using osu.Game.Rulesets.Osu.Replays.Danse.Objects;
 using osu.Game.Rulesets.Osu.UI;
+using osuTK;
 using static osu.Game.Configuration.OsuDanceMover;
 
 // Credit to danser-go https://github.com/Wieku/danser-go
@@ -35,15 +36,15 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
                 _ => new MomentumMover()
             };
 
-        public static SpinnerMover GetSpinnerMover(OsuDanceSpinnerMover mover, Spinner spinner, float spinRadiusStart, float spinRadiusEnd) =>
+        public static SpinnerMover GetSpinnerMover(OsuDanceSpinnerMover mover, double startTime, double endTime, float spinRadiusStart, float spinRadiusEnd) =>
             mover switch
             {
-                OsuDanceSpinnerMover.Pippi => new PippiSpinnerMover(spinner, spinRadiusStart, spinRadiusEnd),
-                OsuDanceSpinnerMover.Heart => new HeartSpinnerMover(spinner, spinRadiusStart, spinRadiusEnd),
-                OsuDanceSpinnerMover.Square => new SquareSpinnerMover(spinner, spinRadiusStart, spinRadiusEnd),
-                OsuDanceSpinnerMover.Triangle => new TriangleSpinnerMover(spinner, spinRadiusStart, spinRadiusEnd),
-                OsuDanceSpinnerMover.Cube => new CubeSpinnerMover(spinner, spinRadiusStart, spinRadiusEnd),
-                _ => new CircleSpinnerMover(spinner, spinRadiusStart, spinRadiusEnd)
+                OsuDanceSpinnerMover.Pippi => new PippiSpinnerMover(startTime, endTime, spinRadiusStart, spinRadiusEnd),
+                OsuDanceSpinnerMover.Heart => new HeartSpinnerMover(startTime, endTime, spinRadiusStart, spinRadiusEnd),
+                OsuDanceSpinnerMover.Square => new SquareSpinnerMover(startTime, endTime, spinRadiusStart, spinRadiusEnd),
+                OsuDanceSpinnerMover.Triangle => new TriangleSpinnerMover(startTime, endTime, spinRadiusStart, spinRadiusEnd),
+                OsuDanceSpinnerMover.Cube => new CubeSpinnerMover(startTime, endTime, spinRadiusStart, spinRadiusEnd),
+                _ => new CircleSpinnerMover(startTime, endTime, spinRadiusStart, spinRadiusEnd)
             };
 
         public new OsuBeatmap Beatmap => (OsuBeatmap)base.Beatmap;
@@ -52,10 +53,8 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
         private readonly float spinRadiusStart;
         private readonly float spinRadiusEnd;
         private readonly bool sliderDance;
-        private readonly bool skipShortSliders;
         private readonly bool spinnerChangeFramerate;
         private readonly bool borderBounce;
-        private readonly MConfigManager config;
         private readonly double normalFrameDelay;
         private double frameDelay;
         private InputProcessor input = null!;
@@ -64,7 +63,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
         public OsuDanceGenerator(IBeatmap beatmap, IReadOnlyList<Mod> mods)
             : base(beatmap, mods)
         {
-            config = MConfigManager.Instance;
+            var config = MConfigManager.Instance;
             mover = GetMover(config.Get<OsuDanceMover>(MSetting.DanceMover));
             spinnerMover = config.Get<OsuDanceSpinnerMover>(MSetting.DanceSpinnerMover);
             borderBounce = config.Get<bool>(MSetting.BorderBounce);
@@ -72,7 +71,6 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
             spinRadiusStart = config.Get<float>(MSetting.SpinnerRadiusStart);
             spinRadiusEnd = config.Get<float>(MSetting.SpinnerRadiusEnd);
             sliderDance = config.Get<bool>(MSetting.SliderDance);
-            skipShortSliders = config.Get<bool>(MSetting.SkipShortSlider);
             spinnerChangeFramerate = config.Get<bool>(MSetting.SpinnerChangeFramerate);
             mover.TimeAffectingMods = mods.OfType<IApplicableToRate>().ToList();
             preProcessObjects();
@@ -85,7 +83,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
                 switch (h)
                 {
                     case Spinner spinner:
-                        return new DanceSpinner(spinner, GetSpinnerMover(spinnerMover, spinner, spinRadiusStart, spinRadiusEnd));
+                        return new DanceSpinner(spinner, GetSpinnerMover(spinnerMover, spinner.StartTime, spinner.EndTime, spinRadiusStart, spinRadiusEnd));
 
                     default:
                         return new DanceHitObject(h);
@@ -131,7 +129,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
             {
                 if (hitObjects[i] is DanceSpinner s)
                 {
-                    var subSpinners = new List<Spinner>();
+                    var subSpinners = new List<DanceSpinner>();
                     double startTime = s.StartTime;
 
                     for (int j = i + 1; j < hitObjects.Count; j++)
@@ -144,7 +142,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
 
                         if (endTime > startTime)
                         {
-                            subSpinners.Add(new Spinner { StartTime = startTime, EndTime = endTime });
+                            subSpinners.Add(new DanceSpinner(new Spinner { StartTime = startTime, EndTime = endTime }, GetSpinnerMover(spinnerMover, startTime, endTime, s.Mover.RadiusAt(startTime), s.Mover.RadiusAt(endTime))));
                         }
 
                         startTime = o.EndTime + frameDelay;
@@ -154,12 +152,11 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
                     {
                         if (s.EndTime > startTime)
                         {
-                            subSpinners.Add(new Spinner { StartTime = startTime, EndTime = s.EndTime });
+                            subSpinners.Add(new DanceSpinner(new Spinner { StartTime = startTime, EndTime = s.EndTime }, GetSpinnerMover(spinnerMover, startTime, s.EndTime, s.Mover.RadiusAt(startTime), s.Mover.RadiusAt(s.EndTime))));
                         }
 
                         hitObjects.RemoveAt(i);
-                        hitObjects.InsertRange(i, subSpinners.Select(h => new DanceSpinner(h, GetSpinnerMover(spinnerMover, h, spinRadiusStart, spinRadiusEnd))));
-
+                        hitObjects.InsertRange(i, subSpinners);
                         hitObjects = hitObjects.OrderBy(h => h.StartTime).ToList();
                     }
                 }
@@ -180,24 +177,6 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
 
                         break;
                     }
-
-                    case Spinner:
-                        h.StartPos = h.PositionAt(h.StartTime);
-
-                        if (i > 0)
-                        {
-                            var last = hitObjects[i - 1];
-
-                            if (last.BaseObject is Spinner)
-                                h.StartPos = last.EndPos;
-                        }
-
-                        h.EndPos = h.PositionAt(h.EndTime);
-                        break;
-
-                    default:
-                        h.StartPos = h.PositionAt(h.StartTime);
-                        break;
                 }
             }
 
@@ -241,6 +220,28 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
                 }
             }
 
+            for (int i = 0; i < hitObjects.Count; i++)
+            {
+                var h = hitObjects[i];
+
+                if (h is not DanceSpinner spinner)
+                    continue;
+
+                /*if (i > 0)
+                {
+                    var prev = hitObjects[i - 1];
+                    Vector2 startPos;
+                    calcSpinnerStartPos(prev.EndPos, spinner.Mover.RadiusAt(spinner.StartTime), out startPos);
+                    Vector2 difference = startPos - SPINNER_CENTRE;
+
+                    float radius = difference.Length;
+                    spinner.Mover.StartAngle = radius == 0 ? 0 : MathF.Atan2(difference.Y, difference.X) * 2f * MathF.PI;
+                }*/
+
+                spinner.StartPos = spinner.PositionAt(spinner.StartTime);
+                spinner.EndPos = spinner.PositionAt(spinner.EndTime);
+            }
+
             hitObjects = hitObjects.OrderBy(h => h.StartTime).ToList();
             input = new InputProcessor(hitObjects.ToList(), frameDelay, ApplyModsToTimeDelta);
             hitObjects.Insert(0, new DanceHitObject(new HitCircle { Position = hitObjects[0].StartPos, StartTime = hitObjects[0].StartTime - 500 }));
@@ -248,7 +249,43 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
             hitObjects = hitObjects[toRemove..];
         }
 
-        private void replaceSlider(int index, ref List<DanceHitObject> queue)
+        private static void calcSpinnerStartPos(Vector2 prevPos, float radius, out Vector2 startPosition)
+        {
+            Vector2 spinCentreOffset = SPINNER_CENTRE - prevPos;
+            float distFromCentre = spinCentreOffset.Length;
+            float distToTangentPoint = MathF.Sqrt(distFromCentre * distFromCentre - radius * radius);
+
+            if (distFromCentre > radius)
+            {
+                // Previous cursor position was outside spin circle, set startPosition to the tangent point.
+
+                // Angle between centre offset and tangent point offset.
+                float angle = MathF.Asin(radius / distFromCentre);
+
+                // Rotate by angle so it's parallel to tangent line
+                spinCentreOffset.X = spinCentreOffset.X * MathF.Cos(angle) - spinCentreOffset.Y * MathF.Sin(angle);
+                spinCentreOffset.Y = spinCentreOffset.X * MathF.Sin(angle) + spinCentreOffset.Y * MathF.Cos(angle);
+
+                // Set length to distToTangentPoint
+                spinCentreOffset.Normalize();
+                spinCentreOffset *= distToTangentPoint;
+
+                // Move along the tangent line, now startPosition is at the tangent point.
+                startPosition = prevPos + spinCentreOffset;
+            }
+            else if (spinCentreOffset.Length > 0)
+            {
+                // Previous cursor position was inside spin circle, set startPosition to the nearest point on spin circle.
+                startPosition = SPINNER_CENTRE - spinCentreOffset * (radius / spinCentreOffset.Length);
+            }
+            else
+            {
+                // Degenerate case where cursor position is exactly at the centre of the spin circle.
+                startPosition = SPINNER_CENTRE + new Vector2(0, -radius);
+            }
+        }
+
+        private static void replaceSlider(int index, ref List<DanceHitObject> queue)
         {
             if (queue[index].BaseObject is not Slider s)
                 return;
@@ -257,7 +294,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
 
             if (s.IsRetarded())
             {
-                queue.Insert(index, new DanceHitObject(new HitCircle { Position = s.Position, StartTime = s.StartTime, StackHeight = s.StackHeight }) { SliderPoint = true, SliderPointStart = true});
+                queue.Insert(index, new DanceHitObject(new HitCircle { Position = s.Position, StartTime = s.StartTime, StackHeight = s.StackHeight }) { SliderPoint = true, SliderPointStart = true });
                 return;
             }
 
@@ -324,7 +361,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
                         switch (h.BaseObject)
                         {
                             case Spinner:
-                                frameDelay = spinnerChangeFramerate ? normalFrameDelay :　GetFrameDelay(time);
+                                frameDelay = spinnerChangeFramerate ? normalFrameDelay : GetFrameDelay(time);
                                 AddFrameToReplay(new OsuReplayFrame(time, mover.GetObjectPosition(time, h), action));
                                 break;
 
