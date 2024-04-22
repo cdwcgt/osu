@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using osu.Game.Configuration;
 using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Rulesets.Osu.Objects;
+using osu.Game.Rulesets.Osu.Replays.Danse.Objects;
 using osuTK;
 using static osu.Game.Rulesets.Osu.Replays.Danse.Movers.MoverUtilExtensions;
 
@@ -60,19 +61,17 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
             invertAngleInterpolation = config.Get<bool>(MSetting.InvertAngleInterpolation);
         }
 
-        private bool isSame(DanceHitObject o1, DanceHitObject o2) => isSame(o1.BaseObject, o2.BaseObject, skipStacks);
+        private bool isSame(DanceHitObject o1, DanceHitObject o2) => isSame(o1, o2, skipStacks);
 
-        private bool isSame(OsuHitObject o1, OsuHitObject o2, bool skipStacks)
-        {
-            return o1.StackedPosition == o2.StackedPosition || (skipStacks && o1.Position == o2.Position);
-        }
+        private bool isSame(DanceHitObject o1, DanceHitObject o2, bool skipStacks) =>
+            o1.StartPos == o2.StartPos || (skipStacks && o1.BaseObject.Position == o2.BaseObject.Position);
 
-        public override void SetObjects(List<DanceHitObject> objects)
+        public override int SetObjects(List<DanceHitObject> objects)
         {
             base.SetObjects(objects);
-            OsuHitObject? next = null;
+            DanceHitObject? next = null;
 
-            if (objects.Count > 2) next = objects[2].BaseObject;
+            if (objects.Count > 2) next = objects[2];
 
             float area = restrictArea * MathF.PI / 180f;
             float sarea = streamArea * MathF.PI / 180f;
@@ -86,9 +85,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
             {
                 var o = objects[i];
 
-                if (o.BaseObject is Slider s)
+                if (o.BaseObject is Slider)
                 {
-                    a2 = s.GetStartAngle();
+                    a2 = o.GetStartAngle();
                     fromLong = true;
                     break;
                 }
@@ -104,11 +103,11 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
 
                 if (!isSame(o, o2))
                 {
-                    if (o2.BaseObject is Slider s2 && sliderPredict)
+                    if (o2.BaseObject is Slider && sliderPredict)
                     {
                         var pos = StartPos;
                         var pos2 = EndPos;
-                        float s2a = s2.GetStartAngle();
+                        float s2a = o2.GetStartAngle();
                         float dst2 = Vector2.Distance(pos, pos2);
                         pos2 = new Vector2(s2a, dst2 * mult) + pos2;
                         a2 = pos.AngleRV(pos2);
@@ -127,12 +126,12 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
 
             if (next != null)
             {
-                stream = IsStream(Start.BaseObject, End.BaseObject, next) && streamRestrict;
+                stream = IsStream(Start, End, next) && streamRestrict;
                 sq1 = Vector2.DistanceSquared(StartPos, EndPos);
-                sq2 = Vector2.DistanceSquared(EndPos, next.StackedPosition);
+                sq2 = Vector2.DistanceSquared(EndPos, next.StartPos);
             }
 
-            float a1 = (Start.BaseObject as Slider)?.GetEndAngle() ?? (first ? a2 + MathF.PI : StartPos.AngleRV(last));
+            float a1 = Start.BaseObject is Slider ? Start.GetEndAngle() : (first ? a2 + MathF.PI : StartPos.AngleRV(last));
             float ac = a2 - EndPos.AngleRV(StartPos);
 
             if (sarea > 0 && stream && anorm(ac) < anorm(2 * MathF.PI - sarea))
@@ -172,7 +171,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
                 mult = offsetMult;
             }
 
-            bool bounce = !(End.BaseObject is IHasDuration) && isSame(Start.BaseObject, End.BaseObject, true);
+            bool bounce = !(End.BaseObject is IHasDuration) && isSame(Start, End, true);
 
             if (equalPosBounce > 0 && bounce)
             {
@@ -194,6 +193,8 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
 
             curve = new BezierCurveCubic(StartPos, EndPos, p1, p2);
             first = false;
+
+            return 2;
         }
 
         private float anorm(float a)

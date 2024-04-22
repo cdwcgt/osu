@@ -1,11 +1,10 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-#nullable disable
-
 using System.Collections.Generic;
 using osu.Game.Configuration;
 using osu.Game.Rulesets.Osu.Objects;
+using osu.Game.Rulesets.Osu.Replays.Danse.Objects;
 using osuTK;
 using static osu.Game.Rulesets.Osu.Replays.Danse.Movers.MoverUtilExtensions;
 
@@ -14,7 +13,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
     public class BezierMover : Mover
     {
         private BezierCurve curve;
-        private Vector2 pt = new Vector2(512f / 2f, 384 / 2f);
+        private Vector2 pt = OsuAutoGeneratorBase.SPINNER_CENTRE;
         private float previousSpeed;
         private readonly float aggressiveness;
         private readonly float sliderAggressiveness;
@@ -27,7 +26,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
             previousSpeed = -1;
         }
 
-        public override void SetObjects(List<DanceHitObject> objects)
+        public override int SetObjects(List<DanceHitObject> objects)
         {
             base.SetObjects(objects);
             float dist = Vector2.Distance(StartPos, EndPos);
@@ -38,22 +37,21 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
             }
 
             float genScale = previousSpeed;
-            var s1 = Start.BaseObject as Slider;
-            var s2 = End.BaseObject as Slider;
-            bool ok1 = s1 != null;
-            bool ok2 = s2 != null;
+
+            bool ok1 = Start.BaseObject is Slider;
+            bool ok2 = End.BaseObject is Slider;
             float dst = 0, dst2 = 0, startAngle = 0, endAngle = 0;
 
-            if (s1 != null)
+            if (ok1)
             {
-                dst = Vector2.Distance(s1.StackedPositionAt((StartTime - 10 - s1.StartTime) / s1.Duration), StartPos);
-                endAngle = s1.GetEndAngle();
+                dst = Vector2.Distance(Start.PositionAt((StartTime - 10 - Start.StartTime) / Start.Duration), StartPos);
+                endAngle = Start.GetEndAngle();
             }
 
-            if (s2 != null)
+            if (ok2)
             {
-                dst2 = Vector2.Distance(s2.StackedPositionAt((EndTime + 10 - s2.StartTime) / s2.Duration), EndPos);
-                startAngle = s2.GetStartAngle();
+                dst2 = Vector2.Distance(End.PositionAt((EndTime + 10 - End.StartTime) / End.Duration), EndPos);
+                startAngle = End.GetStartAngle();
             }
 
             if (StartPos == EndPos)
@@ -92,6 +90,8 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
             }
 
             previousSpeed = (dist + 1.0f) / (float)Duration;
+
+            return 2;
         }
 
         public override Vector2 Update(double time) => curve.CalculatePoint(ProgressAt(time));

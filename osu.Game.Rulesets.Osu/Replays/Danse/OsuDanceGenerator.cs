@@ -4,19 +4,21 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using osu.Framework.Graphics;
-using osu.Framework.Utils;
 using osu.Game.Beatmaps;
 using osu.Game.Configuration;
 using osu.Game.Replays;
 using osu.Game.Rulesets.Mods;
+using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Osu.Beatmaps;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Osu.Replays.Danse.Movers;
+using osu.Game.Rulesets.Osu.Replays.Danse.Movers.Spinners;
+using osu.Game.Rulesets.Osu.Replays.Danse.Objects;
 using osu.Game.Rulesets.Osu.UI;
 using osuTK;
 using static osu.Game.Configuration.OsuDanceMover;
 
+// Credit to danser-go https://github.com/Wieku/danser-go
 namespace osu.Game.Rulesets.Osu.Replays.Danse
 {
     public class OsuDanceGenerator : OsuAutoGeneratorBase
@@ -34,36 +36,41 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
                 _ => new MomentumMover()
             };
 
+        public static SpinnerMover GetSpinnerMover(OsuDanceSpinnerMover mover, double startTime, double endTime, float spinRadiusStart, float spinRadiusEnd) =>
+            mover switch
+            {
+                OsuDanceSpinnerMover.Pippi => new PippiSpinnerMover(startTime, endTime, spinRadiusStart, spinRadiusEnd),
+                OsuDanceSpinnerMover.Heart => new HeartSpinnerMover(startTime, endTime, spinRadiusStart, spinRadiusEnd),
+                OsuDanceSpinnerMover.Square => new SquareSpinnerMover(startTime, endTime, spinRadiusStart, spinRadiusEnd),
+                OsuDanceSpinnerMover.Triangle => new TriangleSpinnerMover(startTime, endTime, spinRadiusStart, spinRadiusEnd),
+                OsuDanceSpinnerMover.Cube => new CubeSpinnerMover(startTime, endTime, spinRadiusStart, spinRadiusEnd),
+                _ => new CircleSpinnerMover(startTime, endTime, spinRadiusStart, spinRadiusEnd)
+            };
+
         public new OsuBeatmap Beatmap => (OsuBeatmap)base.Beatmap;
         private readonly Mover mover;
+        private readonly OsuDanceSpinnerMover spinnerMover;
         private readonly float spinRadiusStart;
         private readonly float spinRadiusEnd;
         private readonly bool sliderDance;
-        private readonly bool pippiSpinner;
-        private readonly bool pippiStream;
-        private readonly bool skipShortSliders;
         private readonly bool spinnerChangeFramerate;
-        //private bool isStream = false;
-        private readonly MConfigManager config;
-        private readonly double frameDelay;
-        private int buttonIndex;
+        private readonly bool borderBounce;
+        private readonly double normalFrameDelay;
+        private double frameDelay;
+        private InputProcessor input = null!;
         private List<DanceHitObject> hitObjects = null!;
-        private readonly bool isPippi;
-        private readonly double[] keyUpTime = { -20000, -20000 };
 
         public OsuDanceGenerator(IBeatmap beatmap, IReadOnlyList<Mod> mods)
             : base(beatmap, mods)
         {
-            config = MConfigManager.Instance;
+            var config = MConfigManager.Instance;
             mover = GetMover(config.Get<OsuDanceMover>(MSetting.DanceMover));
-            isPippi = mover is PippiMover;
-            frameDelay = 1000.0 / config.Get<float>(MSetting.ReplayFramerate);
+            spinnerMover = config.Get<OsuDanceSpinnerMover>(MSetting.DanceSpinnerMover);
+            borderBounce = config.Get<bool>(MSetting.BorderBounce);
+            frameDelay = normalFrameDelay = ApplyModsToRate(0, 1000.0 / config.Get<double>(MSetting.ReplayFramerate));
             spinRadiusStart = config.Get<float>(MSetting.SpinnerRadiusStart);
             spinRadiusEnd = config.Get<float>(MSetting.SpinnerRadiusEnd);
             sliderDance = config.Get<bool>(MSetting.SliderDance);
-            pippiSpinner = config.Get<bool>(MSetting.PippiSpinner) || isPippi;
-            pippiStream = config.Get<bool>(MSetting.PippiStream);
-            skipShortSliders = config.Get<bool>(MSetting.SkipShortSlider);
             spinnerChangeFramerate = config.Get<bool>(MSetting.SpinnerChangeFramerate);
             mover.TimeAffectingMods = mods.OfType<IApplicableToRate>().ToList();
             preProcessObjects();
@@ -71,37 +78,35 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
 
         private void preProcessObjects()
         {
-            hitObjects = Beatmap.HitObjects.SkipWhile(h => h is Spinner { SpinsRequired: 0 }).Select(h => new DanceHitObject(h)).ToList();
-
-            for (int i = 0; i < hitObjects.Count; i++)
+            hitObjects = Beatmap.HitObjects.Where(h => h is not Spinner { SpinsRequired: 0 }).Select(h =>
             {
-                if (hitObjects[i].BaseObject is Slider slider)
+                switch (h)
                 {
-                    if (slider.IsRetarded())
-                    {
-                        replaceSlider(i, hitObjects);
-                    }
-                }
-            }
+                    case Spinner spinner:
+                        return new DanceSpinner(spinner, GetSpinnerMover(spinnerMover, spinner.StartTime, spinner.EndTime, spinRadiusStart, spinRadiusEnd));
 
-            /*
+                    default:
+                        return new DanceHitObject(h);
+                }
+            }).ToList();
+
             for (int i = 0; i < hitObjects.Count; i++)
             {
                 var h = hitObjects[i].BaseObject;
 
-                bool found = false;
-
-                if (h is Slider)
+                if (h is Slider s)
                 {
+                    bool found = false;
+
                     // Resolving 2B conflicts
                     for (int j = i - 1; j >= 0; j--)
                     {
-                        var o = hitObjects[Math.Max(0, i - 1)].BaseObject;
+                        var o = hitObjects[i - 1];
 
-                        if (o.GetEndTime() >= h.StartTime)
+                        if (o.EndTime >= h.StartTime)
                         {
                             found = true;
-                            replaceSlider(i, hitObjects);
+                            replaceSlider(i, ref hitObjects);
 
                             break;
                         }
@@ -109,51 +114,89 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
 
                     if (!found && i + 1 < hitObjects.Count)
                     {
-                        var o = hitObjects[Math.Min(hitObjects.Count, i + 1)];
+                        var o = hitObjects[i + 1];
 
-                        if (o.StartTime <= h.GetEndTime())
+                        if (o.StartTime <= s.EndTime)
                         {
-                            replaceSlider(i, hitObjects);
+                            replaceSlider(i, ref hitObjects);
                         }
                     }
                 }
-            }*/
+            }
 
             // Second 2B pass for spinners
             for (int i = 0; i < hitObjects.Count; i++)
             {
-                if (hitObjects[i].BaseObject is Spinner s)
+                if (hitObjects[i] is DanceSpinner s)
                 {
-                    var subSpinners = new List<Spinner>();
+                    var subSpinners = new List<DanceSpinner>();
                     double startTime = s.StartTime;
 
                     for (int j = i + 1; j < hitObjects.Count; j++)
                     {
                         var o = hitObjects[j];
 
-                        if (o.StartTime >= s.EndTime) break;
+                        if (o.StartTime - frameDelay >= s.EndTime) break;
 
-                        double endTime = o.StartTime - 30;
+                        double endTime = o.StartTime - frameDelay;
 
                         if (endTime > startTime)
                         {
-                            subSpinners.Add(new Spinner { StartTime = startTime, EndTime = endTime });
+                            subSpinners.Add(new DanceSpinner(new Spinner { StartTime = startTime, EndTime = endTime }, GetSpinnerMover(spinnerMover, startTime, endTime, s.Mover.RadiusAt(startTime), s.Mover.RadiusAt(endTime))));
                         }
 
-                        startTime = o.EndTime + 30;
+                        startTime = o.EndTime + frameDelay;
                     }
 
                     if (subSpinners.Count > 0)
                     {
                         if (s.EndTime > startTime)
                         {
-                            subSpinners.Add(new Spinner { StartTime = startTime, EndTime = s.EndTime });
+                            subSpinners.Add(new DanceSpinner(new Spinner { StartTime = startTime, EndTime = s.EndTime }, GetSpinnerMover(spinnerMover, startTime, s.EndTime, s.Mover.RadiusAt(startTime), s.Mover.RadiusAt(s.EndTime))));
                         }
 
                         hitObjects.RemoveAt(i);
-                        hitObjects.InsertRange(i, subSpinners.Select(h => new DanceHitObject(h)));
-
+                        hitObjects.InsertRange(i, subSpinners);
                         hitObjects = hitObjects.OrderBy(h => h.StartTime).ToList();
+                    }
+                }
+            }
+
+            for (int i = 0; i < hitObjects.Count; i++)
+            {
+                var h = hitObjects[i];
+
+                switch (h.BaseObject)
+                {
+                    case Slider slider:
+                    {
+                        if (slider.IsRetarded() || sliderDance)
+                        {
+                            replaceSlider(i, ref hitObjects);
+                        }
+
+                        break;
+                    }
+                }
+            }
+
+            for (int i = 0; i < hitObjects.Count - 1; i++)
+            {
+                var current = hitObjects[i];
+                var next = hitObjects[i + 1];
+
+                if (current.BaseObject is HitCircle circle && next.BaseObject is HitCircle &&
+                    (!current.SliderPoint || current.SliderPointStart) && (!next.SliderPoint || next.SliderPointStart))
+                {
+                    float dst = (next.StartPos - current.EndPos).Length;
+
+                    if (dst <= circle.Radius * 1.995 && next.StartTime - current.EndTime <= Math.Max(frameDelay, 3))
+                    {
+                        double sTime = (next.StartTime + current.EndTime) / 2;
+                        current.DoubleClick = true;
+                        current.StartTime = current.EndTime = sTime;
+                        current.StartPos = current.EndPos = (current.EndPos + next.StartPos) * 0.5f;
+                        hitObjects.RemoveAt(i + 1);
                     }
                 }
             }
@@ -165,164 +208,127 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
 
                 for (int j = i + 1; j < hitObjects.Count; j++)
                 {
-                    var o = hitObjects[j].BaseObject;
+                    var o = hitObjects[j];
 
-                    if (current.EndTime < hitObjects[j].StartTime) break;
+                    if (current.EndTime + frameDelay < o.StartTime) break;
 
-                    if (o is HitCircle || o is Slider)
+                    if (!o.SliderPoint || o.SliderPointStart)
                     {
-                        hitObjects[j].StartTime++;
+                        // The minimum time we can delay is one frame
+                        hitObjects[j].StartTime += frameDelay;
                     }
                 }
             }
 
-            // Because we go from Start.EndPos to End.StartPos, create a dummy hit object to avoid missing the first object
-            hitObjects.Insert(0, new DanceHitObject(new HitCircle { Position = hitObjects[0].StartPos, StartTime = -10000 }));
-        }
-
-        private void replaceSlider(int index, List<DanceHitObject> queue)
-        {
-            if (queue[index].BaseObject is Slider s)
+            for (int i = 0; i < hitObjects.Count; i++)
             {
-                queue.RemoveAt(index);
-                queue.InsertRange(index, s.NestedHitObjects.Cast<OsuHitObject>().Select(h => new DanceHitObject(h)));
+                var h = hitObjects[i];
 
-                queue = queue.OrderBy(h => h.StartTime).ToList();
+                if (h is not DanceSpinner spinner)
+                    continue;
+
+                /*if (i > 0)
+                {
+                    var prev = hitObjects[i - 1];
+                    Vector2 startPos;
+                    calcSpinnerStartPos(prev.EndPos, spinner.Mover.RadiusAt(spinner.StartTime), out startPos);
+                    Vector2 difference = startPos - SPINNER_CENTRE;
+
+                    float radius = difference.Length;
+                    spinner.Mover.StartAngle = radius == 0 ? 0 : MathF.Atan2(difference.Y, difference.X) * 2f * MathF.PI;
+                }*/
+
+                spinner.StartPos = spinner.PositionAt(spinner.StartTime);
+                spinner.EndPos = spinner.PositionAt(spinner.EndTime);
             }
+
+            hitObjects = hitObjects.OrderBy(h => h.StartTime).ToList();
+            input = new InputProcessor(hitObjects.ToList(), frameDelay, ApplyModsToTimeDelta);
+            hitObjects.Insert(0, new DanceHitObject(new HitCircle { Position = hitObjects[0].StartPos, StartTime = hitObjects[0].StartTime - 500 }));
+            int toRemove = mover.SetObjects(hitObjects) - 1;
+            hitObjects = hitObjects[toRemove..];
         }
 
-        private void updateAction(DanceHitObject h, DanceHitObject last)
+        private static void calcSpinnerStartPos(Vector2 prevPos, float radius, out Vector2 startPosition)
         {
-            double timeDifference = ApplyModsToTimeDelta(last.EndTime, h.StartTime);
+            Vector2 spinCentreOffset = SPINNER_CENTRE - prevPos;
+            float distFromCentre = spinCentreOffset.Length;
+            float distToTangentPoint = MathF.Sqrt(distFromCentre * distFromCentre - radius * radius);
 
-            if (timeDifference > 0 && timeDifference < 266)
-                buttonIndex++;
+            if (distFromCentre > radius)
+            {
+                // Previous cursor position was outside spin circle, set startPosition to the tangent point.
+
+                // Angle between centre offset and tangent point offset.
+                float angle = MathF.Asin(radius / distFromCentre);
+
+                // Rotate by angle so it's parallel to tangent line
+                spinCentreOffset.X = spinCentreOffset.X * MathF.Cos(angle) - spinCentreOffset.Y * MathF.Sin(angle);
+                spinCentreOffset.Y = spinCentreOffset.X * MathF.Sin(angle) + spinCentreOffset.Y * MathF.Cos(angle);
+
+                // Set length to distToTangentPoint
+                spinCentreOffset.Normalize();
+                spinCentreOffset *= distToTangentPoint;
+
+                // Move along the tangent line, now startPosition is at the tangent point.
+                startPosition = prevPos + spinCentreOffset;
+            }
+            else if (spinCentreOffset.Length > 0)
+            {
+                // Previous cursor position was inside spin circle, set startPosition to the nearest point on spin circle.
+                startPosition = SPINNER_CENTRE - spinCentreOffset * (radius / spinCentreOffset.Length);
+            }
             else
-                buttonIndex = 0;
-
-            var action = buttonIndex % 2 == 0 ? OsuAction.LeftButton : OsuAction.RightButton;
-            keyUpTime[(int)action] = h.EndTime + KEY_UP_DELAY;
+            {
+                // Degenerate case where cursor position is exactly at the centre of the spin circle.
+                startPosition = SPINNER_CENTRE + new Vector2(0, -radius);
+            }
         }
 
-        private OsuAction[] getAction(double time)
+        private static void replaceSlider(int index, ref List<DanceHitObject> queue)
         {
-            var actions = new List<OsuAction>(2);
+            if (queue[index].BaseObject is not Slider s)
+                return;
 
-            if (time <= keyUpTime[0])
-                actions.Add(OsuAction.LeftButton);
-            if (time <= keyUpTime[1])
-                actions.Add(OsuAction.RightButton);
+            queue.RemoveAt(index);
 
-            if (actions.Count == 2)
+            if (s.IsRetarded())
             {
-                var lastAction = (buttonIndex - 1) % 2 == 0 ? OsuAction.LeftButton : OsuAction.RightButton;
-                keyUpTime[(int)lastAction] = time;
+                queue.Insert(index, new DanceHitObject(new HitCircle { Position = s.Position, StartTime = s.StartTime, StackHeight = s.StackHeight }) { SliderPoint = true, SliderPointStart = true });
+                return;
             }
 
-            return actions.ToArray();
-        }
-
-        private void addHitObjectClickFrames(DanceHitObject h, DanceHitObject prev)
-        {
-            Vector2 startPosition = h.StartPos;
-            Vector2 difference = startPosition - SPINNER_CENTRE;
-            float radius = difference.Length;
-            float angle = radius == 0 ? 0 : MathF.Atan2(difference.Y, difference.X);
-            Vector2 pos;
-            updateAction(h, prev);
-
-            switch (h.BaseObject)
+            var p = s.NestedHitObjects.Cast<OsuHitObject>().Select(h =>
             {
-                case Slider slider:
-                    AddFrameToReplay(new OsuReplayFrame(h.StartTime, h.StartPos, getAction(h.StartTime)));
+                var d = new DanceHitObject(new HitCircle { Position = h.Position, StartTime = h.StartTime, StackHeight = h.StackHeight })
+                {
+                    SliderPoint = true
+                };
 
-                    var points = slider.NestedHitObjects.SkipWhile(p => p is SliderRepeat).Cast<OsuHitObject>()
-                                       .OrderBy(p => p.StartTime)
-                                       .ToList();
+                switch (h)
+                {
+                    case SliderHeadCircle:
+                        d.SliderPointStart = true;
+                        break;
 
-                    var mid = h.EndPos;
+                    case SliderTailCircle:
+                        double t = Math.Max(s.StartTime + s.Duration / 2, s.EndTime + SliderEventGenerator.TAIL_LENIENCY);
+                        d.StartTime = d.EndTime = t;
+                        d.StartPos = d.EndPos = s.StackedPositionAt((t - s.StartTime) / s.Duration);
+                        d.SliderPointEnd = true;
+                        break;
+                }
 
-                    if (skipShortSliders && Math.Abs(Vector2.Distance(startPosition, mid)) <= slider.Radius * 1.6)
-                    {
-                        mid = slider.Path.PositionAt(1);
-
-                        if (slider.RepeatCount == 1 || Vector2.Distance(startPosition, mid) <= slider.Radius * 1.6)
-                        {
-                            mid = slider.Path.PositionAt(0.5);
-
-                            if (Vector2.Distance(startPosition, mid) <= slider.Radius * 1.6)
-                            {
-                                AddFrameToReplay(new OsuReplayFrame(h.EndTime, mid, getAction(h.EndTime)));
-                                h.EndPos = mid;
-                                return;
-                            }
-                        }
-                    }
-
-                    if (sliderDance && points.Count > 2)
-                    {
-                        for (int i = 0; i < points.Count - 1; i++)
-                        {
-                            var point = points[i];
-                            var next = points[i + 1];
-                            double duration = next.StartTime - point.StartTime;
-
-                            if (i == points.Count - 2)
-                                duration += 36;
-
-                            for (double j = GetFrameDelay(point.StartTime); j < duration; j += GetFrameDelay(point.StartTime + j))
-                            {
-                                double scaleFactor = j / duration;
-                                pos = point.StackedPosition + (next.StackedPosition - point.StackedPosition) * (float)scaleFactor;
-
-                                AddFrameToReplay(new OsuReplayFrame(point.StartTime + j, pos, getAction(point.StartTime + j)));
-                            }
-                        }
-                    }
-                    else
-                    {
-                        for (double j = GetFrameDelay(slider.StartTime); j < slider.Duration; j += GetFrameDelay(slider.StartTime + j))
-                        {
-                            pos = slider.StackedPositionAt(j / slider.Duration);
-                            AddFrameToReplay(new OsuReplayFrame(h.StartTime + j, pos, getAction(h.StartTime + j)));
-                        }
-                    }
-
-                    break;
-
-                case Spinner spinner:
-                    double radiusStart = spinner.SpinsRequired > 3 ? spinRadiusStart : spinRadiusEnd;
-                    double rEndTime = spinner.StartTime + spinner.Duration * 0.7;
-                    double previousFrame = h.StartTime;
-                    double delay;
-
-                    for (double nextFrame = h.StartTime + GetFrameDelay(h.StartTime); nextFrame < spinner.EndTime; nextFrame += delay)
-                    {
-                        delay = spinnerChangeFramerate ? ApplyModsToRate(nextFrame, frameDelay) : GetFrameDelay(previousFrame);
-                        double t = ApplyModsToTimeDelta(previousFrame, nextFrame) * -1;
-                        angle += (float)t / 20;
-                        double r = nextFrame > rEndTime ? spinRadiusEnd : Interpolation.ValueAt(nextFrame, radiusStart, spinRadiusEnd, spinner.StartTime, rEndTime, Easing.In);
-                        pos = SPINNER_CENTRE + CirclePosition(angle, r);
-                        AddFrameToReplay(new OsuReplayFrame((int)nextFrame, pos, getAction(nextFrame)));
-
-                        previousFrame = nextFrame;
-                    }
-
-                    break;
-
-                default:
-                    AddFrameToReplay(new OsuReplayFrame(h.StartTime, h.StartPos, getAction(h.StartTime)));
-                    break;
-            }
+                return d;
+            });
+            queue.InsertRange(index, p);
+            queue = queue.OrderBy(h => h.StartTime).ToList();
         }
 
         public override Replay Generate()
         {
-            var h = hitObjects[0];
-
-            AddFrameToReplay(new OsuReplayFrame(-10000, h.StartPos));
-
-            Vector2 baseSize = OsuPlayfield.BASE_SIZE;
+            double lastTime = 0;
+            var baseSize = OsuPlayfield.BASE_SIZE;
 
             float xf = baseSize.X / 0.8f * (4f / 3f);
             float x0 = (baseSize.X - xf) / 2f;
@@ -332,59 +338,102 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
             float y0 = (baseSize.Y - yf) / 2f;
             float y1 = yf + y0;
 
-            mover.SetObjects(hitObjects);
+            double endTime = hitObjects[^1].EndTime + frameDelay * 5;
 
-            for (int i = 0; i < hitObjects.Count; i++)
+            for (double time = hitObjects[0].StartTime; time <= endTime; time += frameDelay)
             {
-                var prev = h;
-                h = hitObjects[i];
+                double lastEndTime = 0;
+                OsuAction[] action = input.Update(time);
 
-                if (i > 1)
+                for (int i = 0; i < hitObjects.Count; i++)
                 {
-                    // HACK: mover moves from hitObject[i - 1] to hitObject[i], so input has to be hitObject[i - 2] to hitObject[i - 1]
-                    var prevPrev = hitObjects[i - 2];
-                    addHitObjectClickFrames(prev, prevPrev);
-                }
+                    var h = hitObjects[i];
 
-                for (double time = mover.StartTime; time < mover.EndTime; time += frameDelay)
-                {
-                    var currentPosition = mover.Update(time);
+                    if (h.StartTime > time)
+                        break;
 
-                    if (config.Get<bool>(MSetting.BorderBounce))
+                    lastEndTime = Math.Max(lastEndTime, h.EndTime);
+
+                    if (lastTime <= h.StartTime || time <= h.EndTime)
                     {
-                        if (currentPosition.X < x0) currentPosition.X = x0 - (currentPosition.X - x0);
-                        if (currentPosition.Y < y0) currentPosition.Y = y0 - (currentPosition.Y - y0);
+                        frameDelay = normalFrameDelay;
 
-                        if (currentPosition.X > x1)
+                        switch (h.BaseObject)
                         {
-                            float x = currentPosition.X - x0;
-                            int m = (int)(x / xf);
-                            x %= xf;
-                            x = m % 2 == 0 ? x : xf - x;
-                            currentPosition.X = x + x0;
-                        }
+                            case Spinner:
+                                frameDelay = spinnerChangeFramerate ? normalFrameDelay : GetFrameDelay(time);
+                                AddFrameToReplay(new OsuReplayFrame(time, mover.GetObjectPosition(time, h), action));
+                                break;
 
-                        if (currentPosition.Y > y1)
-                        {
-                            float y = currentPosition.Y - y0;
-                            float m = (int)(y / yf);
-                            y %= yf;
-                            y = m % 2 == 0 ? y : yf - y;
-                            currentPosition.Y = y + y0;
+                            default:
+                                AddFrameToReplay(new OsuReplayFrame(time, mover.GetObjectPosition(time, h), action));
+                                break;
                         }
                     }
 
-                    AddFrameToReplay(new OsuReplayFrame(time, currentPosition, getAction(time)));
+                    if (time > h.EndTime)
+                    {
+                        // Ensure object is hit on time
+                        AddFrameToReplay(new OsuReplayFrame(h.StartTime, mover.GetObjectPosition(h.StartTime, h), input.Update(h.StartTime)));
+                        int upperLimit = hitObjects.Count;
+
+                        for (int j = i; j < hitObjects.Count; j++)
+                        {
+                            if (hitObjects[j].EndTime >= lastEndTime)
+                                break;
+
+                            upperLimit = j + 1;
+                        }
+
+                        int toRemove = 1;
+
+                        if (upperLimit - i > 1)
+                        {
+                            toRemove = mover.SetObjects(hitObjects[i..upperLimit]) - 1;
+                        }
+
+                        hitObjects.RemoveRange(i, toRemove);
+                        i--;
+                    }
                 }
 
-                mover.SetObjects(hitObjects.GetRange(i, hitObjects.Count - i));
+                lastTime = time;
+
+                if (mover.EndTime >= time)
+                {
+                    var pos = mover.Update(time);
+
+                    if (borderBounce)
+                    {
+                        if (pos.X < x0) pos.X = x0 - (pos.X - x0);
+                        if (pos.Y < y0) pos.Y = y0 - (pos.Y - y0);
+
+                        if (pos.X > x1)
+                        {
+                            float x = pos.X - x0;
+                            int m = (int)(x / xf);
+                            x %= xf;
+                            x = m % 2 == 0 ? x : xf - x;
+                            pos.X = x + x0;
+                        }
+
+                        if (pos.Y > y1)
+                        {
+                            float y = pos.Y - y0;
+                            float m = (int)(y / yf);
+                            y %= yf;
+                            y = m % 2 == 0 ? y : yf - y;
+                            pos.Y = y + y0;
+                        }
+                    }
+
+                    AddFrameToReplay(new OsuReplayFrame(time, pos, action));
+                }
             }
 
-            addHitObjectClickFrames(hitObjects[^1], hitObjects[^2]);
             var lastFrame = (OsuReplayFrame)Frames[^1];
-            var newLastFrame = new OsuReplayFrame(lastFrame.Time + 50, lastFrame.Position);
+            var newLastFrame = new OsuReplayFrame(lastFrame.Time + KEY_UP_DELAY, lastFrame.Position);
             AddFrameToReplay(newLastFrame);
-
             return Replay;
         }
     }

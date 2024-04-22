@@ -5,19 +5,20 @@ using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Osu.Objects;
 using osuTK;
 
-namespace osu.Game.Rulesets.Osu.Replays.Danse
+namespace osu.Game.Rulesets.Osu.Replays.Danse.Objects
 {
     public class DanceHitObject
     {
-        public readonly OsuHitObject BaseObject = null!;
+        public readonly OsuHitObject BaseObject;
         public Vector2 StartPos;
         public Vector2 EndPos;
         public double StartTime;
         public double EndTime;
-
-        public DanceHitObject()
-        {
-        }
+        public bool SliderPoint;
+        public bool SliderPointStart;
+        public bool SliderPointEnd;
+        public bool DoubleClick;
+        public double Duration => EndTime - StartTime;
 
         public DanceHitObject(OsuHitObject baseObject)
         {
@@ -27,5 +28,11 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
             StartPos = BaseObject.StackedPosition;
             EndPos = BaseObject.StackedEndPosition;
         }
+
+        public virtual Vector2 PositionAt(double time) => BaseObject switch
+        {
+            Slider slider => slider.StackedPositionAt((time - StartTime) / slider.Duration),
+            _ => EndPos
+        };
     }
 }
