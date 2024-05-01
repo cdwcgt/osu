@@ -12,26 +12,32 @@ using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input;
 using osu.Framework.Input.Events;
+using osu.Framework.Localisation;
 using osu.Framework.Platform;
+using osu.Game.Localisation;
 
 namespace osu.Game.Graphics.UserInterface
 {
-    public class OsuPasswordTextBox : OsuTextBox, ISuppressKeyEventLogging
+    public partial class OsuPasswordTextBox : OsuTextBox, ISuppressKeyEventLogging
     {
         protected override Drawable GetDrawableCharacter(char c) => new FallingDownContainer
         {
             AutoSizeAxes = Axes.Both,
-            Child = new PasswordMaskChar(CalculatedTextSize),
+            Child = new PasswordMaskChar(FontSize),
         };
 
         protected override bool AllowUniqueCharacterSamples => false;
 
         protected override bool AllowClipboardExport => false;
 
+        protected override bool AllowWordNavigation => false;
+
+        protected override bool AllowIme => false;
+
         private readonly CapsWarning warning;
 
         [Resolved]
-        private GameHost host { get; set; }
+        private GameHost host { get; set; } = null!;
 
         public OsuPasswordTextBox()
         {
@@ -66,7 +72,7 @@ namespace osu.Game.Graphics.UserInterface
 
         private void updateCapsWarning(bool visible) => warning.FadeTo(visible ? 1 : 0, 250, Easing.OutQuint);
 
-        public class PasswordMaskChar : Container
+        public partial class PasswordMaskChar : Container
         {
             private readonly CircularContainer circle;
 
@@ -103,9 +109,9 @@ namespace osu.Game.Graphics.UserInterface
             }
         }
 
-        private class CapsWarning : SpriteIcon, IHasTooltip
+        private partial class CapsWarning : SpriteIcon, IHasTooltip
         {
-            public string TooltipText => @"caps lock is active";
+            public LocalisableString TooltipText => CommonStrings.CapsLockIsActive;
 
             public CapsWarning()
             {

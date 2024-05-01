@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Caching;
@@ -9,8 +10,6 @@ using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Lines;
-using osu.Framework.Platform;
-using osu.Game.Graphics;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Editors;
@@ -19,18 +18,18 @@ using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Screens.Ladder
 {
-    public class LadderScreen : TournamentScreen, IProvideVideo
+    public partial class LadderScreen : TournamentScreen
     {
-        protected Container<DrawableTournamentMatch> MatchesContainer;
-        private Container<Path> paths;
-        private Container headings;
+        protected Container<DrawableTournamentMatch> MatchesContainer = null!;
+        private Container<Path> paths = null!;
+        private Container headings = null!;
 
-        protected LadderDragContainer ScrollContent;
+        protected LadderDragContainer ScrollContent = null!;
 
-        protected Container Content;
+        protected Container Content = null!;
 
         [BackgroundDependencyLoader]
-        private void load(OsuColour colours, Storage storage)
+        private void load()
         {
             normalPathColour = Color4Extensions.FromHex("#66D1FF");
             losersPathColour = Color4Extensions.FromHex("#FFC700");
@@ -40,6 +39,7 @@ namespace osu.Game.Tournament.Screens.Ladder
             InternalChild = Content = new Container
             {
                 RelativeSizeAxes = Axes.Both,
+                Masking = true,
                 Children = new Drawable[]
                 {
                     new TourneyVideo("ladder")
@@ -55,12 +55,15 @@ namespace osu.Game.Tournament.Screens.Ladder
                     },
                     ScrollContent = new LadderDragContainer
                     {
-                        RelativeSizeAxes = Axes.Both,
+                        AutoSizeAxes = Axes.Both,
                         Children = new Drawable[]
                         {
                             paths = new Container<Path> { RelativeSizeAxes = Axes.Both },
                             headings = new Container { RelativeSizeAxes = Axes.Both },
-                            MatchesContainer = new Container<DrawableTournamentMatch> { RelativeSizeAxes = Axes.Both },
+                            MatchesContainer = new Container<DrawableTournamentMatch>
+                            {
+                                AutoSizeAxes = Axes.Both
+                            },
                         }
                     },
                 }
@@ -75,17 +78,21 @@ namespace osu.Game.Tournament.Screens.Ladder
             foreach (var match in LadderInfo.Matches)
                 addMatch(match);
 
-            LadderInfo.Rounds.CollectionChanged += (_, __) => layout.Invalidate();
+            LadderInfo.Rounds.CollectionChanged += (_, _) => layout.Invalidate();
             LadderInfo.Matches.CollectionChanged += (_, args) =>
             {
                 switch (args.Action)
                 {
                     case NotifyCollectionChangedAction.Add:
+                        Debug.Assert(args.NewItems != null);
+
                         foreach (var p in args.NewItems.Cast<TournamentMatch>())
                             addMatch(p);
                         break;
 
                     case NotifyCollectionChangedAction.Remove:
+                        Debug.Assert(args.OldItems != null);
+
                         foreach (var p in args.OldItems.Cast<TournamentMatch>())
                         {
                             foreach (var d in MatchesContainer.Where(d => d.Match == p))
@@ -153,7 +160,7 @@ namespace osu.Game.Tournament.Screens.Ladder
 
             foreach (var round in LadderInfo.Rounds)
             {
-                var topMatch = MatchesContainer.Where(p => !p.Match.Losers.Value && p.Match.Round.Value == round).OrderBy(p => p.Y).FirstOrDefault();
+                var topMatch = MatchesContainer.Where(p => !p.Match.Losers.Value && p.Match.Round.Value == round).MinBy(p => p.Y);
 
                 if (topMatch == null) continue;
 
@@ -167,7 +174,7 @@ namespace osu.Game.Tournament.Screens.Ladder
 
             foreach (var round in LadderInfo.Rounds)
             {
-                var topMatch = MatchesContainer.Where(p => p.Match.Losers.Value && p.Match.Round.Value == round).OrderBy(p => p.Y).FirstOrDefault();
+                var topMatch = MatchesContainer.Where(p => p.Match.Losers.Value && p.Match.Round.Value == round).MinBy(p => p.Y);
 
                 if (topMatch == null) continue;
 

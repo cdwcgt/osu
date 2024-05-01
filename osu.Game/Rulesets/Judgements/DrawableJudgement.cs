@@ -1,6 +1,8 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using System.Diagnostics;
 using JetBrains.Annotations;
@@ -18,7 +20,7 @@ namespace osu.Game.Rulesets.Judgements
     /// <summary>
     /// A drawable object which visualises the hit result of a <see cref="Judgements.Judgement"/>.
     /// </summary>
-    public class DrawableJudgement : PoolableDrawable
+    public partial class DrawableJudgement : PoolableDrawable
     {
         private const float judgement_size = 128;
 
@@ -32,17 +34,8 @@ namespace osu.Game.Rulesets.Judgements
 
         private readonly Container aboveHitObjectsContent;
 
-        /// <summary>
-        /// Duration of initial fade in.
-        /// </summary>
-        [Obsolete("Apply any animations manually via ApplyHitAnimations / ApplyMissAnimations. Defaults were moved inside skinned components.")]
-        protected virtual double FadeInDuration => 100;
-
-        /// <summary>
-        /// Duration to wait until fade out begins. Defaults to <see cref="FadeInDuration"/>.
-        /// </summary>
-        [Obsolete("Apply any animations manually via ApplyHitAnimations / ApplyMissAnimations. Defaults were moved inside skinned components.")]
-        protected virtual double FadeOutDelay => FadeInDuration;
+        private readonly Lazy<Drawable> proxiedAboveHitObjectsContent;
+        public Drawable ProxiedAboveHitObjectsContent => proxiedAboveHitObjectsContent.Value;
 
         /// <summary>
         /// Creates a drawable which visualises a <see cref="Judgements.Judgement"/>.
@@ -65,6 +58,8 @@ namespace osu.Game.Rulesets.Judgements
                 Depth = float.MinValue,
                 RelativeSizeAxes = Axes.Both
             });
+
+            proxiedAboveHitObjectsContent = new Lazy<Drawable>(() => aboveHitObjectsContent.CreateProxy());
         }
 
         [BackgroundDependencyLoader]
@@ -72,8 +67,6 @@ namespace osu.Game.Rulesets.Judgements
         {
             prepareDrawables();
         }
-
-        public Drawable GetProxyAboveHitObjectsContent() => aboveHitObjectsContent.CreateProxy();
 
         /// <summary>
         /// Apply top-level animations to the current judgement when successfully hit.
@@ -130,7 +123,7 @@ namespace osu.Game.Rulesets.Judgements
 
             LifetimeStart = Result.TimeAbsolute;
 
-            using (BeginAbsoluteSequence(Result.TimeAbsolute, true))
+            using (BeginAbsoluteSequence(Result.TimeAbsolute))
             {
                 // not sure if this should remain going forward.
                 JudgementBody.ResetAnimation();
@@ -140,12 +133,11 @@ namespace osu.Game.Rulesets.Judgements
                     case HitResult.None:
                         break;
 
-                    case HitResult.Miss:
-                        ApplyMissAnimations();
-                        break;
-
                     default:
-                        ApplyHitAnimations();
+                        if (Result.Type.IsHit())
+                            ApplyHitAnimations();
+                        else
+                            ApplyMissAnimations();
                         break;
                 }
 
@@ -172,14 +164,10 @@ namespace osu.Game.Rulesets.Judgements
 
             // sub-classes might have added their own children that would be removed here if .InternalChild was used.
             if (JudgementBody != null)
-                RemoveInternal(JudgementBody);
+                RemoveInternal(JudgementBody, true);
 
-            AddInternal(JudgementBody = new SkinnableDrawable(new GameplaySkinComponent<HitResult>(type), _ =>
-                CreateDefaultJudgement(type), confineMode: ConfineMode.NoScaling)
-            {
-                Anchor = Anchor.Centre,
-                Origin = Anchor.Centre,
-            });
+            AddInternal(JudgementBody = new SkinnableDrawable(new GameplaySkinComponentLookup<HitResult>(type), _ =>
+                CreateDefaultJudgement(type), confineMode: ConfineMode.NoScaling));
 
             JudgementBody.OnSkinChanged += () =>
             {

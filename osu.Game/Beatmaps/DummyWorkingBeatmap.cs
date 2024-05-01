@@ -1,6 +1,8 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -15,6 +17,7 @@ using osu.Game.Rulesets.Difficulty;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.UI;
+using osu.Game.Skinning;
 
 namespace osu.Game.Beatmaps
 {
@@ -31,62 +34,70 @@ namespace osu.Game.Beatmaps
                     Title = "no beatmaps available!"
                 },
                 BeatmapSet = new BeatmapSetInfo(),
-                BaseDifficulty = new BeatmapDifficulty
+                Difficulty = new BeatmapDifficulty
                 {
-                    DrainRate = 0,
                     CircleSize = 0,
+                    DrainRate = 0,
                     OverallDifficulty = 0,
+                    ApproachRate = 0,
                 },
-                Ruleset = new DummyRulesetInfo()
+                Ruleset = new DummyRuleset().RulesetInfo
             }, audio)
         {
             this.textures = textures;
+
+            // We are guaranteed to have a virtual track.
+            // To ease usability, ensure the track is available from point of construction.
+            LoadTrack();
         }
 
         protected override IBeatmap GetBeatmap() => new Beatmap();
 
-        protected override Texture GetBackground() => textures?.Get(@"Backgrounds/bg4");
+        public override Texture GetBackground() => textures?.Get(@"Backgrounds/bg4");
 
         protected override Track GetBeatmapTrack() => GetVirtualTrack();
 
+        protected internal override ISkin GetSkin() => null;
+
         public override Stream GetStream(string storagePath) => null;
 
-        private class DummyRulesetInfo : RulesetInfo
+        private class DummyRuleset : Ruleset
         {
-            public override Ruleset CreateInstance() => new DummyRuleset();
+            public override IEnumerable<Mod> GetModsFor(ModType type) => Array.Empty<Mod>();
 
-            private class DummyRuleset : Ruleset
+            public override DrawableRuleset CreateDrawableRulesetWith(IBeatmap beatmap, IReadOnlyList<Mod> mods = null)
             {
-                public override IEnumerable<Mod> GetModsFor(ModType type) => Array.Empty<Mod>();
+                throw new NotImplementedException();
+            }
 
-                public override DrawableRuleset CreateDrawableRulesetWith(IBeatmap beatmap, IReadOnlyList<Mod> mods = null)
+            public override IBeatmapConverter CreateBeatmapConverter(IBeatmap beatmap) => new DummyBeatmapConverter(beatmap);
+
+            public override DifficultyCalculator CreateDifficultyCalculator(IWorkingBeatmap beatmap) => throw new NotImplementedException();
+
+            public override string Description => "dummy";
+
+            public override string ShortName => "dummy";
+
+            private class DummyBeatmapConverter : IBeatmapConverter
+            {
+                public IBeatmap Beatmap { get; }
+
+                public DummyBeatmapConverter(IBeatmap beatmap)
                 {
-                    throw new NotImplementedException();
+                    Beatmap = beatmap;
                 }
 
-                public override IBeatmapConverter CreateBeatmapConverter(IBeatmap beatmap) => new DummyBeatmapConverter { Beatmap = beatmap };
+                [CanBeNull]
+                public event Action<HitObject, IEnumerable<HitObject>> ObjectConverted;
 
-                public override DifficultyCalculator CreateDifficultyCalculator(WorkingBeatmap beatmap) => null;
+                public bool CanConvert() => true;
 
-                public override string Description => "dummy";
-
-                public override string ShortName => "dummy";
-
-                private class DummyBeatmapConverter : IBeatmapConverter
+                public IBeatmap Convert(CancellationToken cancellationToken = default)
                 {
-                    public event Action<HitObject, IEnumerable<HitObject>> ObjectConverted;
+                    foreach (var obj in Beatmap.HitObjects)
+                        ObjectConverted?.Invoke(obj, obj.Yield());
 
-                    public IBeatmap Beatmap { get; set; }
-
-                    public bool CanConvert() => true;
-
-                    public IBeatmap Convert(CancellationToken cancellationToken = default)
-                    {
-                        foreach (var obj in Beatmap.HitObjects)
-                            ObjectConverted?.Invoke(obj, obj.Yield());
-
-                        return Beatmap;
-                    }
+                    return Beatmap;
                 }
             }
         }

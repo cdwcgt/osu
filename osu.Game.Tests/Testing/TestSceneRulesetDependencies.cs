@@ -7,6 +7,7 @@ using NUnit.Framework;
 using osu.Framework.Allocation;
 using osu.Framework.Audio.Sample;
 using osu.Framework.Configuration.Tracking;
+using osu.Framework.Graphics.Shaders;
 using osu.Framework.Graphics.Textures;
 using osu.Framework.IO.Stores;
 using osu.Framework.Testing;
@@ -27,7 +28,7 @@ namespace osu.Game.Tests.Testing
     /// provided ruleset below are cached at the base implementation.
     /// </summary>
     [HeadlessTest]
-    public class TestSceneRulesetDependencies : OsuTestScene
+    public partial class TestSceneRulesetDependencies : OsuTestScene
     {
         protected override Ruleset CreateRuleset() => new TestRuleset();
 
@@ -46,13 +47,25 @@ namespace osu.Game.Tests.Testing
         }
 
         [Test]
+        public void TestRetrieveShader()
+        {
+            AddStep("ruleset shaders retrieved without error", () =>
+            {
+                Dependencies.Get<ShaderManager>().GetRawData(@"sh_TestVertex.vs");
+                Dependencies.Get<ShaderManager>().GetRawData(@"sh_TestFragment.fs");
+                Dependencies.Get<ShaderManager>().Load(@"TestVertex", @"TestFragment");
+                Dependencies.Get<ShaderManager>().Load(VertexShaderDescriptor.TEXTURE_2, @"TestFragment");
+            });
+        }
+
+        [Test]
         public void TestResolveConfigManager()
         {
             AddAssert("ruleset config resolved", () =>
                 Dependencies.Get<TestRulesetConfigManager>() != null);
         }
 
-        private class TestRuleset : Ruleset
+        public class TestRuleset : Ruleset
         {
             public override string Description => string.Empty;
             public override string ShortName => string.Empty;
@@ -61,16 +74,16 @@ namespace osu.Game.Tests.Testing
             {
                 // temporary ID to let RulesetConfigCache pass our
                 // config manager to the ruleset dependencies.
-                RulesetInfo.ID = -1;
+                RulesetInfo.OnlineID = -1;
             }
 
             public override IResourceStore<byte[]> CreateResourceStore() => new NamespacedResourceStore<byte[]>(TestResources.GetStore(), @"Resources");
-            public override IRulesetConfigManager CreateConfig(SettingsStore settings) => new TestRulesetConfigManager();
+            public override IRulesetConfigManager CreateConfig(SettingsStore? settings) => new TestRulesetConfigManager();
 
             public override IEnumerable<Mod> GetModsFor(ModType type) => Array.Empty<Mod>();
-            public override DrawableRuleset CreateDrawableRulesetWith(IBeatmap beatmap, IReadOnlyList<Mod> mods = null) => null;
-            public override IBeatmapConverter CreateBeatmapConverter(IBeatmap beatmap) => null;
-            public override DifficultyCalculator CreateDifficultyCalculator(WorkingBeatmap beatmap) => null;
+            public override DrawableRuleset CreateDrawableRulesetWith(IBeatmap beatmap, IReadOnlyList<Mod>? mods = null) => null!;
+            public override IBeatmapConverter CreateBeatmapConverter(IBeatmap beatmap) => null!;
+            public override DifficultyCalculator CreateDifficultyCalculator(IWorkingBeatmap beatmap) => null!;
         }
 
         private class TestRulesetConfigManager : IRulesetConfigManager

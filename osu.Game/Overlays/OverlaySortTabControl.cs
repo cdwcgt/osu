@@ -1,6 +1,8 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.UserInterface;
@@ -18,11 +20,14 @@ using JetBrains.Annotations;
 using System;
 using osu.Framework.Extensions;
 using osu.Framework.Localisation;
+using osu.Game.Resources.Localisation.Web;
 
 namespace osu.Game.Overlays
 {
-    public class OverlaySortTabControl<T> : CompositeDrawable, IHasCurrentValue<T>
+    public partial class OverlaySortTabControl<T> : CompositeDrawable, IHasCurrentValue<T>
     {
+        public TabControl<T> TabControl { get; }
+
         private readonly BindableWithCurrent<T> current = new BindableWithCurrent<T>();
 
         public Bindable<T> Current
@@ -54,9 +59,9 @@ namespace osu.Game.Overlays
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.CentreLeft,
                         Font = OsuFont.GetFont(size: 12, weight: FontWeight.SemiBold),
-                        Text = @"Sort by"
+                        Text = SortStrings.Default
                     },
-                    CreateControl().With(c =>
+                    TabControl = CreateControl().With(c =>
                     {
                         c.Anchor = Anchor.CentreLeft;
                         c.Origin = Anchor.CentreLeft;
@@ -69,7 +74,7 @@ namespace osu.Game.Overlays
         [NotNull]
         protected virtual SortTabControl CreateControl() => new SortTabControl();
 
-        protected class SortTabControl : OsuTabControl<T>
+        protected partial class SortTabControl : OsuTabControl<T>
         {
             protected override Dropdown<T> CreateDropdown() => null;
 
@@ -88,7 +93,7 @@ namespace osu.Game.Overlays
             }
         }
 
-        protected class SortTabItem : TabItem<T>
+        protected partial class SortTabItem : TabItem<T>
         {
             public SortTabItem(T value)
                 : base(value)
@@ -112,7 +117,7 @@ namespace osu.Game.Overlays
             }
         }
 
-        protected class TabButton : HeaderButton
+        public partial class TabButton : HeaderButton
         {
             public readonly BindableBool Active = new BindableBool();
 
@@ -143,10 +148,12 @@ namespace osu.Game.Overlays
                             Anchor = Anchor.Centre,
                             Origin = Anchor.Centre,
                             Font = OsuFont.GetFont(size: 12, weight: FontWeight.SemiBold),
-                            Text = (value as Enum)?.GetDescription() ?? value.ToString()
+                            Text = (value as Enum)?.GetLocalisableDescription() ?? value.ToString()
                         }
                     }
                 });
+
+                AddInternal(new HoverClickSounds(HoverSampleSet.TabSelect));
             }
 
             protected override void LoadComplete()

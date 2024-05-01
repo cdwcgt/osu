@@ -2,24 +2,28 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Input.Bindings;
+using osu.Framework.Input.Events;
 using osu.Game.Input.Bindings;
 using osu.Game.Overlays;
 
 namespace osu.Game.Screens.Play
 {
-    public class HotkeyRetryOverlay : HoldToConfirmOverlay, IKeyBindingHandler<GlobalAction>
+    public partial class HotkeyRetryOverlay : HoldToConfirmOverlay, IKeyBindingHandler<GlobalAction>
     {
-        public bool OnPressed(GlobalAction action)
+        public bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
         {
-            if (action != GlobalAction.QuickRetry) return false;
+            if (e.Repeat)
+                return false;
+
+            if (e.Action != GlobalAction.QuickRetry) return false;
 
             BeginConfirm();
             return true;
         }
 
-        public void OnReleased(GlobalAction action)
+        public void OnReleased(KeyBindingReleaseEvent<GlobalAction> e)
         {
-            if (action != GlobalAction.QuickRetry) return;
+            if (e.Action != GlobalAction.QuickRetry) return;
 
             AbortConfirm();
         }

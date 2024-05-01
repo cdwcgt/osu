@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Collections.Generic;
@@ -40,7 +40,7 @@ namespace osu.Game.Tests.Beatmaps.Formats
 
             protected override bool ShouldSkipLine(string line)
             {
-                var result = base.ShouldSkipLine(line);
+                bool result = base.ShouldSkipLine(line);
 
                 if (!result)
                     ParsedLines.Add(line);

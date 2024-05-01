@@ -1,16 +1,19 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using osu.Framework.Allocation;
-using osu.Framework.Audio;
-using osu.Framework.Audio.Sample;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Containers;
+using osu.Framework.Input.Events;
 using osu.Game.Input.Bindings;
 using osu.Game.Online.API.Requests;
 using osu.Game.Online.API.Requests.Responses;
@@ -19,13 +22,9 @@ using osuTK.Graphics;
 
 namespace osu.Game.Overlays
 {
-    public class ChangelogOverlay : OnlineOverlay<ChangelogHeader>
+    public partial class ChangelogOverlay : OnlineOverlay<ChangelogHeader>
     {
-        public override bool IsPresent => base.IsPresent || Scheduler.HasPendingTasks;
-
         public readonly Bindable<APIChangelogBuild> Current = new Bindable<APIChangelogBuild>();
-
-        private Sample sampleBack;
 
         private List<APIChangelogBuild> builds;
 
@@ -37,11 +36,9 @@ namespace osu.Game.Overlays
         }
 
         [BackgroundDependencyLoader]
-        private void load(AudioManager audio)
+        private void load()
         {
             Header.Build.BindTarget = Current;
-
-            sampleBack = audio.Samples.Get(@"UI/generic-select-soft");
 
             Current.BindValueChanged(e =>
             {
@@ -73,7 +70,7 @@ namespace osu.Game.Overlays
         /// <see cref="APIChangelogBuild.DisplayVersion"/> are specified, the header will instantly display them.</param>
         public void ShowBuild([NotNull] APIChangelogBuild build)
         {
-            if (build == null) throw new ArgumentNullException(nameof(build));
+            ArgumentNullException.ThrowIfNull(build);
 
             Current.Value = build;
             Show();
@@ -81,8 +78,10 @@ namespace osu.Game.Overlays
 
         public void ShowBuild([NotNull] string updateStream, [NotNull] string version)
         {
-            if (updateStream == null) throw new ArgumentNullException(nameof(updateStream));
-            if (version == null) throw new ArgumentNullException(nameof(version));
+            ArgumentNullException.ThrowIfNull(updateStream);
+            ArgumentNullException.ThrowIfNull(version);
+
+            Show();
 
             performAfterFetch(() =>
             {
@@ -92,13 +91,14 @@ namespace osu.Game.Overlays
                 if (build != null)
                     ShowBuild(build);
             });
-
-            Show();
         }
 
-        public override bool OnPressed(GlobalAction action)
+        public override bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
         {
-            switch (action)
+            if (e.Repeat)
+                return false;
+
+            switch (e.Action)
             {
                 case GlobalAction.Back:
                     if (Current.Value == null)
@@ -108,7 +108,6 @@ namespace osu.Game.Overlays
                     else
                     {
                         Current.Value = null;
-                        sampleBack?.Play();
                     }
 
                     return true;
@@ -128,11 +127,16 @@ namespace osu.Game.Overlays
 
         private Task initialFetchTask;
 
-        private void performAfterFetch(Action action) => Schedule(() =>
+        private void performAfterFetch(Action action)
         {
-            fetchListing()?.ContinueWith(_ =>
-                Schedule(action), TaskContinuationOptions.OnlyOnRanToCompletion);
-        });
+            Debug.Assert(State.Value == Visibility.Visible);
+
+            Schedule(() =>
+            {
+                fetchListing()?.ContinueWith(_ =>
+                    Schedule(action), TaskContinuationOptions.OnlyOnRanToCompletion);
+            });
+        }
 
         private Task fetchListing()
         {

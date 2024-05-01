@@ -1,6 +1,10 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
+using System.Numerics;
+using System.Globalization;
+using osu.Framework.Localisation;
 using osu.Game.Graphics.UserInterface;
 
 namespace osu.Game.Overlays.Settings.Sections
@@ -8,8 +12,9 @@ namespace osu.Game.Overlays.Settings.Sections
     /// <summary>
     /// A slider intended to show a "size" multiplier number, where 1x is 1.0.
     /// </summary>
-    internal class SizeSlider : OsuSliderBar<float>
+    public partial class SizeSlider<T> : RoundedSliderBar<T>
+        where T : struct, INumber<T>, IMinMaxValue<T>, IFormattable
     {
-        public override string TooltipText => Current.Value.ToString(@"0.##x");
+        public override LocalisableString TooltipText => Current.Value.ToString(@"0.##x", NumberFormatInfo.CurrentInfo);
     }
 }

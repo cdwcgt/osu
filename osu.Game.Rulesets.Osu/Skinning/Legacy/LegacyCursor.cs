@@ -9,12 +9,17 @@ using osuTK;
 
 namespace osu.Game.Rulesets.Osu.Skinning.Legacy
 {
-    public class LegacyCursor : OsuCursorSprite
+    public partial class LegacyCursor : SkinnableCursor
     {
+        private const float pressed_scale = 1.3f;
+        private const float released_scale = 1f;
+
+        private readonly ISkin skin;
         private bool spin;
 
-        public LegacyCursor()
+        public LegacyCursor(ISkin skin)
         {
+            this.skin = skin;
             Size = new Vector2(50);
 
             Anchor = Anchor.Centre;
@@ -22,7 +27,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
         }
 
         [BackgroundDependencyLoader]
-        private void load(ISkinSource skin)
+        private void load()
         {
             bool centre = skin.GetConfig<OsuSkinConfiguration, bool>(OsuSkinConfiguration.CursorCentre)?.Value ?? true;
             spin = skin.GetConfig<OsuSkinConfiguration, bool>(OsuSkinConfiguration.CursorRotate)?.Value ?? true;
@@ -48,6 +53,17 @@ namespace osu.Game.Rulesets.Osu.Skinning.Legacy
         {
             if (spin)
                 ExpandTarget.Spin(10000, RotationDirection.Clockwise);
+        }
+
+        public override void Expand()
+        {
+            ExpandTarget?.ScaleTo(released_scale)
+                        .ScaleTo(pressed_scale, 100, Easing.Out);
+        }
+
+        public override void Contract()
+        {
+            ExpandTarget?.ScaleTo(released_scale, 100, Easing.Out);
         }
     }
 }

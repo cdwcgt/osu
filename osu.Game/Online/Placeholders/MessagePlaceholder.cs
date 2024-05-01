@@ -3,14 +3,15 @@
 
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Localisation;
 
 namespace osu.Game.Online.Placeholders
 {
-    public class MessagePlaceholder : Placeholder
+    public partial class MessagePlaceholder : Placeholder
     {
-        private readonly string message;
+        private readonly LocalisableString message;
 
-        public MessagePlaceholder(string message)
+        public MessagePlaceholder(LocalisableString message)
         {
             AddIcon(FontAwesome.Solid.ExclamationCircle, cp =>
             {
@@ -21,6 +22,6 @@ namespace osu.Game.Online.Placeholders
             AddText(this.message = message);
         }
 
-        public override bool Equals(Placeholder other) => (other as MessagePlaceholder)?.message == message;
+        public override bool Equals(Placeholder? other) => (other as MessagePlaceholder)?.message == message;
     }
 }

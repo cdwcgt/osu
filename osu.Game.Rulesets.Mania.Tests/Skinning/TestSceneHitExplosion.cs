@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Collections.Generic;
@@ -18,19 +18,19 @@ using osuTK;
 namespace osu.Game.Rulesets.Mania.Tests.Skinning
 {
     [TestFixture]
-    public class TestSceneHitExplosion : ManiaSkinnableTestScene
+    public partial class TestSceneHitExplosion : ManiaSkinnableTestScene
     {
         private readonly List<DrawablePool<PoolableHitExplosion>> hitExplosionPools = new List<DrawablePool<PoolableHitExplosion>>();
 
         public TestSceneHitExplosion()
         {
-            int runcount = 0;
+            int runCount = 0;
 
             AddRepeatStep("explode", () =>
             {
-                runcount++;
+                runCount++;
 
-                if (runcount % 15 > 12)
+                if (runCount % 15 > 12)
                     return;
 
                 int poolIndex = 0;
@@ -39,7 +39,7 @@ namespace osu.Game.Rulesets.Mania.Tests.Skinning
                 {
                     c.Add(hitExplosionPools[poolIndex].Get(e =>
                     {
-                        e.Apply(new JudgementResult(new HitObject(), runcount % 6 == 0 ? new HoldNoteTickJudgement() : new ManiaJudgement()));
+                        e.Apply(new JudgementResult(new HitObject(), new ManiaJudgement()));
 
                         e.Anchor = Anchor.Centre;
                         e.Origin = Anchor.Centre;
@@ -53,7 +53,7 @@ namespace osu.Game.Rulesets.Mania.Tests.Skinning
         [BackgroundDependencyLoader]
         private void load()
         {
-            SetContents(() =>
+            SetContents(_ =>
             {
                 var pool = new DrawablePool<PoolableHitExplosion>(5);
                 hitExplosionPools.Add(pool);

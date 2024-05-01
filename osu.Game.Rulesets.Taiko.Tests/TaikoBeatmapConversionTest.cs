@@ -12,7 +12,6 @@ using osu.Game.Tests.Beatmaps;
 namespace osu.Game.Rulesets.Taiko.Tests
 {
     [TestFixture]
-    [Timeout(10000)]
     public class TaikoBeatmapConversionTest : BeatmapConversionTest<ConvertValue>
     {
         protected override string ResourceAssembly => "osu.Game.Rulesets.Taiko";
@@ -24,6 +23,7 @@ namespace osu.Game.Rulesets.Taiko.Tests
         [TestCase("slider-conversion-v6")]
         [TestCase("slider-conversion-v14")]
         [TestCase("slider-generating-drumroll-2")]
+        [TestCase("file-hitsamples")]
         public void Test(string name) => base.Test(name);
 
         protected override IEnumerable<ConvertValue> CreateConvertValue(HitObject hitObject)

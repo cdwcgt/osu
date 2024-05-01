@@ -9,11 +9,12 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Localisation;
 using osu.Game.Graphics.Sprites;
 
 namespace osu.Game.Graphics.Cursor
 {
-    public class OsuTooltipContainer : TooltipContainer
+    public partial class OsuTooltipContainer : TooltipContainer
     {
         protected override ITooltip CreateTooltip() => new OsuTooltip();
 
@@ -24,18 +25,15 @@ namespace osu.Game.Graphics.Cursor
 
         protected override double AppearDelay => (1 - CurrentTooltip.Alpha) * base.AppearDelay; // reduce appear delay if the tooltip is already partly visible.
 
-        public class OsuTooltip : Tooltip
+        public partial class OsuTooltip : Tooltip
         {
             private readonly Box background;
             private readonly OsuSpriteText text;
             private bool instantMovement = true;
 
-            public override bool SetContent(object content)
+            public override void SetContent(LocalisableString contentString)
             {
-                if (!(content is string contentString))
-                    return false;
-
-                if (contentString == text.Text) return true;
+                if (contentString == text.Text) return;
 
                 text.Text = contentString;
 
@@ -46,8 +44,6 @@ namespace osu.Game.Graphics.Cursor
                 }
                 else
                     AutoSizeDuration = 0;
-
-                return true;
             }
 
             public OsuTooltip()

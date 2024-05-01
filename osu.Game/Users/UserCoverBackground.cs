@@ -10,19 +10,20 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
+using osu.Game.Online.API.Requests.Responses;
 using osuTK.Graphics;
 
 namespace osu.Game.Users
 {
-    public class UserCoverBackground : ModelBackedDrawable<User>
+    public partial class UserCoverBackground : ModelBackedDrawable<APIUser?>
     {
-        public User User
+        public APIUser? User
         {
             get => Model;
             set => Model = value;
         }
 
-        protected override Drawable CreateDrawable(User user) => new Cover(user);
+        protected override Drawable CreateDrawable(APIUser? user) => new Cover(user);
 
         protected override double LoadDelay => 300;
 
@@ -35,11 +36,11 @@ namespace osu.Game.Users
             => new DelayedLoadUnloadWrapper(createContentFunc, timeBeforeLoad, UnloadDelay);
 
         [LongRunningLoad]
-        private class Cover : CompositeDrawable
+        private partial class Cover : CompositeDrawable
         {
-            private readonly User user;
+            private readonly APIUser? user;
 
-            public Cover(User user)
+            public Cover(APIUser? user)
             {
                 this.user = user;
 

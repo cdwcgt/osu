@@ -3,40 +3,29 @@
 
 using System;
 using osu.Framework.Allocation;
+using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics.Pooling;
+using osu.Framework.Threading;
 
 namespace osu.Game.Skinning
 {
     /// <summary>
-    /// A drawable which has a callback when the skin changes.
+    /// A poolable drawable implementation which has a pre-wired callback (see <see cref="SkinChanged"/>) that fires
+    /// once on load and again on any subsequent skin change.
     /// </summary>
-    public abstract class SkinReloadableDrawable : PoolableDrawable
+    public abstract partial class SkinReloadableDrawable : PoolableDrawable
     {
+        private ScheduledDelegate? pendingSkinChange;
+
         /// <summary>
         /// Invoked when <see cref="CurrentSkin"/> has changed.
         /// </summary>
-        public event Action OnSkinChanged;
+        public event Action? OnSkinChanged;
 
         /// <summary>
         /// The current skin source.
         /// </summary>
-        protected ISkinSource CurrentSkin { get; private set; }
-
-        private readonly Func<ISkinSource, bool> allowFallback;
-
-        /// <summary>
-        /// Whether fallback to default skin should be allowed if the custom skin is missing this resource.
-        /// </summary>
-        protected bool AllowDefaultFallback => allowFallback == null || allowFallback.Invoke(CurrentSkin);
-
-        /// <summary>
-        /// Create a new <see cref="SkinReloadableDrawable"/>
-        /// </summary>
-        /// <param name="allowFallback">A conditional to decide whether to allow fallback to the default implementation if a skinned element is not present.</param>
-        protected SkinReloadableDrawable(Func<ISkinSource, bool> allowFallback = null)
-        {
-            this.allowFallback = allowFallback;
-        }
+        protected ISkinSource CurrentSkin { get; private set; } = null!;
 
         [BackgroundDependencyLoader]
         private void load(ISkinSource source)
@@ -45,37 +34,61 @@ namespace osu.Game.Skinning
             CurrentSkin.SourceChanged += onChange;
         }
 
-        private void onChange() =>
-            // schedule required to avoid calls after disposed.
-            // note that this has the side-effect of components only performing a skin change when they are alive.
-            Scheduler.AddOnce(skinChanged);
-
         protected override void LoadAsyncComplete()
         {
             base.LoadAsyncComplete();
             skinChanged();
         }
 
-        private void skinChanged()
+        /// <summary>
+        /// Force any pending <see cref="SkinChanged"/> calls to be performed immediately.
+        /// </summary>
+        /// <remarks>
+        /// When a skin change occurs, the handling provided by this class is scheduled.
+        /// In some cases, such a sample playback, this can result in the sample being played
+        /// just before it is updated to a potentially different sample.
+        ///
+        /// Calling this method will ensure any pending update operations are run immediately.
+        /// It is recommended to call this before consuming the result of skin changes for anything non-drawable.
+        /// </remarks>
+        protected void FlushPendingSkinChanges()
         {
-            SkinChanged(CurrentSkin, AllowDefaultFallback);
-            OnSkinChanged?.Invoke();
+            if (pendingSkinChange == null)
+                return;
+
+            pendingSkinChange.RunTask();
+            pendingSkinChange = null;
         }
 
         /// <summary>
         /// Called when a change is made to the skin.
         /// </summary>
         /// <param name="skin">The new skin.</param>
-        /// <param name="allowFallback">Whether fallback to default skin should be allowed if the custom skin is missing this resource.</param>
-        protected virtual void SkinChanged(ISkinSource skin, bool allowFallback)
+        protected virtual void SkinChanged(ISkinSource skin)
         {
+        }
+
+        private void onChange()
+        {
+            // schedule required to avoid calls after disposed.
+            // note that this has the side-effect of components only performing a skin change when they are alive.
+            pendingSkinChange?.Cancel();
+            pendingSkinChange = Scheduler.Add(skinChanged);
+        }
+
+        private void skinChanged()
+        {
+            SkinChanged(CurrentSkin);
+            OnSkinChanged?.Invoke();
+
+            pendingSkinChange = null;
         }
 
         protected override void Dispose(bool isDisposing)
         {
             base.Dispose(isDisposing);
 
-            if (CurrentSkin != null)
+            if (CurrentSkin.IsNotNull())
                 CurrentSkin.SourceChanged -= onChange;
 
             OnSkinChanged = null;

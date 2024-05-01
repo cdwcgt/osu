@@ -1,9 +1,8 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System.Collections.Generic;
-using JetBrains.Annotations;
 using osu.Framework.Bindables;
+using osu.Game.Skinning;
 using osuTK.Graphics;
 
 namespace osu.Game.Rulesets.Objects.Types
@@ -13,25 +12,47 @@ namespace osu.Game.Rulesets.Objects.Types
     /// </summary>
     public interface IHasComboInformation : IHasCombo
     {
+        /// <summary>
+        /// Bindable exposure of <see cref="IndexInCurrentCombo"/>.
+        /// </summary>
         Bindable<int> IndexInCurrentComboBindable { get; }
 
         /// <summary>
-        /// The offset of this hitobject in the current combo.
+        /// The index of this hitobject in the current combo.
         /// </summary>
         int IndexInCurrentCombo { get; set; }
 
+        /// <summary>
+        /// Bindable exposure of <see cref="ComboIndex"/>.
+        /// </summary>
         Bindable<int> ComboIndexBindable { get; }
 
         /// <summary>
-        /// The offset of this combo in relation to the beatmap.
+        /// The index of this combo in relation to the beatmap.
+        ///
+        /// In other words, this is incremented by 1 each time a <see cref="NewCombo"/> is reached.
         /// </summary>
         int ComboIndex { get; set; }
+
+        /// <summary>
+        /// Bindable exposure of <see cref="ComboIndexWithOffsets"/>.
+        /// </summary>
+        Bindable<int> ComboIndexWithOffsetsBindable { get; }
+
+        /// <summary>
+        /// The index of this combo in relation to the beatmap, with all aggregate <see cref="IHasCombo.ComboOffset"/>s applied.
+        /// This should be used instead of <see cref="ComboIndex"/> only when retrieving combo colours from the beatmap's skin.
+        /// </summary>
+        int ComboIndexWithOffsets { get; set; }
 
         /// <summary>
         /// Whether the HitObject starts a new combo.
         /// </summary>
         new bool NewCombo { get; set; }
 
+        /// <summary>
+        /// Bindable exposure of <see cref="LastInCombo"/>.
+        /// </summary>
         Bindable<bool> LastInComboBindable { get; }
 
         /// <summary>
@@ -40,11 +61,42 @@ namespace osu.Game.Rulesets.Objects.Types
         bool LastInCombo { get; set; }
 
         /// <summary>
-        /// Retrieves the colour of the combo described by this <see cref="IHasComboInformation"/> object from a set of possible combo colours.
-        /// Defaults to using <see cref="ComboIndex"/> to decide the colour.
+        /// Retrieves the colour of the combo described by this <see cref="IHasComboInformation"/> object.
         /// </summary>
-        /// <param name="comboColours">A list of possible combo colours provided by the beatmap or skin.</param>
-        /// <returns>The colour of the combo described by this <see cref="IHasComboInformation"/> object.</returns>
-        Color4 GetComboColour([NotNull] IReadOnlyList<Color4> comboColours) => comboColours.Count > 0 ? comboColours[ComboIndex % comboColours.Count] : Color4.White;
+        /// <param name="skin">The skin to retrieve the combo colour from, if wanted.</param>
+        Color4 GetComboColour(ISkin skin) => GetSkinComboColour(this, skin, ComboIndex);
+
+        /// <summary>
+        /// Retrieves the colour of the combo described by a given <see cref="IHasComboInformation"/> object from a given skin.
+        /// </summary>
+        /// <param name="combo">The combo information, should be <c>this</c>.</param>
+        /// <param name="skin">The skin to retrieve the combo colour from.</param>
+        /// <param name="comboIndex">The index to retrieve the combo colour with.</param>
+        /// <returns></returns>
+        protected static Color4 GetSkinComboColour(IHasComboInformation combo, ISkin skin, int comboIndex)
+        {
+            return skin.GetConfig<SkinComboColourLookup, Color4>(new SkinComboColourLookup(comboIndex, combo))?.Value ?? Color4.White;
+        }
+
+        /// <summary>
+        /// Given the previous object in the beatmap, update relevant combo information.
+        /// </summary>
+        /// <param name="lastObj">The previous hitobject, or null if this is the first object in the beatmap.</param>
+        void UpdateComboInformation(IHasComboInformation? lastObj)
+        {
+            ComboIndex = lastObj?.ComboIndex ?? 0;
+            ComboIndexWithOffsets = lastObj?.ComboIndexWithOffsets ?? 0;
+            IndexInCurrentCombo = (lastObj?.IndexInCurrentCombo + 1) ?? 0;
+
+            if (NewCombo || lastObj == null)
+            {
+                IndexInCurrentCombo = 0;
+                ComboIndex++;
+                ComboIndexWithOffsets += ComboOffset + 1;
+
+                if (lastObj != null)
+                    lastObj.LastInCombo = true;
+            }
+        }
     }
 }

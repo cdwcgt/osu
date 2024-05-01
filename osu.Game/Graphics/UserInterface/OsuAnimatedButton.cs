@@ -16,7 +16,7 @@ namespace osu.Game.Graphics.UserInterface
     /// <summary>
     /// Highlight on hover, bounce on click.
     /// </summary>
-    public class OsuAnimatedButton : OsuClickableContainer
+    public partial class OsuAnimatedButton : OsuClickableContainer
     {
         /// <summary>
         /// The colour that should be flashed when the <see cref="OsuAnimatedButton"/> is clicked.
@@ -38,12 +38,16 @@ namespace osu.Game.Graphics.UserInterface
             }
         }
 
+        [Resolved]
+        private OsuColour colours { get; set; } = null!;
+
         protected override Container<Drawable> Content => content;
 
         private readonly Container content;
         private readonly Box hover;
 
-        public OsuAnimatedButton()
+        public OsuAnimatedButton(HoverSampleSet sampleSet = HoverSampleSet.Button)
+            : base(sampleSet)
         {
             base.Content.Add(content = new Container
             {
@@ -72,16 +76,24 @@ namespace osu.Game.Graphics.UserInterface
         }
 
         [BackgroundDependencyLoader]
-        private void load(OsuColour colours)
+        private void load()
         {
             if (AutoSizeAxes != Axes.None)
             {
                 content.RelativeSizeAxes = (Axes.Both & ~AutoSizeAxes);
                 content.AutoSizeAxes = AutoSizeAxes;
             }
-
-            Enabled.BindValueChanged(enabled => this.FadeColour(enabled.NewValue ? Color4.White : colours.Gray9, 200, Easing.OutQuint), true);
         }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            Colour = dimColour;
+            Enabled.BindValueChanged(_ => this.FadeColour(dimColour, 200, Easing.OutQuint));
+        }
+
+        private Color4 dimColour => Enabled.Value ? Color4.White : colours.Gray9;
 
         protected override bool OnHover(HoverEvent e)
         {
@@ -97,6 +109,10 @@ namespace osu.Game.Graphics.UserInterface
 
         protected override bool OnClick(ClickEvent e)
         {
+            // Handle case where a click is triggered via TriggerClick().
+            if (!IsHovered)
+                hover.FadeOutFromOne(1600);
+
             hover.FlashColour(FlashColour, 800, Easing.OutQuint);
             return base.OnClick(e);
         }

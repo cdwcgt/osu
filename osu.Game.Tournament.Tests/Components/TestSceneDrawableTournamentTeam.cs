@@ -1,6 +1,7 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Game.Tests.Visual;
@@ -9,29 +10,34 @@ using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Drawings.Components;
 using osu.Game.Tournament.Screens.Gameplay.Components;
 using osu.Game.Tournament.Screens.Ladder.Components;
-using osu.Game.Users;
 
 namespace osu.Game.Tournament.Tests.Components
 {
-    public class TestSceneDrawableTournamentTeam : OsuGridTestScene
+    public partial class TestSceneDrawableTournamentTeam : OsuGridTestScene
     {
+        [Cached]
+        protected LadderInfo Ladder { get; private set; } = new LadderInfo();
+
         public TestSceneDrawableTournamentTeam()
             : base(4, 3)
         {
+            AddToggleStep("toggle seed view", v => Ladder.DisplayTeamSeeds.Value = v);
+
             var team = new TournamentTeam
             {
                 FlagName = { Value = "AU" },
                 FullName = { Value = "Australia" },
+                Seed = { Value = "#5" },
                 Players =
                 {
-                    new User { Username = "ASecretBox" },
-                    new User { Username = "Dereban" },
-                    new User { Username = "mReKk" },
-                    new User { Username = "uyghti" },
-                    new User { Username = "Parkes" },
-                    new User { Username = "Shiroha" },
-                    new User { Username = "Jordan The Bear" },
-                }
+                    new TournamentUser { Username = "ASecretBox" },
+                    new TournamentUser { Username = "Dereban" },
+                    new TournamentUser { Username = "mReKk" },
+                    new TournamentUser { Username = "uyghti" },
+                    new TournamentUser { Username = "Parkes" },
+                    new TournamentUser { Username = "Shiroha" },
+                    new TournamentUser { Username = "Jordan The Bear" },
+                },
             };
 
             var match = new TournamentMatch { Team1 = { Value = team } };

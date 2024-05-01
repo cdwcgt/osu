@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using NUnit.Framework;
@@ -13,12 +13,12 @@ namespace osu.Game.Rulesets.Mania.Tests.Skinning
     /// <summary>
     /// A test scene for a mania hitobject.
     /// </summary>
-    public abstract class ManiaHitObjectTestScene : ManiaSkinnableTestScene
+    public abstract partial class ManiaHitObjectTestScene : ManiaSkinnableTestScene
     {
         [SetUp]
         public void SetUp() => Schedule(() =>
         {
-            SetContents(() => new FillFlowContainer
+            SetContents(_ => new FillFlowContainer
             {
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre,
@@ -40,7 +40,7 @@ namespace osu.Game.Rulesets.Mania.Tests.Skinning
                         {
                             c.Add(CreateHitObject().With(h =>
                             {
-                                h.HitObject.StartTime = START_TIME;
+                                h.HitObject.StartTime = Time.Current + 5000;
                                 h.AccentColour.Value = Color4.Orange;
                             }));
                         })
@@ -58,8 +58,7 @@ namespace osu.Game.Rulesets.Mania.Tests.Skinning
                         {
                             c.Add(CreateHitObject().With(h =>
                             {
-                                h.HitObject.StartTime = START_TIME;
-                                h.AccentColour.Value = Color4.Orange;
+                                h.HitObject.StartTime = Time.Current + 5000;
                             }));
                         })
                     },

@@ -5,6 +5,7 @@ using System;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
+using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Utils;
@@ -17,9 +18,9 @@ using osuTK.Graphics;
 
 namespace osu.Game.Rulesets.Osu.Skinning.Default
 {
-    public class DefaultSpinnerDisc : CompositeDrawable
+    public partial class DefaultSpinnerDisc : CompositeDrawable
     {
-        private DrawableSpinner drawableSpinner;
+        private DrawableSpinner drawableSpinner = null!;
 
         private const float initial_scale = 1.3f;
         private const float idle_alpha = 0.2f;
@@ -28,15 +29,15 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
         private Color4 normalColour;
         private Color4 completeColour;
 
-        private SpinnerTicks ticks;
+        private SpinnerTicks ticks = null!;
 
         private int wholeRotationCount;
         private readonly BindableBool complete = new BindableBool();
 
-        private SpinnerFill fill;
-        private Container mainContainer;
-        private SpinnerCentreLayer centre;
-        private SpinnerBackgroundLayer background;
+        private SpinnerFill fill = null!;
+        private Container mainContainer = null!;
+        private SpinnerCentreLayer centre = null!;
+        private SpinnerBackgroundLayer background = null!;
 
         public DefaultSpinnerDisc()
         {
@@ -88,7 +89,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
         {
             base.LoadComplete();
 
-            complete.BindValueChanged(complete => updateComplete(complete.NewValue, 200));
+            complete.BindValueChanged(complete => updateDiscColour(complete.NewValue, 200));
             drawableSpinner.ApplyCustomUpdateState += updateStateTransforms;
 
             updateStateTransforms(drawableSpinner, drawableSpinner.State.Value);
@@ -130,18 +131,20 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
 
             Spinner spinner = drawableSpinner.HitObject;
 
-            using (BeginAbsoluteSequence(spinner.StartTime - spinner.TimePreempt, true))
+            using (BeginAbsoluteSequence(spinner.StartTime - spinner.TimePreempt))
             {
                 this.ScaleTo(initial_scale);
                 this.RotateTo(0);
 
-                using (BeginDelayedSequence(spinner.TimePreempt / 2, true))
+                updateDiscColour(false);
+
+                using (BeginDelayedSequence(spinner.TimePreempt / 2))
                 {
                     // constant ambient rotation to give the spinner "spinning" character.
                     this.RotateTo((float)(25 * spinner.Duration / 2000), spinner.TimePreempt + spinner.Duration);
                 }
 
-                using (BeginDelayedSequence(spinner.TimePreempt + spinner.Duration + drawableHitObject.Result.TimeOffset, true))
+                using (BeginDelayedSequence(spinner.TimePreempt + spinner.Duration + drawableHitObject.Result.TimeOffset))
                 {
                     switch (state)
                     {
@@ -157,17 +160,17 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
                 }
             }
 
-            using (BeginAbsoluteSequence(spinner.StartTime - spinner.TimePreempt, true))
+            using (BeginAbsoluteSequence(spinner.StartTime - spinner.TimePreempt))
             {
                 centre.ScaleTo(0);
                 mainContainer.ScaleTo(0);
 
-                using (BeginDelayedSequence(spinner.TimePreempt / 2, true))
+                using (BeginDelayedSequence(spinner.TimePreempt / 2))
                 {
                     centre.ScaleTo(0.3f, spinner.TimePreempt / 4, Easing.OutQuint);
                     mainContainer.ScaleTo(0.2f, spinner.TimePreempt / 4, Easing.OutQuint);
 
-                    using (BeginDelayedSequence(spinner.TimePreempt / 2, true))
+                    using (BeginDelayedSequence(spinner.TimePreempt / 2))
                     {
                         centre.ScaleTo(0.5f, spinner.TimePreempt / 2, Easing.OutQuint);
                         mainContainer.ScaleTo(1, spinner.TimePreempt / 2, Easing.OutQuint);
@@ -175,12 +178,14 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
                 }
             }
 
-            // transforms we have from completing the spinner will be rolled back, so reapply immediately.
-            using (BeginAbsoluteSequence(spinner.StartTime - spinner.TimePreempt, true))
-                updateComplete(state == ArmedState.Hit, 0);
+            if (drawableSpinner.Result?.TimeCompleted is double completionTime)
+            {
+                using (BeginAbsoluteSequence(completionTime))
+                    updateDiscColour(true, 200);
+            }
         }
 
-        private void updateComplete(bool complete, double duration)
+        private void updateDiscColour(bool complete, double duration = 0)
         {
             var colour = complete ? completeColour : normalColour;
 
@@ -195,7 +200,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
         {
             get
             {
-                int rotations = (int)(drawableSpinner.Result.RateAdjustedRotation / 360);
+                int rotations = (int)(drawableSpinner.Result.TotalRotation / 360);
 
                 if (wholeRotationCount == rotations) return false;
 
@@ -208,7 +213,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
         {
             base.Dispose(isDisposing);
 
-            if (drawableSpinner != null)
+            if (drawableSpinner.IsNotNull())
                 drawableSpinner.ApplyCustomUpdateState -= updateStateTransforms;
         }
     }

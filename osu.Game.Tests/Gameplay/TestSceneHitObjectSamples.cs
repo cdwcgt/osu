@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using NUnit.Framework;
@@ -7,14 +7,14 @@ using osu.Game.Rulesets;
 using osu.Game.Rulesets.Osu;
 using osu.Game.Tests.Beatmaps;
 using osu.Game.Tests.Resources;
-using static osu.Game.Skinning.LegacySkinConfiguration;
+using static osu.Game.Skinning.SkinConfiguration;
 
 namespace osu.Game.Tests.Gameplay
 {
-    public class TestSceneHitObjectSamples : HitObjectSampleTest
+    public partial class TestSceneHitObjectSamples : HitObjectSampleTest
     {
         protected override Ruleset CreatePlayerRuleset() => new OsuRuleset();
-        protected override IResourceStore<byte[]> Resources => TestResources.GetStore();
+        protected override IResourceStore<byte[]> RulesetResources => TestResources.GetStore();
 
         /// <summary>
         /// Tests that a hitobject which provides no custom sample set retrieves samples from the user skin.

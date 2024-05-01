@@ -7,14 +7,16 @@ using osu.Framework.Screens;
 
 namespace osu.Game.Screens.OnlinePlay
 {
-    public abstract class OnlinePlaySubScreen : OsuScreen, IOnlinePlaySubScreen
+    public abstract partial class OnlinePlaySubScreen : OsuScreen, IOnlinePlaySubScreen
     {
         public override bool DisallowExternalBeatmapRulesetChanges => false;
 
         public virtual string ShortTitle => Title;
 
-        [Resolved(CanBeNull = true)]
-        protected IRoomManager RoomManager { get; private set; }
+        protected sealed override bool PlayExitSound => false;
+
+        [Resolved]
+        protected IRoomManager? RoomManager { get; private set; }
 
         protected OnlinePlaySubScreen()
         {
@@ -23,41 +25,33 @@ namespace osu.Game.Screens.OnlinePlay
             RelativeSizeAxes = Axes.Both;
         }
 
-        public const float X_SHIFT = 200;
-
-        public const double X_MOVE_DURATION = 800;
-
-        public const double RESUME_TRANSITION_DELAY = DISAPPEAR_DURATION / 2;
-
         public const double APPEAR_DURATION = 800;
 
         public const double DISAPPEAR_DURATION = 500;
 
-        public override void OnEntering(IScreen last)
+        public override void OnEntering(ScreenTransitionEvent e)
         {
+            base.OnEntering(e);
             this.FadeInFromZero(APPEAR_DURATION, Easing.OutQuint);
-            this.FadeInFromZero(APPEAR_DURATION, Easing.OutQuint);
-            this.MoveToX(X_SHIFT).MoveToX(0, X_MOVE_DURATION, Easing.OutQuint);
         }
 
-        public override bool OnExiting(IScreen next)
+        public override bool OnExiting(ScreenExitEvent e)
         {
+            base.OnExiting(e);
             this.FadeOut(DISAPPEAR_DURATION, Easing.OutQuint);
-            this.MoveToX(X_SHIFT, X_MOVE_DURATION, Easing.OutQuint);
-
             return false;
         }
 
-        public override void OnResuming(IScreen last)
+        public override void OnResuming(ScreenTransitionEvent e)
         {
-            this.Delay(RESUME_TRANSITION_DELAY).FadeIn(APPEAR_DURATION, Easing.OutQuint);
-            this.MoveToX(0, X_MOVE_DURATION, Easing.OutQuint);
+            base.OnResuming(e);
+            this.FadeIn(APPEAR_DURATION, Easing.OutQuint);
         }
 
-        public override void OnSuspending(IScreen next)
+        public override void OnSuspending(ScreenTransitionEvent e)
         {
+            base.OnSuspending(e);
             this.FadeOut(DISAPPEAR_DURATION, Easing.OutQuint);
-            this.MoveToX(-X_SHIFT, X_MOVE_DURATION, Easing.OutQuint);
         }
 
         public override string ToString() => Title;

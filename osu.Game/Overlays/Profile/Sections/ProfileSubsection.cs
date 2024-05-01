@@ -5,23 +5,22 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Game.Users;
-using JetBrains.Annotations;
+using osu.Framework.Localisation;
 
 namespace osu.Game.Overlays.Profile.Sections
 {
-    public abstract class ProfileSubsection : FillFlowContainer
+    public abstract partial class ProfileSubsection : FillFlowContainer
     {
-        protected readonly Bindable<User> User = new Bindable<User>();
+        protected readonly Bindable<UserProfileData?> User = new Bindable<UserProfileData?>();
 
-        private readonly string headerText;
+        private readonly LocalisableString headerText;
         private readonly CounterVisibilityState counterVisibilityState;
 
-        private ProfileSubsectionHeader header;
+        private ProfileSubsectionHeader header = null!;
 
-        protected ProfileSubsection(Bindable<User> user, string headerText = "", CounterVisibilityState counterVisibilityState = CounterVisibilityState.AlwaysHidden)
+        protected ProfileSubsection(Bindable<UserProfileData?> user, LocalisableString? headerText = null, CounterVisibilityState counterVisibilityState = CounterVisibilityState.AlwaysHidden)
         {
-            this.headerText = headerText;
+            this.headerText = headerText ?? string.Empty;
             this.counterVisibilityState = counterVisibilityState;
             User.BindTo(user);
         }
@@ -37,13 +36,12 @@ namespace osu.Game.Overlays.Profile.Sections
             {
                 header = new ProfileSubsectionHeader(headerText, counterVisibilityState)
                 {
-                    Alpha = string.IsNullOrEmpty(headerText) ? 0 : 1
+                    Alpha = string.IsNullOrEmpty(headerText.ToString()) ? 0 : 1
                 },
                 CreateContent()
             };
         }
 
-        [NotNull]
         protected abstract Drawable CreateContent();
 
         protected void SetCount(int value) => header.Current.Value = value;

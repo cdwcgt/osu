@@ -1,43 +1,37 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Bindables;
-using osu.Framework.IO.Stores;
 using osu.Framework.Testing;
 using osu.Game.Beatmaps;
-using osu.Game.Screens.Play;
 using osu.Game.Skinning;
 using osu.Game.Tests.Visual;
 using osuTK.Graphics;
 
 namespace osu.Game.Tests.Beatmaps
 {
-    public abstract class LegacyBeatmapSkinColourTest : ScreenTestScene
+    public abstract partial class LegacyBeatmapSkinColourTest : ScreenTestScene
     {
         protected readonly Bindable<bool> BeatmapSkins = new Bindable<bool>();
         protected readonly Bindable<bool> BeatmapColours = new Bindable<bool>();
+
         protected ExposedPlayer TestPlayer;
-        protected WorkingBeatmap TestBeatmap;
 
-        public virtual void TestBeatmapComboColours(bool userHasCustomColours, bool useBeatmapSkin) => ConfigureTest(useBeatmapSkin, true, userHasCustomColours);
+        private WorkingBeatmap testBeatmap;
 
-        public virtual void TestBeatmapComboColoursOverride(bool useBeatmapSkin) => ConfigureTest(useBeatmapSkin, false, true);
+        protected void PrepareBeatmap(Func<WorkingBeatmap> createBeatmap) => AddStep("prepare beatmap", () => testBeatmap = createBeatmap());
 
-        public virtual void TestBeatmapComboColoursOverrideWithDefaultColours(bool useBeatmapSkin) => ConfigureTest(useBeatmapSkin, false, false);
-
-        public virtual void TestBeatmapNoComboColours(bool useBeatmapSkin, bool useBeatmapColour) => ConfigureTest(useBeatmapSkin, useBeatmapColour, false);
-
-        public virtual void TestBeatmapNoComboColoursSkinOverride(bool useBeatmapSkin, bool useBeatmapColour) => ConfigureTest(useBeatmapSkin, useBeatmapColour, true);
-
-        protected virtual void ConfigureTest(bool useBeatmapSkin, bool useBeatmapColours, bool userHasCustomColours)
+        protected void ConfigureTest(bool useBeatmapSkin, bool useBeatmapColours, bool userHasCustomColours)
         {
             configureSettings(useBeatmapSkin, useBeatmapColours);
-            AddStep($"load {(((CustomSkinWorkingBeatmap)TestBeatmap).HasColours ? "coloured " : "")} beatmap", () => TestPlayer = LoadBeatmap(userHasCustomColours));
+            AddStep("load beatmap", () => TestPlayer = LoadBeatmap(userHasCustomColours));
             AddUntilStep("wait for player load", () => TestPlayer.IsLoaded);
         }
 
@@ -57,7 +51,7 @@ namespace osu.Game.Tests.Beatmaps
         {
             ExposedPlayer player;
 
-            Beatmap.Value = TestBeatmap;
+            Beatmap.Value = testBeatmap;
 
             LoadScreen(player = CreateTestPlayer(userHasCustomColours));
 
@@ -66,16 +60,12 @@ namespace osu.Game.Tests.Beatmaps
 
         protected virtual ExposedPlayer CreateTestPlayer(bool userHasCustomColours) => new ExposedPlayer(userHasCustomColours);
 
-        protected class ExposedPlayer : Player
+        protected partial class ExposedPlayer : TestPlayer
         {
             protected readonly bool UserHasCustomColours;
 
             public ExposedPlayer(bool userHasCustomColours)
-                : base(new PlayerConfiguration
-                {
-                    AllowPause = false,
-                    ShowResults = false,
-                })
+                : base(false, false)
             {
                 UserHasCustomColours = userHasCustomColours;
             }
@@ -103,7 +93,7 @@ namespace osu.Game.Tests.Beatmaps
                 HasColours = hasColours;
             }
 
-            protected override ISkin GetSkin() => new TestBeatmapSkin(BeatmapInfo, HasColours);
+            protected internal override ISkin GetSkin() => new TestBeatmapSkin(BeatmapInfo, HasColours);
         }
 
         protected class TestBeatmapSkin : LegacyBeatmapSkin
@@ -112,6 +102,8 @@ namespace osu.Game.Tests.Beatmaps
             {
                 new Color4(50, 100, 150, 255),
                 new Color4(40, 80, 120, 255),
+                new Color4(25, 50, 75, 255),
+                new Color4(10, 20, 30, 255),
             };
 
             public static readonly Color4 HYPER_DASH_COLOUR = Color4.DarkBlue;
@@ -120,12 +112,12 @@ namespace osu.Game.Tests.Beatmaps
 
             public static readonly Color4 HYPER_DASH_FRUIT_COLOUR = Color4.DarkGoldenrod;
 
-            public TestBeatmapSkin(BeatmapInfo beatmap, bool hasColours)
-                : base(beatmap, new ResourceStore<byte[]>(), null)
+            public TestBeatmapSkin(BeatmapInfo beatmapInfo, bool hasColours)
+                : base(beatmapInfo, null)
             {
                 if (hasColours)
                 {
-                    Configuration.AddComboColours(Colours);
+                    Configuration.CustomComboColours = Colours.ToList();
                     Configuration.CustomColours.Add("HyperDash", HYPER_DASH_COLOUR);
                     Configuration.CustomColours.Add("HyperDashAfterImage", HYPER_DASH_AFTER_IMAGE_COLOUR);
                     Configuration.CustomColours.Add("HyperDashFruit", HYPER_DASH_FRUIT_COLOUR);
@@ -139,6 +131,8 @@ namespace osu.Game.Tests.Beatmaps
             {
                 new Color4(150, 100, 50, 255),
                 new Color4(20, 20, 20, 255),
+                new Color4(75, 50, 25, 255),
+                new Color4(80, 80, 80, 255),
             };
 
             public static readonly Color4 HYPER_DASH_COLOUR = Color4.LightBlue;
@@ -148,11 +142,11 @@ namespace osu.Game.Tests.Beatmaps
             public static readonly Color4 HYPER_DASH_FRUIT_COLOUR = Color4.LightCyan;
 
             public TestSkin(bool hasCustomColours)
-                : base(new SkinInfo(), new ResourceStore<byte[]>(), null, string.Empty)
+                : base(new SkinInfo(), null, null)
             {
                 if (hasCustomColours)
                 {
-                    Configuration.AddComboColours(Colours);
+                    Configuration.CustomComboColours = Colours.ToList();
                     Configuration.CustomColours.Add("HyperDash", HYPER_DASH_COLOUR);
                     Configuration.CustomColours.Add("HyperDashAfterImage", HYPER_DASH_AFTER_IMAGE_COLOUR);
                     Configuration.CustomColours.Add("HyperDashFruit", HYPER_DASH_FRUIT_COLOUR);
@@ -164,6 +158,10 @@ namespace osu.Game.Tests.Beatmaps
                 add { }
                 remove { }
             }
+
+            public ISkin FindProvider(Func<ISkin, bool> lookupFunction) => lookupFunction(this) ? this : null;
+
+            public IEnumerable<ISkin> AllSources => new[] { this };
         }
     }
 }

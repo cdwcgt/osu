@@ -1,14 +1,17 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Graphics.Primitives;
 using osu.Game.Rulesets.Mania.Beatmaps;
 using osu.Game.Rulesets.Mania.Objects;
+using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Drawables;
 using osu.Game.Rulesets.UI.Scrolling;
 using osuTK;
@@ -16,18 +19,42 @@ using osuTK;
 namespace osu.Game.Rulesets.Mania.UI
 {
     [Cached]
-    public class ManiaPlayfield : ScrollingPlayfield
+    public partial class ManiaPlayfield : ScrollingPlayfield
     {
         public IReadOnlyList<Stage> Stages => stages;
 
         private readonly List<Stage> stages = new List<Stage>();
 
-        public override bool ReceivePositionalInputAt(Vector2 screenSpacePos) => stages.Any(s => s.ReceivePositionalInputAt(screenSpacePos));
+        public override Quad SkinnableComponentScreenSpaceDrawQuad
+        {
+            get
+            {
+                RectangleF totalArea = RectangleF.Empty;
+
+                for (int i = 0; i < Stages.Count; ++i)
+                {
+                    var stageArea = Stages[i].ScreenSpaceDrawQuad.AABBFloat;
+                    totalArea = i == 0 ? stageArea : RectangleF.Union(totalArea, stageArea);
+                }
+
+                return totalArea;
+            }
+        }
+
+        public override bool ReceivePositionalInputAt(Vector2 screenSpacePos)
+        {
+            foreach (var s in stages)
+            {
+                if (s.ReceivePositionalInputAt(screenSpacePos))
+                    return true;
+            }
+
+            return false;
+        }
 
         public ManiaPlayfield(List<StageDefinition> stageDefinitions)
         {
-            if (stageDefinitions == null)
-                throw new ArgumentNullException(nameof(stageDefinitions));
+            ArgumentNullException.ThrowIfNull(stageDefinitions);
 
             if (stageDefinitions.Count <= 0)
                 throw new ArgumentException("Can't have zero or fewer stages.");
@@ -52,15 +79,19 @@ namespace osu.Game.Rulesets.Mania.UI
                 stages.Add(newStage);
                 AddNested(newStage);
 
-                firstColumnIndex += newStage.Columns.Count;
+                firstColumnIndex += newStage.Columns.Length;
             }
         }
+
+        public override void Add(HitObject hitObject) => getStageByColumn(((ManiaHitObject)hitObject).Column).Add(hitObject);
+
+        public override bool Remove(HitObject hitObject) => getStageByColumn(((ManiaHitObject)hitObject).Column).Remove(hitObject);
 
         public override void Add(DrawableHitObject h) => getStageByColumn(((ManiaHitObject)h.HitObject).Column).Add(h);
 
         public override bool Remove(DrawableHitObject h) => getStageByColumn(((ManiaHitObject)h.HitObject).Column).Remove(h);
 
-        public void Add(BarLine barline) => stages.ForEach(s => s.Add(barline));
+        public void Add(BarLine barLine) => stages.ForEach(s => s.Add(barLine));
 
         /// <summary>
         /// Retrieves a column from a screen-space position.
@@ -102,9 +133,9 @@ namespace osu.Game.Rulesets.Mania.UI
 
             foreach (var stage in stages)
             {
-                if (index >= stage.Columns.Count)
+                if (index >= stage.Columns.Length)
                 {
-                    index -= stage.Columns.Count;
+                    index -= stage.Columns.Length;
                     continue;
                 }
 
@@ -117,7 +148,18 @@ namespace osu.Game.Rulesets.Mania.UI
         /// <summary>
         /// Retrieves the total amount of columns across all stages in this playfield.
         /// </summary>
-        public int TotalColumns => stages.Sum(s => s.Columns.Count);
+        public int TotalColumns
+        {
+            get
+            {
+                int sum = 0;
+
+                foreach (var stage in stages)
+                    sum += stage.Columns.Length;
+
+                return sum;
+            }
+        }
 
         private Stage getStageByColumn(int column)
         {
@@ -125,7 +167,7 @@ namespace osu.Game.Rulesets.Mania.UI
 
             foreach (var stage in stages)
             {
-                sum += stage.Columns.Count;
+                sum += stage.Columns.Length;
                 if (sum > column)
                     return stage;
             }

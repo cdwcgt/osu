@@ -13,16 +13,16 @@ using osuTK;
 
 namespace osu.Game.Tournament.Components
 {
-    public class DrawableTeamFlag : Container
+    public partial class DrawableTeamFlag : Container
     {
-        private readonly TournamentTeam team;
+        private readonly TournamentTeam? team;
 
         [UsedImplicitly]
-        private Bindable<string> flag;
+        private Bindable<string>? flag;
 
-        private Sprite flagSprite;
+        private Sprite? flagSprite;
 
-        public DrawableTeamFlag(TournamentTeam team)
+        public DrawableTeamFlag(TournamentTeam? team)
         {
             this.team = team;
         }
@@ -32,7 +32,7 @@ namespace osu.Game.Tournament.Components
         {
             if (team == null) return;
 
-            Size = new Vector2(75, 50);
+            Size = new Vector2(75, 54);
             Masking = true;
             CornerRadius = 5;
             Child = flagSprite = new Sprite
@@ -43,7 +43,7 @@ namespace osu.Game.Tournament.Components
                 FillMode = FillMode.Fill
             };
 
-            (flag = team.FlagName.GetBoundCopy()).BindValueChanged(acronym => flagSprite.Texture = textures.Get($@"Flags/{team.FlagName}"), true);
+            (flag = team.FlagName.GetBoundCopy()).BindValueChanged(_ => flagSprite.Texture = textures.Get($@"Flags/{team.FlagName}"), true);
         }
     }
 }

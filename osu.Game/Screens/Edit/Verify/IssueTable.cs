@@ -8,6 +8,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Input.Events;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Input.Bindings;
@@ -15,19 +16,21 @@ using osu.Game.Rulesets.Edit.Checks.Components;
 
 namespace osu.Game.Screens.Edit.Verify
 {
-    public class IssueTable : EditorTable
+    public partial class IssueTable : EditorTable
     {
-        [Resolved]
-        private Bindable<Issue> selectedIssue { get; set; }
+        private Bindable<Issue> selectedIssue = null!;
 
         [Resolved]
-        private EditorClock clock { get; set; }
+        private VerifyScreen verify { get; set; } = null!;
 
         [Resolved]
-        private EditorBeatmap editorBeatmap { get; set; }
+        private EditorClock clock { get; set; } = null!;
 
         [Resolved]
-        private Editor editor { get; set; }
+        private EditorBeatmap editorBeatmap { get; set; } = null!;
+
+        [Resolved]
+        private Editor editor { get; set; } = null!;
 
         public IEnumerable<Issue> Issues
         {
@@ -36,7 +39,7 @@ namespace osu.Game.Screens.Edit.Verify
                 Content = null;
                 BackgroundFlow.Clear();
 
-                if (value == null)
+                if (!value.Any())
                     return;
 
                 foreach (var issue in value)
@@ -50,7 +53,7 @@ namespace osu.Game.Screens.Edit.Verify
                             if (issue.Time != null)
                             {
                                 clock.Seek(issue.Time.Value);
-                                editor.OnPressed(GlobalAction.EditorComposeMode);
+                                editor.OnPressed(new KeyBindingPressEvent<GlobalAction>(GetContainingInputManager().CurrentState, GlobalAction.EditorComposeMode));
                             }
 
                             if (!issue.HitObjects.Any())
@@ -71,9 +74,10 @@ namespace osu.Game.Screens.Edit.Verify
         {
             base.LoadComplete();
 
+            selectedIssue = verify.SelectedIssue.GetBoundCopy();
             selectedIssue.BindValueChanged(issue =>
             {
-                foreach (var b in BackgroundFlow) b.Selected = b.Item == issue.NewValue;
+                SetSelectedRow(issue.NewValue);
             }, true);
         }
 

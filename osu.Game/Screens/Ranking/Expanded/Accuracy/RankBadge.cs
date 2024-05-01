@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using osu.Framework.Allocation;
 using osu.Framework.Extensions.Color4Extensions;
@@ -18,14 +20,19 @@ namespace osu.Game.Screens.Ranking.Expanded.Accuracy
     /// <summary>
     /// Contains a <see cref="DrawableRank"/> that is positioned around the <see cref="AccuracyCircle"/>.
     /// </summary>
-    public class RankBadge : CompositeDrawable
+    public partial class RankBadge : CompositeDrawable
     {
         /// <summary>
         /// The accuracy value corresponding to the <see cref="ScoreRank"/> displayed by this badge.
         /// </summary>
-        public readonly float Accuracy;
+        public readonly double Accuracy;
 
-        private readonly ScoreRank rank;
+        /// <summary>
+        /// The position around the <see cref="AccuracyCircle"/> to display this badge.
+        /// </summary>
+        private readonly double displayPosition;
+
+        public readonly ScoreRank Rank;
 
         private Drawable rankContainer;
         private Drawable overlay;
@@ -34,11 +41,13 @@ namespace osu.Game.Screens.Ranking.Expanded.Accuracy
         /// Creates a new <see cref="RankBadge"/>.
         /// </summary>
         /// <param name="accuracy">The accuracy value corresponding to <paramref name="rank"/>.</param>
+        /// <param name="position">The position around the <see cref="AccuracyCircle"/> to display this badge.</param>
         /// <param name="rank">The <see cref="ScoreRank"/> to be displayed in this <see cref="RankBadge"/>.</param>
-        public RankBadge(float accuracy, ScoreRank rank)
+        public RankBadge(double accuracy, double position, ScoreRank rank)
         {
             Accuracy = accuracy;
-            this.rank = rank;
+            displayPosition = position;
+            Rank = rank;
 
             RelativeSizeAxes = Axes.Both;
             Alpha = 0;
@@ -53,7 +62,7 @@ namespace osu.Game.Screens.Ranking.Expanded.Accuracy
                 Size = new Vector2(28, 14),
                 Children = new[]
                 {
-                    new DrawableRank(rank),
+                    new DrawableRank(Rank),
                     overlay = new CircularContainer
                     {
                         RelativeSizeAxes = Axes.Both,
@@ -62,7 +71,7 @@ namespace osu.Game.Screens.Ranking.Expanded.Accuracy
                         EdgeEffect = new EdgeEffectParameters
                         {
                             Type = EdgeEffectType.Glow,
-                            Colour = OsuColour.ForRank(rank).Opacity(0.2f),
+                            Colour = OsuColour.ForRank(Rank).Opacity(0.2f),
                             Radius = 10,
                         },
                         Child = new Box
@@ -90,7 +99,7 @@ namespace osu.Game.Screens.Ranking.Expanded.Accuracy
             base.Update();
 
             // Starts at -90deg (top) and moves counter-clockwise by the accuracy
-            rankContainer.Position = circlePosition(-MathF.PI / 2 - (1 - Accuracy) * MathF.PI * 2);
+            rankContainer.Position = circlePosition(-MathF.PI / 2 - (1 - (float)displayPosition) * MathF.PI * 2);
         }
 
         private Vector2 circlePosition(float t)

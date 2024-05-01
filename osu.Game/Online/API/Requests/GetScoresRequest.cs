@@ -9,53 +9,34 @@ using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Rulesets.Mods;
 using System.Text;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Linq;
 
 namespace osu.Game.Online.API.Requests
 {
-    public class GetScoresRequest : APIRequest<APILegacyScores>
+    public class GetScoresRequest : APIRequest<APIScoresCollection>, IEquatable<GetScoresRequest>
     {
-        private readonly BeatmapInfo beatmap;
-        private readonly BeatmapLeaderboardScope scope;
-        private readonly RulesetInfo ruleset;
-        private readonly IEnumerable<Mod> mods;
+        public const int MAX_SCORES_PER_REQUEST = 50;
 
-        public GetScoresRequest(BeatmapInfo beatmap, RulesetInfo ruleset, BeatmapLeaderboardScope scope = BeatmapLeaderboardScope.Global, IEnumerable<Mod> mods = null)
+        private readonly IBeatmapInfo beatmapInfo;
+        private readonly BeatmapLeaderboardScope scope;
+        private readonly IRulesetInfo ruleset;
+        private readonly IEnumerable<IMod> mods;
+
+        public GetScoresRequest(IBeatmapInfo beatmapInfo, IRulesetInfo ruleset, BeatmapLeaderboardScope scope = BeatmapLeaderboardScope.Global, IEnumerable<IMod>? mods = null)
         {
-            if (!beatmap.OnlineBeatmapID.HasValue)
-                throw new InvalidOperationException($"Cannot lookup a beatmap's scores without having a populated {nameof(BeatmapInfo.OnlineBeatmapID)}.");
+            if (beatmapInfo.OnlineID <= 0)
+                throw new InvalidOperationException($"Cannot lookup a beatmap's scores without having a populated {nameof(IBeatmapInfo.OnlineID)}.");
 
             if (scope == BeatmapLeaderboardScope.Local)
                 throw new InvalidOperationException("Should not attempt to request online scores for a local scoped leaderboard");
 
-            this.beatmap = beatmap;
+            this.beatmapInfo = beatmapInfo;
             this.scope = scope;
             this.ruleset = ruleset ?? throw new ArgumentNullException(nameof(ruleset));
-            this.mods = mods ?? Array.Empty<Mod>();
-
-            Success += onSuccess;
+            this.mods = mods ?? Array.Empty<IMod>();
         }
 
-        private void onSuccess(APILegacyScores r)
-        {
-            Debug.Assert(ruleset.ID != null, "ruleset.ID != null");
-
-            foreach (APILegacyScoreInfo score in r.Scores)
-            {
-                score.Beatmap = beatmap;
-                score.OnlineRulesetID = ruleset.ID.Value;
-            }
-
-            var userScore = r.UserScore;
-
-            if (userScore != null)
-            {
-                userScore.Score.Beatmap = beatmap;
-                userScore.Score.OnlineRulesetID = ruleset.ID.Value;
-            }
-        }
-
-        protected override string Target => $@"beatmaps/{beatmap.OnlineBeatmapID}/scores{createQueryParameters()}";
+        protected override string Target => $@"beatmaps/{beatmapInfo.OnlineID}/solo-scores{createQueryParameters()}";
 
         private string createQueryParameters()
         {
@@ -68,6 +49,17 @@ namespace osu.Game.Online.API.Requests
                 query.Append($@"&mods[]={mod.Acronym}");
 
             return query.ToString();
+        }
+
+        public bool Equals(GetScoresRequest? other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return beatmapInfo.Equals(other.beatmapInfo)
+                   && scope == other.scope
+                   && ruleset.Equals(other.ruleset)
+                   && mods.SequenceEqual(other.mods);
         }
     }
 }

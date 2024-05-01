@@ -4,47 +4,36 @@
 using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Extensions;
+using osu.Framework.Localisation;
+using osu.Game.Resources.Localisation.Web;
 using osu.Game.Scoring;
 
 namespace osu.Game.Overlays.BeatmapListing
 {
-    public class BeatmapSearchScoreFilterRow : BeatmapSearchMultipleSelectionFilterRow<ScoreRank>
+    public partial class BeatmapSearchScoreFilterRow : BeatmapSearchMultipleSelectionFilterRow<ScoreRank>
     {
         public BeatmapSearchScoreFilterRow()
-            : base(@"Rank Achieved")
+            : base(BeatmapsStrings.ListingSearchFiltersRank)
         {
         }
 
         protected override MultipleSelectionFilter CreateMultipleSelectionFilter() => new RankFilter();
 
-        private class RankFilter : MultipleSelectionFilter
+        private partial class RankFilter : MultipleSelectionFilter
         {
             protected override MultipleSelectionFilterTabItem CreateTabItem(ScoreRank value) => new RankItem(value);
 
-            protected override IEnumerable<ScoreRank> GetValues() => base.GetValues().Reverse();
+            protected override IEnumerable<ScoreRank> GetValues() => base.GetValues().Where(r => r > ScoreRank.F).Reverse();
         }
 
-        private class RankItem : MultipleSelectionFilterTabItem
+        private partial class RankItem : MultipleSelectionFilterTabItem
         {
             public RankItem(ScoreRank value)
                 : base(value)
             {
             }
 
-            protected override string LabelFor(ScoreRank value)
-            {
-                switch (value)
-                {
-                    case ScoreRank.XH:
-                        return @"Silver SS";
-
-                    case ScoreRank.SH:
-                        return @"Silver S";
-
-                    default:
-                        return value.GetDescription();
-                }
-            }
+            protected override LocalisableString LabelFor(ScoreRank value) => value.GetLocalisableDescription();
         }
     }
 }

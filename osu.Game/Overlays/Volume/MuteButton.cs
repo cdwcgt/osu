@@ -17,7 +17,7 @@ using osuTK.Graphics;
 
 namespace osu.Game.Overlays.Volume
 {
-    public class MuteButton : OsuButton, IHasCurrentValue<bool>
+    public partial class MuteButton : OsuButton, IHasCurrentValue<bool>
     {
         private readonly Bindable<bool> current = new Bindable<bool>();
 
@@ -26,8 +26,7 @@ namespace osu.Game.Overlays.Volume
             get => current;
             set
             {
-                if (value == null)
-                    throw new ArgumentNullException(nameof(value));
+                ArgumentNullException.ThrowIfNull(value);
 
                 current.UnbindBindings();
                 current.BindTo(value);
@@ -79,13 +78,21 @@ namespace osu.Game.Overlays.Volume
 
         protected override bool OnHover(HoverEvent e)
         {
-            Content.TransformTo<Container<Drawable>, SRGBColour>("BorderColour", hoveredColour, 500, Easing.OutQuint);
+            Content.TransformTo<Container<Drawable>, ColourInfo>("BorderColour", hoveredColour, 500, Easing.OutQuint);
             return false;
         }
 
         protected override void OnHoverLost(HoverLostEvent e)
         {
-            Content.TransformTo<Container<Drawable>, SRGBColour>("BorderColour", unhoveredColour, 500, Easing.OutQuint);
+            Content.TransformTo<Container<Drawable>, ColourInfo>("BorderColour", unhoveredColour, 500, Easing.OutQuint);
+        }
+
+        protected override bool OnMouseDown(MouseDownEvent e)
+        {
+            base.OnMouseDown(e);
+
+            // Block mouse down to avoid dismissing overlays sitting behind the mute button
+            return true;
         }
     }
 }

@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using NUnit.Framework;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -10,7 +12,7 @@ using osu.Game.Rulesets.UI;
 
 namespace osu.Game.Tests.Visual.Gameplay
 {
-    public class TestSceneFrameStabilityContainer : OsuTestScene
+    public partial class TestSceneFrameStabilityContainer : OsuTestScene
     {
         private readonly ManualClock manualClock;
 
@@ -103,20 +105,49 @@ namespace osu.Game.Tests.Visual.Gameplay
             checkFrameCount(0);
         }
 
-        private const int max_frames_catchup = 50;
+        [Test]
+        public void TestRatePreservedWhenTimeNotProgressing()
+        {
+            AddStep("set manual clock rate", () => manualClock.Rate = 1);
+            seekManualTo(5000);
+            createStabilityContainer();
+            checkRate(1);
+
+            seekManualTo(10000);
+            checkRate(1);
+
+            AddWaitStep("wait some", 3);
+            checkRate(1);
+
+            seekManualTo(5000);
+            checkRate(-1);
+
+            AddWaitStep("wait some", 3);
+            checkRate(-1);
+
+            seekManualTo(10000);
+            checkRate(1);
+        }
 
         private void createStabilityContainer(double gameplayStartTime = double.MinValue) => AddStep("create container", () =>
-            mainContainer.Child = new FrameStabilityContainer(gameplayStartTime) { MaxCatchUpFrames = max_frames_catchup }
-                .WithChild(consumer = new ClockConsumingChild()));
+        {
+            mainContainer.Child = new FrameStabilityContainer(gameplayStartTime)
+            {
+                AllowBackwardsSeeks = true,
+            }.WithChild(consumer = new ClockConsumingChild());
+        });
 
         private void seekManualTo(double time) => AddStep($"seek manual clock to {time}", () => manualClock.CurrentTime = time);
 
-        private void confirmSeek(double time) => AddUntilStep($"wait for seek to {time}", () => consumer.Clock.CurrentTime == time);
+        private void confirmSeek(double time) => AddUntilStep($"wait for seek to {time}", () => consumer.Clock.CurrentTime, () => Is.EqualTo(time));
 
         private void checkFrameCount(int frames) =>
-            AddAssert($"elapsed frames is {frames}", () => consumer.ElapsedFrames == frames);
+            AddAssert($"elapsed frames is {frames}", () => consumer.ElapsedFrames, () => Is.EqualTo(frames));
 
-        public class ClockConsumingChild : CompositeDrawable
+        private void checkRate(double rate) =>
+            AddAssert($"clock rate is {rate}", () => consumer.Clock.Rate, () => Is.EqualTo(rate));
+
+        public partial class ClockConsumingChild : CompositeDrawable
         {
             private readonly OsuSpriteText text;
             private readonly OsuSpriteText text2;

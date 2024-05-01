@@ -7,14 +7,14 @@ using osu.Game.Graphics.UserInterface;
 
 namespace osu.Game.Tournament.Screens.Setup
 {
-    internal class ResolutionSelector : ActionableInfo
+    internal partial class ResolutionSelector : ActionableInfo
     {
         private const int minimum_window_height = 480;
         private const int maximum_window_height = 2160;
 
-        public new Action<int> Action;
+        public new Action<int>? Action;
 
-        private OsuNumberBox numberBox;
+        private OsuNumberBox? numberBox;
 
         protected override Drawable CreateComponent()
         {
@@ -31,7 +31,7 @@ namespace osu.Game.Tournament.Screens.Setup
                     return;
 
                 // box contains text
-                if (!int.TryParse(numberBox.Text, out var number))
+                if (!int.TryParse(numberBox.Text, out int number))
                 {
                     // at this point, the only reason we can arrive here is if the input number was too big to parse into an int
                     // so clamp to max allowed value

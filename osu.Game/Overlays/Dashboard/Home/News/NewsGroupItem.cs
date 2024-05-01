@@ -3,6 +3,7 @@
 
 using System;
 using osu.Framework.Allocation;
+using osu.Framework.Extensions.LocalisationExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Cursor;
@@ -12,7 +13,7 @@ using osu.Game.Online.API.Requests.Responses;
 
 namespace osu.Game.Overlays.Dashboard.Home.News
 {
-    public class NewsGroupItem : CompositeDrawable
+    public partial class NewsGroupItem : CompositeDrawable
     {
         private readonly APINewsPost post;
 
@@ -67,12 +68,8 @@ namespace osu.Game.Overlays.Dashboard.Home.News
             };
         }
 
-        private class Date : CompositeDrawable, IHasCustomTooltip
+        private partial class Date : CompositeDrawable, IHasCustomTooltip<DateTimeOffset>
         {
-            public ITooltip GetCustomTooltip() => new DateTooltip();
-
-            public object TooltipContent => date;
-
             private readonly DateTimeOffset date;
 
             public Date(DateTimeOffset date)
@@ -100,16 +97,20 @@ namespace osu.Game.Overlays.Dashboard.Home.News
                     Margin = new MarginPadding { Vertical = 5 }
                 };
 
-                textFlow.AddText($"{date:dd}", t =>
+                textFlow.AddText(date.ToLocalisableString(@"dd"), t =>
                 {
                     t.Font = OsuFont.GetFont(size: 14, weight: FontWeight.Bold);
                 });
 
-                textFlow.AddText($"{date: MMM}", t =>
+                textFlow.AddText(date.ToLocalisableString(@" MMM"), t =>
                 {
                     t.Font = OsuFont.GetFont(size: 14, weight: FontWeight.Regular);
                 });
             }
+
+            ITooltip<DateTimeOffset> IHasCustomTooltip<DateTimeOffset>.GetCustomTooltip() => new DateTooltip();
+
+            DateTimeOffset IHasCustomTooltip<DateTimeOffset>.TooltipContent => date;
         }
     }
 }

@@ -5,13 +5,15 @@ using NUnit.Framework;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Localisation;
 using osu.Game.Configuration;
+using osu.Game.Overlays.Settings;
 using osuTK;
 
 namespace osu.Game.Tests.Visual.Settings
 {
     [TestFixture]
-    public class TestSceneSettingsSource : OsuTestScene
+    public partial class TestSceneSettingsSource : OsuTestScene
     {
         public TestSceneSettingsSource()
         {
@@ -36,6 +38,9 @@ namespace osu.Game.Tests.Visual.Settings
             [SettingSource("Sample bool", "Clicking this changes a setting")]
             public BindableBool TickBindable { get; } = new BindableBool();
 
+            [SettingSource(typeof(TestStrings), nameof(TestStrings.LocalisableLabel), nameof(TestStrings.LocalisableDescription))]
+            public BindableBool LocalisableBindable { get; } = new BindableBool(true);
+
             [SettingSource("Sample float", "Change something for a mod")]
             public BindableFloat SliderBindable { get; } = new BindableFloat
             {
@@ -53,13 +58,26 @@ namespace osu.Game.Tests.Visual.Settings
             };
 
             [SettingSource("Sample string", "Change something for a mod")]
-            public Bindable<string> StringBindable { get; } = new Bindable<string>();
+            public Bindable<string> StringBindable { get; } = new Bindable<string>
+            {
+                Default = string.Empty,
+                Value = "Sample text"
+            };
+
+            [SettingSource("Sample number textbox", "Textbox number entry", SettingControlType = typeof(SettingsNumberBox))]
+            public Bindable<int?> IntTextBoxBindable { get; } = new Bindable<int?>();
         }
 
         private enum TestEnum
         {
             Value1,
             Value2
+        }
+
+        private class TestStrings
+        {
+            public static LocalisableString LocalisableLabel => new LocalisableString("Sample localisable label");
+            public static LocalisableString LocalisableDescription => new LocalisableString("Sample localisable description");
         }
     }
 }

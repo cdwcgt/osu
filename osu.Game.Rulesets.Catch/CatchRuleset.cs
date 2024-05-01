@@ -1,43 +1,54 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using osu.Game.Beatmaps;
-using osu.Game.Graphics;
-using osu.Game.Rulesets.Catch.Mods;
-using osu.Game.Rulesets.Catch.UI;
-using osu.Game.Rulesets.Mods;
-using osu.Game.Rulesets.UI;
+using System;
 using System.Collections.Generic;
+using osu.Framework.Extensions.EnumExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input.Bindings;
-using osu.Game.Rulesets.Catch.Replays;
-using osu.Game.Rulesets.Replays.Types;
+using osu.Framework.Localisation;
+using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Legacy;
+using osu.Game.Graphics;
 using osu.Game.Rulesets.Catch.Beatmaps;
 using osu.Game.Rulesets.Catch.Difficulty;
+using osu.Game.Rulesets.Catch.Edit;
+using osu.Game.Rulesets.Catch.Mods;
+using osu.Game.Rulesets.Catch.Objects;
+using osu.Game.Rulesets.Catch.Replays;
 using osu.Game.Rulesets.Catch.Scoring;
-using osu.Game.Rulesets.Difficulty;
-using osu.Game.Rulesets.Scoring;
-using osu.Game.Scoring;
-using System;
-using osu.Framework.Extensions.EnumExtensions;
+using osu.Game.Rulesets.Catch.Skinning.Argon;
 using osu.Game.Rulesets.Catch.Skinning.Legacy;
+using osu.Game.Rulesets.Catch.UI;
+using osu.Game.Rulesets.Difficulty;
+using osu.Game.Rulesets.Edit;
+using osu.Game.Rulesets.Mods;
+using osu.Game.Rulesets.Replays.Types;
+using osu.Game.Rulesets.Scoring;
+using osu.Game.Rulesets.Scoring.Legacy;
+using osu.Game.Rulesets.UI;
+using osu.Game.Scoring;
+using osu.Game.Screens.Ranking.Statistics;
 using osu.Game.Skinning;
 
 namespace osu.Game.Rulesets.Catch
 {
     public class CatchRuleset : Ruleset, ILegacyRuleset
     {
-        public override DrawableRuleset CreateDrawableRulesetWith(IBeatmap beatmap, IReadOnlyList<Mod> mods = null) => new DrawableCatchRuleset(this, beatmap, mods);
+        public override DrawableRuleset CreateDrawableRulesetWith(IBeatmap beatmap, IReadOnlyList<Mod>? mods = null) => new DrawableCatchRuleset(this, beatmap, mods);
 
         public override ScoreProcessor CreateScoreProcessor() => new CatchScoreProcessor();
+
+        public override HealthProcessor CreateHealthProcessor(double drainStartTime) => new CatchHealthProcessor(drainStartTime);
 
         public override IBeatmapConverter CreateBeatmapConverter(IBeatmap beatmap) => new CatchBeatmapConverter(beatmap, this);
 
         public override IBeatmapProcessor CreateBeatmapProcessor(IBeatmap beatmap) => new CatchBeatmapProcessor(beatmap);
 
         public const string SHORT_NAME = "fruits";
+
+        public override string RulesetAPIVersionSupported => CURRENT_RULESET_API_VERSION;
 
         public override IEnumerable<KeyBinding> GetDefaultKeyBindings(int variant = 0) => new[]
         {
@@ -46,7 +57,7 @@ namespace osu.Game.Rulesets.Catch
             new KeyBinding(InputKey.X, CatchAction.MoveRight),
             new KeyBinding(InputKey.Right, CatchAction.MoveRight),
             new KeyBinding(InputKey.Shift, CatchAction.Dash),
-            new KeyBinding(InputKey.Shift, CatchAction.Dash),
+            new KeyBinding(InputKey.MouseLeft, CatchAction.Dash),
         };
 
         public override IEnumerable<Mod> ConvertFromLegacyMods(LegacyMods mods)
@@ -86,6 +97,9 @@ namespace osu.Game.Rulesets.Catch
 
             if (mods.HasFlagFast(LegacyMods.Relax))
                 yield return new CatchModRelax();
+
+            if (mods.HasFlagFast(LegacyMods.ScoreV2))
+                yield return new ModScoreV2();
         }
 
         public override IEnumerable<Mod> GetModsFor(ModType type)
@@ -108,6 +122,7 @@ namespace osu.Game.Rulesets.Catch
                         new MultiMod(new CatchModDoubleTime(), new CatchModNightcore()),
                         new CatchModHidden(),
                         new CatchModFlashlight(),
+                        new ModAccuracyChallenge(),
                     };
 
                 case ModType.Conversion:
@@ -115,6 +130,7 @@ namespace osu.Game.Rulesets.Catch
                     {
                         new CatchModDifficultyAdjust(),
                         new CatchModClassic(),
+                        new CatchModMirror(),
                     };
 
                 case ModType.Automation:
@@ -128,7 +144,15 @@ namespace osu.Game.Rulesets.Catch
                     return new Mod[]
                     {
                         new MultiMod(new ModWindUp(), new ModWindDown()),
-                        new CatchModFloatingFruits()
+                        new CatchModFloatingFruits(),
+                        new CatchModMuted(),
+                        new CatchModNoScope(),
+                    };
+
+                case ModType.System:
+                    return new Mod[]
+                    {
+                        new ModScoreV2(),
                     };
 
                 default:
@@ -156,31 +180,73 @@ namespace osu.Game.Rulesets.Catch
             };
         }
 
-        public override string GetDisplayNameForHitResult(HitResult result)
+        public override LocalisableString GetDisplayNameForHitResult(HitResult result)
         {
             switch (result)
             {
                 case HitResult.LargeTickHit:
-                    return "large droplet";
+                    return "Large droplet";
 
                 case HitResult.SmallTickHit:
-                    return "small droplet";
+                    return "Small droplet";
 
                 case HitResult.LargeBonus:
-                    return "banana";
+                    return "Banana";
             }
 
             return base.GetDisplayNameForHitResult(result);
         }
 
-        public override DifficultyCalculator CreateDifficultyCalculator(WorkingBeatmap beatmap) => new CatchDifficultyCalculator(this, beatmap);
+        public override DifficultyCalculator CreateDifficultyCalculator(IWorkingBeatmap beatmap) => new CatchDifficultyCalculator(RulesetInfo, beatmap);
 
-        public override ISkin CreateLegacySkinProvider(ISkinSource source, IBeatmap beatmap) => new CatchLegacySkinTransformer(source);
+        public override ISkin? CreateSkinTransformer(ISkin skin, IBeatmap beatmap)
+        {
+            switch (skin)
+            {
+                case LegacySkin:
+                    return new CatchLegacySkinTransformer(skin);
 
-        public override PerformanceCalculator CreatePerformanceCalculator(DifficultyAttributes attributes, ScoreInfo score) => new CatchPerformanceCalculator(this, attributes, score);
+                case ArgonSkin:
+                    return new CatchArgonSkinTransformer(skin);
+            }
+
+            return null;
+        }
+
+        public override PerformanceCalculator CreatePerformanceCalculator() => new CatchPerformanceCalculator();
 
         public int LegacyID => 2;
 
+        public ILegacyScoreSimulator CreateLegacyScoreSimulator() => new CatchLegacyScoreSimulator();
+
         public override IConvertibleReplayFrame CreateConvertibleReplayFrame() => new CatchReplayFrame();
+
+        public override HitObjectComposer CreateHitObjectComposer() => new CatchHitObjectComposer(this);
+
+        public override IBeatmapVerifier CreateBeatmapVerifier() => new CatchBeatmapVerifier();
+
+        public override StatisticItem[] CreateStatisticsForScore(ScoreInfo score, IBeatmap playableBeatmap)
+        {
+            return new[]
+            {
+                new StatisticItem("Performance Breakdown", () => new PerformanceBreakdownChart(score, playableBeatmap)
+                {
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y
+                }),
+            };
+        }
+
+        /// <seealso cref="CatchHitObject.ApplyDefaultsToSelf"/>
+        public override BeatmapDifficulty GetRateAdjustedDisplayDifficulty(IBeatmapDifficultyInfo difficulty, double rate)
+        {
+            BeatmapDifficulty adjustedDifficulty = new BeatmapDifficulty(difficulty);
+
+            double preempt = IBeatmapDifficultyInfo.DifficultyRange(adjustedDifficulty.ApproachRate, CatchHitObject.PREEMPT_MAX, CatchHitObject.PREEMPT_MID, CatchHitObject.PREEMPT_MIN);
+            preempt /= rate;
+            adjustedDifficulty.ApproachRate = (float)IBeatmapDifficultyInfo.InverseDifficultyRange(preempt, CatchHitObject.PREEMPT_MAX, CatchHitObject.PREEMPT_MID, CatchHitObject.PREEMPT_MIN);
+
+            return adjustedDifficulty;
+        }
     }
 }

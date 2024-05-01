@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using Newtonsoft.Json;
-using osu.Game.Users;
 using System;
 
 namespace osu.Game.Online.API.Requests.Responses
@@ -15,18 +14,18 @@ namespace osu.Game.Online.API.Requests.Responses
         [JsonProperty(@"parent_id")]
         public long? ParentId { get; set; }
 
-        public Comment ParentComment { get; set; }
+        public Comment? ParentComment { get; set; }
 
         [JsonProperty(@"user_id")]
         public long? UserId { get; set; }
 
-        public User User { get; set; }
+        public APIUser? User { get; set; }
 
         [JsonProperty(@"message")]
-        public string Message { get; set; }
+        public string Message { get; set; } = null!;
 
         [JsonProperty(@"message_html")]
-        public string MessageHtml { get; set; }
+        public string? MessageHtml { get; set; }
 
         [JsonProperty(@"replies_count")]
         public int RepliesCount { get; set; }
@@ -34,14 +33,14 @@ namespace osu.Game.Online.API.Requests.Responses
         [JsonProperty(@"votes_count")]
         public int VotesCount { get; set; }
 
-        [JsonProperty(@"commenatble_type")]
-        public string CommentableType { get; set; }
+        [JsonProperty(@"commentable_type")]
+        public string CommentableType { get; set; } = null!;
 
         [JsonProperty(@"commentable_id")]
         public int CommentableId { get; set; }
 
         [JsonProperty(@"legacy_name")]
-        public string LegacyName { get; set; }
+        public string? LegacyName { get; set; }
 
         [JsonProperty(@"created_at")]
         public DateTimeOffset CreatedAt { get; set; }
@@ -58,7 +57,10 @@ namespace osu.Game.Online.API.Requests.Responses
         [JsonProperty(@"edited_by_id")]
         public long? EditedById { get; set; }
 
-        public User EditedUser { get; set; }
+        [JsonProperty(@"pinned")]
+        public bool Pinned { get; set; }
+
+        public APIUser? EditedUser { get; set; }
 
         public bool IsTopLevel => !ParentId.HasValue;
 

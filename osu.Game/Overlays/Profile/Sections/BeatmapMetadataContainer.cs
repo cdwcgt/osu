@@ -12,35 +12,32 @@ namespace osu.Game.Overlays.Profile.Sections
     /// <summary>
     /// Display artist/title/mapper information, commonly used as the left portion of a profile or score display row.
     /// </summary>
-    public abstract class BeatmapMetadataContainer : OsuHoverContainer
+    public abstract partial class BeatmapMetadataContainer : OsuHoverContainer
     {
-        private readonly BeatmapInfo beatmap;
+        private readonly IBeatmapInfo beatmapInfo;
 
-        protected BeatmapMetadataContainer(BeatmapInfo beatmap)
+        protected BeatmapMetadataContainer(IBeatmapInfo beatmapInfo)
         {
-            this.beatmap = beatmap;
+            this.beatmapInfo = beatmapInfo;
 
             AutoSizeAxes = Axes.Both;
         }
 
-        [BackgroundDependencyLoader(true)]
-        private void load(BeatmapSetOverlay beatmapSetOverlay)
+        [BackgroundDependencyLoader]
+        private void load(BeatmapSetOverlay? beatmapSetOverlay)
         {
             Action = () =>
             {
-                if (beatmap.OnlineBeatmapID != null)
-                    beatmapSetOverlay?.FetchAndShowBeatmap(beatmap.OnlineBeatmapID.Value);
-                else if (beatmap.BeatmapSet?.OnlineBeatmapSetID != null)
-                    beatmapSetOverlay?.FetchAndShowBeatmapSet(beatmap.BeatmapSet.OnlineBeatmapSetID.Value);
+                beatmapSetOverlay?.FetchAndShowBeatmap(beatmapInfo.OnlineID);
             };
 
             Child = new FillFlowContainer
             {
                 AutoSizeAxes = Axes.Both,
-                Children = CreateText(beatmap),
+                Children = CreateText(beatmapInfo),
             };
         }
 
-        protected abstract Drawable[] CreateText(BeatmapInfo beatmap);
+        protected abstract Drawable[] CreateText(IBeatmapInfo beatmapInfo);
     }
 }

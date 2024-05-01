@@ -1,32 +1,39 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
-using osuTK.Graphics;
-using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Cursor;
-using osu.Framework.Graphics.Effects;
-using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.UserInterface;
-using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
+using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
+using osu.Game.Graphics.Containers;
 using osuTK;
 
 namespace osu.Game.Overlays.Settings
 {
-    public abstract class SettingsItem<T> : Container, IFilterable, ISettingsItem, IHasCurrentValue<T>, IHasTooltip
+    public abstract partial class SettingsItem<T> : Container, IConditionalFilterable, ISettingsItem, IHasCurrentValue<T>, IHasTooltip
     {
         protected abstract Drawable CreateControl();
 
         protected Drawable Control { get; }
+
+        /// <summary>
+        /// The source component if this <see cref="SettingsItem{T}"/> was created via <see cref="SettingSourceAttribute"/>.
+        /// </summary>
+        public object SettingSourceObject { get; internal set; }
+
+        public const string CLASSIC_DEFAULT_SEARCH_TERM = @"has-classic-default";
 
         private IHasCurrentValue<T> controlWithCurrent => Control as IHasCurrentValue<T>;
 
@@ -36,9 +43,15 @@ namespace osu.Game.Overlays.Settings
 
         private SpriteText labelText;
 
-        public bool ShowsDefaultIndicator = true;
+        private OsuTextFlowContainer noticeText;
 
-        public string TooltipText { get; set; }
+        public bool ShowsDefaultIndicator = true;
+        private readonly Container defaultValueIndicatorContainer;
+
+        public LocalisableString TooltipText { get; set; }
+
+        [Resolved]
+        private OsuColour colours { get; set; }
 
         public virtual LocalisableString LabelText
         {
@@ -54,7 +67,37 @@ namespace osu.Game.Overlays.Settings
                 }
 
                 labelText.Text = value;
+                updateLayout();
             }
+        }
+
+        /// <summary>
+        /// Clear any warning text.
+        /// </summary>
+        public void ClearNoticeText()
+        {
+            noticeText?.Expire();
+            noticeText = null;
+        }
+
+        /// <summary>
+        /// Set the text to be displayed at the bottom of this <see cref="SettingsItem{T}"/>.
+        /// Generally used to provide feedback to a user about a sub-optimal setting.
+        /// </summary>
+        /// <param name="text">The text to display.</param>
+        /// <param name="isWarning">Whether the text is in a warning state. Will decide how this is visually represented.</param>
+        public void SetNoticeText(LocalisableString text, bool isWarning = false)
+        {
+            ClearNoticeText();
+
+            // construct lazily for cases where the label is not needed (may be provided by the Control).
+            FlowContent.Add(noticeText = new LinkFlowContainer(cp => cp.Colour = isWarning ? colours.Yellow : colours.Green)
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Margin = new MarginPadding { Bottom = 5 },
+                Text = text,
+            });
         }
 
         public virtual Bindable<T> Current
@@ -63,156 +106,140 @@ namespace osu.Game.Overlays.Settings
             set => controlWithCurrent.Current = value;
         }
 
-        public virtual IEnumerable<string> FilterTerms => Keywords == null ? new[] { LabelText.ToString() } : new List<string>(Keywords) { LabelText.ToString() }.ToArray();
+        public virtual IEnumerable<LocalisableString> FilterTerms
+        {
+            get
+            {
+                var keywords = new List<LocalisableString>(Keywords?.Select(k => (LocalisableString)k) ?? Array.Empty<LocalisableString>())
+                {
+                    LabelText
+                };
+
+                if (HasClassicDefault)
+                    keywords.Add(CLASSIC_DEFAULT_SEARCH_TERM);
+
+                return keywords;
+            }
+        }
 
         public IEnumerable<string> Keywords { get; set; }
 
+        private bool matchingFilter = true;
+
         public bool MatchingFilter
         {
-            set => this.FadeTo(value ? 1 : 0);
+            get => matchingFilter;
+            set
+            {
+                bool wasPresent = IsPresent;
+
+                matchingFilter = value;
+
+                if (IsPresent != wasPresent)
+                    Invalidate(Invalidation.Presence);
+            }
         }
+
+        public override bool IsPresent => base.IsPresent && MatchingFilter;
 
         public bool FilteringActive { get; set; }
 
+        public BindableBool CanBeShown { get; } = new BindableBool(true);
+        IBindable<bool> IConditionalFilterable.CanBeShown => CanBeShown;
+
         public event Action SettingChanged;
+
+        private T classicDefault;
+
+        public bool HasClassicDefault { get; private set; }
+
+        /// <summary>
+        /// A "classic" default value for this setting.
+        /// </summary>
+        public T ClassicDefault
+        {
+            set
+            {
+                classicDefault = value;
+                HasClassicDefault = true;
+            }
+        }
+
+        public void ApplyClassicDefault()
+        {
+            if (!HasClassicDefault)
+                throw new InvalidOperationException($"Cannot apply a classic default to a setting which doesn't have one defined via {nameof(ClassicDefault)}.");
+
+            Current.Value = classicDefault;
+        }
+
+        public void ApplyDefault() => Current.SetDefault();
 
         protected SettingsItem()
         {
-            RestoreDefaultValueButton restoreDefaultButton;
-
             RelativeSizeAxes = Axes.X;
             AutoSizeAxes = Axes.Y;
             Padding = new MarginPadding { Right = SettingsPanel.CONTENT_MARGINS };
 
             InternalChildren = new Drawable[]
             {
-                restoreDefaultButton = new RestoreDefaultValueButton(),
-                FlowContent = new FillFlowContainer
+                defaultValueIndicatorContainer = new Container
+                {
+                    Width = SettingsPanel.CONTENT_MARGINS,
+                },
+                new Container
                 {
                     RelativeSizeAxes = Axes.X,
                     AutoSizeAxes = Axes.Y,
                     Padding = new MarginPadding { Left = SettingsPanel.CONTENT_MARGINS },
-                    Child = Control = CreateControl()
-                },
+                    Child = FlowContent = new FillFlowContainer
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Spacing = new Vector2(0, 5),
+                        Child = Control = CreateControl(),
+                    }
+                }
             };
 
-            // all bindable logic is in constructor intentionally to support "CreateSettingsControls" being used in a context it is
+            // IMPORTANT: all bindable logic is in constructor intentionally to support "CreateSettingsControls" being used in a context it is
             // never loaded, but requires bindable storage.
-            if (controlWithCurrent != null)
-            {
-                controlWithCurrent.Current.ValueChanged += _ => SettingChanged?.Invoke();
-                controlWithCurrent.Current.DisabledChanged += _ => updateDisabled();
+            if (controlWithCurrent == null)
+                throw new ArgumentException(@$"Control created via {nameof(CreateControl)} must implement {nameof(IHasCurrentValue<T>)}");
 
-                if (ShowsDefaultIndicator)
-                    restoreDefaultButton.Bindable = controlWithCurrent.Current;
+            controlWithCurrent.Current.ValueChanged += _ => SettingChanged?.Invoke();
+            controlWithCurrent.Current.DisabledChanged += _ => updateDisabled();
+        }
+
+        [BackgroundDependencyLoader]
+        private void load()
+        {
+            // intentionally done before LoadComplete to avoid overhead.
+            if (ShowsDefaultIndicator)
+            {
+                defaultValueIndicatorContainer.Add(new RevertToDefaultButton<T>
+                {
+                    Current = controlWithCurrent.Current,
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre
+                });
+                updateLayout();
             }
+        }
+
+        private void updateLayout()
+        {
+            bool hasLabel = labelText != null && !string.IsNullOrEmpty(labelText.Text.ToString());
+
+            // if the settings item is providing a label, the default value indicator should be centred vertically to the left of the label.
+            // otherwise, it should be centred vertically to the left of the main control of the settings item.
+            defaultValueIndicatorContainer.Height = hasLabel ? labelText.DrawHeight : Control.DrawHeight;
         }
 
         private void updateDisabled()
         {
             if (labelText != null)
                 labelText.Alpha = controlWithCurrent.Current.Disabled ? 0.3f : 1;
-        }
-
-        protected internal class RestoreDefaultValueButton : Container, IHasTooltip
-        {
-            public override bool IsPresent => base.IsPresent || Scheduler.HasPendingTasks;
-
-            private Bindable<T> bindable;
-
-            public Bindable<T> Bindable
-            {
-                get => bindable;
-                set
-                {
-                    bindable = value;
-                    bindable.ValueChanged += _ => UpdateState();
-                    bindable.DisabledChanged += _ => UpdateState();
-                    bindable.DefaultChanged += _ => UpdateState();
-                    UpdateState();
-                }
-            }
-
-            private Color4 buttonColour;
-
-            private bool hovering;
-
-            public RestoreDefaultValueButton()
-            {
-                RelativeSizeAxes = Axes.Y;
-                Width = SettingsPanel.CONTENT_MARGINS;
-                Alpha = 0f;
-            }
-
-            [BackgroundDependencyLoader]
-            private void load(OsuColour colour)
-            {
-                buttonColour = colour.Yellow;
-
-                Child = new Container
-                {
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
-                    RelativeSizeAxes = Axes.Both,
-                    CornerRadius = 3,
-                    Masking = true,
-                    Colour = buttonColour,
-                    EdgeEffect = new EdgeEffectParameters
-                    {
-                        Colour = buttonColour.Opacity(0.1f),
-                        Type = EdgeEffectType.Glow,
-                        Radius = 2,
-                    },
-                    Size = new Vector2(0.33f, 0.8f),
-                    Child = new Box { RelativeSizeAxes = Axes.Both },
-                };
-            }
-
-            protected override void LoadComplete()
-            {
-                base.LoadComplete();
-                UpdateState();
-            }
-
-            public string TooltipText => "revert to default";
-
-            protected override bool OnClick(ClickEvent e)
-            {
-                if (bindable != null && !bindable.Disabled)
-                    bindable.SetDefault();
-                return true;
-            }
-
-            protected override bool OnHover(HoverEvent e)
-            {
-                hovering = true;
-                UpdateState();
-                return false;
-            }
-
-            protected override void OnHoverLost(HoverLostEvent e)
-            {
-                hovering = false;
-                UpdateState();
-            }
-
-            public void SetButtonColour(Color4 buttonColour)
-            {
-                this.buttonColour = buttonColour;
-                UpdateState();
-            }
-
-            public void UpdateState() => Scheduler.AddOnce(updateState);
-
-            private void updateState()
-            {
-                if (bindable == null)
-                    return;
-
-                this.FadeTo(bindable.IsDefault ? 0f :
-                    hovering && !bindable.Disabled ? 1f : 0.65f, 200, Easing.OutQuint);
-                this.FadeColour(bindable.Disabled ? Color4.Gray : buttonColour, 200, Easing.OutQuint);
-            }
         }
     }
 }

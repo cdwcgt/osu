@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ using osuTK.Graphics;
 
 namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
 {
-    public class SliderBodyPiece : BlueprintPiece<Slider>
+    public partial class SliderBodyPiece : BlueprintPiece<Slider>
     {
         private readonly ManualSliderBody body;
 
@@ -20,12 +20,21 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
         /// </summary>
         public Vector2 PathStartLocation => body.PathOffset;
 
+        /// <summary>
+        /// Offset in absolute (local) coordinates from the end of the curve.
+        /// </summary>
+        public Vector2 PathEndLocation => body.PathEndOffset;
+
         public SliderBodyPiece()
         {
             InternalChild = body = new ManualSliderBody
             {
                 AccentColour = Color4.Transparent
             };
+
+            // SliderSelectionBlueprint relies on calling ReceivePositionalInputAt on this drawable to determine whether selection should occur.
+            // Without AlwaysPresent, a movement in a parent container (ie. the editor composer area resizing) could cause incorrect input handling.
+            AlwaysPresent = true;
         }
 
         [BackgroundDependencyLoader]
@@ -34,16 +43,23 @@ namespace osu.Game.Rulesets.Osu.Edit.Blueprints.Sliders.Components
             body.BorderColour = colours.Yellow;
         }
 
+        private int? lastVersion;
+
         public override void UpdateFrom(Slider hitObject)
         {
             base.UpdateFrom(hitObject);
 
             body.PathRadius = hitObject.Scale * OsuHitObject.OBJECT_RADIUS;
 
-            var vertices = new List<Vector2>();
-            hitObject.Path.GetPathToProgress(vertices, 0, 1);
+            if (lastVersion != hitObject.Path.Version.Value)
+            {
+                lastVersion = hitObject.Path.Version.Value;
 
-            body.SetVertices(vertices);
+                var vertices = new List<Vector2>();
+                hitObject.Path.GetPathToProgress(vertices, 0, 1);
+
+                body.SetVertices(vertices);
+            }
 
             Size = body.Size;
             OriginPosition = body.PathOffset;

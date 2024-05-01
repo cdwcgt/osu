@@ -14,7 +14,7 @@ using osu.Framework.Testing;
 
 namespace osu.Game.Tests.Visual.UserInterface
 {
-    public class TestSceneCommentRepliesButton : OsuTestScene
+    public partial class TestSceneCommentRepliesButton : OsuTestScene
     {
         [Cached]
         private readonly OverlayColourProvider colourProvider = new OverlayColourProvider(OverlayColourScheme.Blue);
@@ -52,7 +52,7 @@ namespace osu.Game.Tests.Visual.UserInterface
             AddAssert("Icon facing downwards", () => button.Icon.Scale.Y == 1);
         }
 
-        private class TestButton : CommentRepliesButton
+        private partial class TestButton : CommentRepliesButton
         {
             public SpriteIcon Icon => this.ChildrenOfType<SpriteIcon>().First();
 

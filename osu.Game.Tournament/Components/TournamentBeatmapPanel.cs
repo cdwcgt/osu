@@ -9,7 +9,6 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
-using osu.Framework.Graphics.Textures;
 using osu.Framework.Localisation;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Drawables;
@@ -19,31 +18,29 @@ using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Components
 {
-    public class TournamentBeatmapPanel : CompositeDrawable
+    public partial class TournamentBeatmapPanel : CompositeDrawable
     {
-        public readonly BeatmapInfo Beatmap;
-        private readonly string mod;
+        public readonly IBeatmapInfo? Beatmap;
 
-        private const float horizontal_padding = 10;
-        private const float vertical_padding = 10;
+        private readonly string mod;
 
         public const float HEIGHT = 50;
 
-        private readonly Bindable<TournamentMatch> currentMatch = new Bindable<TournamentMatch>();
-        private Box flash;
+        private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
 
-        public TournamentBeatmapPanel(BeatmapInfo beatmap, string mod = null)
+        private Box flash = null!;
+
+        public TournamentBeatmapPanel(IBeatmapInfo? beatmap, string mod = "")
         {
-            if (beatmap == null) throw new ArgumentNullException(nameof(beatmap));
-
             Beatmap = beatmap;
             this.mod = mod;
+
             Width = 400;
             Height = HEIGHT;
         }
 
         [BackgroundDependencyLoader]
-        private void load(LadderInfo ladder, TextureStore textures)
+        private void load(LadderInfo ladder)
         {
             currentMatch.BindValueChanged(matchChanged);
             currentMatch.BindTo(ladder.CurrentMatch);
@@ -57,11 +54,11 @@ namespace osu.Game.Tournament.Components
                     RelativeSizeAxes = Axes.Both,
                     Colour = Color4.Black,
                 },
-                new UpdateableBeatmapSetCover
+                new NoUnloadBeatmapSetCover
                 {
                     RelativeSizeAxes = Axes.Both,
                     Colour = OsuColour.Gray(0.5f),
-                    BeatmapSet = Beatmap.BeatmapSet,
+                    OnlineInfo = (Beatmap as IBeatmapSetOnlineInfo),
                 },
                 new FillFlowContainer
                 {
@@ -74,9 +71,7 @@ namespace osu.Game.Tournament.Components
                     {
                         new TournamentSpriteText
                         {
-                            Text = new RomanisableString(
-                                $"{Beatmap.Metadata.ArtistUnicode ?? Beatmap.Metadata.Artist} - {Beatmap.Metadata.TitleUnicode ?? Beatmap.Metadata.Title}",
-                                $"{Beatmap.Metadata.Artist} - {Beatmap.Metadata.Title}"),
+                            Text = Beatmap?.GetDisplayTitleRomanisable(false, false) ?? (LocalisableString)@"unknown",
                             Font = OsuFont.Torus.With(weight: FontWeight.Bold),
                         },
                         new FillFlowContainer
@@ -93,7 +88,7 @@ namespace osu.Game.Tournament.Components
                                 },
                                 new TournamentSpriteText
                                 {
-                                    Text = Beatmap.Metadata.AuthorString,
+                                    Text = Beatmap?.Metadata.Author.Username ?? "unknown",
                                     Padding = new MarginPadding { Right = 20 },
                                     Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 14)
                                 },
@@ -105,7 +100,7 @@ namespace osu.Game.Tournament.Components
                                 },
                                 new TournamentSpriteText
                                 {
-                                    Text = Beatmap.Version,
+                                    Text = Beatmap?.DifficultyName ?? "unknown",
                                     Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 14)
                                 },
                             }
@@ -134,36 +129,42 @@ namespace osu.Game.Tournament.Components
             }
         }
 
-        private void matchChanged(ValueChangedEvent<TournamentMatch> match)
+        private void matchChanged(ValueChangedEvent<TournamentMatch?> match)
         {
             if (match.OldValue != null)
                 match.OldValue.PicksBans.CollectionChanged -= picksBansOnCollectionChanged;
-            match.NewValue.PicksBans.CollectionChanged += picksBansOnCollectionChanged;
-            updateState();
+            if (match.NewValue != null)
+                match.NewValue.PicksBans.CollectionChanged += picksBansOnCollectionChanged;
+
+            Scheduler.AddOnce(updateState);
         }
 
-        private void picksBansOnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
-            => updateState();
+        private void picksBansOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+            => Scheduler.AddOnce(updateState);
 
-        private BeatmapChoice choice;
+        private BeatmapChoice? choice;
 
         private void updateState()
         {
-            var found = currentMatch.Value.PicksBans.FirstOrDefault(p => p.BeatmapID == Beatmap.OnlineBeatmapID);
-
-            bool doFlash = found != choice;
-            choice = found;
-
-            if (found != null)
+            if (currentMatch.Value == null)
             {
-                if (doFlash)
-                    flash?.FadeOutFromOne(500).Loop(0, 10);
+                return;
+            }
+
+            var newChoice = currentMatch.Value.PicksBans.FirstOrDefault(p => p.BeatmapID == Beatmap?.OnlineID);
+
+            bool shouldFlash = newChoice != choice;
+
+            if (newChoice != null)
+            {
+                if (shouldFlash)
+                    flash.FadeOutFromOne(500).Loop(0, 10);
 
                 BorderThickness = 6;
 
-                BorderColour = TournamentGame.GetTeamColour(found.Team);
+                BorderColour = TournamentGame.GetTeamColour(newChoice.Team);
 
-                switch (found.Type)
+                switch (newChoice.Type)
                 {
                     case ChoiceType.Pick:
                         Colour = Color4.White;
@@ -182,6 +183,18 @@ namespace osu.Game.Tournament.Components
                 BorderThickness = 0;
                 Alpha = 1;
             }
+
+            choice = newChoice;
+        }
+
+        private partial class NoUnloadBeatmapSetCover : UpdateableOnlineBeatmapSetCover
+        {
+            // As covers are displayed on stream, we want them to load as soon as possible.
+            protected override double LoadDelay => 0;
+
+            // Use DelayedLoadWrapper to avoid content unloading when switching away to another screen.
+            protected override DelayedLoadWrapper CreateDelayedLoadWrapper(Func<Drawable> createContentFunc, double timeBeforeLoad)
+                => new DelayedLoadWrapper(createContentFunc(), timeBeforeLoad);
         }
     }
 }

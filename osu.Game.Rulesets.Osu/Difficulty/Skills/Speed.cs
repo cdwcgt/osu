@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -14,14 +14,28 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     /// </summary>
     public class Speed : StrainSkill
     {
-        protected override double SkillMultiplier => 2600;
-        protected override double StrainDecayBase => 0.1;
+        protected virtual double SkillMultiplier => 2600;
+        protected virtual double StrainDecayBase => 0.1;
+
+        private double currentStrain;
+
+        private double strainDecay(double ms) => Math.Pow(StrainDecayBase, ms / 1000);
+
+        protected override double CalculateInitialStrain(double time, DifficultyHitObject current) => currentStrain * strainDecay(time - current.Previous(0).StartTime);
 
         public Speed(Mod[] mods) : base(mods)
         {
         }
 
-        protected override double StrainValueOf(DifficultyHitObject current)
+        protected override double StrainValueAt(DifficultyHitObject current)
+        {
+            currentStrain *= strainDecay(current.DeltaTime);
+            currentStrain += StrainValueOf(current) * SkillMultiplier;
+
+            return currentStrain;
+        }
+
+        protected virtual double StrainValueOf(DifficultyHitObject current)
         {
             var osuCurrent = (OsuDifficultyHitObject)current;
 

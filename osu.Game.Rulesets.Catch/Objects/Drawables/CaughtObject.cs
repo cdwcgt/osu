@@ -15,15 +15,18 @@ namespace osu.Game.Rulesets.Catch.Objects.Drawables
     /// Represents a <see cref="PalpableCatchHitObject"/> caught by the catcher.
     /// </summary>
     [Cached(typeof(IHasCatchObjectState))]
-    public abstract class CaughtObject : SkinnableDrawable, IHasCatchObjectState
+    public abstract partial class CaughtObject : SkinnableDrawable, IHasCatchObjectState
     {
-        public PalpableCatchHitObject HitObject { get; private set; }
+        public PalpableCatchHitObject HitObject { get; private set; } = null!;
         public Bindable<Color4> AccentColour { get; } = new Bindable<Color4>();
         public Bindable<bool> HyperDash { get; } = new Bindable<bool>();
+        public Bindable<int> IndexInBeatmap { get; } = new Bindable<int>();
 
         public Vector2 DisplaySize => Size * Scale;
 
         public float DisplayRotation => Rotation;
+
+        public double DisplayStartTime => HitObject.StartTime;
 
         /// <summary>
         /// Whether this hit object should stay on the catcher plate when the object is caught by the catcher.
@@ -32,8 +35,8 @@ namespace osu.Game.Rulesets.Catch.Objects.Drawables
 
         public override bool RemoveWhenNotAlive => true;
 
-        protected CaughtObject(CatchSkinComponents skinComponent, Func<ISkinComponent, Drawable> defaultImplementation)
-            : base(new CatchSkinComponent(skinComponent), defaultImplementation)
+        protected CaughtObject(CatchSkinComponents skinComponent, Func<ISkinComponentLookup, Drawable> defaultImplementation)
+            : base(new CatchSkinComponentLookup(skinComponent), defaultImplementation)
         {
             Origin = Anchor.Centre;
 
@@ -51,6 +54,7 @@ namespace osu.Game.Rulesets.Catch.Objects.Drawables
             Rotation = objectState.DisplayRotation;
             AccentColour.Value = objectState.AccentColour.Value;
             HyperDash.Value = objectState.HyperDash.Value;
+            IndexInBeatmap.Value = objectState.IndexInBeatmap.Value;
         }
 
         protected override void FreeAfterUse()

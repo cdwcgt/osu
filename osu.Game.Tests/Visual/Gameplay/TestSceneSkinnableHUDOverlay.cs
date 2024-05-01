@@ -1,53 +1,65 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using osu.Framework.Allocation;
+using osu.Framework.Audio.Track;
 using osu.Framework.Extensions.IEnumerableExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Testing;
-using osu.Game.Configuration;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Osu;
+using osu.Game.Rulesets.Scoring;
 using osu.Game.Screens.Play;
+using osu.Game.Screens.Play.HUD;
+using osu.Game.Skinning;
+using osu.Game.Tests.Gameplay;
 using osuTK.Input;
 
 namespace osu.Game.Tests.Visual.Gameplay
 {
-    public class TestSceneSkinnableHUDOverlay : SkinnableTestScene
+    public partial class TestSceneSkinnableHUDOverlay : SkinnableTestScene
     {
         private HUDOverlay hudOverlay;
+
+        [Cached(typeof(ScoreProcessor))]
+        private ScoreProcessor scoreProcessor { get; set; }
+
+        [Cached(typeof(HealthProcessor))]
+        private HealthProcessor healthProcessor = new DrainingHealthProcessor(0);
+
+        [Cached]
+        private GameplayState gameplayState = TestGameplayState.Create(new OsuRuleset());
+
+        [Cached(typeof(IGameplayClock))]
+        private readonly IGameplayClock gameplayClock = new GameplayClockContainer(new TrackVirtual(60000), false, false);
 
         private IEnumerable<HUDOverlay> hudOverlays => CreatedDrawables.OfType<HUDOverlay>();
 
         // best way to check without exposing.
-        private Drawable hideTarget => hudOverlay.KeyCounter;
-        private FillFlowContainer<KeyCounter> keyCounterFlow => hudOverlay.KeyCounter.ChildrenOfType<FillFlowContainer<KeyCounter>>().First();
+        private Drawable hideTarget => hudOverlay.ChildrenOfType<SkinComponentsContainer>().First();
+        private Drawable keyCounterFlow => hudOverlay.ChildrenOfType<KeyCounterDisplay>().First().ChildrenOfType<FillFlowContainer<KeyCounter>>().Single();
 
-        [Resolved]
-        private OsuConfigManager config { get; set; }
+        public TestSceneSkinnableHUDOverlay()
+        {
+            scoreProcessor = gameplayState.ScoreProcessor;
+        }
 
         [Test]
         public void TestComboCounterIncrementing()
         {
             createNew();
 
-            AddRepeatStep("increase combo", () =>
-            {
-                foreach (var hud in hudOverlays)
-                    hud.ComboCounter.Current.Value++;
-            }, 10);
+            AddRepeatStep("increase combo", () => scoreProcessor.Combo.Value++, 10);
 
-            AddStep("reset combo", () =>
-            {
-                foreach (var hud in hudOverlays)
-                    hud.ComboCounter.Current.Value = 0;
-            });
+            AddStep("reset combo", () => scoreProcessor.Combo.Value = 0);
         }
 
         [Test]
@@ -56,7 +68,6 @@ namespace osu.Game.Tests.Visual.Gameplay
             float? initialAlpha = null;
 
             createNew(h => h.OnLoadComplete += _ => initialAlpha = hideTarget.Alpha);
-            AddUntilStep("wait for load", () => hudOverlay.IsAlive);
             AddAssert("initial alpha was less than 1", () => initialAlpha < 1);
         }
 
@@ -67,7 +78,7 @@ namespace osu.Game.Tests.Visual.Gameplay
 
             AddStep("set showhud false", () => hudOverlays.ForEach(h => h.ShowHud.Value = false));
 
-            AddUntilStep("hidetarget is hidden", () => !hideTarget.IsPresent);
+            AddUntilStep("hidetarget is hidden", () => hideTarget.Alpha, () => Is.LessThanOrEqualTo(0));
             AddAssert("pause button is still visible", () => hudOverlay.HoldToQuit.IsPresent);
 
             // Key counter flow container should not be affected by this, only the key counter display will be hidden as checked above.
@@ -78,20 +89,21 @@ namespace osu.Game.Tests.Visual.Gameplay
         {
             AddStep("create overlay", () =>
             {
-                SetContents(() =>
+                SetContents(_ =>
                 {
-                    hudOverlay = new HUDOverlay(null, null, null, Array.Empty<Mod>());
+                    hudOverlay = new HUDOverlay(null, Array.Empty<Mod>());
 
                     // Add any key just to display the key counter visually.
-                    hudOverlay.KeyCounter.Add(new KeyCounterKeyboard(Key.Space));
-
-                    hudOverlay.ComboCounter.Current.Value = 1;
+                    hudOverlay.InputCountController.Add(new KeyCounterKeyboardTrigger(Key.Space));
 
                     action?.Invoke(hudOverlay);
 
                     return hudOverlay;
                 });
             });
+            AddUntilStep("HUD overlay loaded", () => hudOverlay.IsAlive);
+            AddUntilStep("components container loaded",
+                () => hudOverlay.ChildrenOfType<SkinComponentsContainer>().Any(scc => scc.ComponentsLoaded));
         }
 
         protected override Ruleset CreateRulesetForSkinProvider() => new OsuRuleset();

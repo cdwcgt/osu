@@ -10,7 +10,7 @@ namespace osu.Game.Beatmaps.Formats
     {
         public static void Register()
         {
-            AddDecoder<Beatmap>("{", m => new JsonBeatmapDecoder());
+            AddDecoder<Beatmap>("{", _ => new JsonBeatmapDecoder());
         }
 
         protected override void ParseStreamInto(LineBufferedReader stream, Beatmap output)
@@ -18,7 +18,7 @@ namespace osu.Game.Beatmaps.Formats
             stream.ReadToEnd().DeserializeInto(output);
 
             foreach (var hitObject in output.HitObjects)
-                hitObject.ApplyDefaults(output.ControlPointInfo, output.BeatmapInfo.BaseDifficulty);
+                hitObject.ApplyDefaults(output.ControlPointInfo, output.Difficulty);
         }
     }
 }

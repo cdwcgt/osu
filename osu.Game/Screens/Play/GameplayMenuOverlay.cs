@@ -2,27 +2,30 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using osu.Framework.Allocation;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Game.Graphics.Sprites;
-using osuTK;
-using osuTK.Graphics;
-using osu.Game.Graphics;
-using osu.Framework.Allocation;
-using osu.Game.Graphics.UserInterface;
+using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Shapes;
-using System.Collections.Generic;
-using System.Linq;
 using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
+using osu.Framework.Localisation;
+using osu.Game.Beatmaps;
+using osu.Game.Graphics;
+using osu.Game.Graphics.Containers;
+using osu.Game.Graphics.Sprites;
+using osu.Game.Graphics.UserInterface;
 using osu.Game.Input.Bindings;
-using Humanizer;
-using osu.Framework.Graphics.Effects;
+using osuTK;
+using osuTK.Graphics;
+using osu.Game.Localisation;
 
 namespace osu.Game.Screens.Play
 {
-    public abstract class GameplayMenuOverlay : OverlayContainer, IKeyBindingHandler<GlobalAction>
+    public abstract partial class GameplayMenuOverlay : OverlayContainer, IKeyBindingHandler<GlobalAction>
     {
         protected const int TRANSITION_DURATION = 200;
 
@@ -35,33 +38,41 @@ namespace osu.Game.Screens.Play
 
         public override bool ReceivePositionalInputAt(Vector2 screenSpacePos) => true;
 
-        public Action OnRetry;
-        public Action OnQuit;
+        public Action? OnResume { get; init; }
+        public Action? OnRetry { get; init; }
+        public Action? OnQuit { get; init; }
 
         /// <summary>
         /// Action that is invoked when <see cref="GlobalAction.Back"/> is triggered.
         /// </summary>
-        protected virtual Action BackAction => () => InternalButtons.Children.LastOrDefault()?.Click();
+        protected virtual Action BackAction => () =>
+        {
+            // We prefer triggering the button click as it will animate...
+            // but sometimes buttons aren't present (see FailOverlay's constructor as an example).
+            if (Buttons.Any())
+                Buttons.Last().TriggerClick();
+            else
+                OnQuit?.Invoke();
+        };
 
         /// <summary>
         /// Action that is invoked when <see cref="GlobalAction.Select"/> is triggered.
         /// </summary>
-        protected virtual Action SelectAction => () => InternalButtons.Children.FirstOrDefault(f => f.Selected.Value)?.Click();
+        protected virtual Action SelectAction => () => InternalButtons.Selected?.TriggerClick();
 
-        public abstract string Header { get; }
+        public abstract LocalisableString Header { get; }
 
-        public abstract string Description { get; }
-
-        protected ButtonContainer InternalButtons;
+        protected SelectionCycleFillFlowContainer<DialogButton> InternalButtons = null!;
         public IReadOnlyList<DialogButton> Buttons => InternalButtons;
 
-        private FillFlowContainer retryCounterContainer;
+        private TextFlowContainer playInfoText = null!;
+
+        [Resolved]
+        private GlobalActionContainer globalAction { get; set; } = null!;
 
         protected GameplayMenuOverlay()
         {
             RelativeSizeAxes = Axes.Both;
-
-            State.ValueChanged += s => InternalButtons.Deselect();
         }
 
         [BackgroundDependencyLoader]
@@ -85,38 +96,15 @@ namespace osu.Game.Screens.Play
                     Anchor = Anchor.Centre,
                     Children = new Drawable[]
                     {
-                        new FillFlowContainer
+                        new OsuSpriteText
                         {
+                            Text = Header,
+                            Font = OsuFont.GetFont(size: 48),
                             Origin = Anchor.TopCentre,
                             Anchor = Anchor.TopCentre,
-                            RelativeSizeAxes = Axes.X,
-                            AutoSizeAxes = Axes.Y,
-                            Direction = FillDirection.Vertical,
-                            Spacing = new Vector2(0, 20),
-                            Children = new Drawable[]
-                            {
-                                new OsuSpriteText
-                                {
-                                    Text = Header,
-                                    Font = OsuFont.GetFont(size: 30),
-                                    Spacing = new Vector2(5, 0),
-                                    Origin = Anchor.TopCentre,
-                                    Anchor = Anchor.TopCentre,
-                                    Colour = colours.Yellow,
-                                    Shadow = true,
-                                    ShadowColour = new Color4(0, 0, 0, 0.25f)
-                                },
-                                new OsuSpriteText
-                                {
-                                    Text = Description,
-                                    Origin = Anchor.TopCentre,
-                                    Anchor = Anchor.TopCentre,
-                                    Shadow = true,
-                                    ShadowColour = new Color4(0, 0, 0, 0.25f)
-                                }
-                            }
+                            Colour = colours.Yellow,
                         },
-                        InternalButtons = new ButtonContainer
+                        InternalButtons = new SelectionCycleFillFlowContainer<DialogButton>
                         {
                             Origin = Anchor.TopCentre,
                             Anchor = Anchor.TopCentre,
@@ -131,17 +119,29 @@ namespace osu.Game.Screens.Play
                                 Radius = 50
                             },
                         },
-                        retryCounterContainer = new FillFlowContainer
+                        playInfoText = new OsuTextFlowContainer(cp => cp.Font = OsuFont.GetFont(size: 18))
                         {
                             Origin = Anchor.TopCentre,
                             Anchor = Anchor.TopCentre,
+                            TextAnchor = Anchor.TopCentre,
                             AutoSizeAxes = Axes.Both,
                         }
                     }
                 },
             };
 
-            updateRetryCount();
+            if (OnResume != null)
+                AddButton(GameplayMenuOverlayStrings.Continue, colours.Green, () => OnResume.Invoke());
+
+            if (OnRetry != null)
+                AddButton(GameplayMenuOverlayStrings.Retry, colours.YellowDark, () => OnRetry.Invoke());
+
+            if (OnQuit != null)
+                AddButton(GameplayMenuOverlayStrings.Quit, new Color4(170, 27, 39, 255), () => OnQuit.Invoke());
+
+            State.ValueChanged += _ => InternalButtons.Deselect();
+
+            updateInfoText();
         }
 
         private int retries;
@@ -154,12 +154,18 @@ namespace osu.Game.Screens.Play
                     return;
 
                 retries = value;
-                if (retryCounterContainer != null)
-                    updateRetryCount();
+
+                if (IsLoaded)
+                    updateInfoText();
             }
         }
 
-        protected override void PopIn() => this.FadeIn(TRANSITION_DURATION, Easing.In);
+        protected override void PopIn()
+        {
+            this.FadeIn(TRANSITION_DURATION, Easing.In);
+            updateInfoText();
+        }
+
         protected override void PopOut() => this.FadeOut(TRANSITION_DURATION, Easing.In);
 
         // Don't let mouse down events through the overlay or people can click circles while paused.
@@ -167,7 +173,7 @@ namespace osu.Game.Screens.Play
 
         protected override bool OnMouseMove(MouseMoveEvent e) => true;
 
-        protected void AddButton(string text, Color4 colour, Action action)
+        protected void AddButton(LocalisableString text, Color4 colour, Action? action)
         {
             var button = new Button
             {
@@ -183,14 +189,12 @@ namespace osu.Game.Screens.Play
                 }
             };
 
-            button.Selected.ValueChanged += selected => buttonSelectionChanged(button, selected.NewValue);
-
             InternalButtons.Add(button);
         }
 
-        public bool OnPressed(GlobalAction action)
+        public virtual bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
         {
-            switch (action)
+            switch (e.Action)
             {
                 case GlobalAction.SelectPrevious:
                     InternalButtons.SelectPrevious();
@@ -212,109 +216,62 @@ namespace osu.Game.Screens.Play
             return false;
         }
 
-        public void OnReleased(GlobalAction action)
+        public void OnReleased(KeyBindingReleaseEvent<GlobalAction> e)
         {
         }
 
-        private void buttonSelectionChanged(DialogButton button, bool isSelected)
-        {
-            if (!isSelected)
-                InternalButtons.Deselect();
-            else
-                InternalButtons.Select(button);
-        }
+        [Resolved]
+        private IGameplayClock? gameplayClock { get; set; }
 
-        private void updateRetryCount()
-        {
-            // "You've retried 1,065 times in this session"
-            // "You've retried 1 time in this session"
+        [Resolved]
+        private GameplayState? gameplayState { get; set; }
 
-            retryCounterContainer.Children = new Drawable[]
+        private void updateInfoText()
+        {
+            playInfoText.Clear();
+            playInfoText.AddText(GameplayMenuOverlayStrings.RetryCount);
+            playInfoText.AddText(retries.ToString(), cp => cp.Font = cp.Font.With(weight: FontWeight.Bold));
+
+            if (getSongProgress() is int progress)
             {
-                new OsuSpriteText
-                {
-                    Text = "You've retried ",
-                    Shadow = true,
-                    ShadowColour = new Color4(0, 0, 0, 0.25f),
-                    Font = OsuFont.GetFont(size: 18),
-                },
-                new OsuSpriteText
-                {
-                    Text = "time".ToQuantity(retries),
-                    Font = OsuFont.GetFont(weight: FontWeight.Bold, size: 18),
-                    Shadow = true,
-                    ShadowColour = new Color4(0, 0, 0, 0.25f),
-                },
-                new OsuSpriteText
-                {
-                    Text = " in this session",
-                    Shadow = true,
-                    ShadowColour = new Color4(0, 0, 0, 0.25f),
-                    Font = OsuFont.GetFont(size: 18),
-                }
-            };
-        }
-
-        protected class ButtonContainer : FillFlowContainer<DialogButton>
-        {
-            private int selectedIndex = -1;
-
-            private void setSelected(int value)
-            {
-                if (selectedIndex == value)
-                    return;
-
-                // Deselect the previously-selected button
-                if (selectedIndex != -1)
-                    this[selectedIndex].Selected.Value = false;
-
-                selectedIndex = value;
-
-                // Select the newly-selected button
-                if (selectedIndex != -1)
-                    this[selectedIndex].Selected.Value = true;
+                playInfoText.NewLine();
+                playInfoText.AddText(GameplayMenuOverlayStrings.SongProgress);
+                playInfoText.AddText($"{progress}%", cp => cp.Font = cp.Font.With(weight: FontWeight.Bold));
             }
-
-            public void SelectNext()
-            {
-                if (selectedIndex == -1 || selectedIndex == Count - 1)
-                    setSelected(0);
-                else
-                    setSelected(selectedIndex + 1);
-            }
-
-            public void SelectPrevious()
-            {
-                if (selectedIndex == -1 || selectedIndex == 0)
-                    setSelected(Count - 1);
-                else
-                    setSelected(selectedIndex - 1);
-            }
-
-            public void Deselect() => setSelected(-1);
-            public void Select(DialogButton button) => setSelected(IndexOf(button));
         }
 
-        private class Button : DialogButton
+        private int? getSongProgress()
+        {
+            if (gameplayClock == null || gameplayState == null)
+                return null;
+
+            (double firstHitTime, double lastHitTime) = gameplayState.Beatmap.CalculatePlayableBounds();
+
+            double playableLength = (lastHitTime - firstHitTime);
+
+            if (playableLength == 0)
+                return 0;
+
+            return (int)Math.Clamp(((gameplayClock.CurrentTime - firstHitTime) / playableLength) * 100, 0, 100);
+        }
+
+        private partial class Button : DialogButton
         {
             // required to ensure keyboard navigation always starts from an extremity (unless the cursor is moved)
             protected override bool OnHover(HoverEvent e) => true;
 
             protected override bool OnMouseMove(MouseMoveEvent e)
             {
-                Selected.Value = true;
+                State = SelectionState.Selected;
                 return base.OnMouseMove(e);
             }
         }
-
-        [Resolved]
-        private GlobalActionContainer globalAction { get; set; }
 
         protected override bool Handle(UIEvent e)
         {
             switch (e)
             {
-                case ScrollEvent _:
+                case ScrollEvent:
                     if (ReceivePositionalInputAt(e.ScreenSpaceMousePosition))
                         return globalAction.TriggerEvent(e);
 

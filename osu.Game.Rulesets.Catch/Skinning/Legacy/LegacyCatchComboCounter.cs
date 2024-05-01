@@ -2,8 +2,9 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Graphics;
-using osu.Framework.Graphics.Containers;
+using osu.Game.Graphics.Containers;
 using osu.Game.Rulesets.Catch.UI;
+using osu.Game.Screens.Play;
 using osu.Game.Skinning;
 using osuTK;
 using osuTK.Graphics;
@@ -13,13 +14,13 @@ namespace osu.Game.Rulesets.Catch.Skinning.Legacy
     /// <summary>
     /// A combo counter implementation that visually behaves almost similar to stable's osu!catch combo counter.
     /// </summary>
-    public class LegacyCatchComboCounter : CompositeDrawable, ICatchComboCounter
+    public partial class LegacyCatchComboCounter : UprightAspectMaintainingContainer, ICatchComboCounter
     {
         private readonly LegacyRollingCounter counter;
 
         private readonly LegacyRollingCounter explosion;
 
-        public LegacyCatchComboCounter(ISkin skin)
+        public LegacyCatchComboCounter()
         {
             AutoSizeAxes = Axes.Both;
 
@@ -30,7 +31,7 @@ namespace osu.Game.Rulesets.Catch.Skinning.Legacy
 
             InternalChildren = new Drawable[]
             {
-                explosion = new LegacyRollingCounter(skin, LegacyFont.Combo)
+                explosion = new LegacyRollingCounter(LegacyFont.Combo)
                 {
                     Alpha = 0.65f,
                     Blending = BlendingParameters.Additive,
@@ -38,7 +39,7 @@ namespace osu.Game.Rulesets.Catch.Skinning.Legacy
                     Origin = Anchor.Centre,
                     Scale = new Vector2(1.5f),
                 },
-                counter = new LegacyRollingCounter(skin, LegacyFont.Combo)
+                counter = new LegacyRollingCounter(LegacyFont.Combo)
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
@@ -59,7 +60,7 @@ namespace osu.Game.Rulesets.Catch.Skinning.Legacy
 
             lastDisplayedCombo = combo;
 
-            if (Time.Elapsed < 0)
+            if ((Clock as IGameplayClock)?.IsRewinding == true)
             {
                 // needs more work to make rewind somehow look good.
                 // basically we want the previous increment to play... or turning off RemoveCompletedTransforms (not feasible from a performance angle).

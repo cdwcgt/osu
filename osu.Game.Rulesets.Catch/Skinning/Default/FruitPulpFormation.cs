@@ -2,12 +2,12 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Bindables;
-using osu.Game.Rulesets.Catch.Objects.Drawables;
+using osu.Game.Rulesets.Catch.Objects;
 using osuTK;
 
 namespace osu.Game.Rulesets.Catch.Skinning.Default
 {
-    public class FruitPulpFormation : PulpFormation
+    public partial class FruitPulpFormation : PulpFormation
     {
         public readonly Bindable<FruitVisualRepresentation> VisualRepresentation = new Bindable<FruitVisualRepresentation>();
 

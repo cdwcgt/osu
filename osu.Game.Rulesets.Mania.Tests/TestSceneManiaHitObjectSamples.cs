@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Reflection;
@@ -8,10 +8,10 @@ using osu.Game.Tests.Beatmaps;
 
 namespace osu.Game.Rulesets.Mania.Tests
 {
-    public class TestSceneManiaHitObjectSamples : HitObjectSampleTest
+    public partial class TestSceneManiaHitObjectSamples : HitObjectSampleTest
     {
         protected override Ruleset CreatePlayerRuleset() => new ManiaRuleset();
-        protected override IResourceStore<byte[]> Resources => new DllResourceStore(Assembly.GetAssembly(typeof(TestSceneManiaHitObjectSamples)));
+        protected override IResourceStore<byte[]> RulesetResources => new DllResourceStore(Assembly.GetAssembly(typeof(TestSceneManiaHitObjectSamples)));
 
         /// <summary>
         /// Tests that when a normal sample bank is used, the normal hitsound will be looked up.

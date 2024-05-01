@@ -1,7 +1,8 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
+using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Screens;
 using osu.Game.Online.Spectator;
 using osu.Game.Scoring;
@@ -9,25 +10,25 @@ using osu.Game.Screens.Ranking;
 
 namespace osu.Game.Screens.Play
 {
-    public class SpectatorResultsScreen : SoloResultsScreen
+    public partial class SpectatorResultsScreen : SoloResultsScreen
     {
         public SpectatorResultsScreen(ScoreInfo score)
-            : base(score, false)
+            : base(score)
         {
         }
 
         [Resolved]
-        private SpectatorStreamingClient spectatorStreaming { get; set; }
+        private SpectatorClient spectatorClient { get; set; } = null!;
 
         [BackgroundDependencyLoader]
         private void load()
         {
-            spectatorStreaming.OnUserBeganPlaying += userBeganPlaying;
+            spectatorClient.OnUserBeganPlaying += userBeganPlaying;
         }
 
         private void userBeganPlaying(int userId, SpectatorState state)
         {
-            if (userId == Score.UserID)
+            if (userId == Score?.UserID)
             {
                 Schedule(() =>
                 {
@@ -40,8 +41,8 @@ namespace osu.Game.Screens.Play
         {
             base.Dispose(isDisposing);
 
-            if (spectatorStreaming != null)
-                spectatorStreaming.OnUserBeganPlaying -= userBeganPlaying;
+            if (spectatorClient.IsNotNull())
+                spectatorClient.OnUserBeganPlaying -= userBeganPlaying;
         }
     }
 }

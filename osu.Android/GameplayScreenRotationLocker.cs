@@ -9,12 +9,12 @@ using osu.Game;
 
 namespace osu.Android
 {
-    public class GameplayScreenRotationLocker : Component
+    public partial class GameplayScreenRotationLocker : Component
     {
-        private Bindable<bool> localUserPlaying;
+        private Bindable<bool> localUserPlaying = null!;
 
         [Resolved]
-        private OsuGameActivity gameActivity { get; set; }
+        private OsuGameActivity gameActivity { get; set; } = null!;
 
         [BackgroundDependencyLoader]
         private void load(OsuGame game)
@@ -27,7 +27,7 @@ namespace osu.Android
         {
             gameActivity.RunOnUiThread(() =>
             {
-                gameActivity.RequestedOrientation = userPlaying.NewValue ? ScreenOrientation.Locked : ScreenOrientation.FullUser;
+                gameActivity.RequestedOrientation = userPlaying.NewValue ? ScreenOrientation.Locked : gameActivity.DefaultOrientation;
             });
         }
     }

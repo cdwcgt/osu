@@ -10,7 +10,7 @@ using osuTK.Graphics;
 
 namespace osu.Game.Overlays.Rankings.Tables
 {
-    public class TableRowBackground : CompositeDrawable
+    public partial class TableRowBackground : CompositeDrawable
     {
         private const int fade_duration = 100;
 
@@ -22,10 +22,10 @@ namespace osu.Game.Overlays.Rankings.Tables
         public TableRowBackground()
         {
             RelativeSizeAxes = Axes.X;
-            Height = 25;
 
-            CornerRadius = 3;
+            CornerRadius = 4;
             Masking = true;
+            MaskingSmoothness = 0.5f;
 
             InternalChild = background = new Box
             {

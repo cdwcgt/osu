@@ -3,257 +3,366 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
+using JetBrains.Annotations;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using osu.Framework.Extensions;
+using osu.Framework.Localisation;
 using osu.Game.Beatmaps;
 using osu.Game.Database;
+using osu.Game.Models;
 using osu.Game.Online.API;
+using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Scoring;
+using osu.Game.Scoring.Legacy;
 using osu.Game.Users;
 using osu.Game.Utils;
+using Realms;
 
 namespace osu.Game.Scoring
 {
-    public class ScoreInfo : IHasFiles<ScoreFileInfo>, IHasPrimaryKey, ISoftDelete, IEquatable<ScoreInfo>
+    /// <summary>
+    /// A realm model containing metadata for a single score.
+    /// </summary>
+    [MapTo("Score")]
+    public class ScoreInfo : RealmObject, IHasGuidPrimaryKey, IHasRealmFiles, ISoftDelete, IEquatable<ScoreInfo>, IScoreInfo
     {
-        public int ID { get; set; }
+        [PrimaryKey]
+        public Guid ID { get; set; }
 
-        [JsonProperty("rank")]
-        [JsonConverter(typeof(StringEnumConverter))]
-        public ScoreRank Rank { get; set; }
+        /// <summary>
+        /// The <see cref="BeatmapInfo"/> this score was made against.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// This property may be <see langword="null"/> if the score was set on a beatmap (or a version of the beatmap) that is not available locally
+        /// e.g. due to online updates, or local modifications to the beatmap.
+        /// The property will only link to a <see cref="BeatmapInfo"/> if its <see cref="Beatmaps.BeatmapInfo.Hash"/> matches <see cref="BeatmapHash"/>.
+        /// </para>
+        /// <para>
+        /// Due to the above, whenever setting this, make sure to also set <see cref="BeatmapHash"/> to allow relational consistency when a beatmap is potentially changed.
+        /// </para>
+        /// </remarks>
+        public BeatmapInfo? BeatmapInfo { get; set; }
 
-        [JsonProperty("total_score")]
+        /// <summary>
+        /// The version of the client this score was set using.
+        /// Sourced from <see cref="OsuGameBase.Version"/> at the point of score submission.
+        /// </summary>
+        public string ClientVersion { get; set; } = string.Empty;
+
+        /// <summary>
+        /// The <see cref="osu.Game.Beatmaps.BeatmapInfo.Hash"/> at the point in time when the score was set.
+        /// </summary>
+        public string BeatmapHash { get; set; } = string.Empty;
+
+        public RulesetInfo Ruleset { get; set; } = null!;
+
+        public IList<RealmNamedFileUsage> Files { get; } = null!;
+
+        public string Hash { get; set; } = string.Empty;
+
+        public bool DeletePending { get; set; }
+
         public long TotalScore { get; set; }
 
-        [JsonProperty("accuracy")]
-        [Column(TypeName = "DECIMAL(1,4)")] // TODO: This data type is wrong (should contain more precision). But at the same time, we probably don't need to be storing this in the database.
-        public double Accuracy { get; set; }
+        /// <summary>
+        /// The version of processing applied to calculate total score as stored in the database.
+        /// If this does not match <see cref="LegacyScoreEncoder.LATEST_VERSION"/>,
+        /// the total score has not yet been updated to reflect the current scoring values.
+        ///
+        /// See <see cref="BackgroundDataStoreProcessor"/>'s conversion logic.
+        /// </summary>
+        /// <remarks>
+        /// This may not match the version stored in the replay files.
+        /// </remarks>
+        public int TotalScoreVersion { get; set; } = LegacyScoreEncoder.LATEST_VERSION;
 
-        [JsonIgnore]
-        public string DisplayAccuracy => Accuracy.FormatAccuracy();
+        /// <summary>
+        /// Used to preserve the total score for legacy scores.
+        /// </summary>
+        /// <remarks>
+        /// Not populated if <see cref="IsLegacyScore"/> is <c>false</c>.
+        /// </remarks>
+        public long? LegacyTotalScore { get; set; }
 
-        [JsonProperty(@"pp")]
-        public double? PP { get; set; }
+        /// <summary>
+        /// If background processing of this beatmap failed in some way, this flag will become <c>true</c>.
+        /// Should be used to ensure we don't repeatedly attempt to reprocess the same scores each startup even though we already know they will fail.
+        /// </summary>
+        /// <remarks>
+        /// See https://github.com/ppy/osu/issues/24301 for one example of how this can occur (missing beatmap file on disk).
+        /// </remarks>
+        public bool BackgroundReprocessingFailed { get; set; }
 
-        [JsonProperty("max_combo")]
         public int MaxCombo { get; set; }
 
-        [JsonIgnore]
-        public int Combo { get; set; } // Todo: Shouldn't exist in here
+        public double Accuracy { get; set; }
 
-        [JsonIgnore]
-        public int RulesetID { get; set; }
+        [Ignored]
+        public bool HasOnlineReplay { get; set; }
 
-        [JsonProperty("passed")]
-        [NotMapped]
-        public bool Passed { get; set; } = true;
-
-        [JsonIgnore]
-        public virtual RulesetInfo Ruleset { get; set; }
-
-        private APIMod[] localAPIMods;
-        private Mod[] mods;
-
-        [JsonIgnore]
-        [NotMapped]
-        public Mod[] Mods
-        {
-            get
-            {
-                var rulesetInstance = Ruleset?.CreateInstance();
-                if (rulesetInstance == null)
-                    return mods ?? Array.Empty<Mod>();
-
-                Mod[] scoreMods = Array.Empty<Mod>();
-
-                if (mods != null)
-                    scoreMods = mods;
-                else if (localAPIMods != null)
-                    scoreMods = apiMods.Select(m => m.ToMod(rulesetInstance)).ToArray();
-
-                if (IsLegacyScore)
-                    scoreMods = scoreMods.Append(rulesetInstance.GetAllMods().OfType<ModClassic>().Single()).ToArray();
-
-                return scoreMods;
-            }
-            set
-            {
-                localAPIMods = null;
-                mods = value;
-            }
-        }
-
-        // Used for API serialisation/deserialisation.
-        [JsonProperty("mods")]
-        [NotMapped]
-        private APIMod[] apiMods
-        {
-            get
-            {
-                if (localAPIMods != null)
-                    return localAPIMods;
-
-                if (mods == null)
-                    return Array.Empty<APIMod>();
-
-                return localAPIMods = mods.Select(m => new APIMod(m)).ToArray();
-            }
-            set
-            {
-                localAPIMods = value;
-
-                // We potentially can't update this yet due to Ruleset being late-bound, so instead update on read as necessary.
-                mods = null;
-            }
-        }
-
-        // Used for database serialisation/deserialisation.
-        [JsonIgnore]
-        [Column("Mods")]
-        public string ModsJson
-        {
-            get => JsonConvert.SerializeObject(apiMods);
-            set => apiMods = JsonConvert.DeserializeObject<APIMod[]>(value);
-        }
-
-        [NotMapped]
-        [JsonProperty("user")]
-        public User User { get; set; }
-
-        [JsonIgnore]
-        [Column("User")]
-        public string UserString
-        {
-            get => User?.Username;
-            set
-            {
-                User ??= new User();
-                User.Username = value;
-            }
-        }
-
-        [JsonIgnore]
-        [Column("UserID")]
-        public int? UserID
-        {
-            get => User?.Id ?? 1;
-            set
-            {
-                User ??= new User();
-                User.Id = value ?? 1;
-            }
-        }
-
-        [JsonIgnore]
-        public int BeatmapInfoID { get; set; }
-
-        [JsonIgnore]
-        public virtual BeatmapInfo Beatmap { get; set; }
-
-        [JsonIgnore]
-        public long? OnlineScoreID { get; set; }
-
-        [JsonIgnore]
         public DateTimeOffset Date { get; set; }
 
-        [JsonProperty("statistics")]
-        public Dictionary<HitResult, int> Statistics = new Dictionary<HitResult, int>();
+        public double? PP { get; set; }
 
-        [JsonIgnore]
-        [Column("Statistics")]
-        public string StatisticsJson
+        /// <summary>
+        /// Whether the performance points in this score is awarded to the player. This is used for online display purposes (see <see cref="SoloScoreInfo.Ranked"/>).
+        /// </summary>
+        [Ignored]
+        public bool Ranked { get; set; }
+
+        /// <summary>
+        /// The online ID of this score.
+        /// </summary>
+        /// <remarks>
+        /// In the osu-web database, this ID (if present) comes from the new <c>solo_scores</c> table.
+        /// </remarks>
+        [Indexed]
+        public long OnlineID { get; set; } = -1;
+
+        /// <summary>
+        /// The legacy online ID of this score.
+        /// </summary>
+        /// <remarks>
+        /// In the osu-web database, this ID (if present) comes from the legacy <c>osu_scores_*_high</c> tables.
+        /// This ID is also stored to replays set on osu!stable.
+        /// </remarks>
+        [Indexed]
+        public long LegacyOnlineID { get; set; } = -1;
+
+        [MapTo("User")]
+        public RealmUser RealmUser { get; set; } = null!;
+
+        [MapTo("Mods")]
+        public string ModsJson { get; set; } = string.Empty;
+
+        [MapTo("Statistics")]
+        public string StatisticsJson { get; set; } = string.Empty;
+
+        [MapTo("MaximumStatistics")]
+        public string MaximumStatisticsJson { get; set; } = string.Empty;
+
+        public ScoreInfo(BeatmapInfo? beatmap = null, RulesetInfo? ruleset = null, RealmUser? realmUser = null)
         {
-            get => JsonConvert.SerializeObject(Statistics);
+            Ruleset = ruleset ?? new RulesetInfo();
+            BeatmapInfo = beatmap ?? new BeatmapInfo();
+            BeatmapHash = BeatmapInfo.Hash;
+            RealmUser = realmUser ?? new RealmUser();
+            ID = Guid.NewGuid();
+        }
+
+        [UsedImplicitly] // Realm
+        private ScoreInfo()
+        {
+        }
+
+        // TODO: this is a bit temporary to account for the fact that this class is used to ferry API user data to certain UI components.
+        // Eventually we should either persist enough information to realm to not require the API lookups, or perform the API lookups locally.
+        private APIUser? user;
+
+        [Ignored]
+        public APIUser User
+        {
+            get => user ??= new APIUser
+            {
+                Id = RealmUser.OnlineID,
+                Username = RealmUser.Username,
+                CountryCode = RealmUser.CountryCode,
+            };
             set
             {
-                if (value == null)
-                {
-                    Statistics.Clear();
-                    return;
-                }
+                user = value;
 
-                Statistics = JsonConvert.DeserializeObject<Dictionary<HitResult, int>>(value);
+                RealmUser = new RealmUser
+                {
+                    OnlineID = user.OnlineID,
+                    Username = user.Username,
+                    CountryCode = user.CountryCode,
+                };
             }
         }
 
-        [NotMapped]
-        [JsonIgnore]
-        public List<HitEvent> HitEvents { get; set; }
+        [Ignored]
+        public ScoreRank Rank
+        {
+            get => (ScoreRank)RankInt;
+            set => RankInt = (int)value;
+        }
 
-        [JsonIgnore]
-        public List<ScoreFileInfo> Files { get; set; }
+        [MapTo(nameof(Rank))]
+        public int RankInt { get; set; }
 
-        [JsonIgnore]
-        public string Hash { get; set; }
+        IRulesetInfo IScoreInfo.Ruleset => Ruleset;
+        IBeatmapInfo? IScoreInfo.Beatmap => BeatmapInfo;
+        IUser IScoreInfo.User => User;
 
-        [JsonIgnore]
-        public bool DeletePending { get; set; }
+        #region Properties required to make things work with existing usages
+
+        public int UserID => RealmUser.OnlineID;
+
+        public int RulesetID => Ruleset.OnlineID;
+
+        [Ignored]
+        public List<HitEvent> HitEvents { get; set; } = new List<HitEvent>();
+
+        public ScoreInfo DeepClone()
+        {
+            var clone = (ScoreInfo)this.Detach().MemberwiseClone();
+
+            clone.Statistics = new Dictionary<HitResult, int>(clone.Statistics);
+            clone.MaximumStatistics = new Dictionary<HitResult, int>(clone.MaximumStatistics);
+            clone.HitEvents = new List<HitEvent>(clone.HitEvents);
+
+            // Ensure we have fresh mods to avoid any references (ie. after gameplay).
+            clone.clearAllMods();
+            clone.ModsJson = ModsJson;
+
+            clone.RealmUser = new RealmUser
+            {
+                OnlineID = RealmUser.OnlineID,
+                Username = RealmUser.Username,
+                CountryCode = RealmUser.CountryCode,
+            };
+
+            return clone;
+        }
+
+        [Ignored]
+        public bool Passed { get; set; } = true;
+
+        public int Combo { get; set; }
 
         /// <summary>
         /// The position of this score, starting at 1.
         /// </summary>
-        [NotMapped]
-        [JsonProperty("position")]
-        public int? Position { get; set; }
+        [Ignored]
+        public int? Position { get; set; } // TODO: remove after all calls to `CreateScoreInfo` are gone.
 
-        private bool isLegacyScore;
+        [Ignored]
+        public LocalisableString DisplayAccuracy => Accuracy.FormatAccuracy();
 
         /// <summary>
         /// Whether this <see cref="ScoreInfo"/> represents a legacy (osu!stable) score.
         /// </summary>
-        [JsonIgnore]
-        [NotMapped]
-        public bool IsLegacyScore
+        public bool IsLegacyScore { get; set; }
+
+        private Dictionary<HitResult, int>? statistics;
+
+        [Ignored]
+        public Dictionary<HitResult, int> Statistics
         {
             get
             {
-                if (isLegacyScore)
-                    return true;
+                if (statistics != null)
+                    return statistics;
 
-                // The above check will catch legacy online scores that have an appropriate UserString + UserId.
-                // For non-online scores such as those imported in, a heuristic is used based on the following table:
-                //
-                //       Mode      | UserString | UserId
-                // --------------- | ---------- | ---------
-                // stable          | <username> | 1
-                // lazer           | <username> | <userid>
-                // lazer (offline) | Guest      | 1
+                if (!string.IsNullOrEmpty(StatisticsJson))
+                    statistics = JsonConvert.DeserializeObject<Dictionary<HitResult, int>>(StatisticsJson);
 
-                return ID > 0 && UserID == 1 && UserString != "Guest";
+                return statistics ??= new Dictionary<HitResult, int>();
             }
-            set => isLegacyScore = value;
+            set => statistics = value;
+        }
+
+        private Dictionary<HitResult, int>? maximumStatistics;
+
+        [Ignored]
+        public Dictionary<HitResult, int> MaximumStatistics
+        {
+            get
+            {
+                if (maximumStatistics != null)
+                    return maximumStatistics;
+
+                if (!string.IsNullOrEmpty(MaximumStatisticsJson))
+                    maximumStatistics = JsonConvert.DeserializeObject<Dictionary<HitResult, int>>(MaximumStatisticsJson);
+
+                return maximumStatistics ??= new Dictionary<HitResult, int>();
+            }
+            set => maximumStatistics = value;
+        }
+
+        private Mod[]? mods;
+
+        [Ignored]
+        public Mod[] Mods
+        {
+            get
+            {
+                if (mods != null)
+                    return mods;
+
+                return APIMods.Select(m => m.ToMod(Ruleset.CreateInstance())).ToArray();
+            }
+            set
+            {
+                clearAllMods();
+                mods = value;
+                updateModsJson();
+            }
+        }
+
+        private APIMod[]? apiMods;
+
+        // Used for API serialisation/deserialisation.
+        [Ignored]
+        public APIMod[] APIMods
+        {
+            get
+            {
+                if (apiMods != null) return apiMods;
+
+                // prioritise reading from realm backing
+                if (!string.IsNullOrEmpty(ModsJson))
+                    apiMods = JsonConvert.DeserializeObject<APIMod[]>(ModsJson);
+
+                // then check mods set via Mods property.
+                if (mods != null)
+                    apiMods ??= mods.Select(m => new APIMod(m)).ToArray();
+
+                return apiMods ?? Array.Empty<APIMod>();
+            }
+            set
+            {
+                clearAllMods();
+                apiMods = value;
+                updateModsJson();
+            }
+        }
+
+        private void clearAllMods()
+        {
+            ModsJson = string.Empty;
+            mods = null;
+            apiMods = null;
+        }
+
+        private void updateModsJson()
+        {
+            ModsJson = APIMods.Length > 0
+                ? JsonConvert.SerializeObject(APIMods)
+                : string.Empty;
         }
 
         public IEnumerable<HitResultDisplayStatistic> GetStatisticsForDisplay()
         {
             foreach (var r in Ruleset.CreateInstance().GetHitResults())
             {
-                int value = Statistics.GetOrDefault(r.result);
+                int value = Statistics.GetValueOrDefault(r.result);
 
                 switch (r.result)
                 {
                     case HitResult.SmallTickHit:
-                    {
-                        int total = value + Statistics.GetOrDefault(HitResult.SmallTickMiss);
-                        if (total > 0)
-                            yield return new HitResultDisplayStatistic(r.result, value, total, r.displayName);
-
-                        break;
-                    }
-
                     case HitResult.LargeTickHit:
-                    {
-                        int total = value + Statistics.GetOrDefault(HitResult.LargeTickMiss);
-                        if (total > 0)
-                            yield return new HitResultDisplayStatistic(r.result, value, total, r.displayName);
+                    case HitResult.SliderTailHit:
+                    case HitResult.LargeBonus:
+                    case HitResult.SmallBonus:
+                        if (MaximumStatistics.TryGetValue(r.result, out int count) && count > 0)
+                            yield return new HitResultDisplayStatistic(r.result, value, count, r.displayName);
 
                         break;
-                    }
 
                     case HitResult.SmallTickMiss:
                     case HitResult.LargeTickMiss:
@@ -267,23 +376,10 @@ namespace osu.Game.Scoring
             }
         }
 
-        public override string ToString() => $"{User} playing {Beatmap}";
+        #endregion
 
-        public bool Equals(ScoreInfo other)
-        {
-            if (other == null)
-                return false;
+        public bool Equals(ScoreInfo? other) => other?.ID == ID;
 
-            if (ID != 0 && other.ID != 0)
-                return ID == other.ID;
-
-            if (OnlineScoreID.HasValue && other.OnlineScoreID.HasValue)
-                return OnlineScoreID == other.OnlineScoreID;
-
-            if (!string.IsNullOrEmpty(Hash) && !string.IsNullOrEmpty(other.Hash))
-                return Hash == other.Hash;
-
-            return ReferenceEquals(this, other);
-        }
+        public override string ToString() => this.GetDisplayTitle();
     }
 }

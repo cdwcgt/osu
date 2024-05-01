@@ -1,9 +1,12 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using osu.Framework.Graphics;
 using osu.Framework.Input.Events;
+using osu.Framework.Utils;
 using osu.Game.Rulesets.Edit;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Types;
@@ -14,7 +17,7 @@ using osuTK.Input;
 
 namespace osu.Game.Rulesets.Taiko.Edit.Blueprints
 {
-    public class TaikoSpanPlacementBlueprint : PlacementBlueprint
+    public partial class TaikoSpanPlacementBlueprint : PlacementBlueprint
     {
         private readonly HitPiece headPiece;
         private readonly HitPiece tailPiece;
@@ -22,6 +25,8 @@ namespace osu.Game.Rulesets.Taiko.Edit.Blueprints
         private readonly LengthPiece lengthPiece;
 
         private readonly IHasDuration spanPlacementObject;
+
+        protected override bool IsValidForPlacement => Precision.DefinitelyBigger(spanPlacementObject.Duration, 0);
 
         public TaikoSpanPlacementBlueprint(HitObject hitObject)
             : base(hitObject)
@@ -34,21 +39,27 @@ namespace osu.Game.Rulesets.Taiko.Edit.Blueprints
             {
                 headPiece = new HitPiece
                 {
-                    Size = new Vector2(TaikoHitObject.DEFAULT_SIZE * TaikoPlayfield.DEFAULT_HEIGHT)
+                    Size = new Vector2(TaikoHitObject.DEFAULT_SIZE * TaikoPlayfield.BASE_HEIGHT)
                 },
                 lengthPiece = new LengthPiece
                 {
-                    Height = TaikoHitObject.DEFAULT_SIZE * TaikoPlayfield.DEFAULT_HEIGHT
+                    Height = TaikoHitObject.DEFAULT_SIZE * TaikoPlayfield.BASE_HEIGHT
                 },
                 tailPiece = new HitPiece
                 {
-                    Size = new Vector2(TaikoHitObject.DEFAULT_SIZE * TaikoPlayfield.DEFAULT_HEIGHT)
+                    Size = new Vector2(TaikoHitObject.DEFAULT_SIZE * TaikoPlayfield.BASE_HEIGHT)
                 }
             };
         }
 
         private double originalStartTime;
         private Vector2 originalPosition;
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+            BeginPlacement();
+        }
 
         protected override bool OnMouseDown(MouseDownEvent e)
         {

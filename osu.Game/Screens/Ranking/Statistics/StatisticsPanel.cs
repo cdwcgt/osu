@@ -1,25 +1,30 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System;
+#nullable disable
+
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
+using osu.Framework.Audio;
+using osu.Framework.Audio.Sample;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Input.Events;
 using osu.Game.Beatmaps;
+using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Online.Placeholders;
-using osu.Game.Rulesets.Mods;
 using osu.Game.Scoring;
 using osuTK;
 
 namespace osu.Game.Screens.Ranking.Statistics
 {
-    public class StatisticsPanel : VisibilityContainer
+    public partial class StatisticsPanel : VisibilityContainer
     {
         public const float SIDE_PADDING = 30;
 
@@ -32,6 +37,10 @@ namespace osu.Game.Screens.Ranking.Statistics
 
         private readonly Container content;
         private readonly LoadingSpinner spinner;
+
+        private bool wasOpened;
+        private Sample popInSample;
+        private Sample popOutSample;
 
         public StatisticsPanel()
         {
@@ -54,9 +63,12 @@ namespace osu.Game.Screens.Ranking.Statistics
         }
 
         [BackgroundDependencyLoader]
-        private void load()
+        private void load(AudioManager audio)
         {
             Score.BindValueChanged(populateStatistics, true);
+
+            popInSample = audio.Samples.Get(@"Results/statistics-panel-pop-in");
+            popOutSample = audio.Samples.Get(@"Results/statistics-panel-pop-out");
         }
 
         private CancellationTokenSource loadCancellation;
@@ -69,87 +81,129 @@ namespace osu.Game.Screens.Ranking.Statistics
             foreach (var child in content)
                 child.FadeOut(150).Expire();
 
+            spinner.Hide();
+
             var newScore = score.NewValue;
 
             if (newScore == null)
                 return;
 
-            if (newScore.HitEvents == null || newScore.HitEvents.Count == 0)
-            {
-                content.Add(new FillFlowContainer
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Direction = FillDirection.Vertical,
-                    Children = new Drawable[]
-                    {
-                        new MessagePlaceholder("Extended statistics are only available after watching a replay!"),
-                        new ReplayDownloadButton(newScore)
-                        {
-                            Scale = new Vector2(1.5f),
-                            Anchor = Anchor.Centre,
-                            Origin = Anchor.Centre,
-                        },
-                    }
-                });
-            }
-            else
-            {
-                spinner.Show();
+            spinner.Show();
 
-                var localCancellationSource = loadCancellation = new CancellationTokenSource();
-                IBeatmap playableBeatmap = null;
+            var localCancellationSource = loadCancellation = new CancellationTokenSource();
 
-                // Todo: The placement of this is temporary. Eventually we'll both generate the playable beatmap _and_ run through it in a background task to generate the hit events.
-                Task.Run(() =>
+            var workingBeatmap = beatmapManager.GetWorkingBeatmap(newScore.BeatmapInfo);
+
+            // Todo: The placement of this is temporary. Eventually we'll both generate the playable beatmap _and_ run through it in a background task to generate the hit events.
+            Task.Run(() => workingBeatmap.GetPlayableBeatmap(newScore.Ruleset, newScore.Mods), loadCancellation.Token).ContinueWith(task => Schedule(() =>
+            {
+                bool hitEventsAvailable = newScore.HitEvents.Count != 0;
+                Container<Drawable> container;
+
+                var statisticItems = CreateStatisticItems(newScore, task.GetResultSafely());
+
+                if (!hitEventsAvailable && statisticItems.All(c => c.RequiresHitEvents))
                 {
-                    playableBeatmap = beatmapManager.GetWorkingBeatmap(newScore.Beatmap).GetPlayableBeatmap(newScore.Ruleset, newScore.Mods ?? Array.Empty<Mod>());
-                }, loadCancellation.Token).ContinueWith(t => Schedule(() =>
-                {
-                    var rows = new FillFlowContainer
+                    container = new FillFlowContainer
                     {
-                        RelativeSizeAxes = Axes.X,
-                        AutoSizeAxes = Axes.Y,
+                        RelativeSizeAxes = Axes.Both,
                         Anchor = Anchor.Centre,
                         Origin = Anchor.Centre,
                         Direction = FillDirection.Vertical,
-                        Spacing = new Vector2(30, 15),
-                        Alpha = 0
+                        Children = new Drawable[]
+                        {
+                            new MessagePlaceholder("Extended statistics are only available after watching a replay!"),
+                            new ReplayDownloadButton(newScore)
+                            {
+                                Scale = new Vector2(1.5f),
+                                Anchor = Anchor.Centre,
+                                Origin = Anchor.Centre,
+                            },
+                        }
+                    };
+                }
+                else
+                {
+                    FillFlowContainer flow;
+                    container = new OsuScrollContainer(Direction.Vertical)
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
+                        Masking = false,
+                        ScrollbarOverlapsContent = false,
+                        Alpha = 0,
+                        Children = new[]
+                        {
+                            flow = new FillFlowContainer
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+                                Spacing = new Vector2(30, 15),
+                                Direction = FillDirection.Full,
+                            }
+                        }
                     };
 
-                    foreach (var row in newScore.Ruleset.CreateInstance().CreateStatisticsForScore(newScore, playableBeatmap))
+                    bool anyRequiredHitEvents = false;
+
+                    foreach (var item in statisticItems)
                     {
-                        rows.Add(new GridContainer
+                        if (!hitEventsAvailable && item.RequiresHitEvents)
+                        {
+                            anyRequiredHitEvents = true;
+                            continue;
+                        }
+
+                        flow.Add(new StatisticItemContainer(item)
                         {
                             Anchor = Anchor.TopCentre,
                             Origin = Anchor.TopCentre,
-                            RelativeSizeAxes = Axes.X,
-                            AutoSizeAxes = Axes.Y,
-                            Content = new[]
-                            {
-                                row.Columns?.Select(c => new StatisticContainer(c)
-                                {
-                                    Anchor = Anchor.Centre,
-                                    Origin = Anchor.Centre,
-                                }).Cast<Drawable>().ToArray()
-                            },
-                            ColumnDimensions = Enumerable.Range(0, row.Columns?.Length ?? 0)
-                                                         .Select(i => row.Columns[i].Dimension ?? new Dimension()).ToArray(),
-                            RowDimensions = new[] { new Dimension(GridSizeMode.AutoSize) }
                         });
                     }
 
-                    LoadComponentAsync(rows, d =>
+                    if (anyRequiredHitEvents)
                     {
-                        if (Score.Value != newScore)
-                            return;
+                        flow.Add(new FillFlowContainer
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            AutoSizeAxes = Axes.Y,
+                            Direction = FillDirection.Vertical,
+                            Anchor = Anchor.TopCentre,
+                            Origin = Anchor.TopCentre,
+                            Children = new Drawable[]
+                            {
+                                new MessagePlaceholder("More statistics available after watching a replay!"),
+                                new ReplayDownloadButton(newScore)
+                                {
+                                    Scale = new Vector2(1.5f),
+                                    Anchor = Anchor.Centre,
+                                    Origin = Anchor.Centre,
+                                },
+                            }
+                        });
+                    }
+                }
 
-                        spinner.Hide();
-                        content.Add(d);
-                        d.FadeIn(250, Easing.OutQuint);
-                    }, localCancellationSource.Token);
-                }), localCancellationSource.Token);
-            }
+                LoadComponentAsync(container, d =>
+                {
+                    if (!Score.Value.Equals(newScore))
+                        return;
+
+                    spinner.Hide();
+                    content.Add(d);
+                    d.FadeIn(250, Easing.OutQuint);
+                }, localCancellationSource.Token);
+            }), localCancellationSource.Token);
         }
+
+        /// <summary>
+        /// Creates the <see cref="StatisticItem"/>s to be displayed in this panel for a given <paramref name="newScore"/>.
+        /// </summary>
+        /// <param name="newScore">The score to create the rows for.</param>
+        /// <param name="playableBeatmap">The beatmap on which the score was set.</param>
+        protected virtual ICollection<StatisticItem> CreateStatisticItems(ScoreInfo newScore, IBeatmap playableBeatmap)
+            => newScore.Ruleset.CreateInstance().CreateStatisticsForScore(newScore, playableBeatmap);
 
         protected override bool OnClick(ClickEvent e)
         {
@@ -157,9 +211,21 @@ namespace osu.Game.Screens.Ranking.Statistics
             return true;
         }
 
-        protected override void PopIn() => this.FadeIn(150, Easing.OutQuint);
+        protected override void PopIn()
+        {
+            this.FadeIn(350, Easing.OutQuint);
 
-        protected override void PopOut() => this.FadeOut(150, Easing.OutQuint);
+            popInSample?.Play();
+            wasOpened = true;
+        }
+
+        protected override void PopOut()
+        {
+            this.FadeOut(250, Easing.OutQuint);
+
+            if (wasOpened)
+                popOutSample?.Play();
+        }
 
         protected override void Dispose(bool isDisposing)
         {

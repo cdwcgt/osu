@@ -1,6 +1,8 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using JetBrains.Annotations;
 using osu.Framework.Allocation;
@@ -12,7 +14,7 @@ using osu.Game.Rulesets.Mania.UI;
 
 namespace osu.Game.Rulesets.Mania.Objects.Drawables
 {
-    public abstract class DrawableManiaHitObject : DrawableHitObject<ManiaHitObject>
+    public abstract partial class DrawableManiaHitObject : DrawableHitObject<ManiaHitObject>
     {
         /// <summary>
         /// The <see cref="ManiaAction"/> which causes this <see cref="DrawableManiaHitObject{TObject}"/> to be hit.
@@ -44,6 +46,7 @@ namespace osu.Game.Rulesets.Mania.Objects.Drawables
         protected DrawableManiaHitObject(ManiaHitObject hitObject)
             : base(hitObject)
         {
+            RelativeSizeAxes = Axes.X;
         }
 
         [BackgroundDependencyLoader(true)]
@@ -53,64 +56,13 @@ namespace osu.Game.Rulesets.Mania.Objects.Drawables
                 Action.BindTo(action);
 
             Direction.BindTo(scrollingInfo.Direction);
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
             Direction.BindValueChanged(OnDirectionChanged, true);
-        }
-
-        private double computedLifetimeStart;
-
-        public override double LifetimeStart
-        {
-            get => base.LifetimeStart;
-            set
-            {
-                computedLifetimeStart = value;
-
-                if (!AlwaysAlive)
-                    base.LifetimeStart = value;
-            }
-        }
-
-        private double computedLifetimeEnd;
-
-        public override double LifetimeEnd
-        {
-            get => base.LifetimeEnd;
-            set
-            {
-                computedLifetimeEnd = value;
-
-                if (!AlwaysAlive)
-                    base.LifetimeEnd = value;
-            }
-        }
-
-        private bool alwaysAlive;
-
-        /// <summary>
-        /// Whether this <see cref="DrawableManiaHitObject"/> should always remain alive.
-        /// </summary>
-        internal bool AlwaysAlive
-        {
-            get => alwaysAlive;
-            set
-            {
-                if (alwaysAlive == value)
-                    return;
-
-                alwaysAlive = value;
-
-                if (value)
-                {
-                    // Set the base lifetimes directly, to avoid mangling the computed lifetimes
-                    base.LifetimeStart = double.MinValue;
-                    base.LifetimeEnd = double.MaxValue;
-                }
-                else
-                {
-                    LifetimeStart = computedLifetimeStart;
-                    LifetimeEnd = computedLifetimeEnd;
-                }
-            }
         }
 
         protected virtual void OnDirectionChanged(ValueChangedEvent<ScrollingDirection> e)
@@ -135,18 +87,17 @@ namespace osu.Game.Rulesets.Mania.Objects.Drawables
         /// <summary>
         /// Causes this <see cref="DrawableManiaHitObject"/> to get missed, disregarding all conditions in implementations of <see cref="DrawableHitObject.CheckForResult"/>.
         /// </summary>
-        public void MissForcefully() => ApplyResult(r => r.Type = r.Judgement.MinResult);
+        public virtual void MissForcefully() => ApplyMinResult();
     }
 
-    public abstract class DrawableManiaHitObject<TObject> : DrawableManiaHitObject
+    public abstract partial class DrawableManiaHitObject<TObject> : DrawableManiaHitObject
         where TObject : ManiaHitObject
     {
-        public new readonly TObject HitObject;
+        public new TObject HitObject => (TObject)base.HitObject;
 
         protected DrawableManiaHitObject(TObject hitObject)
             : base(hitObject)
         {
-            HitObject = hitObject;
         }
     }
 }

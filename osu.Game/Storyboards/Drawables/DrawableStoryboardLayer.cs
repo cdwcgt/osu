@@ -1,19 +1,23 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Collections.Generic;
 using System.Threading;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osuTK;
 
 namespace osu.Game.Storyboards.Drawables
 {
-    public class DrawableStoryboardLayer : CompositeDrawable
+    public partial class DrawableStoryboardLayer : CompositeDrawable
     {
         public StoryboardLayer Layer { get; }
         public bool Enabled;
 
         public override bool IsPresent => Enabled && base.IsPresent;
+
+        protected LayerElementContainer ElementContainer { get; }
 
         public DrawableStoryboardLayer(StoryboardLayer layer)
         {
@@ -24,19 +28,21 @@ namespace osu.Game.Storyboards.Drawables
             Enabled = layer.VisibleWhenPassing;
             Masking = layer.Masking;
 
-            InternalChild = new LayerElementContainer(layer);
+            InternalChild = ElementContainer = new LayerElementContainer(layer);
         }
 
-        private class LayerElementContainer : LifetimeManagementContainer
+        public partial class LayerElementContainer : LifetimeManagementContainer
         {
             private readonly StoryboardLayer storyboardLayer;
+
+            public IEnumerable<Drawable> Elements => InternalChildren;
 
             public LayerElementContainer(StoryboardLayer layer)
             {
                 storyboardLayer = layer;
 
-                Width = 640;
-                Height = 480;
+                Size = new Vector2(640, 480);
+
                 Anchor = Anchor.Centre;
                 Origin = Anchor.Centre;
             }

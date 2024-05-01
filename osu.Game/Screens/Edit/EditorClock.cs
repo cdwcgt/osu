@@ -1,11 +1,15 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
+using System.Diagnostics;
 using System.Linq;
 using osu.Framework.Audio.Track;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Transforms;
 using osu.Framework.Timing;
 using osu.Framework.Utils;
@@ -17,19 +21,21 @@ namespace osu.Game.Screens.Edit
     /// <summary>
     /// A decoupled clock which adds editor-specific functionality, such as snapping to a user-defined beat divisor.
     /// </summary>
-    public class EditorClock : Component, IFrameBasedClock, IAdjustableClock, ISourceChangeableClock
+    public partial class EditorClock : CompositeComponent, IFrameBasedClock, IAdjustableClock, ISourceChangeableClock
     {
         public IBindable<Track> Track => track;
 
         private readonly Bindable<Track> track = new Bindable<Track>();
 
-        public double TrackLength => track.Value?.Length ?? 60000;
+        public double TrackLength => track.Value?.IsLoaded == true ? track.Value.Length : 60000;
 
-        public ControlPointInfo ControlPointInfo;
+        public ControlPointInfo ControlPointInfo => Beatmap.ControlPointInfo;
+
+        public IBeatmap Beatmap { get; set; }
 
         private readonly BindableBeatDivisor beatDivisor;
 
-        private readonly DecoupleableInterpolatingFramedClock underlyingClock;
+        private readonly FramedBeatmapClock underlyingClock;
 
         private bool playbackFinished;
 
@@ -42,23 +48,14 @@ namespace osu.Game.Screens.Edit
         /// </summary>
         public bool IsSeeking { get; private set; }
 
-        public EditorClock(IBeatmap beatmap, BindableBeatDivisor beatDivisor)
-            : this(beatmap.ControlPointInfo, beatDivisor)
+        public EditorClock(IBeatmap beatmap = null, BindableBeatDivisor beatDivisor = null)
         {
-        }
+            Beatmap = beatmap ?? new Beatmap();
 
-        public EditorClock(ControlPointInfo controlPointInfo, BindableBeatDivisor beatDivisor)
-        {
-            this.beatDivisor = beatDivisor;
+            this.beatDivisor = beatDivisor ?? new BindableBeatDivisor();
 
-            ControlPointInfo = controlPointInfo;
-
-            underlyingClock = new DecoupleableInterpolatingFramedClock();
-        }
-
-        public EditorClock()
-            : this(new ControlPointInfo(), new BindableBeatDivisor())
-        {
+            underlyingClock = new FramedBeatmapClock(applyOffsets: true, requireDecoupling: true);
+            AddInternal(underlyingClock);
         }
 
         /// <summary>
@@ -147,11 +144,9 @@ namespace osu.Game.Screens.Edit
                 seekTime = timingPoint.Time + closestBeat * seekAmount;
             }
 
-            if (seekTime < timingPoint.Time && timingPoint != ControlPointInfo.TimingPoints.First())
+            if (seekTime < timingPoint.Time && !ReferenceEquals(timingPoint, ControlPointInfo.TimingPoints.First()))
                 seekTime = timingPoint.Time;
 
-            // Ensure the sought point is within the boundaries
-            seekTime = Math.Clamp(seekTime, 0, TrackLength);
             SeekSmoothlyTo(seekTime);
         }
 
@@ -190,6 +185,9 @@ namespace osu.Game.Screens.Edit
             seekingOrStopped.Value = IsSeeking = true;
 
             ClearTransforms();
+
+            // Ensure the sought point is within the boundaries
+            position = Math.Clamp(position, 0, TrackLength);
             return underlyingClock.Seek(position);
         }
 
@@ -224,7 +222,29 @@ namespace osu.Game.Screens.Edit
 
         public void ProcessFrame()
         {
-            underlyingClock.ProcessFrame();
+            // Noop to ensure an external consumer doesn't process the internal clock an extra time.
+        }
+
+        public double ElapsedFrameTime => underlyingClock.ElapsedFrameTime;
+
+        public double FramesPerSecond => underlyingClock.FramesPerSecond;
+
+        public void ChangeSource(IClock source)
+        {
+            track.Value = source as Track;
+            underlyingClock.ChangeSource(source);
+        }
+
+        public IClock Source => underlyingClock.Source;
+
+        private const double transform_time = 300;
+
+        protected override void Update()
+        {
+            base.Update();
+
+            // EditorClock wasn't being added in many places. This gives us more certainty that it is.
+            Debug.Assert(underlyingClock.LoadState > LoadState.NotLoaded);
 
             playbackFinished = CurrentTime >= TrackLength;
 
@@ -236,33 +256,6 @@ namespace osu.Game.Screens.Edit
                 if (CurrentTime > TrackLength)
                     underlyingClock.Seek(TrackLength);
             }
-        }
-
-        public double ElapsedFrameTime => underlyingClock.ElapsedFrameTime;
-
-        public double FramesPerSecond => underlyingClock.FramesPerSecond;
-
-        public FrameTimeInfo TimeInfo => underlyingClock.TimeInfo;
-
-        public void ChangeSource(IClock source)
-        {
-            track.Value = source as Track;
-            underlyingClock.ChangeSource(source);
-        }
-
-        public IClock Source => underlyingClock.Source;
-
-        public bool IsCoupled
-        {
-            get => underlyingClock.IsCoupled;
-            set => underlyingClock.IsCoupled = value;
-        }
-
-        private const double transform_time = 300;
-
-        protected override void Update()
-        {
-            base.Update();
 
             updateSeekingState();
         }
@@ -273,7 +266,7 @@ namespace osu.Game.Screens.Edit
             {
                 IsSeeking &= Transforms.Any();
 
-                if (track.Value?.IsRunning != true)
+                if (!IsRunning)
                 {
                     // seeking in the editor can happen while the track isn't running.
                     // in this case we always want to expose ourselves as seeking (to avoid sample playback).
@@ -288,7 +281,7 @@ namespace osu.Game.Screens.Edit
         }
 
         private void transformSeekTo(double seek, double duration = 0, Easing easing = Easing.None)
-            => this.TransformTo(this.PopulateTransform(new TransformSeek(), seek, duration, easing));
+            => this.TransformTo(this.PopulateTransform(new TransformSeek(), Math.Clamp(seek, 0, TrackLength), duration, easing));
 
         private double currentTime
         {

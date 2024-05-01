@@ -1,7 +1,8 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Objects;
@@ -12,7 +13,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
 {
     public class OsuDifficultyHitObject : DifficultyHitObject
     {
-        public const int NORMALIZED_RADIUS = 52;
+        public const int NORMALISED_RADIUS = 52;
 
         protected new OsuHitObject BaseObject => (OsuHitObject)base.BaseObject;
 
@@ -72,18 +73,18 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
         /// </summary>
         public double GapTime { get; private set; }
 
-        private readonly OsuHitObject lastLastObject;
+        private readonly OsuHitObject? lastLastObject;
         private readonly OsuHitObject lastObject;
-        private readonly OsuDifficultyHitObject lastLastDifficultyObject;
-        private readonly OsuDifficultyHitObject lastDifficultyObject;
+        private readonly OsuDifficultyHitObject? lastLastDifficultyObject;
+        private readonly OsuDifficultyHitObject? lastDifficultyObject;
 
-        public OsuDifficultyHitObject(HitObject hitObject, HitObject lastLastObject, HitObject lastObject, OsuDifficultyHitObject lastLastDifficultyObject, OsuDifficultyHitObject lastDifficultyObject, double clockRate)
-            : base(hitObject, lastObject, clockRate)
+        public OsuDifficultyHitObject(HitObject hitObject, HitObject lastObject, HitObject? lastLastObject, OsuDifficultyHitObject? lastDifficultyObject, OsuDifficultyHitObject? lastLastDifficultyObject, double clockRate, List<DifficultyHitObject> objects, int index)
+            : base(hitObject, lastObject, clockRate, objects, index)
         {
-            this.lastLastObject = (OsuHitObject)lastLastObject;
             this.lastObject = (OsuHitObject)lastObject;
-            this.lastLastDifficultyObject = lastLastDifficultyObject;
+            this.lastLastObject = lastLastObject as OsuHitObject;
             this.lastDifficultyObject = lastDifficultyObject;
+            this.lastLastDifficultyObject = lastLastDifficultyObject;
 
             setDistances();
 
@@ -110,7 +111,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
         private void setDistances()
         {
             // We will scale distances by this factor, so we can assume a uniform CircleSize among beatmaps.
-            float scalingFactor = NORMALIZED_RADIUS / (float)BaseObject.Radius;
+            float scalingFactor = NORMALISED_RADIUS / (float)BaseObject.Radius;
 
             if (BaseObject.Radius < 30)
             {
@@ -173,14 +174,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
                     // The cursor would be outside the follow circle, we need to move it
                     diff.Normalize(); // Obtain direction of diff
                     dist -= approxFollowCircleRadius;
-                    slider.LazyEndPosition += diff * dist;
+                    slider.LazyEndPosition = (Vector2)slider.LazyEndPosition + diff * dist;
                     slider.LazyTravelDistance += dist;
                 }
             });
 
             // Skip the head circle
             var scoringTimes = slider.NestedHitObjects.Skip(1).Select(t => t.StartTime);
-            foreach (var time in scoringTimes)
+            foreach (double time in scoringTimes)
                 computeVertex(time);
         }
 
@@ -222,7 +223,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
 
         private double calculateDistanceFlow(double angleScalingFactor = 1)
         {
-            double distanceOffset = (Math.Tanh((streamBpm - 140) / 20) + 2) * NORMALIZED_RADIUS;
+            double distanceOffset = (Math.Tanh((streamBpm - 140) / 20) + 2) * NORMALISED_RADIUS;
             return Utils.TransitionToFalse(JumpDistance, distanceOffset * angleScalingFactor, distanceOffset);
         }
 
@@ -230,8 +231,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
         {
             if (!Utils.IsNullOrNaN(angle))
             {
-                double angleScalingFactor = (-Math.Sin(Math.Cos(angle.Value) * Math.PI / 2) + 3) / 4;
-                return angleScalingFactor + (1 - angleScalingFactor) * lastDifficultyObject.AngleLeniency;
+                double angleScalingFactor = (-Math.Sin(Math.Cos(angle!.Value) * Math.PI / 2) + 3) / 4;
+                return angleScalingFactor + (1 - angleScalingFactor) * lastDifficultyObject!.AngleLeniency;
             }
             else
                 return 0.5;
@@ -257,23 +258,23 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
         {
             double irregularFlow = calculateExtendedDistanceFlow();
 
-            if (Utils.IsRoughlyEqual(StrainTime, lastDifficultyObject.StrainTime))
+            if (Utils.IsRoughlyEqual(StrainTime, lastDifficultyObject!.StrainTime))
                 irregularFlow *= lastDifficultyObject.BaseFlow;
             else
                 irregularFlow = 0;
 
             if (lastLastDifficultyObject != null)
-            if (Utils.IsRoughlyEqual(StrainTime, lastLastDifficultyObject.StrainTime))
-                irregularFlow *= lastLastDifficultyObject.BaseFlow;
-            else
-                irregularFlow = 0;
+                if (Utils.IsRoughlyEqual(StrainTime, lastLastDifficultyObject.StrainTime))
+                    irregularFlow *= lastLastDifficultyObject.BaseFlow;
+                else
+                    irregularFlow = 0;
 
             return irregularFlow;
         }
 
         private double calculateExtendedDistanceFlow()
         {
-            double distanceOffset = (Math.Tanh((streamBpm - 140) / 20) * 1.75 + 2.75) * NORMALIZED_RADIUS;
+            double distanceOffset = (Math.Tanh((streamBpm - 140) / 20) * 1.75 + 2.75) * NORMALISED_RADIUS;
             return Utils.TransitionToFalse(JumpDistance, distanceOffset, distanceOffset);
         }
 

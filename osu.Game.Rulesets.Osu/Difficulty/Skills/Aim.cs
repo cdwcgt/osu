@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -25,23 +25,35 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         /// </summary>
         private ReverseQueue<OsuDifficultyHitObject> preemptHitObjects = new ReverseQueue<OsuDifficultyHitObject>(10);
 
-        protected override double SkillMultiplier => 1059;
+        private double skillMultiplier => 1059;
 
-        protected override double StrainDecayBase => 0.15;
+        private double strainDecayBase => 0.15;
 
-        protected override int HistoryLength => 2;
+        private double currentStrain;
+
+        private double strainDecay(double ms) => Math.Pow(strainDecayBase, ms / 1000);
+
+        protected override double CalculateInitialStrain(double time, DifficultyHitObject current) => currentStrain * strainDecay(time - current.Previous(0).StartTime);
 
         public Aim(Mod[] mods)
             : base(mods)
         {
         }
 
-        protected override double StrainValueOf(DifficultyHitObject current)
+        protected override double StrainValueAt(DifficultyHitObject current)
+        {
+            currentStrain *= strainDecay(current.DeltaTime);
+            currentStrain += strainValueOf(current) * skillMultiplier;
+
+            return currentStrain;
+        }
+
+        private double strainValueOf(DifficultyHitObject current)
         {
             var osuCurrent = (OsuDifficultyHitObject)current;
 
-            var aimValue = CalculateAimValue(osuCurrent);
-            var readingMultiplier = calculateReadingMultiplier(osuCurrent, Mods.Any(m => m is OsuModHidden), Mods.Any(m => m is OsuModFlashlight));
+            double aimValue = CalculateAimValue(osuCurrent);
+            double readingMultiplier = calculateReadingMultiplier(osuCurrent, Mods.Any(m => m is OsuModHidden), Mods.Any(m => m is OsuModFlashlight));
 
             return aimValue * readingMultiplier;
         }
@@ -61,20 +73,25 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (current.Flow == 1)
                 return 0;
 
-            double distance = GetDistance(current) / OsuDifficultyHitObject.NORMALIZED_RADIUS;
+            double distance = GetDistance(current) / OsuDifficultyHitObject.NORMALISED_RADIUS;
 
             double jumpAimBase = distance / current.StrainTime;
 
-            OsuDifficultyHitObject previousObject = null;
+            OsuDifficultyHitObject? previousObject = null;
+            OsuDifficultyHitObject[] previousTwo = [];
             double locationWeight = 1;
-            if (Previous.Count > 0)
+            if (current.Index > 0)
             {
-                previousObject = (OsuDifficultyHitObject)Previous[0];
+                previousObject = (OsuDifficultyHitObject)current.Previous(0);
                 locationWeight = calculateLocationWeight(((OsuHitObject)current.BaseObject).Position, ((OsuHitObject)previousObject.BaseObject).Position);
+                if (current.Index > 1)
+                    previousTwo = [previousObject, (OsuDifficultyHitObject)previousObject.Previous(0)];
+                else
+                    previousTwo = [previousObject];
             }
 
             double angleWeight = calculateJumpAngleWeight(current.Angle, current.StrainTime, previousObject?.StrainTime ?? 0, previousObject?.JumpDistance ?? 0);
-            double patternWeight = calculateJumpPatternWeight(current, Previous.Take(2).Cast<OsuDifficultyHitObject>().ToArray());
+            double patternWeight = calculateJumpPatternWeight(current, previousTwo);
 
             double jumpAim = jumpAimBase * angleWeight * patternWeight * locationWeight;
             return jumpAim * (1 - current.Flow);
@@ -85,7 +102,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (current.Flow == 0)
                 return 0;
 
-            double distance = current.JumpDistance / OsuDifficultyHitObject.NORMALIZED_RADIUS;
+            double distance = current.JumpDistance / OsuDifficultyHitObject.NORMALISED_RADIUS;
 
             // The 1.9 exponent roughly equals the inherent BPM based scaling the strain mechanism adds in the relevant BPM range.
             // This way the aim value of streams stays more or less consistent for a given velocity.
@@ -93,10 +110,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             double flowAimBase = (Math.Tanh(distance - 2) + 1) * 2.5 / current.StrainTime + (distance / 5) / current.StrainTime;
 
             double locationWeight = 1;
-            OsuDifficultyHitObject previousObject = null;
-            if (Previous.Count > 0)
+            OsuDifficultyHitObject? previousObject = null;
+            if (current.Index > 0)
             {
-                previousObject = (OsuDifficultyHitObject)Previous[0];
+                previousObject = (OsuDifficultyHitObject)current.Previous(0);
                 locationWeight = calculateLocationWeight(((OsuHitObject)current.BaseObject).Position, ((OsuHitObject)previousObject.BaseObject).Position);
             }
 
@@ -154,7 +171,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 // An additional restriction to stop jumps that come after triples/streams from getting bonuses for the change in angles.
                 if (Utils.IsRatioEqual(1, current.StrainTime, previousObject.StrainTime) && !Utils.IsNullOrNaN(current.Angle) && !Utils.IsNullOrNaN(previousObject.Angle))
                 {
-                    double angleChange = Math.Abs(current.Angle.Value) - Math.Abs(previousObject.Angle.Value);
+                    double angleChange = Math.Abs(current.Angle!.Value) - Math.Abs(previousObject.Angle!.Value);
                     if (Math.Abs(angleChange) >= Math.PI / 1.5)
                         angleWeight = 1.05;
                     else
@@ -171,7 +188,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             return 1 + (jumpPatternWeight - 1) * distanceRequirement; // Up to ~33% aim bonus.
         }
 
-        private static double calculateFlowPatternWeight(OsuDifficultyHitObject current, OsuDifficultyHitObject previousObject, double distance)
+        private static double calculateFlowPatternWeight(OsuDifficultyHitObject current, OsuDifficultyHitObject? previousObject, double distance)
         {
             if (previousObject == null)
                 return 1;
@@ -202,7 +219,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
                     angleBonus = (-Math.Cos(Math.Sin(angleChange / 2) * Math.PI) + 1) / 2;
                 }
-                else if (Math.Abs(current.Angle.Value) < Math.Abs(previousObject.Angle.Value))
+                else if (Math.Abs(current.Angle!.Value) < Math.Abs(previousObject.Angle!.Value))
                 {
                     double angleChange = current.Angle.Value - previousObject.Angle.Value;
                     angleBonus = (-Math.Cos(Math.Sin(angleChange / 2) * Math.PI) + 1) / 2;
@@ -285,7 +302,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (Utils.IsRatioEqualGreater(1, deltaTime, previousDeltaTime))
             {
                 // In half the time only half as much movement is required between two circles.
-                double overlapDistance = previousDeltaTime / deltaTime * OsuDifficultyHitObject.NORMALIZED_RADIUS * 2;
+                double overlapDistance = previousDeltaTime / deltaTime * OsuDifficultyHitObject.NORMALISED_RADIUS * 2;
                 return Utils.TransitionToTrue(previousDistance, 0, overlapDistance);
             }
             else
@@ -296,7 +313,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         private static double calculateReadingDensity(double previousBaseFlow, double previousJumpDistance)
         {
-            return (1 - previousBaseFlow * 0.75) * (1 + previousBaseFlow * 0.5 * previousJumpDistance / OsuDifficultyHitObject.NORMALIZED_RADIUS);
+            return (1 - previousBaseFlow * 0.75) * (1 + previousBaseFlow * 0.5 * previousJumpDistance / OsuDifficultyHitObject.NORMALISED_RADIUS);
         }
 
         private static double calculateFlashlightMultiplier(bool flashlightEnabled, double rawJumpDistance, double radius)

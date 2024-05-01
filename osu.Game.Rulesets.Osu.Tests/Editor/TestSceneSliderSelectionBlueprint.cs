@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using NUnit.Framework;
 using osu.Framework.Utils;
 using osu.Game.Beatmaps;
@@ -18,7 +20,7 @@ using osuTK.Input;
 
 namespace osu.Game.Rulesets.Osu.Tests.Editor
 {
-    public class TestSceneSliderSelectionBlueprint : SelectionBlueprintTestScene
+    public partial class TestSceneSliderSelectionBlueprint : SelectionBlueprintTestScene
     {
         private Slider slider;
         private DrawableSlider drawableObject;
@@ -32,7 +34,7 @@ namespace osu.Game.Rulesets.Osu.Tests.Editor
             slider = new Slider
             {
                 Position = new Vector2(256, 192),
-                Path = new SliderPath(PathType.Bezier, new[]
+                Path = new SliderPath(PathType.BEZIER, new[]
                 {
                     Vector2.Zero,
                     new Vector2(150, 150),
@@ -43,7 +45,7 @@ namespace osu.Game.Rulesets.Osu.Tests.Editor
             slider.ApplyDefaults(new ControlPointInfo(), new BeatmapDifficulty { CircleSize = 2 });
 
             Add(drawableObject = new DrawableSlider(slider));
-            AddBlueprint(blueprint = new TestSliderBlueprint(drawableObject));
+            AddBlueprint(blueprint = new TestSliderBlueprint(slider), drawableObject);
         });
 
         [Test]
@@ -174,44 +176,44 @@ namespace osu.Game.Rulesets.Osu.Tests.Editor
             AddAssert("body positioned correctly", () => blueprint.BodyPiece.Position == slider.StackedPosition);
 
             AddAssert("head positioned correctly",
-                () => Precision.AlmostEquals(blueprint.HeadBlueprint.CirclePiece.ScreenSpaceDrawQuad.Centre, drawableObject.HeadCircle.ScreenSpaceDrawQuad.Centre));
+                () => Precision.AlmostEquals(blueprint.HeadOverlay.CirclePiece.ScreenSpaceDrawQuad.Centre, drawableObject.HeadCircle.ScreenSpaceDrawQuad.Centre));
 
             AddAssert("tail positioned correctly",
-                () => Precision.AlmostEquals(blueprint.TailBlueprint.CirclePiece.ScreenSpaceDrawQuad.Centre, drawableObject.TailCircle.ScreenSpaceDrawQuad.Centre));
+                () => Precision.AlmostEquals(blueprint.TailOverlay.CirclePiece.ScreenSpaceDrawQuad.Centre, drawableObject.TailCircle.ScreenSpaceDrawQuad.Centre));
         }
 
         private void moveMouseToControlPoint(int index)
         {
             AddStep($"move mouse to control point {index}", () =>
             {
-                Vector2 position = slider.Position + slider.Path.ControlPoints[index].Position.Value;
-                InputManager.MoveMouseTo(drawableObject.Parent.ToScreenSpace(position));
+                Vector2 position = slider.Position + slider.Path.ControlPoints[index].Position;
+                InputManager.MoveMouseTo(drawableObject.Parent!.ToScreenSpace(position));
             });
         }
 
         private void checkControlPointSelected(int index, bool selected)
             => AddAssert($"control point {index} {(selected ? "selected" : "not selected")}", () => blueprint.ControlPointVisualiser.Pieces[index].IsSelected.Value == selected);
 
-        private class TestSliderBlueprint : SliderSelectionBlueprint
+        private partial class TestSliderBlueprint : SliderSelectionBlueprint
         {
             public new SliderBodyPiece BodyPiece => base.BodyPiece;
-            public new TestSliderCircleBlueprint HeadBlueprint => (TestSliderCircleBlueprint)base.HeadBlueprint;
-            public new TestSliderCircleBlueprint TailBlueprint => (TestSliderCircleBlueprint)base.TailBlueprint;
-            public new PathControlPointVisualiser ControlPointVisualiser => base.ControlPointVisualiser;
+            public new TestSliderCircleOverlay HeadOverlay => (TestSliderCircleOverlay)base.HeadOverlay;
+            public new TestSliderCircleOverlay TailOverlay => (TestSliderCircleOverlay)base.TailOverlay;
+            public new PathControlPointVisualiser<Slider> ControlPointVisualiser => base.ControlPointVisualiser;
 
-            public TestSliderBlueprint(DrawableSlider slider)
+            public TestSliderBlueprint(Slider slider)
                 : base(slider)
             {
             }
 
-            protected override SliderCircleSelectionBlueprint CreateCircleSelectionBlueprint(DrawableSlider slider, SliderPosition position) => new TestSliderCircleBlueprint(slider, position);
+            protected override SliderCircleOverlay CreateCircleOverlay(Slider slider, SliderPosition position) => new TestSliderCircleOverlay(slider, position);
         }
 
-        private class TestSliderCircleBlueprint : SliderCircleSelectionBlueprint
+        private partial class TestSliderCircleOverlay : SliderCircleOverlay
         {
             public new HitCirclePiece CirclePiece => base.CirclePiece;
 
-            public TestSliderCircleBlueprint(DrawableSlider slider, SliderPosition position)
+            public TestSliderCircleOverlay(Slider slider, SliderPosition position)
                 : base(slider, position)
             {
             }

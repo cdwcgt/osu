@@ -4,17 +4,17 @@
 using System;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Difficulty.Skills;
-using osu.Game.Rulesets.Difficulty.Utils;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Taiko.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Taiko.Objects;
+using osu.Game.Utils;
 
 namespace osu.Game.Rulesets.Taiko.Difficulty.Skills
 {
     /// <summary>
     /// Calculates the rhythm coefficient of taiko difficulty.
     /// </summary>
-    public class Rhythm : StrainSkill
+    public class Rhythm : StrainDecaySkill
     {
         protected override double SkillMultiplier => 10;
         protected override double StrainDecayBase => 0;
@@ -106,7 +106,7 @@ namespace osu.Game.Rulesets.Taiko.Difficulty.Skills
                     if (!samePattern(start, mostRecentPatternsToCompare))
                         continue;
 
-                    int notesSince = hitObject.ObjectIndex - rhythmHistory[start].ObjectIndex;
+                    int notesSince = hitObject.Index - rhythmHistory[start].Index;
                     penalty *= repetitionPenalty(notesSince);
                     break;
                 }

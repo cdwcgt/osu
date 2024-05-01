@@ -1,9 +1,10 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
+using System.Linq;
 using osu.Framework.Allocation;
-using osu.Framework.Audio;
-using osu.Framework.Audio.Sample;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -12,21 +13,20 @@ using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
 using osu.Game.Graphics.Sprites;
+using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Graphics.UserInterface
 {
-    public class DrawableOsuMenuItem : Menu.DrawableMenuItem
+    public partial class DrawableOsuMenuItem : Menu.DrawableMenuItem
     {
         public const int MARGIN_HORIZONTAL = 17;
         public const int MARGIN_VERTICAL = 4;
         private const int text_size = 17;
         private const int transition_length = 80;
 
-        private Sample sampleClick;
-        private Sample sampleHover;
-
         private TextContainer text;
+        private HoverClickSounds hoverClickSounds;
 
         public DrawableOsuMenuItem(MenuItem item)
             : base(item)
@@ -34,17 +34,43 @@ namespace osu.Game.Graphics.UserInterface
         }
 
         [BackgroundDependencyLoader]
-        private void load(AudioManager audio)
+        private void load()
         {
-            sampleHover = audio.Samples.Get(@"UI/generic-hover");
-            sampleClick = audio.Samples.Get(@"UI/generic-select");
-
             BackgroundColour = Color4.Transparent;
             BackgroundColourHover = Color4Extensions.FromHex(@"172023");
 
+            AddInternal(hoverClickSounds = new HoverClickSounds());
+
             updateTextColour();
 
+            bool hasSubmenu = Item.Items.Any();
+
+            // Only add right chevron if direction of menu items is vertical (i.e. width is relative size, see `DrawableMenuItem.SetFlowDirection()`).
+            if (hasSubmenu && RelativeSizeAxes == Axes.X)
+            {
+                AddInternal(new SpriteIcon
+                {
+                    Margin = new MarginPadding(6),
+                    Size = new Vector2(8),
+                    Icon = FontAwesome.Solid.ChevronRight,
+                    Anchor = Anchor.CentreRight,
+                    Origin = Anchor.CentreRight,
+                });
+
+                text.Padding = new MarginPadding
+                {
+                    // Add some padding for the chevron above.
+                    Right = 5,
+                };
+            }
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
             Item.Action.BindDisabledChanged(_ => updateState(), true);
+            FinishTransforms();
         }
 
         private void updateTextColour()
@@ -80,11 +106,11 @@ namespace osu.Game.Graphics.UserInterface
 
         private void updateState()
         {
-            Alpha = Item.Action.Disabled ? 0.2f : 1;
+            hoverClickSounds.Enabled.Value = IsActionable;
+            Alpha = IsActionable ? 1 : 0.2f;
 
-            if (IsHovered && !Item.Action.Disabled)
+            if (IsHovered && IsActionable)
             {
-                sampleHover.Play();
                 text.BoldText.FadeIn(transition_length, Easing.OutQuint);
                 text.NormalText.FadeOut(transition_length, Easing.OutQuint);
             }
@@ -95,16 +121,10 @@ namespace osu.Game.Graphics.UserInterface
             }
         }
 
-        protected override bool OnClick(ClickEvent e)
-        {
-            sampleClick.Play();
-            return base.OnClick(e);
-        }
-
         protected sealed override Drawable CreateContent() => text = CreateTextContainer();
         protected virtual TextContainer CreateTextContainer() => new TextContainer();
 
-        protected class TextContainer : Container, IHasText
+        protected partial class TextContainer : Container, IHasText
         {
             public LocalisableString Text
             {
@@ -130,6 +150,7 @@ namespace osu.Game.Graphics.UserInterface
                 {
                     NormalText = new OsuSpriteText
                     {
+                        AlwaysPresent = true, // ensures that the menu item does not change width when switching between normal and bold text.
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.CentreLeft,
                         Font = OsuFont.GetFont(size: text_size),
@@ -137,7 +158,7 @@ namespace osu.Game.Graphics.UserInterface
                     },
                     BoldText = new OsuSpriteText
                     {
-                        AlwaysPresent = true,
+                        AlwaysPresent = true, // ensures that the menu item does not change width when switching between normal and bold text.
                         Alpha = 0,
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.CentreLeft,

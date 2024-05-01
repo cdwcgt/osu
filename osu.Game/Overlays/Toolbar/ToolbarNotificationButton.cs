@@ -14,11 +14,11 @@ using osuTK.Graphics;
 
 namespace osu.Game.Overlays.Toolbar
 {
-    public class ToolbarNotificationButton : ToolbarOverlayToggleButton
+    public partial class ToolbarNotificationButton : ToolbarOverlayToggleButton
     {
         protected override Anchor TooltipAnchor => Anchor.TopRight;
 
-        public BindableInt NotificationCount = new BindableInt();
+        public IBindable<int> NotificationCount = new BindableInt();
 
         private readonly CountCircle countDisplay;
 
@@ -36,13 +36,12 @@ namespace osu.Game.Overlays.Toolbar
             });
         }
 
-        [BackgroundDependencyLoader(true)]
-        private void load(NotificationOverlay notificationOverlay)
+        [BackgroundDependencyLoader]
+        private void load(INotificationOverlay notificationOverlay)
         {
-            StateContainer = notificationOverlay;
+            StateContainer = notificationOverlay as NotificationOverlay;
 
-            if (notificationOverlay != null)
-                NotificationCount.BindTo(notificationOverlay.UnreadCount);
+            NotificationCount.BindTo(notificationOverlay.UnreadCount);
 
             NotificationCount.ValueChanged += count =>
             {
@@ -56,7 +55,7 @@ namespace osu.Game.Overlays.Toolbar
             };
         }
 
-        private class CountCircle : CompositeDrawable
+        private partial class CountCircle : CompositeDrawable
         {
             private readonly OsuSpriteText countText;
             private readonly Circle circle;

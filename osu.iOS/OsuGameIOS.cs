@@ -3,14 +3,15 @@
 
 using System;
 using Foundation;
+using Microsoft.Maui.Devices;
+using osu.Framework.Graphics;
 using osu.Game;
 using osu.Game.Updater;
 using osu.Game.Utils;
-using Xamarin.Essentials;
 
 namespace osu.iOS
 {
-    public class OsuGameIOS : OsuGame
+    public partial class OsuGameIOS : OsuGame
     {
         public override Version AssemblyVersion => new Version(NSBundle.MainBundle.InfoDictionary["CFBundleVersion"].ToString());
 
@@ -18,11 +19,16 @@ namespace osu.iOS
 
         protected override BatteryInfo CreateBatteryInfo() => new IOSBatteryInfo();
 
+        protected override Edges SafeAreaOverrideEdges =>
+            // iOS shows a home indicator at the bottom, and adds a safe area to account for this.
+            // Because we have the home indicator (mostly) hidden we don't really care about drawing in this region.
+            Edges.Bottom;
+
         private class IOSBatteryInfo : BatteryInfo
         {
-            public override double ChargeLevel => Battery.ChargeLevel;
+            public override double? ChargeLevel => Battery.ChargeLevel;
 
-            public override bool IsCharging => Battery.PowerSource != BatteryPowerSource.Battery;
+            public override bool OnBattery => Battery.PowerSource == BatteryPowerSource.Battery;
         }
     }
 }

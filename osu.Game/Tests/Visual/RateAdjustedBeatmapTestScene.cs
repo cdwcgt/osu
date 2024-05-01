@@ -6,14 +6,17 @@ namespace osu.Game.Tests.Visual
     /// <summary>
     /// Test case which adjusts the beatmap's rate to match any speed adjustments in visual tests.
     /// </summary>
-    public abstract class RateAdjustedBeatmapTestScene : ScreenTestScene
+    public abstract partial class RateAdjustedBeatmapTestScene : ScreenTestScene
     {
         protected override void Update()
         {
             base.Update();
 
-            // note that this will override any mod rate application
-            Beatmap.Value.Track.Tempo.Value = Clock.Rate;
+            if (Beatmap.Value.TrackLoaded)
+            {
+                // note that this will override any mod rate application
+                Beatmap.Value.Track.Tempo.Value = Clock.Rate;
+            }
         }
     }
 }

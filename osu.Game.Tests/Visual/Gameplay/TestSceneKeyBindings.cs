@@ -1,10 +1,13 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System.Collections.Generic;
 using NUnit.Framework;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Input.Bindings;
+using osu.Framework.Input.Events;
 using osu.Framework.Testing;
 using osu.Game.Beatmaps;
 using osu.Game.Input.Bindings;
@@ -17,7 +20,7 @@ using osuTK.Input;
 namespace osu.Game.Tests.Visual.Gameplay
 {
     [HeadlessTest]
-    public class TestSceneKeyBindings : OsuManualInputManagerTestScene
+    public partial class TestSceneKeyBindings : OsuManualInputManagerTestScene
     {
         private readonly ActionReceiver receiver;
 
@@ -48,7 +51,7 @@ namespace osu.Game.Tests.Visual.Gameplay
             public override IBeatmapConverter CreateBeatmapConverter(IBeatmap beatmap) =>
                 throw new System.NotImplementedException();
 
-            public override DifficultyCalculator CreateDifficultyCalculator(WorkingBeatmap beatmap) =>
+            public override DifficultyCalculator CreateDifficultyCalculator(IWorkingBeatmap beatmap) =>
                 throw new System.NotImplementedException();
 
             public override IEnumerable<KeyBinding> GetDefaultKeyBindings(int variant = 0)
@@ -68,7 +71,7 @@ namespace osu.Game.Tests.Visual.Gameplay
             Down,
         }
 
-        private class TestKeyBindingContainer : DatabasedKeyBindingContainer<TestAction>
+        private partial class TestKeyBindingContainer : DatabasedKeyBindingContainer<TestAction>
         {
             public TestKeyBindingContainer()
                 : base(new TestRuleset().RulesetInfo, 0)
@@ -76,17 +79,20 @@ namespace osu.Game.Tests.Visual.Gameplay
             }
         }
 
-        private class ActionReceiver : CompositeDrawable, IKeyBindingHandler<TestAction>
+        private partial class ActionReceiver : CompositeDrawable, IKeyBindingHandler<TestAction>
         {
             public bool ReceivedAction;
 
-            public bool OnPressed(TestAction action)
+            public bool OnPressed(KeyBindingPressEvent<TestAction> e)
             {
-                ReceivedAction = action == TestAction.Down;
+                if (e.Repeat)
+                    return false;
+
+                ReceivedAction = e.Action == TestAction.Down;
                 return true;
             }
 
-            public void OnReleased(TestAction action)
+            public void OnReleased(KeyBindingReleaseEvent<TestAction> e)
             {
             }
         }

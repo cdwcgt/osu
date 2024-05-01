@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using osu.Game.IO;
+using osu.Game.Rulesets;
 
 namespace osu.Game.Beatmaps.Formats
 {
@@ -38,20 +39,28 @@ namespace osu.Game.Beatmaps.Formats
         }
 
         /// <summary>
+        /// Register dependencies for use with static decoder classes.
+        /// </summary>
+        /// <param name="rulesets">A store containing all available rulesets (used by <see cref="LegacyBeatmapDecoder"/>).</param>
+        public static void RegisterDependencies(RulesetStore rulesets)
+        {
+            LegacyBeatmapDecoder.RulesetStore = rulesets ?? throw new ArgumentNullException(nameof(rulesets));
+        }
+
+        /// <summary>
         /// Retrieves a <see cref="Decoder"/> to parse a <see cref="Beatmap"/>.
         /// </summary>
         /// <param name="stream">A stream pointing to the <see cref="Beatmap"/>.</param>
         public static Decoder<T> GetDecoder<T>(LineBufferedReader stream)
             where T : new()
         {
-            if (stream == null)
-                throw new ArgumentNullException(nameof(stream));
+            ArgumentNullException.ThrowIfNull(stream);
 
             if (!decoders.TryGetValue(typeof(T), out var typedDecoders))
                 throw new IOException(@"Unknown decoder type");
 
             // start off with the first line of the file
-            string line = stream.PeekLine()?.Trim();
+            string? line = stream.PeekLine()?.Trim();
 
             while (line != null && line.Length == 0)
             {
@@ -61,7 +70,7 @@ namespace osu.Game.Beatmaps.Formats
             }
 
             if (line == null)
-                throw new IOException("Unknown file format (null)");
+                throw new IOException("Unknown file format (no content)");
 
             var decoder = typedDecoders.Where(d => line.StartsWith(d.Key, StringComparison.InvariantCulture)).Select(d => d.Value).FirstOrDefault();
 

@@ -1,14 +1,11 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using osu.Framework.Graphics;
-using osu.Framework.Graphics.Sprites;
-using osu.Framework.Graphics.Textures;
 using osu.Game.Beatmaps;
-using osu.Game.Skinning;
+using osu.Game.Rulesets.Mods;
 using osu.Game.Storyboards.Drawables;
 
 namespace osu.Game.Storyboards
@@ -21,7 +18,7 @@ namespace osu.Game.Storyboards
         public BeatmapInfo BeatmapInfo = new BeatmapInfo();
 
         /// <summary>
-        /// Whether the storyboard can fall back to skin sprites in case no matching storyboard sprites are found.
+        /// Whether the storyboard should prefer textures from the current skin before using local storyboard textures.
         /// </summary>
         public bool UseSkinSprites { get; set; }
 
@@ -33,8 +30,25 @@ namespace osu.Game.Storyboards
         /// </summary>
         /// <remarks>
         /// This iterates all elements and as such should be used sparingly or stored locally.
+        /// Sample events use their start time as "end time" during this calculation.
+        /// Video and background events are not included to match stable.
         /// </remarks>
-        public double? EarliestEventTime => Layers.SelectMany(l => l.Elements).OrderBy(e => e.StartTime).FirstOrDefault()?.StartTime;
+        public double? EarliestEventTime => Layers.SelectMany(l => l.Elements)
+                                                  .Where(e => e is not StoryboardVideo)
+                                                  .MinBy(e => e.StartTime)?.StartTime;
+
+        /// <summary>
+        /// Across all layers, find the latest point in time that a storyboard element ends at.
+        /// Will return null if there are no elements.
+        /// </summary>
+        /// <remarks>
+        /// This iterates all elements and as such should be used sparingly or stored locally.
+        /// Sample events use their start time as "end time" during this calculation.
+        /// Video and background events are not included to match stable.
+        /// </remarks>
+        public double? LatestEventTime => Layers.SelectMany(l => l.Elements)
+                                                .Where(e => e is not StoryboardVideo)
+                                                .MaxBy(e => e.GetEndTime())?.GetEndTime();
 
         /// <summary>
         /// Depth of the currently front-most storyboard layer, excluding the overlay layer.
@@ -43,7 +57,7 @@ namespace osu.Game.Storyboards
 
         public Storyboard()
         {
-            layers.Add("Video", new StoryboardLayer("Video", 4, false));
+            layers.Add("Video", new StoryboardVideoLayer("Video", 4, false));
             layers.Add("Background", new StoryboardLayer("Background", 3));
             layers.Add("Fail", new StoryboardLayer("Fail", 2) { VisibleWhenPassing = false, });
             layers.Add("Pass", new StoryboardLayer("Pass", 1) { VisibleWhenFailing = false, });
@@ -67,33 +81,42 @@ namespace osu.Game.Storyboards
         {
             get
             {
-                var backgroundPath = BeatmapInfo.BeatmapSet?.Metadata?.BackgroundFile?.ToLowerInvariant();
-                if (backgroundPath == null)
+                string backgroundPath = BeatmapInfo.Metadata.BackgroundFile;
+
+                if (string.IsNullOrEmpty(backgroundPath))
                     return false;
+
+                // Importantly, do this after the NullOrEmpty because EF may have stored the non-nullable value as null to the database, bypassing compile-time constraints.
+                backgroundPath = backgroundPath.ToLowerInvariant();
 
                 return GetLayer("Background").Elements.Any(e => e.Path.ToLowerInvariant() == backgroundPath);
             }
         }
 
-        public DrawableStoryboard CreateDrawable(WorkingBeatmap working = null)
+        public virtual DrawableStoryboard CreateDrawable(IReadOnlyList<Mod>? mods = null) =>
+            new DrawableStoryboard(this, mods);
+
+        private static readonly string[] image_extensions = { @".png", @".jpg" };
+
+        public virtual string? GetStoragePathFromStoryboardPath(string path)
         {
-            var drawable = new DrawableStoryboard(this);
-            drawable.Width = drawable.Height * (BeatmapInfo.WidescreenStoryboard ? 16 / 9f : 4 / 3f);
-            return drawable;
-        }
+            string? resolvedPath = null;
 
-        public Drawable CreateSpriteFromResourcePath(string path, TextureStore textureStore)
-        {
-            Drawable drawable = null;
-            var storyboardPath = BeatmapInfo.BeatmapSet?.Files?.Find(f => f.Filename.Equals(path, StringComparison.OrdinalIgnoreCase))?.FileInfo.StoragePath;
+            if (Path.HasExtension(path))
+            {
+                resolvedPath = BeatmapInfo.BeatmapSet?.GetPathForFile(path);
+            }
+            else
+            {
+                // Some old storyboards don't include a file extension, so let's best guess at one.
+                foreach (string ext in image_extensions)
+                {
+                    if ((resolvedPath = BeatmapInfo.BeatmapSet?.GetPathForFile($"{path}{ext}")) != null)
+                        break;
+                }
+            }
 
-            if (storyboardPath != null)
-                drawable = new Sprite { Texture = textureStore.Get(storyboardPath) };
-            // if the texture isn't available locally in the beatmap, some storyboards choose to source from the underlying skin lookup hierarchy.
-            else if (UseSkinSprites)
-                drawable = new SkinnableSprite(path);
-
-            return drawable;
+            return resolvedPath;
         }
     }
 }

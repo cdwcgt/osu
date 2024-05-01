@@ -15,7 +15,7 @@ using static osu.Game.Graphics.UserInterface.ShowMoreButton;
 
 namespace osu.Game.Overlays.Comments.Buttons
 {
-    public abstract class CommentRepliesButton : CompositeDrawable
+    public abstract partial class CommentRepliesButton : CompositeDrawable
     {
         protected LocalisableString Text
         {
@@ -24,7 +24,7 @@ namespace osu.Game.Overlays.Comments.Buttons
         }
 
         [Resolved]
-        private OverlayColourProvider colourProvider { get; set; }
+        private OverlayColourProvider colourProvider { get; set; } = null!;
 
         private readonly ChevronIcon icon;
         private readonly Box background;

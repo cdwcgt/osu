@@ -12,7 +12,7 @@ namespace osu.Game.Database
     public interface IHasFiles<TFile>
         where TFile : INamedFileInfo
     {
-        List<TFile> Files { get; set; }
+        List<TFile> Files { get; }
 
         string Hash { get; set; }
     }

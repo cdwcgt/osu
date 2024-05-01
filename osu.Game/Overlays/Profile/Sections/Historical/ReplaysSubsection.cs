@@ -2,20 +2,21 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Bindables;
-using osu.Game.Users;
-using static osu.Game.Users.User;
+using osu.Framework.Localisation;
+using osu.Game.Online.API.Requests.Responses;
+using osu.Game.Resources.Localisation.Web;
 
 namespace osu.Game.Overlays.Profile.Sections.Historical
 {
-    public class ReplaysSubsection : ChartProfileSubsection
+    public partial class ReplaysSubsection : ChartProfileSubsection
     {
-        protected override string GraphCounterName => "Replays Watched";
+        protected override LocalisableString GraphCounterName => UsersStrings.ShowExtraHistoricalReplaysWatchedCountsCountLabel;
 
-        public ReplaysSubsection(Bindable<User> user)
-            : base(user, "Replays Watched History")
+        public ReplaysSubsection(Bindable<UserProfileData?> user)
+            : base(user, UsersStrings.ShowExtraHistoricalReplaysWatchedCountsTitle)
         {
         }
 
-        protected override UserHistoryCount[] GetValues(User user) => user?.ReplaysWatchedCounts;
+        protected override APIUserHistoryCount[]? GetValues(APIUser? user) => user?.ReplaysWatchedCounts;
     }
 }

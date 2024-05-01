@@ -1,6 +1,8 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System.Collections.Generic;
 using System.Linq;
 using JetBrains.Annotations;
@@ -8,6 +10,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Primitives;
 using osu.Framework.Input.Bindings;
+using osu.Framework.Input.Events;
 using osu.Game.Audio;
 using osu.Game.Rulesets.Objects.Drawables;
 using osu.Game.Skinning;
@@ -15,12 +18,21 @@ using osuTK;
 
 namespace osu.Game.Rulesets.Taiko.Objects.Drawables
 {
-    public abstract class DrawableTaikoHitObject : DrawableHitObject<TaikoHitObject>, IKeyBindingHandler<TaikoAction>
+    public abstract partial class DrawableTaikoHitObject : DrawableHitObject<TaikoHitObject>, IKeyBindingHandler<TaikoAction>
     {
         protected readonly Container Content;
         private readonly Container proxiedContent;
 
         private readonly Container nonProxiedContent;
+
+        /// <summary>
+        /// Whether the location of the hit should be snapped to the hit target before animating.
+        /// </summary>
+        /// <remarks>
+        /// This is how osu-stable worked, but notably is not how TnT works.
+        /// Not snapping results in less visual feedback on hit accuracy.
+        /// </remarks>
+        public bool SnapJudgementLocation { get; set; }
 
         protected DrawableTaikoHitObject([CanBeNull] TaikoHitObject hitObject)
             : base(hitObject)
@@ -53,7 +65,7 @@ namespace osu.Game.Rulesets.Taiko.Objects.Drawables
 
             isProxied = true;
 
-            nonProxiedContent.Remove(Content);
+            nonProxiedContent.Remove(Content, false);
             proxiedContent.Add(Content);
         }
 
@@ -67,7 +79,7 @@ namespace osu.Game.Rulesets.Taiko.Objects.Drawables
 
             isProxied = false;
 
-            proxiedContent.Remove(Content);
+            proxiedContent.Remove(Content, false);
             nonProxiedContent.Add(Content);
         }
 
@@ -76,9 +88,9 @@ namespace osu.Game.Rulesets.Taiko.Objects.Drawables
         /// </summary>
         public Drawable CreateProxiedContent() => proxiedContent.CreateProxy();
 
-        public abstract bool OnPressed(TaikoAction action);
+        public abstract bool OnPressed(KeyBindingPressEvent<TaikoAction> e);
 
-        public virtual void OnReleased(TaikoAction action)
+        public virtual void OnReleased(KeyBindingReleaseEvent<TaikoAction> e)
         {
         }
 
@@ -102,13 +114,16 @@ namespace osu.Game.Rulesets.Taiko.Objects.Drawables
             }
         }
 
-        private class ProxiedContentContainer : Container
+        private partial class ProxiedContentContainer : Container
         {
             public override bool RemoveWhenNotAlive => false;
         }
+
+        // osu!taiko hitsounds are managed by the drum (see DrumSampleTriggerSource).
+        public sealed override IEnumerable<HitSampleInfo> GetSamples() => Enumerable.Empty<HitSampleInfo>();
     }
 
-    public abstract class DrawableTaikoHitObject<TObject> : DrawableTaikoHitObject
+    public abstract partial class DrawableTaikoHitObject<TObject> : DrawableTaikoHitObject
         where TObject : TaikoHitObject
     {
         public override Vector2 OriginPosition => new Vector2(DrawHeight / 2);
@@ -130,6 +145,8 @@ namespace osu.Game.Rulesets.Taiko.Objects.Drawables
         protected override void OnApply()
         {
             base.OnApply();
+
+            // TODO: THIS CANNOT BE HERE, it makes pooling pointless (see https://github.com/ppy/osu/issues/21072).
             RecreatePieces();
         }
 
@@ -137,12 +154,11 @@ namespace osu.Game.Rulesets.Taiko.Objects.Drawables
         {
             Size = BaseSize = new Vector2(TaikoHitObject.DEFAULT_SIZE);
 
-            MainPiece?.Expire();
+            if (MainPiece != null)
+                Content.Remove(MainPiece, true);
+
             Content.Add(MainPiece = CreateMainPiece());
         }
-
-        // Most osu!taiko hitsounds are managed by the drum (see DrumSampleMapping).
-        public override IEnumerable<HitSampleInfo> GetSamples() => Enumerable.Empty<HitSampleInfo>();
 
         protected abstract SkinnableDrawable CreateMainPiece();
     }

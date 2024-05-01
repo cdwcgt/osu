@@ -13,7 +13,7 @@ namespace osu.Game.Online.API.Requests
         private readonly RankingsSortCriteria sort;
 
         public GetSpotlightRankingsRequest(RulesetInfo ruleset, int spotlight, RankingsSortCriteria sort)
-            : base(ruleset, 1)
+            : base(ruleset)
         {
             this.spotlight = spotlight;
             this.sort = sort;
@@ -24,7 +24,7 @@ namespace osu.Game.Online.API.Requests
             var req = base.CreateWebRequest();
 
             req.AddParameter("spotlight", spotlight.ToString());
-            req.AddParameter("filter", sort.ToString().ToLower());
+            req.AddParameter("filter", sort.ToString().ToLowerInvariant());
 
             return req;
         }

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using osu.Game.Beatmaps;
+using osu.Game.Rulesets.Edit;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Rulesets.Osu.Edit.Checks;
@@ -20,7 +21,7 @@ namespace osu.Game.Rulesets.Osu.Tests.Editor.Checks
     {
         private static readonly Vector2 playfield_centre = OsuPlayfield.BASE_SIZE * 0.5f;
 
-        private CheckOffscreenObjects check;
+        private CheckOffscreenObjects check = null!;
 
         [SetUp]
         public void Setup()
@@ -106,7 +107,7 @@ namespace osu.Game.Rulesets.Osu.Tests.Editor.Checks
                         Position = new Vector2(420, 240),
                         Path = new SliderPath(new[]
                         {
-                            new PathControlPoint(new Vector2(0, 0), PathType.Linear),
+                            new PathControlPoint(new Vector2(0, 0), PathType.LINEAR),
                             new PathControlPoint(new Vector2(-100, 0))
                         }),
                     }
@@ -127,7 +128,7 @@ namespace osu.Game.Rulesets.Osu.Tests.Editor.Checks
                         Position = playfield_centre,
                         Path = new SliderPath(new[]
                         {
-                            new PathControlPoint(new Vector2(0, 0), PathType.Linear),
+                            new PathControlPoint(new Vector2(0, 0), PathType.LINEAR),
                             new PathControlPoint(new Vector2(0, -playfield_centre.Y + 5))
                         }),
                     }
@@ -148,7 +149,7 @@ namespace osu.Game.Rulesets.Osu.Tests.Editor.Checks
                         Position = playfield_centre,
                         Path = new SliderPath(new[]
                         {
-                            new PathControlPoint(new Vector2(0, 0), PathType.Linear),
+                            new PathControlPoint(new Vector2(0, 0), PathType.LINEAR),
                             new PathControlPoint(new Vector2(0, -playfield_centre.Y + 5))
                         }),
                         StackHeight = 5
@@ -170,7 +171,7 @@ namespace osu.Game.Rulesets.Osu.Tests.Editor.Checks
                         Position = new Vector2(0, 0),
                         Path = new SliderPath(new[]
                         {
-                            new PathControlPoint(new Vector2(0, 0), PathType.Linear),
+                            new PathControlPoint(new Vector2(0, 0), PathType.LINEAR),
                             new PathControlPoint(playfield_centre)
                         }),
                     }
@@ -191,7 +192,7 @@ namespace osu.Game.Rulesets.Osu.Tests.Editor.Checks
                         Position = playfield_centre,
                         Path = new SliderPath(new[]
                         {
-                            new PathControlPoint(new Vector2(0, 0), PathType.Linear),
+                            new PathControlPoint(new Vector2(0, 0), PathType.LINEAR),
                             new PathControlPoint(-playfield_centre)
                         }),
                     }
@@ -213,7 +214,7 @@ namespace osu.Game.Rulesets.Osu.Tests.Editor.Checks
                         Path = new SliderPath(new[]
                         {
                             // Circular arc shoots over the top of the screen.
-                            new PathControlPoint(new Vector2(0, 0), PathType.PerfectCurve),
+                            new PathControlPoint(new Vector2(0, 0), PathType.PERFECT_CURVE),
                             new PathControlPoint(new Vector2(-100, -200)),
                             new PathControlPoint(new Vector2(100, -200))
                         }),
@@ -224,12 +225,14 @@ namespace osu.Game.Rulesets.Osu.Tests.Editor.Checks
 
         private void assertOk(IBeatmap beatmap)
         {
-            Assert.That(check.Run(beatmap, new TestWorkingBeatmap(beatmap)), Is.Empty);
+            var context = new BeatmapVerifierContext(beatmap, new TestWorkingBeatmap(beatmap));
+            Assert.That(check.Run(context), Is.Empty);
         }
 
         private void assertOffscreenCircle(IBeatmap beatmap)
         {
-            var issues = check.Run(beatmap, new TestWorkingBeatmap(beatmap)).ToList();
+            var context = new BeatmapVerifierContext(beatmap, new TestWorkingBeatmap(beatmap));
+            var issues = check.Run(context).ToList();
 
             Assert.That(issues, Has.Count.EqualTo(1));
             Assert.That(issues.Single().Template is CheckOffscreenObjects.IssueTemplateOffscreenCircle);
@@ -237,7 +240,8 @@ namespace osu.Game.Rulesets.Osu.Tests.Editor.Checks
 
         private void assertOffscreenSlider(IBeatmap beatmap)
         {
-            var issues = check.Run(beatmap, new TestWorkingBeatmap(beatmap)).ToList();
+            var context = new BeatmapVerifierContext(beatmap, new TestWorkingBeatmap(beatmap));
+            var issues = check.Run(context).ToList();
 
             Assert.That(issues, Has.Count.EqualTo(1));
             Assert.That(issues.Single().Template is CheckOffscreenObjects.IssueTemplateOffscreenSlider);

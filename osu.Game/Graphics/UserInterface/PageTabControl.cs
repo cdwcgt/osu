@@ -1,21 +1,26 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using osuTK;
 using osuTK.Graphics;
 using osu.Framework.Allocation;
+using osu.Framework.Audio;
+using osu.Framework.Audio.Sample;
 using osu.Framework.Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
+using osu.Framework.Localisation;
 using osu.Game.Graphics.Sprites;
 
 namespace osu.Game.Graphics.UserInterface
 {
-    public class PageTabControl<T> : OsuTabControl<T>
+    public partial class PageTabControl<T> : OsuTabControl<T>
     {
         protected override TabItem<T> CreateTabItem(T value) => new PageTabItem(value);
 
@@ -30,7 +35,7 @@ namespace osu.Game.Graphics.UserInterface
             AccentColour = colours.Yellow;
         }
 
-        public class PageTabItem : TabItem<T>, IHasAccentColour
+        public partial class PageTabItem : TabItem<T>, IHasAccentColour
         {
             private const float transition_duration = 100;
 
@@ -49,6 +54,8 @@ namespace osu.Game.Graphics.UserInterface
                     box.Colour = accentColour;
                 }
             }
+
+            private Sample selectSample = null!;
 
             public PageTabItem(T value)
                 : base(value)
@@ -75,13 +82,19 @@ namespace osu.Game.Graphics.UserInterface
                         Origin = Anchor.BottomLeft,
                         Anchor = Anchor.BottomLeft,
                     },
-                    new HoverClickSounds()
+                    new HoverSounds(HoverSampleSet.TabSelect)
                 };
 
                 Active.BindValueChanged(active => Text.Font = Text.Font.With(Typeface.Torus, weight: active.NewValue ? FontWeight.Bold : FontWeight.Medium), true);
             }
 
-            protected virtual string CreateText() => (Value as Enum)?.GetDescription() ?? Value.ToString();
+            [BackgroundDependencyLoader]
+            private void load(AudioManager audio)
+            {
+                selectSample = audio.Samples.Get(@"UI/tabselect-select");
+            }
+
+            protected virtual LocalisableString CreateText() => (Value as Enum)?.GetLocalisableDescription() ?? Value.ToString();
 
             protected override bool OnHover(HoverEvent e)
             {
@@ -109,6 +122,8 @@ namespace osu.Game.Graphics.UserInterface
             protected override void OnActivated() => slideActive();
 
             protected override void OnDeactivated() => slideInactive();
+
+            protected override void OnActivatedByUser() => selectSample.Play();
         }
     }
 }

@@ -11,12 +11,12 @@ using osu.Framework.Allocation;
 
 namespace osu.Game.Tests.Visual.UserInterface
 {
-    public class TestSceneProfileSubsectionHeader : OsuTestScene
+    public partial class TestSceneProfileSubsectionHeader : OsuTestScene
     {
         [Cached]
         private readonly OverlayColourProvider colourProvider = new OverlayColourProvider(OverlayColourScheme.Pink);
 
-        private ProfileSubsectionHeader header;
+        private ProfileSubsectionHeader header = null!;
 
         [Test]
         public void TestHiddenCounter()
@@ -57,7 +57,7 @@ namespace osu.Game.Tests.Visual.UserInterface
         [Test]
         public void TestInitialVisibility()
         {
-            AddStep("Create header with 0 value", () => createHeader("Header with visible when zero counter", CounterVisibilityState.VisibleWhenZero, 0));
+            AddStep("Create header with 0 value", () => createHeader("Header with visible when zero counter", CounterVisibilityState.VisibleWhenZero));
             AddAssert("Value is 0", () => header.Current.Value == 0);
             AddAssert("Counter is visible", () => header.ChildrenOfType<CounterPill>().First().Alpha == 1);
 

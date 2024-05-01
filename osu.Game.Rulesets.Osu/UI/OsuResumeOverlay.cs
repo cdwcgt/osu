@@ -3,30 +3,32 @@
 
 using System;
 using osu.Framework.Allocation;
-using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Cursor;
 using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
+using osu.Framework.Localisation;
 using osu.Game.Rulesets.Osu.UI.Cursor;
+using osu.Game.Rulesets.UI;
 using osu.Game.Screens.Play;
-using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Rulesets.Osu.UI
 {
-    public class OsuResumeOverlay : ResumeOverlay
+    public partial class OsuResumeOverlay : ResumeOverlay
     {
-        private Container cursorScaleContainer;
-        private OsuClickToResumeCursor clickToResumeCursor;
+        private Container cursorScaleContainer = null!;
+        private OsuClickToResumeCursor clickToResumeCursor = null!;
 
-        private OsuCursorContainer localCursorContainer;
-        private IBindable<float> localCursorScale;
+        private OsuCursorContainer? localCursorContainer;
 
-        public override CursorContainer LocalCursor => State.Value == Visibility.Visible ? localCursorContainer : null;
+        public override CursorContainer? LocalCursor => State.Value == Visibility.Visible ? localCursorContainer : null;
 
-        protected override string Message => "Click the orange cursor to resume";
+        protected override LocalisableString Message => "Click the orange cursor to resume";
+
+        [Resolved]
+        private DrawableRuleset? drawableRuleset { get; set; }
 
         [BackgroundDependencyLoader]
         private void load()
@@ -39,6 +41,13 @@ namespace osu.Game.Rulesets.Osu.UI
 
         protected override void PopIn()
         {
+            // Can't display if the cursor is outside the window.
+            if (GameplayCursor.LastFrameState == Visibility.Hidden || drawableRuleset?.Contains(GameplayCursor.ActiveCursor.ScreenSpaceDrawQuad.Centre) == false)
+            {
+                Resume();
+                return;
+            }
+
             base.PopIn();
 
             GameplayCursor.ActiveCursor.Hide();
@@ -46,13 +55,7 @@ namespace osu.Game.Rulesets.Osu.UI
             clickToResumeCursor.Appear();
 
             if (localCursorContainer == null)
-            {
                 Add(localCursorContainer = new OsuCursorContainer());
-
-                localCursorScale = new BindableFloat();
-                localCursorScale.BindTo(localCursorContainer.CursorScale);
-                localCursorScale.BindValueChanged(scale => cursorScaleContainer.Scale = new Vector2(scale.NewValue), true);
-            }
         }
 
         protected override void PopOut()
@@ -61,21 +64,34 @@ namespace osu.Game.Rulesets.Osu.UI
 
             localCursorContainer?.Expire();
             localCursorContainer = null;
-            GameplayCursor?.ActiveCursor?.Show();
+            GameplayCursor?.ActiveCursor.Show();
         }
 
         protected override bool OnHover(HoverEvent e) => true;
 
-        public class OsuClickToResumeCursor : OsuCursor, IKeyBindingHandler<OsuAction>
+        public partial class OsuClickToResumeCursor : OsuCursor, IKeyBindingHandler<OsuAction>
         {
             public override bool HandlePositionalInput => true;
 
-            public Action ResumeRequested;
+            public Action? ResumeRequested;
+            private Container scaleTransitionContainer = null!;
 
             public OsuClickToResumeCursor()
             {
                 RelativePositionAxes = Axes.Both;
             }
+
+            protected override Container CreateCursorContent() => scaleTransitionContainer = new Container
+            {
+                RelativeSizeAxes = Axes.Both,
+                Origin = Anchor.Centre,
+                Anchor = Anchor.Centre,
+                Child = base.CreateCursorContent(),
+            };
+
+            protected override float CalculateCursorScale() =>
+                // Force minimum cursor size so it's easily clickable
+                Math.Max(1f, base.CalculateCursorScale());
 
             protected override bool OnHover(HoverEvent e)
             {
@@ -89,15 +105,16 @@ namespace osu.Game.Rulesets.Osu.UI
                 base.OnHoverLost(e);
             }
 
-            public bool OnPressed(OsuAction action)
+            public bool OnPressed(KeyBindingPressEvent<OsuAction> e)
             {
-                switch (action)
+                switch (e.Action)
                 {
                     case OsuAction.LeftButton:
                     case OsuAction.RightButton:
-                        if (!IsHovered) return false;
+                        if (!IsHovered)
+                            return false;
 
-                        this.ScaleTo(2, TRANSITION_TIME, Easing.OutQuint);
+                        scaleTransitionContainer.ScaleTo(2, TRANSITION_TIME, Easing.OutQuint);
 
                         ResumeRequested?.Invoke();
                         return true;
@@ -106,14 +123,17 @@ namespace osu.Game.Rulesets.Osu.UI
                 return false;
             }
 
-            public void OnReleased(OsuAction action)
+            public void OnReleased(KeyBindingReleaseEvent<OsuAction> e)
             {
             }
 
             public void Appear() => Schedule(() =>
             {
                 updateColour();
-                this.ScaleTo(4).Then().ScaleTo(1, 1000, Easing.OutQuint);
+
+                // importantly, we perform the scale transition on an underlying container rather than the whole cursor
+                // to prevent attempts of abuse by the scale change in the cursor's hitbox (see: https://github.com/ppy/osu/issues/26477).
+                scaleTransitionContainer.ScaleTo(4).Then().ScaleTo(1, 1000, Easing.OutQuint);
             });
 
             private void updateColour()

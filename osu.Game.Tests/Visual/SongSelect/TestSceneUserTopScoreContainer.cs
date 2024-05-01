@@ -5,19 +5,21 @@ using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Game.Online.API.Requests.Responses;
 using osuTK.Graphics;
 using osu.Game.Online.Leaderboards;
 using osu.Game.Overlays;
 using osu.Game.Rulesets.Mods;
+using osu.Game.Rulesets.Osu;
 using osu.Game.Scoring;
 using osu.Game.Rulesets.Osu.Mods;
 using osu.Game.Users;
 
 namespace osu.Game.Tests.Visual.SongSelect
 {
-    public class TestSceneUserTopScoreContainer : OsuTestScene
+    public partial class TestSceneUserTopScoreContainer : OsuTestScene
     {
-        [Cached]
+        [Cached(typeof(IDialogOverlay))]
         private readonly DialogOverlay dialogOverlay;
 
         public TestSceneUserTopScoreContainer()
@@ -60,15 +62,12 @@ namespace osu.Game.Tests.Visual.SongSelect
                     MaxCombo = 244,
                     TotalScore = 1707827,
                     Mods = new Mod[] { new OsuModHidden(), new OsuModHardRock(), },
-                    User = new User
+                    Ruleset = new OsuRuleset().RulesetInfo,
+                    User = new APIUser
                     {
                         Id = 6602580,
                         Username = @"waaiiru",
-                        Country = new Country
-                        {
-                            FullName = @"Spain",
-                            FlagName = @"ES",
-                        },
+                        CountryCode = CountryCode.ES,
                     },
                 },
                 new ScoreInfo
@@ -78,15 +77,12 @@ namespace osu.Game.Tests.Visual.SongSelect
                     Accuracy = 1,
                     MaxCombo = 244,
                     TotalScore = 1707827,
-                    User = new User
+                    Ruleset = new OsuRuleset().RulesetInfo,
+                    User = new APIUser
                     {
                         Id = 4608074,
                         Username = @"Skycries",
-                        Country = new Country
-                        {
-                            FullName = @"Brazil",
-                            FlagName = @"BR",
-                        },
+                        CountryCode = CountryCode.BR,
                     },
                 },
                 new ScoreInfo
@@ -96,15 +92,12 @@ namespace osu.Game.Tests.Visual.SongSelect
                     Accuracy = 1,
                     MaxCombo = 244,
                     TotalScore = 1707827,
-                    User = new User
+                    Ruleset = new OsuRuleset().RulesetInfo,
+                    User = new APIUser
                     {
                         Id = 1541390,
                         Username = @"Toukai",
-                        Country = new Country
-                        {
-                            FullName = @"Canada",
-                            FlagName = @"CA",
-                        },
+                        CountryCode = CountryCode.CA,
                     },
                 }
             };

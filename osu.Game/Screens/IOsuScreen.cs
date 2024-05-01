@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Bindables;
@@ -40,6 +40,11 @@ namespace osu.Game.Screens
         bool HideOverlaysOnEnter { get; }
 
         /// <summary>
+        /// Whether the menu cursor should be hidden when non-mouse input is received.
+        /// </summary>
+        bool HideMenuCursorOnNonMouseInput { get; }
+
+        /// <summary>
         /// Whether overlays should be able to be opened when this screen is current.
         /// </summary>
         IBindable<OverlayActivation> OverlayActivationMode { get; }
@@ -59,16 +64,26 @@ namespace osu.Game.Screens
         Bindable<RulesetInfo> Ruleset { get; }
 
         /// <summary>
-        /// Whether mod rate adjustments are allowed to be applied.
+        /// Whether mod track adjustments should be applied on entering this screen.
+        /// A <see langword="null"/> value means that the parent screen's value of this setting will be used.
         /// </summary>
-        bool AllowRateAdjustments { get; }
+        bool? ApplyModTrackAdjustments { get; }
+
+        /// <summary>
+        /// Whether control of the global track should be allowed via the music controller / now playing overlay.
+        /// A <see langword="null"/> value means that the parent screen's value of this setting will be used.
+        /// </summary>
+        bool? AllowGlobalTrackControl { get; }
 
         /// <summary>
         /// Invoked when the back button has been pressed to close any overlays before exiting this <see cref="IOsuScreen"/>.
         /// </summary>
         /// <remarks>
+        /// If this <see cref="IOsuScreen"/> has not yet finished loading, the exit will occur immediately without this method being invoked.
+        /// <para>
         /// Return <c>true</c> to block this <see cref="IOsuScreen"/> from being exited after closing an overlay.
         /// Return <c>false</c> if this <see cref="IOsuScreen"/> should continue exiting.
+        /// </para>
         /// </remarks>
         bool OnBackButton();
     }

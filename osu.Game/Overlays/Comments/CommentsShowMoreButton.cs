@@ -2,11 +2,14 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.LocalisationExtensions;
+using osu.Framework.Localisation;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Resources.Localisation.Web;
 
 namespace osu.Game.Overlays.Comments
 {
-    public class CommentsShowMoreButton : ShowMoreButton
+    public partial class CommentsShowMoreButton : ShowMoreButton
     {
         public readonly BindableInt Current = new BindableInt();
 
@@ -18,7 +21,8 @@ namespace osu.Game.Overlays.Comments
 
         private void onCurrentChanged(ValueChangedEvent<int> count)
         {
-            Text = $@"Show More ({count.NewValue})".ToUpper();
+            Text = new TranslatableString(@"_", "{0} ({1})",
+                CommonStrings.ButtonsShowMore.ToUpper(), count.NewValue);
         }
     }
 }

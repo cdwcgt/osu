@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -14,37 +13,16 @@ using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Objects.Drawables;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Osu.Objects.Drawables;
-using osu.Game.Rulesets.UI;
 using osuTK;
 
 namespace osu.Game.Rulesets.Osu.Mods
 {
-    public class OsuModFlashlight : ModFlashlight<OsuHitObject>, IApplicableToDrawableHitObjects
+    public partial class OsuModFlashlight : ModFlashlight<OsuHitObject>, IApplicableToDrawableHitObject
     {
-        public override double ScoreMultiplier => 1.12;
-
-        private const float default_flashlight_size = 180;
+        public override double ScoreMultiplier => UsesDefaultConfiguration ? 1.12 : 1;
+        public override Type[] IncompatibleMods => base.IncompatibleMods.Append(typeof(OsuModBlinds)).ToArray();
 
         private const double default_follow_delay = 120;
-
-        private OsuFlashlight flashlight;
-
-        public override Flashlight CreateFlashlight() => flashlight = new OsuFlashlight();
-
-        public void ApplyToDrawableHitObjects(IEnumerable<DrawableHitObject> drawables)
-        {
-            foreach (var s in drawables.OfType<DrawableSlider>())
-            {
-                s.Tracking.ValueChanged += flashlight.OnSliderTrackingChange;
-            }
-        }
-
-        public override void ApplyToDrawableRuleset(DrawableRuleset<OsuHitObject> drawableRuleset)
-        {
-            base.ApplyToDrawableRuleset(drawableRuleset);
-
-            flashlight.FollowDelay = FollowDelay.Value;
-        }
 
         [SettingSource("Follow delay", "Milliseconds until the flashlight reaches the cursor")]
         public BindableNumber<double> FollowDelay { get; } = new BindableDouble(default_follow_delay)
@@ -54,19 +32,44 @@ namespace osu.Game.Rulesets.Osu.Mods
             Precision = default_follow_delay,
         };
 
-        private class OsuFlashlight : Flashlight, IRequireHighFrequencyMousePosition
+        public override BindableFloat SizeMultiplier { get; } = new BindableFloat(1)
         {
-            public double FollowDelay { private get; set; }
+            MinValue = 0.5f,
+            MaxValue = 2f,
+            Precision = 0.1f
+        };
 
-            public OsuFlashlight()
+        public override BindableBool ComboBasedSize { get; } = new BindableBool(true);
+
+        public override float DefaultFlashlightSize => 200;
+
+        private OsuFlashlight flashlight = null!;
+
+        protected override Flashlight CreateFlashlight() => flashlight = new OsuFlashlight(this);
+
+        public void ApplyToDrawableHitObject(DrawableHitObject drawable)
+        {
+            if (drawable is DrawableSlider s)
+                s.OnUpdate += _ => flashlight.OnSliderTrackingChange(s);
+        }
+
+        private partial class OsuFlashlight : Flashlight, IRequireHighFrequencyMousePosition
+        {
+            private readonly double followDelay;
+
+            public OsuFlashlight(OsuModFlashlight modFlashlight)
+                : base(modFlashlight)
             {
-                FlashlightSize = new Vector2(0, getSizeFor(0));
+                followDelay = modFlashlight.FollowDelay.Value;
+
+                FlashlightSize = new Vector2(0, GetSize());
+                FlashlightSmoothness = 1.4f;
             }
 
-            public void OnSliderTrackingChange(ValueChangedEvent<bool> e)
+            public void OnSliderTrackingChange(DrawableSlider e)
             {
-                // If a slider is in a tracking state, a further dim should be applied to the (remaining) visible portion of the playfield over a brief duration.
-                this.TransformTo(nameof(FlashlightDim), e.NewValue ? 0.8f : 0.0f, 50);
+                // If a slider is in a tracking state, a further dim should be applied to the (remaining) visible portion of the playfield.
+                FlashlightDim = Time.Current >= e.HitObject.StartTime && e.Tracking.Value ? 0.8f : 0.0f;
             }
 
             protected override bool OnMouseMove(MouseMoveEvent e)
@@ -75,24 +78,14 @@ namespace osu.Game.Rulesets.Osu.Mods
                 var destination = e.MousePosition;
 
                 FlashlightPosition = Interpolation.ValueAt(
-                    Math.Min(Math.Abs(Clock.ElapsedFrameTime), FollowDelay), position, destination, 0, FollowDelay, Easing.Out);
+                    Math.Min(Math.Abs(Clock.ElapsedFrameTime), followDelay), position, destination, 0, followDelay, Easing.Out);
 
                 return base.OnMouseMove(e);
             }
 
-            private float getSizeFor(int combo)
+            protected override void UpdateFlashlightSize(float size)
             {
-                if (combo > 200)
-                    return default_flashlight_size * 0.8f;
-                else if (combo > 100)
-                    return default_flashlight_size * 0.9f;
-                else
-                    return default_flashlight_size;
-            }
-
-            protected override void OnComboChange(ValueChangedEvent<int> e)
-            {
-                this.TransformTo(nameof(FlashlightSize), new Vector2(0, getSizeFor(e.NewValue)), FLASHLIGHT_FADE_DURATION);
+                this.TransformTo(nameof(FlashlightSize), new Vector2(0, size), FLASHLIGHT_FADE_DURATION);
             }
 
             protected override string FragmentShader => "CircularFlashlight";

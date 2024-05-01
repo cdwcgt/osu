@@ -1,34 +1,39 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using NUnit.Framework;
 using osu.Framework.Allocation;
 using osu.Framework.Audio.Sample;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Framework.Graphics.OpenGL.Textures;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Textures;
 using osu.Framework.Input;
+using osu.Framework.Input.Events;
 using osu.Framework.Testing.Input;
 using osu.Framework.Utils;
 using osu.Game.Audio;
 using osu.Game.Configuration;
+using osu.Game.Rulesets.Osu.Configuration;
 using osu.Game.Rulesets.Osu.Skinning;
 using osu.Game.Rulesets.Osu.UI.Cursor;
 using osu.Game.Screens.Play;
 using osu.Game.Skinning;
+using osu.Game.Tests.Gameplay;
 using osuTK;
 
 namespace osu.Game.Rulesets.Osu.Tests
 {
     [TestFixture]
-    public class TestSceneGameplayCursor : OsuSkinnableTestScene
+    public partial class TestSceneGameplayCursor : OsuSkinnableTestScene
     {
         [Cached]
-        private GameplayBeatmap gameplayBeatmap;
+        private GameplayState gameplayState;
 
         private OsuCursorContainer lastContainer;
 
@@ -37,9 +42,12 @@ namespace osu.Game.Rulesets.Osu.Tests
 
         private Drawable background;
 
+        private readonly Bindable<bool> ripples = new Bindable<bool>();
+
         public TestSceneGameplayCursor()
         {
-            gameplayBeatmap = new GameplayBeatmap(CreateBeatmap(new OsuRuleset().RulesetInfo));
+            var ruleset = new OsuRuleset();
+            gameplayState = TestGameplayState.Create(ruleset);
 
             AddStep("change background colour", () =>
             {
@@ -53,14 +61,23 @@ namespace osu.Game.Rulesets.Osu.Tests
                 });
             });
 
+            AddToggleStep("ripples", v => ripples.Value = v);
+
             AddSliderStep("circle size", 0f, 10f, 0f, val =>
             {
                 config.SetValue(OsuSetting.AutoCursorSize, true);
-                gameplayBeatmap.BeatmapInfo.BaseDifficulty.CircleSize = val;
-                Scheduler.AddOnce(() => loadContent(false));
+                gameplayState.Beatmap.Difficulty.CircleSize = val;
+                Scheduler.AddOnce(loadContent);
             });
 
             AddStep("test cursor container", () => loadContent(false));
+        }
+
+        [BackgroundDependencyLoader]
+        private void load()
+        {
+            var rulesetConfig = (OsuRulesetConfigManager)RulesetConfigs.GetConfigFor(Ruleset.Value.CreateInstance()).AsNonNull();
+            rulesetConfig.BindWith(OsuRulesetSetting.ShowCursorRipples, ripples);
         }
 
         [TestCase(1, 1)]
@@ -72,21 +89,21 @@ namespace osu.Game.Rulesets.Osu.Tests
         public void TestSizing(int circleSize, float userScale)
         {
             AddStep($"set user scale to {userScale}", () => config.SetValue(OsuSetting.GameplayCursorSize, userScale));
-            AddStep($"adjust cs to {circleSize}", () => gameplayBeatmap.BeatmapInfo.BaseDifficulty.CircleSize = circleSize);
+            AddStep($"adjust cs to {circleSize}", () => gameplayState.Beatmap.Difficulty.CircleSize = circleSize);
             AddStep("turn on autosizing", () => config.SetValue(OsuSetting.AutoCursorSize, true));
 
-            AddStep("load content", () => loadContent());
+            AddStep("load content", loadContent);
 
-            AddUntilStep("cursor size correct", () => lastContainer.ActiveCursor.Scale.X == OsuCursorContainer.GetScaleForCircleSize(circleSize) * userScale);
+            AddUntilStep("cursor size correct", () => lastContainer.ActiveCursor.CursorScale.Value == OsuCursor.GetScaleForCircleSize(circleSize) * userScale);
 
             AddStep("set user scale to 1", () => config.SetValue(OsuSetting.GameplayCursorSize, 1f));
-            AddUntilStep("cursor size correct", () => lastContainer.ActiveCursor.Scale.X == OsuCursorContainer.GetScaleForCircleSize(circleSize));
+            AddUntilStep("cursor size correct", () => lastContainer.ActiveCursor.CursorScale.Value == OsuCursor.GetScaleForCircleSize(circleSize));
 
             AddStep("turn off autosizing", () => config.SetValue(OsuSetting.AutoCursorSize, false));
-            AddUntilStep("cursor size correct", () => lastContainer.ActiveCursor.Scale.X == 1);
+            AddUntilStep("cursor size correct", () => lastContainer.ActiveCursor.CursorScale.Value == 1);
 
             AddStep($"set user scale to {userScale}", () => config.SetValue(OsuSetting.GameplayCursorSize, userScale));
-            AddUntilStep("cursor size correct", () => lastContainer.ActiveCursor.Scale.X == userScale);
+            AddUntilStep("cursor size correct", () => lastContainer.ActiveCursor.CursorScale.Value == userScale);
         }
 
         [Test]
@@ -95,9 +112,11 @@ namespace osu.Game.Rulesets.Osu.Tests
             AddStep("load content", () => loadContent(false, () => new SkinProvidingContainer(new TopLeftCursorSkin())));
         }
 
-        private void loadContent(bool automated = true, Func<SkinProvidingContainer> skinProvider = null)
+        private void loadContent() => loadContent(false);
+
+        private void loadContent(bool automated, Func<SkinProvidingContainer> skinProvider = null)
         {
-            SetContents(() =>
+            SetContents(_ =>
             {
                 var inputManager = automated ? (InputManager)new MovingCursorInputManager() : new OsuInputManager(new OsuRuleset().RulesetInfo);
                 var skinContainer = skinProvider?.Invoke() ?? new SkinProvidingContainer(null);
@@ -110,7 +129,7 @@ namespace osu.Game.Rulesets.Osu.Tests
 
         private class TopLeftCursorSkin : ISkin
         {
-            public Drawable GetDrawableComponent(ISkinComponent component) => null;
+            public Drawable GetDrawableComponent(ISkinComponentLookup lookup) => null;
             public Texture GetTexture(string componentName, WrapMode wrapModeS, WrapMode wrapModeT) => null;
             public ISample GetSample(ISampleInfo sampleInfo) => null;
 
@@ -120,7 +139,7 @@ namespace osu.Game.Rulesets.Osu.Tests
                 {
                     case OsuSkinConfiguration osuLookup:
                         if (osuLookup == OsuSkinConfiguration.CursorCentre)
-                            return SkinUtils.As<TValue>(new BindableBool(false));
+                            return SkinUtils.As<TValue>(new BindableBool());
 
                         break;
                 }
@@ -129,7 +148,7 @@ namespace osu.Game.Rulesets.Osu.Tests
             }
         }
 
-        private class ClickingCursorContainer : OsuCursorContainer
+        private partial class ClickingCursorContainer : OsuCursorContainer
         {
             private bool pressed;
 
@@ -142,9 +161,9 @@ namespace osu.Game.Rulesets.Osu.Tests
 
                     pressed = value;
                     if (value)
-                        OnPressed(OsuAction.LeftButton);
+                        OnPressed(new KeyBindingPressEvent<OsuAction>(GetContainingInputManager().CurrentState, OsuAction.LeftButton));
                     else
-                        OnReleased(OsuAction.LeftButton);
+                        OnReleased(new KeyBindingReleaseEvent<OsuAction>(GetContainingInputManager().CurrentState, OsuAction.LeftButton));
                 }
             }
 
@@ -155,7 +174,7 @@ namespace osu.Game.Rulesets.Osu.Tests
             }
         }
 
-        private class MovingCursorInputManager : ManualInputManager
+        private partial class MovingCursorInputManager : ManualInputManager
         {
             public MovingCursorInputManager()
             {

@@ -1,6 +1,8 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using osuTK;
 using osu.Game.Audio;
 using System.Collections.Generic;
@@ -12,44 +14,31 @@ namespace osu.Game.Rulesets.Objects.Legacy.Catch
     /// </summary>
     public class ConvertHitObjectParser : Legacy.ConvertHitObjectParser
     {
+        private ConvertHitObject lastObject;
+
         public ConvertHitObjectParser(double offset, int formatVersion)
             : base(offset, formatVersion)
         {
         }
 
-        private bool forceNewCombo;
-        private int extraComboOffset;
-
         protected override HitObject CreateHit(Vector2 position, bool newCombo, int comboOffset)
         {
-            newCombo |= forceNewCombo;
-            comboOffset += extraComboOffset;
-
-            forceNewCombo = false;
-            extraComboOffset = 0;
-
-            return new ConvertHit
+            return lastObject = new ConvertHit
             {
-                X = position.X,
-                NewCombo = newCombo,
-                ComboOffset = comboOffset
+                Position = position,
+                NewCombo = FirstObject || lastObject is ConvertSpinner || newCombo,
+                ComboOffset = newCombo ? comboOffset : 0
             };
         }
 
         protected override HitObject CreateSlider(Vector2 position, bool newCombo, int comboOffset, PathControlPoint[] controlPoints, double? length, int repeatCount,
-                                                  List<IList<HitSampleInfo>> nodeSamples)
+                                                  IList<IList<HitSampleInfo>> nodeSamples)
         {
-            newCombo |= forceNewCombo;
-            comboOffset += extraComboOffset;
-
-            forceNewCombo = false;
-            extraComboOffset = 0;
-
-            return new ConvertSlider
+            return lastObject = new ConvertSlider
             {
-                X = position.X,
-                NewCombo = FirstObject || newCombo,
-                ComboOffset = comboOffset,
+                Position = position,
+                NewCombo = FirstObject || lastObject is ConvertSpinner || newCombo,
+                ComboOffset = newCombo ? comboOffset : 0,
                 Path = new SliderPath(controlPoints, length),
                 NodeSamples = nodeSamples,
                 RepeatCount = repeatCount
@@ -58,20 +47,17 @@ namespace osu.Game.Rulesets.Objects.Legacy.Catch
 
         protected override HitObject CreateSpinner(Vector2 position, bool newCombo, int comboOffset, double duration)
         {
-            // Convert spinners don't create the new combo themselves, but force the next non-spinner hitobject to create a new combo
-            // Their combo offset is still added to that next hitobject's combo index
-            forceNewCombo |= FormatVersion <= 8 || newCombo;
-            extraComboOffset += comboOffset;
-
-            return new ConvertSpinner
+            return lastObject = new ConvertSpinner
             {
-                Duration = duration
+                Duration = duration,
+                NewCombo = newCombo
+                // Spinners cannot have combo offset.
             };
         }
 
         protected override HitObject CreateHold(Vector2 position, bool newCombo, int comboOffset, double duration)
         {
-            return null;
+            return lastObject = null;
         }
     }
 }

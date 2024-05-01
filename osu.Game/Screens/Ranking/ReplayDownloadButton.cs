@@ -4,20 +4,31 @@
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Containers;
+using osu.Framework.Input.Bindings;
+using osu.Framework.Input.Events;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Input.Bindings;
 using osu.Game.Online;
 using osu.Game.Scoring;
 using osuTK;
 
 namespace osu.Game.Screens.Ranking
 {
-    public class ReplayDownloadButton : DownloadTrackingComposite<ScoreInfo, ScoreManager>
+    public partial class ReplayDownloadButton : CompositeDrawable, IKeyBindingHandler<GlobalAction>
     {
-        public Bindable<ScoreInfo> Score => Model;
+        public readonly Bindable<ScoreInfo> Score = new Bindable<ScoreInfo>();
 
-        private DownloadButton button;
-        private ShakeContainer shakeContainer;
+        protected readonly Bindable<DownloadState> State = new Bindable<DownloadState>();
+
+        private DownloadButton button = null!;
+        private ShakeContainer shakeContainer = null!;
+
+        private ScoreDownloadTracker? downloadTracker;
+
+        [Resolved]
+        private ScoreManager scoreManager { get; set; } = null!;
 
         private ReplayAvailability replayAvailability
         {
@@ -26,7 +37,7 @@ namespace osu.Game.Screens.Ranking
                 if (State.Value == DownloadState.LocallyAvailable)
                     return ReplayAvailability.Local;
 
-                if (!string.IsNullOrEmpty(Model.Value?.Hash))
+                if (Score.Value?.HasOnlineReplay == true)
                     return ReplayAvailability.Online;
 
                 return ReplayAvailability.NotAvailable;
@@ -34,13 +45,13 @@ namespace osu.Game.Screens.Ranking
         }
 
         public ReplayDownloadButton(ScoreInfo score)
-            : base(score)
         {
+            Score.Value = score;
             Size = new Vector2(50, 30);
         }
 
-        [BackgroundDependencyLoader(true)]
-        private void load(OsuGame game, ScoreManager scores)
+        [BackgroundDependencyLoader]
+        private void load(OsuGame? game, ScoreModelDownloader scoreDownloader)
         {
             InternalChild = shakeContainer = new ShakeContainer
             {
@@ -56,11 +67,11 @@ namespace osu.Game.Screens.Ranking
                 switch (State.Value)
                 {
                     case DownloadState.LocallyAvailable:
-                        game?.PresentScore(Model.Value, ScorePresentType.Gameplay);
+                        game?.PresentScore(Score.Value, ScorePresentType.Gameplay);
                         break;
 
                     case DownloadState.NotDownloaded:
-                        scores.Download(Model.Value);
+                        scoreDownloader.Download(Score.Value);
                         break;
 
                     case DownloadState.Importing:
@@ -70,35 +81,96 @@ namespace osu.Game.Screens.Ranking
                 }
             };
 
+            Score.BindValueChanged(score =>
+            {
+                // An export may be pending from the last score.
+                // Reset this to meet user expectations (a new score which has just been switched to shouldn't export)
+                State.ValueChanged -= exportWhenReady;
+
+                downloadTracker?.RemoveAndDisposeImmediately();
+
+                if (score.NewValue != null)
+                {
+                    AddInternal(downloadTracker = new ScoreDownloadTracker(score.NewValue)
+                    {
+                        State = { BindTarget = State }
+                    });
+                }
+
+                updateState();
+            }, true);
+
             State.BindValueChanged(state =>
             {
                 button.State.Value = state.NewValue;
-
-                updateTooltip();
-            }, true);
-
-            Model.BindValueChanged(_ =>
-            {
-                button.Enabled.Value = replayAvailability != ReplayAvailability.NotAvailable;
-
-                updateTooltip();
+                updateState();
             }, true);
         }
 
-        private void updateTooltip()
+        #region Export via hotkey logic (also in SaveFailedScoreButton)
+
+        public bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
+        {
+            if (e.Repeat)
+                return false;
+
+            switch (e.Action)
+            {
+                case GlobalAction.SaveReplay:
+                    button.TriggerClick();
+                    return true;
+
+                case GlobalAction.ExportReplay:
+                    if (State.Value == DownloadState.LocallyAvailable)
+                    {
+                        State.BindValueChanged(exportWhenReady, true);
+                    }
+                    else
+                    {
+                        // A download needs to be performed before we can export this replay.
+                        button.TriggerClick();
+                        if (button.Enabled.Value)
+                            State.BindValueChanged(exportWhenReady, true);
+                    }
+
+                    return true;
+            }
+
+            return false;
+        }
+
+        public void OnReleased(KeyBindingReleaseEvent<GlobalAction> e)
+        {
+        }
+
+        private void exportWhenReady(ValueChangedEvent<DownloadState> state)
+        {
+            if (state.NewValue != DownloadState.LocallyAvailable) return;
+
+            scoreManager.Export(Score.Value);
+
+            State.ValueChanged -= exportWhenReady;
+        }
+
+        #endregion
+
+        private void updateState()
         {
             switch (replayAvailability)
             {
                 case ReplayAvailability.Local:
                     button.TooltipText = @"watch replay";
+                    button.Enabled.Value = true;
                     break;
 
                 case ReplayAvailability.Online:
                     button.TooltipText = @"download replay";
+                    button.Enabled.Value = true;
                     break;
 
                 default:
                     button.TooltipText = @"replay unavailable";
+                    button.Enabled.Value = false;
                     break;
             }
         }

@@ -1,17 +1,16 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using osuTK;
-using osu.Framework.Graphics;
-using osu.Game.Storyboards.Drawables;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using JetBrains.Annotations;
+using osu.Framework.Graphics;
+using osu.Game.Storyboards.Drawables;
+using osuTK;
 
 namespace osu.Game.Storyboards
 {
-    public class StoryboardSprite : IStoryboardElement
+    public class StoryboardSprite : IStoryboardElementWithDuration
     {
         private readonly List<CommandLoop> loops = new List<CommandLoop>();
         private readonly List<CommandTrigger> triggers = new List<CommandTrigger>();
@@ -28,26 +27,43 @@ namespace osu.Game.Storyboards
         {
             get
             {
-                // check for presence affecting commands as an initial pass.
-                double earliestStartTime = TimelineGroup.EarliestDisplayedTime ?? double.MaxValue;
+                // To get the initial start time, we need to check whether the first alpha command to exist (across all loops) has a StartValue of zero.
+                // A StartValue of zero governs, above all else, the first valid display time of a sprite.
+                //
+                // You can imagine that the first command of each type decides that type's start value, so if the initial alpha is zero,
+                // anything before that point can be ignored (the sprite is not visible after all).
+                var alphaCommands = new List<(double startTime, bool isZeroStartValue)>();
 
-                foreach (var l in loops)
+                var command = TimelineGroup.Alpha.Commands.FirstOrDefault();
+                if (command != null) alphaCommands.Add((command.StartTime, command.StartValue == 0));
+
+                foreach (var loop in loops)
                 {
-                    if (!(l.EarliestDisplayedTime is double lEarliest))
-                        continue;
-
-                    earliestStartTime = Math.Min(earliestStartTime, lEarliest);
+                    command = loop.Alpha.Commands.FirstOrDefault();
+                    if (command != null) alphaCommands.Add((command.StartTime + loop.LoopStartTime, command.StartValue == 0));
                 }
 
-                if (earliestStartTime < double.MaxValue)
-                    return earliestStartTime;
+                if (alphaCommands.Count > 0)
+                {
+                    var firstAlpha = alphaCommands.MinBy(t => t.startTime);
 
-                // if an alpha-affecting command was not found, use the earliest of any command.
-                earliestStartTime = TimelineGroup.StartTime;
+                    if (firstAlpha.isZeroStartValue)
+                        return firstAlpha.startTime;
+                }
 
+                return EarliestTransformTime;
+            }
+        }
+
+        public double EarliestTransformTime
+        {
+            get
+            {
+                // If we got to this point, either no alpha commands were present, or the earliest had a non-zero start value.
+                // The sprite's StartTime will be determined by the earliest command, regardless of type.
+                double earliestStartTime = TimelineGroup.StartTime;
                 foreach (var l in loops)
                     earliestStartTime = Math.Min(earliestStartTime, l.StartTime);
-
                 return earliestStartTime;
             }
         }
@@ -60,6 +76,19 @@ namespace osu.Game.Storyboards
 
                 foreach (var l in loops)
                     latestEndTime = Math.Max(latestEndTime, l.EndTime);
+
+                return latestEndTime;
+            }
+        }
+
+        public double EndTimeForDisplay
+        {
+            get
+            {
+                double latestEndTime = TimelineGroup.EndTime;
+
+                foreach (var l in loops)
+                    latestEndTime = Math.Max(latestEndTime, l.StartTime + l.CommandsDuration * l.TotalIterations);
 
                 return latestEndTime;
             }
@@ -78,9 +107,9 @@ namespace osu.Game.Storyboards
             InitialPosition = initialPosition;
         }
 
-        public CommandLoop AddLoop(double startTime, int loopCount)
+        public CommandLoop AddLoop(double startTime, int repeatCount)
         {
-            var loop = new CommandLoop(startTime, loopCount);
+            var loop = new CommandLoop(startTime, repeatCount);
             loops.Add(loop);
             return loop;
         }
@@ -95,7 +124,7 @@ namespace osu.Game.Storyboards
         public virtual Drawable CreateDrawable()
             => new DrawableStoryboardSprite(this);
 
-        public void ApplyTransforms(Drawable drawable, IEnumerable<Tuple<CommandTimelineGroup, double>> triggeredGroups = null)
+        public void ApplyTransforms(Drawable drawable, IEnumerable<Tuple<CommandTimelineGroup, double>>? triggeredGroups = null)
         {
             // For performance reasons, we need to apply the commands in order by start time. Not doing so will cause many functions to be interleaved, resulting in O(n^2) complexity.
             // To achieve this, commands are "generated" as pairs of (command, initFunc, transformFunc) and batched into a contiguous list
@@ -109,20 +138,20 @@ namespace osu.Game.Storyboards
             generateCommands(generated, getCommands(g => g.Rotation, triggeredGroups), (d, value) => d.Rotation = value, (d, value, duration, easing) => d.RotateTo(value, duration, easing));
             generateCommands(generated, getCommands(g => g.Colour, triggeredGroups), (d, value) => d.Colour = value, (d, value, duration, easing) => d.FadeColour(value, duration, easing));
             generateCommands(generated, getCommands(g => g.Alpha, triggeredGroups), (d, value) => d.Alpha = value, (d, value, duration, easing) => d.FadeTo(value, duration, easing));
-            generateCommands(generated, getCommands(g => g.BlendingParameters, triggeredGroups), (d, value) => d.Blending = value, (d, value, duration, easing) => d.TransformBlendingMode(value, duration),
+            generateCommands(generated, getCommands(g => g.BlendingParameters, triggeredGroups), (d, value) => d.Blending = value, (d, value, duration, _) => d.TransformBlendingMode(value, duration),
                 false);
 
             if (drawable is IVectorScalable vectorScalable)
             {
-                generateCommands(generated, getCommands(g => g.VectorScale, triggeredGroups), (d, value) => vectorScalable.VectorScale = value,
-                    (d, value, duration, easing) => vectorScalable.VectorScaleTo(value, duration, easing));
+                generateCommands(generated, getCommands(g => g.VectorScale, triggeredGroups), (_, value) => vectorScalable.VectorScale = value,
+                    (_, value, duration, easing) => vectorScalable.VectorScaleTo(value, duration, easing));
             }
 
             if (drawable is IFlippable flippable)
             {
-                generateCommands(generated, getCommands(g => g.FlipH, triggeredGroups), (d, value) => flippable.FlipH = value, (d, value, duration, easing) => flippable.TransformFlipH(value, duration),
+                generateCommands(generated, getCommands(g => g.FlipH, triggeredGroups), (_, value) => flippable.FlipH = value, (_, value, duration, _) => flippable.TransformFlipH(value, duration),
                     false);
-                generateCommands(generated, getCommands(g => g.FlipV, triggeredGroups), (d, value) => flippable.FlipV = value, (d, value, duration, easing) => flippable.TransformFlipV(value, duration),
+                generateCommands(generated, getCommands(g => g.FlipV, triggeredGroups), (_, value) => flippable.FlipV = value, (_, value, duration, _) => flippable.TransformFlipV(value, duration),
                     false);
             }
 
@@ -137,7 +166,7 @@ namespace osu.Game.Storyboards
 
             foreach (var command in commands)
             {
-                DrawablePropertyInitializer<T> initFunc = null;
+                DrawablePropertyInitializer<T>? initFunc = null;
 
                 if (!initialized)
                 {
@@ -150,7 +179,7 @@ namespace osu.Game.Storyboards
             }
         }
 
-        private IEnumerable<CommandTimeline<T>.TypedCommand> getCommands<T>(CommandTimelineSelector<T> timelineSelector, IEnumerable<Tuple<CommandTimelineGroup, double>> triggeredGroups)
+        private IEnumerable<CommandTimeline<T>.TypedCommand> getCommands<T>(CommandTimelineSelector<T> timelineSelector, IEnumerable<Tuple<CommandTimelineGroup, double>>? triggeredGroups)
         {
             var commands = TimelineGroup.GetCommands(timelineSelector);
             foreach (var loop in loops)
@@ -179,11 +208,11 @@ namespace osu.Game.Storyboards
         {
             public double StartTime => command.StartTime;
 
-            private readonly DrawablePropertyInitializer<T> initializeProperty;
+            private readonly DrawablePropertyInitializer<T>? initializeProperty;
             private readonly DrawableTransformer<T> transform;
             private readonly CommandTimeline<T>.TypedCommand command;
 
-            public GeneratedCommand([NotNull] CommandTimeline<T>.TypedCommand command, [CanBeNull] DrawablePropertyInitializer<T> initializeProperty, [NotNull] DrawableTransformer<T> transform)
+            public GeneratedCommand(CommandTimeline<T>.TypedCommand command, DrawablePropertyInitializer<T>? initializeProperty, DrawableTransformer<T> transform)
             {
                 this.command = command;
                 this.initializeProperty = initializeProperty;

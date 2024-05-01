@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,11 +13,11 @@ using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Framework.Utils;
 using osu.Framework.Screens;
 using osu.Framework.Testing;
+using osu.Framework.Utils;
+using osu.Game.Beatmaps;
 using osu.Game.Configuration;
-using osu.Game.Graphics.Containers;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Notifications;
 using osu.Game.Rulesets.Mods;
@@ -23,19 +25,22 @@ using osu.Game.Rulesets.Osu;
 using osu.Game.Rulesets.Osu.Mods;
 using osu.Game.Rulesets.Scoring;
 using osu.Game.Scoring;
+using osu.Game.Screens.Menu;
 using osu.Game.Screens.Play;
 using osu.Game.Screens.Play.PlayerSettings;
 using osu.Game.Utils;
+using osuTK;
 using osuTK.Input;
 
 namespace osu.Game.Tests.Visual.Gameplay
 {
-    public class TestScenePlayerLoader : ScreenTestScene
+    public partial class TestScenePlayerLoader : ScreenTestScene
     {
         private TestPlayerLoader loader;
         private TestPlayer player;
 
-        private bool epilepsyWarning;
+        private bool? epilepsyWarning;
+        private BeatmapOnlineStatus? onlineStatus;
 
         [Resolved]
         private AudioManager audioManager { get; set; }
@@ -43,16 +48,26 @@ namespace osu.Game.Tests.Visual.Gameplay
         [Resolved]
         private SessionStatics sessionStatics { get; set; }
 
-        [Cached]
+        [Resolved]
+        private OsuConfigManager config { get; set; }
+
+        [Cached(typeof(INotificationOverlay))]
         private readonly NotificationOverlay notificationOverlay;
 
         [Cached]
         private readonly VolumeOverlay volumeOverlay;
 
+        [Cached]
+        private readonly OsuLogo logo;
+
         [Cached(typeof(BatteryInfo))]
         private readonly LocalBatteryInfo batteryInfo = new LocalBatteryInfo();
 
         private readonly ChangelogOverlay changelogOverlay;
+
+        private double savedTrackVolume;
+        private double savedMasterVolume;
+        private bool savedMutedState;
 
         public TestScenePlayerLoader()
         {
@@ -68,7 +83,14 @@ namespace osu.Game.Tests.Visual.Gameplay
                     Anchor = Anchor.TopLeft,
                     Origin = Anchor.TopLeft,
                 },
-                changelogOverlay = new ChangelogOverlay()
+                changelogOverlay = new ChangelogOverlay(),
+                logo = new OsuLogo
+                {
+                    Anchor = Anchor.BottomRight,
+                    Origin = Anchor.BottomRight,
+                    Scale = new Vector2(0.5f),
+                    Position = new Vector2(128f),
+                },
             });
         }
 
@@ -76,8 +98,23 @@ namespace osu.Game.Tests.Visual.Gameplay
         public void Setup() => Schedule(() =>
         {
             player = null;
-            audioManager.Volume.SetDefault();
+            epilepsyWarning = null;
+            onlineStatus = null;
         });
+
+        [SetUpSteps]
+        public override void SetUpSteps()
+        {
+            base.SetUpSteps();
+
+            AddStep("read all notifications", () =>
+            {
+                notificationOverlay.Show();
+                notificationOverlay.Hide();
+            });
+
+            AddUntilStep("wait for no notifications", () => notificationOverlay.UnreadCount.Value, () => Is.EqualTo(0));
+        }
 
         /// <summary>
         /// Sets the input manager child to a new test player loader container instance.
@@ -88,13 +125,26 @@ namespace osu.Game.Tests.Visual.Gameplay
         {
             beforeLoadAction?.Invoke();
 
-            Beatmap.Value = CreateWorkingBeatmap(new OsuRuleset().RulesetInfo);
-            Beatmap.Value.BeatmapInfo.EpilepsyWarning = epilepsyWarning;
+            prepareBeatmap();
+
+            LoadScreen(loader = new TestPlayerLoader(() => player = new TestPlayer(interactive, interactive)));
+        }
+
+        private void prepareBeatmap()
+        {
+            var workingBeatmap = CreateWorkingBeatmap(new OsuRuleset().RulesetInfo);
+
+            // Add intro time to test quick retry skipping (TestQuickRetry).
+            workingBeatmap.BeatmapInfo.AudioLeadIn = 60000;
+
+            // Set up data for testing disclaimer display.
+            workingBeatmap.BeatmapInfo.EpilepsyWarning = epilepsyWarning ?? false;
+            workingBeatmap.BeatmapInfo.Status = onlineStatus ?? BeatmapOnlineStatus.Ranked;
+
+            Beatmap.Value = workingBeatmap;
 
             foreach (var mod in SelectedMods.Value.OfType<IApplicableToTrack>())
                 mod.ApplyToTrack(Beatmap.Value.Track);
-
-            LoadScreen(loader = new TestPlayerLoader(() => player = new TestPlayer(interactive, interactive)));
         }
 
         [Test]
@@ -139,6 +189,7 @@ namespace osu.Game.Tests.Visual.Gameplay
                 moveMouse();
                 return player?.LoadState == LoadState.Ready;
             });
+
             AddRepeatStep("move mouse", moveMouse, 20);
 
             AddAssert("loader still active", () => loader.IsCurrentScreen());
@@ -146,6 +197,8 @@ namespace osu.Game.Tests.Visual.Gameplay
 
             void moveMouse()
             {
+                notificationOverlay.State.Value = Visibility.Hidden;
+
                 InputManager.MoveMouseTo(
                     loader.VisualSettings.ScreenSpaceDrawQuad.TopLeft
                     + (loader.VisualSettings.ScreenSpaceDrawQuad.BottomRight - loader.VisualSettings.ScreenSpaceDrawQuad.TopLeft)
@@ -172,15 +225,48 @@ namespace osu.Game.Tests.Visual.Gameplay
         }
 
         [Test]
+        public void TestLoadNotBlockedOnOsuLogo()
+        {
+            AddStep("load dummy beatmap", () => resetPlayer(false));
+            AddUntilStep("wait for current", () => loader.IsCurrentScreen());
+
+            AddUntilStep("wait for load ready", () =>
+            {
+                moveMouse();
+                return player?.LoadState == LoadState.Ready;
+            });
+
+            // move mouse in logo while waiting for load to still proceed (it shouldn't be blocked when hovering logo).
+            AddUntilStep("move mouse in logo", () =>
+            {
+                moveMouse();
+                return !loader.IsCurrentScreen();
+            });
+
+            void moveMouse()
+            {
+                notificationOverlay.State.Value = Visibility.Hidden;
+
+                InputManager.MoveMouseTo(
+                    logo.ScreenSpaceDrawQuad.TopLeft
+                    + (logo.ScreenSpaceDrawQuad.BottomRight - logo.ScreenSpaceDrawQuad.TopLeft)
+                    * RNG.NextSingle(0.3f, 0.7f));
+            }
+        }
+
+        [Test]
         public void TestLoadContinuation()
         {
             SlowLoadPlayer slowPlayer = null;
 
             AddStep("load slow dummy beatmap", () =>
             {
-                LoadScreen(loader = new TestPlayerLoader(() => slowPlayer = new SlowLoadPlayer(false, false)));
-                Scheduler.AddDelayed(() => slowPlayer.AllowLoad.Set(), 5000);
+                prepareBeatmap();
+                slowPlayer = new SlowLoadPlayer(false, false);
+                LoadScreen(loader = new TestPlayerLoader(() => slowPlayer));
             });
+
+            AddStep("schedule slow load", () => Scheduler.AddDelayed(() => slowPlayer.AllowLoad.Set(), 5000));
 
             AddUntilStep("wait for player to be current", () => slowPlayer.IsCurrentScreen());
         }
@@ -197,7 +283,7 @@ namespace osu.Game.Tests.Visual.Gameplay
             AddUntilStep("wait for loader to become current", () => loader.IsCurrentScreen());
             AddStep("mouse in centre", () => InputManager.MoveMouseTo(loader.ScreenSpaceDrawQuad.Centre));
             AddUntilStep("wait for player to be current", () => player.IsCurrentScreen());
-            AddStep("retrieve mods", () => playerMod1 = (TestMod)player.Mods.Value.Single());
+            AddStep("retrieve mods", () => playerMod1 = (TestMod)player.GameplayState.Mods.Single());
             AddAssert("game mods not applied", () => gameMod.Applied == false);
             AddAssert("player mods applied", () => playerMod1.Applied);
 
@@ -209,7 +295,7 @@ namespace osu.Game.Tests.Visual.Gameplay
             });
 
             AddUntilStep("wait for player to be current", () => player.IsCurrentScreen());
-            AddStep("retrieve mods", () => playerMod2 = (TestMod)player.Mods.Value.Single());
+            AddStep("retrieve mods", () => playerMod2 = (TestMod)player.GameplayState.Mods.Single());
             AddAssert("game mods not applied", () => gameMod.Applied == false);
             AddAssert("player has different mods", () => playerMod1 != playerMod2);
             AddAssert("player mods applied", () => playerMod2.Applied);
@@ -228,21 +314,35 @@ namespace osu.Game.Tests.Visual.Gameplay
         }
 
         [Test]
-        public void TestMutedNotificationMasterVolume()
+        public void TestMutedNotificationLowMusicVolume()
         {
-            addVolumeSteps("master volume", () => audioManager.Volume.Value = 0, () => audioManager.Volume.IsDefault);
+            addVolumeSteps("master and music volumes", () =>
+            {
+                audioManager.Volume.Value = 0.6;
+                audioManager.VolumeTrack.Value = 0.01;
+            }, () => Precision.AlmostEquals(audioManager.Volume.Value, 0.6) && Precision.AlmostEquals(audioManager.VolumeTrack.Value, 0.5));
         }
 
         [Test]
-        public void TestMutedNotificationTrackVolume()
+        public void TestMutedNotificationLowMasterVolume()
         {
-            addVolumeSteps("music volume", () => audioManager.VolumeTrack.Value = 0, () => audioManager.VolumeTrack.IsDefault);
+            addVolumeSteps("master and music volumes", () =>
+            {
+                audioManager.Volume.Value = 0.01;
+                audioManager.VolumeTrack.Value = 0.6;
+            }, () => Precision.AlmostEquals(audioManager.Volume.Value, 0.5) && Precision.AlmostEquals(audioManager.VolumeTrack.Value, 0.6));
         }
 
         [Test]
         public void TestMutedNotificationMuteButton()
         {
-            addVolumeSteps("mute button", () => volumeOverlay.IsMuted.Value = true, () => !volumeOverlay.IsMuted.Value);
+            addVolumeSteps("mute button", () =>
+            {
+                // Importantly, in the case the volume is muted but the user has a volume level set, it should be retained.
+                audioManager.Volume.Value = 0.5;
+                audioManager.VolumeTrack.Value = 0.5;
+                volumeOverlay.IsMuted.Value = true;
+            }, () => !volumeOverlay.IsMuted.Value && audioManager.Volume.Value == 0.5 && audioManager.VolumeTrack.Value == 0.5);
         }
 
         /// <remarks>
@@ -258,18 +358,15 @@ namespace osu.Game.Tests.Visual.Gameplay
             AddStep("load player", () => resetPlayer(false, beforeLoad));
             AddUntilStep("wait for player", () => player?.LoadState == LoadState.Ready);
 
-            AddAssert("check for notification", () => notificationOverlay.UnreadCount.Value == 1);
-            AddStep("click notification", () =>
-            {
-                var scrollContainer = (OsuScrollContainer)notificationOverlay.Children.Last();
-                var flowContainer = scrollContainer.Children.OfType<FillFlowContainer<NotificationSection>>().First();
-                var notification = flowContainer.First();
+            saveVolumes();
 
-                InputManager.MoveMouseTo(notification);
-                InputManager.Click(MouseButton.Left);
-            });
+            AddAssert("check for notification", () => notificationOverlay.UnreadCount.Value, () => Is.EqualTo(1));
+
+            clickNotification();
 
             AddAssert("check " + volumeName, assert);
+
+            restoreVolumes();
 
             AddUntilStep("wait for player load", () => player.IsLoaded);
         }
@@ -278,62 +375,170 @@ namespace osu.Game.Tests.Visual.Gameplay
         [TestCase(false)]
         public void TestEpilepsyWarning(bool warning)
         {
+            saveVolumes();
+            setFullVolume();
+
+            AddStep("enable storyboards", () => config.SetValue(OsuSetting.ShowStoryboard, true));
             AddStep("change epilepsy warning", () => epilepsyWarning = warning);
             AddStep("load dummy beatmap", () => resetPlayer(false));
 
             AddUntilStep("wait for current", () => loader.IsCurrentScreen());
 
-            AddAssert($"epilepsy warning {(warning ? "present" : "absent")}", () => this.ChildrenOfType<EpilepsyWarning>().Any() == warning);
+            AddAssert($"epilepsy warning {(warning ? "present" : "absent")}", () => this.ChildrenOfType<PlayerLoaderDisclaimer>().Count(), () => Is.EqualTo(warning ? 1 : 0));
 
-            if (warning)
-            {
-                AddUntilStep("sound volume decreased", () => Beatmap.Value.Track.AggregateVolume.Value == 0.25);
-                AddUntilStep("sound volume restored", () => Beatmap.Value.Track.AggregateVolume.Value == 1);
-            }
+            restoreVolumes();
         }
 
-        [TestCase(false, 1.0, false)] // not charging, above cutoff --> no warning
-        [TestCase(true, 0.1, false)] // charging, below cutoff --> no warning
-        [TestCase(false, 0.25, true)] // not charging, at cutoff --> warning
-        public void TestLowBatteryNotification(bool isCharging, double chargeLevel, bool shouldWarn)
+        [Test]
+        public void TestEpilepsyWarningWithDisabledStoryboard()
+        {
+            saveVolumes();
+            setFullVolume();
+
+            AddStep("disable storyboards", () => config.SetValue(OsuSetting.ShowStoryboard, false));
+            AddStep("change epilepsy warning", () => epilepsyWarning = true);
+            AddStep("load dummy beatmap", () => resetPlayer(false));
+
+            AddUntilStep("wait for current", () => loader.IsCurrentScreen());
+
+            AddUntilStep("epilepsy warning absent", () => this.ChildrenOfType<PlayerLoaderDisclaimer>().Single().Alpha, () => Is.Zero);
+
+            restoreVolumes();
+        }
+
+        [TestCase(BeatmapOnlineStatus.Loved, 1)]
+        [TestCase(BeatmapOnlineStatus.Qualified, 1)]
+        [TestCase(BeatmapOnlineStatus.Graveyard, 0)]
+        public void TestStatusWarning(BeatmapOnlineStatus status, int expectedDisclaimerCount)
+        {
+            saveVolumes();
+            setFullVolume();
+
+            AddStep("enable storyboards", () => config.SetValue(OsuSetting.ShowStoryboard, true));
+            AddStep("disable epilepsy warning", () => epilepsyWarning = false);
+            AddStep("set beatmap status", () => onlineStatus = status);
+            AddStep("load dummy beatmap", () => resetPlayer(false));
+
+            AddUntilStep("wait for current", () => loader.IsCurrentScreen());
+
+            AddAssert($"disclaimer count is {expectedDisclaimerCount}", () => this.ChildrenOfType<PlayerLoaderDisclaimer>().Count(), () => Is.EqualTo(expectedDisclaimerCount));
+
+            restoreVolumes();
+        }
+
+        [Test]
+        public void TestCombinedWarnings()
+        {
+            saveVolumes();
+            setFullVolume();
+
+            AddStep("enable storyboards", () => config.SetValue(OsuSetting.ShowStoryboard, true));
+            AddStep("disable epilepsy warning", () => epilepsyWarning = true);
+            AddStep("set beatmap status", () => onlineStatus = BeatmapOnlineStatus.Loved);
+            AddStep("load dummy beatmap", () => resetPlayer(false));
+
+            AddUntilStep("wait for current", () => loader.IsCurrentScreen());
+
+            AddAssert("disclaimer count is 2", () => this.ChildrenOfType<PlayerLoaderDisclaimer>().Count(), () => Is.EqualTo(2));
+
+            restoreVolumes();
+        }
+
+        [TestCase(true, 1.0, false)] // on battery, above cutoff --> no warning
+        [TestCase(false, 0.1, false)] // not on battery, below cutoff --> no warning
+        [TestCase(true, 0.25, true)] // on battery, at cutoff --> warning
+        [TestCase(true, null, false)] // on battery, level unknown --> no warning
+        public void TestLowBatteryNotification(bool onBattery, double? chargeLevel, bool shouldWarn)
         {
             AddStep("reset notification lock", () => sessionStatics.GetBindable<bool>(Static.LowBatteryNotificationShownOnce).Value = false);
 
             // set charge status and level
             AddStep("load player", () => resetPlayer(false, () =>
             {
-                batteryInfo.SetCharging(isCharging);
+                batteryInfo.SetOnBattery(onBattery);
                 batteryInfo.SetChargeLevel(chargeLevel);
             }));
             AddUntilStep("wait for player", () => player?.LoadState == LoadState.Ready);
-            AddAssert($"notification {(shouldWarn ? "triggered" : "not triggered")}", () => notificationOverlay.UnreadCount.Value == (shouldWarn ? 1 : 0));
-            AddStep("click notification", () =>
-            {
-                var scrollContainer = (OsuScrollContainer)notificationOverlay.Children.Last();
-                var flowContainer = scrollContainer.Children.OfType<FillFlowContainer<NotificationSection>>().First();
-                var notification = flowContainer.First();
 
-                InputManager.MoveMouseTo(notification);
-                InputManager.Click(MouseButton.Left);
-            });
+            if (shouldWarn)
+                clickNotification();
+            else
+                AddAssert("notification not triggered", () => notificationOverlay.UnreadCount.Value == 0);
+
             AddUntilStep("wait for player load", () => player.IsLoaded);
         }
 
-        [Test]
-        public void TestEpilepsyWarningEarlyExit()
+        private void restoreVolumes()
         {
-            AddStep("set epilepsy warning", () => epilepsyWarning = true);
-            AddStep("load dummy beatmap", () => resetPlayer(false));
-
-            AddUntilStep("wait for current", () => loader.IsCurrentScreen());
-
-            AddUntilStep("wait for epilepsy warning", () => loader.ChildrenOfType<EpilepsyWarning>().Single().Alpha > 0);
-            AddStep("exit early", () => loader.Exit());
-
-            AddUntilStep("sound volume restored", () => Beatmap.Value.Track.AggregateVolume.Value == 1);
+            AddStep("restore previous volumes", () =>
+            {
+                audioManager.VolumeTrack.Value = savedTrackVolume;
+                audioManager.Volume.Value = savedMasterVolume;
+                volumeOverlay.IsMuted.Value = savedMutedState;
+            });
         }
 
-        private class TestPlayerLoader : PlayerLoader
+        private void setFullVolume()
+        {
+            AddStep("set volumes to 100%", () =>
+            {
+                audioManager.VolumeTrack.Value = 1;
+                audioManager.Volume.Value = 1;
+                volumeOverlay.IsMuted.Value = false;
+            });
+        }
+
+        private void saveVolumes()
+        {
+            AddStep("save previous volumes", () =>
+            {
+                savedTrackVolume = audioManager.VolumeTrack.Value;
+                savedMasterVolume = audioManager.Volume.Value;
+                savedMutedState = volumeOverlay.IsMuted.Value;
+            });
+        }
+
+        [Test]
+        public void TestQuickRetry()
+        {
+            TestPlayer getCurrentPlayer() => loader.CurrentPlayer as TestPlayer;
+            bool checkSkipButtonVisible() => player.ChildrenOfType<SkipOverlay>().FirstOrDefault()?.IsButtonVisible == true;
+
+            TestPlayer previousPlayer = null;
+
+            AddStep("load dummy beatmap", () => resetPlayer(false));
+
+            AddUntilStep("wait for current", () => getCurrentPlayer()?.IsCurrentScreen() == true);
+            AddStep("store previous player", () => previousPlayer = getCurrentPlayer());
+
+            AddStep("Restart map normally", () => getCurrentPlayer().Restart());
+            AddUntilStep("wait for load", () => getCurrentPlayer()?.LoadedBeatmapSuccessfully == true);
+
+            AddUntilStep("restart completed", () => getCurrentPlayer() != null && getCurrentPlayer() != previousPlayer);
+            AddStep("store previous player", () => previousPlayer = getCurrentPlayer());
+
+            AddUntilStep("skip button visible", checkSkipButtonVisible);
+
+            AddStep("press quick retry key", () => InputManager.PressKey(Key.Tilde));
+            AddUntilStep("restart completed", () => getCurrentPlayer() != null && getCurrentPlayer() != previousPlayer);
+            AddStep("release quick retry key", () => InputManager.ReleaseKey(Key.Tilde));
+
+            AddUntilStep("wait for player", () => getCurrentPlayer()?.LoadState == LoadState.Ready);
+
+            AddUntilStep("time reached zero", () => getCurrentPlayer()?.GameplayClockContainer.CurrentTime > 0);
+            AddUntilStep("skip button not visible", () => !checkSkipButtonVisible());
+        }
+
+        private void clickNotification()
+        {
+            Notification notification = null;
+
+            AddUntilStep("wait for notification", () => (notification = notificationOverlay.ChildrenOfType<Notification>().FirstOrDefault()) != null);
+            AddStep("open notification overlay", () => notificationOverlay.Show());
+            AddStep("click notification", () => notification.TriggerClick());
+        }
+
+        private partial class TestPlayerLoader : PlayerLoader
         {
             public new VisualSettings VisualSettings => base.VisualSettings;
 
@@ -347,13 +552,8 @@ namespace osu.Game.Tests.Visual.Gameplay
             }
         }
 
-        private class TestMod : Mod, IApplicableToScoreProcessor
+        private class TestMod : OsuModDoubleTime, IApplicableToScoreProcessor
         {
-            public override string Name => string.Empty;
-            public override string Acronym => string.Empty;
-            public override double ScoreMultiplier => 1;
-            public override string Description => string.Empty;
-
             public bool Applied { get; private set; }
 
             public void ApplyToScoreProcessor(ScoreProcessor scoreProcessor)
@@ -364,7 +564,7 @@ namespace osu.Game.Tests.Visual.Gameplay
             public ScoreRank AdjustRank(ScoreRank rank, double accuracy) => rank;
         }
 
-        protected class SlowLoadPlayer : TestPlayer
+        protected partial class SlowLoadPlayer : TestPlayer
         {
             public readonly ManualResetEventSlim AllowLoad = new ManualResetEventSlim(false);
 
@@ -387,19 +587,19 @@ namespace osu.Game.Tests.Visual.Gameplay
         /// <inheritdoc/>
         private class LocalBatteryInfo : BatteryInfo
         {
-            private bool isCharging = true;
-            private double chargeLevel = 1;
+            private bool onBattery;
+            private double? chargeLevel;
 
-            public override bool IsCharging => isCharging;
+            public override bool OnBattery => onBattery;
 
-            public override double ChargeLevel => chargeLevel;
+            public override double? ChargeLevel => chargeLevel;
 
-            public void SetCharging(bool value)
+            public void SetOnBattery(bool value)
             {
-                isCharging = value;
+                onBattery = value;
             }
 
-            public void SetChargeLevel(double value)
+            public void SetChargeLevel(double? value)
             {
                 chargeLevel = value;
             }

@@ -9,8 +9,9 @@ namespace osu.Game.Rulesets.Osu
         FollowPoint,
         Cursor,
         CursorTrail,
+        CursorParticles,
+        CursorRipple,
         SliderScorePoint,
-        ApproachCircle,
         ReverseArrow,
         HitCircleText,
         SliderHeadHitCircle,
@@ -19,5 +20,7 @@ namespace osu.Game.Rulesets.Osu
         SliderBall,
         SliderBody,
         SpinnerBody,
+        CursorSmoke,
+        ApproachCircle,
     }
 }

@@ -1,9 +1,12 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using NUnit.Framework;
 using osu.Framework.Graphics;
+using osu.Framework.Input.Events;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.ControlPoints;
 using osu.Game.Rulesets.Osu.Objects;
@@ -15,7 +18,7 @@ using osuTK;
 
 namespace osu.Game.Rulesets.Osu.Tests
 {
-    public class TestSceneHitCircleArea : OsuManualInputManagerTestScene
+    public partial class TestSceneHitCircleArea : OsuManualInputManagerTestScene
     {
         private HitCircle hitCircle;
         private DrawableHitCircle drawableHitCircle;
@@ -32,7 +35,7 @@ namespace osu.Game.Rulesets.Osu.Tests
 
             hitCircle.ApplyDefaults(new ControlPointInfo(), new BeatmapDifficulty());
 
-            Child = new SkinProvidingContainer(new DefaultSkin())
+            Child = new SkinProvidingContainer(new TrianglesSkin(null!))
             {
                 RelativeSizeAxes = Axes.Both,
                 Child = drawableHitCircle = new DrawableHitCircle(hitCircle)
@@ -96,8 +99,8 @@ namespace osu.Game.Rulesets.Osu.Tests
 
         private void scheduleHit() => AddStep("schedule action", () =>
         {
-            var delay = hitCircle.StartTime - hitCircle.HitWindows.WindowFor(HitResult.Great) - Time.Current;
-            Scheduler.AddDelayed(() => hitAreaReceptor.OnPressed(OsuAction.LeftButton), delay);
+            double delay = hitCircle.StartTime - hitCircle.HitWindows.WindowFor(HitResult.Great) - Time.Current;
+            Scheduler.AddDelayed(() => hitAreaReceptor.OnPressed(new KeyBindingPressEvent<OsuAction>(GetContainingInputManager().CurrentState, OsuAction.LeftButton)), delay);
         });
     }
 }

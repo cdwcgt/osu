@@ -1,9 +1,9 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using JetBrains.Annotations;
+using System;
 using osu.Framework.Graphics;
-using osu.Framework.Graphics.Containers;
+using osu.Framework.Localisation;
 
 namespace osu.Game.Screens.Ranking.Statistics
 {
@@ -13,31 +13,36 @@ namespace osu.Game.Screens.Ranking.Statistics
     public class StatisticItem
     {
         /// <summary>
+        /// The recommended font size to use in statistic items to make sure they match others.
+        /// </summary>
+        public const float FONT_SIZE = 13;
+
+        /// <summary>
         /// The name of this item.
         /// </summary>
-        public readonly string Name;
+        public readonly LocalisableString Name;
 
         /// <summary>
-        /// The <see cref="Drawable"/> content to be displayed.
+        /// A function returning the <see cref="Drawable"/> content to be displayed.
         /// </summary>
-        public readonly Drawable Content;
+        public readonly Func<Drawable> CreateContent;
 
         /// <summary>
-        /// The <see cref="Dimension"/> of this row. This can be thought of as the column dimension of an encompassing <see cref="GridContainer"/>.
+        /// Whether this item requires hit events. If true, <see cref="CreateContent"/> will not be called if no hit events are available.
         /// </summary>
-        public readonly Dimension Dimension;
+        public readonly bool RequiresHitEvents;
 
         /// <summary>
-        /// Creates a new <see cref="StatisticItem"/>, to be displayed inside a <see cref="StatisticRow"/> in the results screen.
+        /// Creates a new <see cref="StatisticItem"/>, to be displayed in the results screen.
         /// </summary>
-        /// <param name="name">The name of the item. Can be <see cref="string.Empty"/> to hide the item header.</param>
-        /// <param name="content">The <see cref="Drawable"/> content to be displayed.</param>
-        /// <param name="dimension">The <see cref="Dimension"/> of this item. This can be thought of as the column dimension of an encompassing <see cref="GridContainer"/>.</param>
-        public StatisticItem([NotNull] string name, [NotNull] Drawable content, [CanBeNull] Dimension dimension = null)
+        /// <param name="name">The name of the item. Can be <see langword="null"/> to hide the item header.</param>
+        /// <param name="createContent">A function returning the <see cref="Drawable"/> content to be displayed.</param>
+        /// <param name="requiresHitEvents">Whether this item requires hit events. If true, <see cref="CreateContent"/> will not be called if no hit events are available.</param>
+        public StatisticItem(LocalisableString name, Func<Drawable> createContent, bool requiresHitEvents = false)
         {
             Name = name;
-            Content = content;
-            Dimension = dimension;
+            RequiresHitEvents = requiresHitEvents;
+            CreateContent = createContent;
         }
     }
 }

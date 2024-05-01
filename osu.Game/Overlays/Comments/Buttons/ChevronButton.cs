@@ -10,7 +10,7 @@ using osu.Framework.Allocation;
 
 namespace osu.Game.Overlays.Comments.Buttons
 {
-    public class ChevronButton : OsuHoverContainer
+    public partial class ChevronButton : OsuHoverContainer
     {
         public readonly BindableBool Expanded = new BindableBool(true);
 

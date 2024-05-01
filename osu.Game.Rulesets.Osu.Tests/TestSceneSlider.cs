@@ -1,6 +1,9 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
+using System;
 using System.Collections.Generic;
 using osu.Framework.Graphics;
 using osu.Game.Audio;
@@ -13,71 +16,120 @@ using osuTK.Graphics;
 using osu.Game.Rulesets.Mods;
 using System.Linq;
 using NUnit.Framework;
+using osu.Framework.Allocation;
+using osu.Framework.Bindables;
+using osu.Framework.Extensions.ObjectExtensions;
+using osu.Framework.Testing;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Rulesets.Judgements;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Drawables;
 using osu.Game.Rulesets.Objects.Types;
+using osu.Game.Rulesets.Osu.Configuration;
+using osu.Game.Rulesets.Osu.Mods;
 
 namespace osu.Game.Rulesets.Osu.Tests
 {
     [TestFixture]
-    public class TestSceneSlider : OsuSkinnableTestScene
+    public partial class TestSceneSlider : OsuSkinnableTestScene
     {
         private int depthIndex;
+
+        private readonly BindableBool snakingIn = new BindableBool(true);
+        private readonly BindableBool snakingOut = new BindableBool(true);
+
+        private float progressToHit;
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            AddToggleStep("disable snaking", v =>
+            {
+                snakingIn.Value = !v;
+                snakingOut.Value = !v;
+            });
+
+            AddToggleStep("toggle hidden", hiddenActive => SelectedMods.Value = hiddenActive ? new[] { new OsuModHidden() } : Array.Empty<Mod>());
+
+            AddSliderStep("hit at", 0f, 1f, 0f, v =>
+            {
+                progressToHit = v;
+            });
+        }
+
+        [BackgroundDependencyLoader]
+        private void load()
+        {
+            var config = (OsuRulesetConfigManager)RulesetConfigs.GetConfigFor(Ruleset.Value.CreateInstance()).AsNonNull();
+            config.BindWith(OsuRulesetSetting.SnakingInSliders, snakingIn);
+            config.BindWith(OsuRulesetSetting.SnakingOutSliders, snakingOut);
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+
+            foreach (var slider in this.ChildrenOfType<DrawableSlider>())
+            {
+                double completionProgress = Math.Clamp((Time.Current - slider.HitObject.StartTime) / slider.HitObject.Duration, 0, 1);
+                if (completionProgress > progressToHit && !slider.IsHit)
+                    slider.HeadCircle.HitArea.Hit();
+            }
+        }
 
         [Test]
         public void TestVariousSliders()
         {
-            AddStep("Big Single", () => SetContents(() => testSimpleBig()));
-            AddStep("Medium Single", () => SetContents(() => testSimpleMedium()));
-            AddStep("Small Single", () => SetContents(() => testSimpleSmall()));
-            AddStep("Big 1 Repeat", () => SetContents(() => testSimpleBig(1)));
-            AddStep("Medium 1 Repeat", () => SetContents(() => testSimpleMedium(1)));
-            AddStep("Small 1 Repeat", () => SetContents(() => testSimpleSmall(1)));
-            AddStep("Big 2 Repeats", () => SetContents(() => testSimpleBig(2)));
-            AddStep("Medium 2 Repeats", () => SetContents(() => testSimpleMedium(2)));
-            AddStep("Small 2 Repeats", () => SetContents(() => testSimpleSmall(2)));
+            AddStep("Big Single", () => SetContents(_ => testSimpleBig()));
+            AddStep("Medium Single", () => SetContents(_ => testSimpleMedium()));
+            AddStep("Small Single", () => SetContents(_ => testSimpleSmall()));
+            AddStep("Big 1 Repeat", () => SetContents(_ => testSimpleBig(1)));
+            AddStep("Medium 1 Repeat", () => SetContents(_ => testSimpleMedium(1)));
+            AddStep("Small 1 Repeat", () => SetContents(_ => testSimpleSmall(1)));
+            AddStep("Big 2 Repeats", () => SetContents(_ => testSimpleBig(2)));
+            AddStep("Medium 2 Repeats", () => SetContents(_ => testSimpleMedium(2)));
+            AddStep("Small 2 Repeats", () => SetContents(_ => testSimpleSmall(2)));
 
-            AddStep("Slow Slider", () => SetContents(testSlowSpeed)); // slow long sliders take ages already so no repeat steps
-            AddStep("Slow Short Slider", () => SetContents(() => testShortSlowSpeed()));
-            AddStep("Slow Short Slider 1 Repeats", () => SetContents(() => testShortSlowSpeed(1)));
-            AddStep("Slow Short Slider 2 Repeats", () => SetContents(() => testShortSlowSpeed(2)));
+            AddStep("Slow Slider", () => SetContents(_ => testSlowSpeed())); // slow long sliders take ages already so no repeat steps
+            AddStep("Slow Short Slider", () => SetContents(_ => testShortSlowSpeed()));
+            AddStep("Slow Short Slider 1 Repeats", () => SetContents(_ => testShortSlowSpeed(1)));
+            AddStep("Slow Short Slider 2 Repeats", () => SetContents(_ => testShortSlowSpeed(2)));
 
-            AddStep("Fast Slider", () => SetContents(() => testHighSpeed()));
-            AddStep("Fast Slider 1 Repeat", () => SetContents(() => testHighSpeed(1)));
-            AddStep("Fast Slider 2 Repeats", () => SetContents(() => testHighSpeed(2)));
-            AddStep("Fast Short Slider", () => SetContents(() => testShortHighSpeed()));
-            AddStep("Fast Short Slider 1 Repeat", () => SetContents(() => testShortHighSpeed(1)));
-            AddStep("Fast Short Slider 2 Repeats", () => SetContents(() => testShortHighSpeed(2)));
-            AddStep("Fast Short Slider 6 Repeats", () => SetContents(() => testShortHighSpeed(6)));
+            AddStep("Fast Slider", () => SetContents(_ => testHighSpeed()));
+            AddStep("Fast Slider 1 Repeat", () => SetContents(_ => testHighSpeed(1)));
+            AddStep("Fast Slider 2 Repeats", () => SetContents(_ => testHighSpeed(2)));
+            AddStep("Fast Short Slider", () => SetContents(_ => testShortHighSpeed()));
+            AddStep("Fast Short Slider 1 Repeat", () => SetContents(_ => testShortHighSpeed(1)));
+            AddStep("Fast Short Slider 2 Repeats", () => SetContents(_ => testShortHighSpeed(2)));
+            AddStep("Fast Short Slider 6 Repeats", () => SetContents(_ => testShortHighSpeed(6)));
 
-            AddStep("Perfect Curve", () => SetContents(() => testPerfect()));
-            AddStep("Perfect Curve 1 Repeat", () => SetContents(() => testPerfect(1)));
-            AddStep("Perfect Curve 2 Repeats", () => SetContents(() => testPerfect(2)));
+            AddStep("Perfect Curve", () => SetContents(_ => testPerfect()));
+            AddStep("Perfect Curve 1 Repeat", () => SetContents(_ => testPerfect(1)));
+            AddStep("Perfect Curve 2 Repeats", () => SetContents(_ => testPerfect(2)));
 
-            AddStep("Linear Slider", () => SetContents(() => testLinear()));
-            AddStep("Linear Slider 1 Repeat", () => SetContents(() => testLinear(1)));
-            AddStep("Linear Slider 2 Repeats", () => SetContents(() => testLinear(2)));
+            AddStep("Linear Slider", () => SetContents(_ => testLinear()));
+            AddStep("Linear Slider 1 Repeat", () => SetContents(_ => testLinear(1)));
+            AddStep("Linear Slider 2 Repeats", () => SetContents(_ => testLinear(2)));
 
-            AddStep("Bezier Slider", () => SetContents(() => testBezier()));
-            AddStep("Bezier Slider 1 Repeat", () => SetContents(() => testBezier(1)));
-            AddStep("Bezier Slider 2 Repeats", () => SetContents(() => testBezier(2)));
+            AddStep("Bezier Slider", () => SetContents(_ => testBezier()));
+            AddStep("Bezier Slider 1 Repeat", () => SetContents(_ => testBezier(1)));
+            AddStep("Bezier Slider 2 Repeats", () => SetContents(_ => testBezier(2)));
 
-            AddStep("Linear Overlapping", () => SetContents(() => testLinearOverlapping()));
-            AddStep("Linear Overlapping 1 Repeat", () => SetContents(() => testLinearOverlapping(1)));
-            AddStep("Linear Overlapping 2 Repeats", () => SetContents(() => testLinearOverlapping(2)));
+            AddStep("Linear Overlapping", () => SetContents(_ => testLinearOverlapping()));
+            AddStep("Linear Overlapping 1 Repeat", () => SetContents(_ => testLinearOverlapping(1)));
+            AddStep("Linear Overlapping 2 Repeats", () => SetContents(_ => testLinearOverlapping(2)));
 
-            AddStep("Catmull Slider", () => SetContents(() => testCatmull()));
-            AddStep("Catmull Slider 1 Repeat", () => SetContents(() => testCatmull(1)));
-            AddStep("Catmull Slider 2 Repeats", () => SetContents(() => testCatmull(2)));
+            AddStep("Catmull Slider", () => SetContents(_ => testCatmull()));
+            AddStep("Catmull Slider 1 Repeat", () => SetContents(_ => testCatmull(1)));
+            AddStep("Catmull Slider 2 Repeats", () => SetContents(_ => testCatmull(2)));
 
-            AddStep("Big Single, Large StackOffset", () => SetContents(() => testSimpleBigLargeStackOffset()));
-            AddStep("Big 1 Repeat, Large StackOffset", () => SetContents(() => testSimpleBigLargeStackOffset(1)));
+            AddStep("Big Single, Large StackOffset", () => SetContents(_ => testSimpleBigLargeStackOffset()));
+            AddStep("Big 1 Repeat, Large StackOffset", () => SetContents(_ => testSimpleBigLargeStackOffset(1)));
 
-            AddStep("Distance Overflow", () => SetContents(() => testDistanceOverflow()));
-            AddStep("Distance Overflow 1 Repeat", () => SetContents(() => testDistanceOverflow(1)));
+            AddStep("Distance Overflow", () => SetContents(_ => testDistanceOverflow()));
+            AddStep("Distance Overflow 1 Repeat", () => SetContents(_ => testDistanceOverflow(1)));
         }
 
         [Test]
@@ -157,9 +209,9 @@ namespace osu.Game.Rulesets.Osu.Tests
             static bool assertSamples(HitObject hitObject) => hitObject.Samples.All(s => s.Name != HitSampleInfo.HIT_CLAP && s.Name != HitSampleInfo.HIT_WHISTLE);
         }
 
-        private Drawable testSimpleBig(int repeats = 0) => createSlider(2, repeats: repeats);
+        private Drawable testSimpleBig(int repeats = 0) => createSlider(repeats: repeats);
 
-        private Drawable testSimpleBigLargeStackOffset(int repeats = 0) => createSlider(2, repeats: repeats, stackHeight: 10);
+        private Drawable testSimpleBigLargeStackOffset(int repeats = 0) => createSlider(repeats: repeats, stackHeight: 10);
 
         private Drawable testDistanceOverflow(int repeats = 0)
         {
@@ -167,7 +219,7 @@ namespace osu.Game.Rulesets.Osu.Tests
             {
                 StartTime = Time.Current + time_offset,
                 Position = new Vector2(239, 176),
-                Path = new SliderPath(PathType.PerfectCurve, new[]
+                Path = new SliderPath(PathType.PERFECT_CURVE, new[]
                 {
                     Vector2.Zero,
                     new Vector2(154, 28),
@@ -177,7 +229,7 @@ namespace osu.Game.Rulesets.Osu.Tests
                 StackHeight = 10
             };
 
-            return createDrawable(slider, 2, 2);
+            return createDrawable(slider, 2);
         }
 
         private Drawable testSimpleMedium(int repeats = 0) => createSlider(5, repeats: repeats);
@@ -200,9 +252,10 @@ namespace osu.Game.Rulesets.Osu.Tests
         {
             var slider = new Slider
             {
+                SliderVelocityMultiplier = speedMultiplier,
                 StartTime = Time.Current + time_offset,
                 Position = new Vector2(0, -(distance / 2)),
-                Path = new SliderPath(PathType.PerfectCurve, new[]
+                Path = new SliderPath(PathType.PERFECT_CURVE, new[]
                 {
                     Vector2.Zero,
                     new Vector2(0, distance),
@@ -211,7 +264,7 @@ namespace osu.Game.Rulesets.Osu.Tests
                 StackHeight = stackHeight
             };
 
-            return createDrawable(slider, circleSize, speedMultiplier);
+            return createDrawable(slider, circleSize);
         }
 
         private Drawable testPerfect(int repeats = 0)
@@ -220,7 +273,7 @@ namespace osu.Game.Rulesets.Osu.Tests
             {
                 StartTime = Time.Current + time_offset,
                 Position = new Vector2(-max_length / 2, 0),
-                Path = new SliderPath(PathType.PerfectCurve, new[]
+                Path = new SliderPath(PathType.PERFECT_CURVE, new[]
                 {
                     Vector2.Zero,
                     new Vector2(max_length / 2, max_length / 2),
@@ -229,7 +282,7 @@ namespace osu.Game.Rulesets.Osu.Tests
                 RepeatCount = repeats,
             };
 
-            return createDrawable(slider, 2, 3);
+            return createDrawable(slider, 2);
         }
 
         private Drawable testLinear(int repeats = 0) => createLinear(repeats);
@@ -240,7 +293,7 @@ namespace osu.Game.Rulesets.Osu.Tests
             {
                 StartTime = Time.Current + time_offset,
                 Position = new Vector2(-max_length / 2, 0),
-                Path = new SliderPath(PathType.Linear, new[]
+                Path = new SliderPath(PathType.LINEAR, new[]
                 {
                     Vector2.Zero,
                     new Vector2(max_length * 0.375f, max_length * 0.18f),
@@ -252,7 +305,7 @@ namespace osu.Game.Rulesets.Osu.Tests
                 RepeatCount = repeats,
             };
 
-            return createDrawable(slider, 2, 3);
+            return createDrawable(slider, 2);
         }
 
         private Drawable testBezier(int repeats = 0) => createBezier(repeats);
@@ -263,7 +316,7 @@ namespace osu.Game.Rulesets.Osu.Tests
             {
                 StartTime = Time.Current + time_offset,
                 Position = new Vector2(-max_length / 2, 0),
-                Path = new SliderPath(PathType.Bezier, new[]
+                Path = new SliderPath(PathType.BEZIER, new[]
                 {
                     Vector2.Zero,
                     new Vector2(max_length * 0.375f, max_length * 0.18f),
@@ -274,7 +327,7 @@ namespace osu.Game.Rulesets.Osu.Tests
                 RepeatCount = repeats,
             };
 
-            return createDrawable(slider, 2, 3);
+            return createDrawable(slider, 2);
         }
 
         private Drawable testLinearOverlapping(int repeats = 0) => createOverlapping(repeats);
@@ -285,7 +338,7 @@ namespace osu.Game.Rulesets.Osu.Tests
             {
                 StartTime = Time.Current + time_offset,
                 Position = new Vector2(0, 0),
-                Path = new SliderPath(PathType.Linear, new[]
+                Path = new SliderPath(PathType.LINEAR, new[]
                 {
                     Vector2.Zero,
                     new Vector2(-max_length / 2, 0),
@@ -297,7 +350,7 @@ namespace osu.Game.Rulesets.Osu.Tests
                 RepeatCount = repeats,
             };
 
-            return createDrawable(slider, 2, 3);
+            return createDrawable(slider, 2);
         }
 
         private Drawable testCatmull(int repeats = 0) => createCatmull(repeats);
@@ -312,7 +365,7 @@ namespace osu.Game.Rulesets.Osu.Tests
             {
                 StartTime = Time.Current + time_offset,
                 Position = new Vector2(-max_length / 4, 0),
-                Path = new SliderPath(PathType.Catmull, new[]
+                Path = new SliderPath(PathType.CATMULL, new[]
                 {
                     Vector2.Zero,
                     new Vector2(max_length * 0.125f, max_length * 0.125f),
@@ -323,20 +376,21 @@ namespace osu.Game.Rulesets.Osu.Tests
                 NodeSamples = repeatSamples
             };
 
-            return createDrawable(slider, 3, 1);
+            return createDrawable(slider, 3);
         }
 
-        private Drawable createDrawable(Slider slider, float circleSize, double speedMultiplier)
+        private Drawable createDrawable(Slider slider, float circleSize)
         {
-            var cpi = new ControlPointInfo();
-            cpi.Add(0, new DifficultyControlPoint { SpeedMultiplier = speedMultiplier });
-
-            slider.ApplyDefaults(cpi, new BeatmapDifficulty { CircleSize = circleSize, SliderTickRate = 3 });
+            slider.ApplyDefaults(new ControlPointInfo(), new BeatmapDifficulty
+            {
+                CircleSize = circleSize,
+                SliderTickRate = 3
+            });
 
             var drawable = CreateDrawableSlider(slider);
 
-            foreach (var mod in SelectedMods.Value.OfType<IApplicableToDrawableHitObjects>())
-                mod.ApplyToDrawableHitObjects(new[] { drawable });
+            foreach (var mod in SelectedMods.Value.OfType<IApplicableToDrawableHitObject>())
+                mod.ApplyToDrawableHitObject(drawable);
 
             drawable.OnNewResult += onNewResult;
 

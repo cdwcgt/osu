@@ -3,6 +3,7 @@
 
 using System;
 using osu.Framework.Graphics;
+using osu.Framework.Localisation;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Utils;
 
@@ -11,9 +12,9 @@ namespace osu.Game.Graphics.UserInterface
     /// <summary>
     /// Used as an accuracy counter. Represented visually as a percentage.
     /// </summary>
-    public class PercentageCounter : RollingCounter<double>
+    public partial class PercentageCounter : RollingCounter<double>
     {
-        protected override double RollingDuration => 750;
+        protected override double RollingDuration => 375;
 
         private float epsilon => 1e-10f;
 
@@ -27,7 +28,7 @@ namespace osu.Game.Graphics.UserInterface
             Current.Value = DisplayedCount = 1.0f;
         }
 
-        protected override string FormatCount(double count) => count.FormatAccuracy();
+        protected override LocalisableString FormatCount(double count) => count.FormatAccuracy();
 
         protected override double GetProportionalDuration(double currentValue, double newValue)
         {

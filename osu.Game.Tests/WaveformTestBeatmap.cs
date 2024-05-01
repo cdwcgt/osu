@@ -1,6 +1,8 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using System.IO;
 using System.Linq;
@@ -11,6 +13,7 @@ using osu.Game.Beatmaps;
 using osu.Game.IO.Archives;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Osu;
+using osu.Game.Skinning;
 using osu.Game.Tests.Beatmaps;
 using osu.Game.Tests.Resources;
 
@@ -48,13 +51,22 @@ namespace osu.Game.Tests
 
         protected override IBeatmap GetBeatmap() => beatmap;
 
-        protected override Texture GetBackground() => null;
+        public override Texture GetBackground() => null;
 
         protected override Waveform GetWaveform() => new Waveform(trackStore.GetStream(firstAudioFile));
+
+        protected internal override ISkin GetSkin() => null;
 
         public override Stream GetStream(string storagePath) => null;
 
         protected override Track GetBeatmapTrack() => trackStore.Get(firstAudioFile);
+
+        public override bool TryTransferTrack(WorkingBeatmap target)
+        {
+            // Our track comes from a local track store that's disposed on finalizer,
+            // therefore it's unsafe to transfer it to another working beatmap.
+            return false;
+        }
 
         private string firstAudioFile
         {

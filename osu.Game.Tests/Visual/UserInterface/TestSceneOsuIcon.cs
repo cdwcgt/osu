@@ -1,6 +1,8 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System.Diagnostics;
 using System.Reflection;
 using NUnit.Framework;
@@ -10,6 +12,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Localisation;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osuTK;
@@ -18,7 +21,7 @@ using osuTK.Graphics;
 namespace osu.Game.Tests.Visual.UserInterface
 {
     [TestFixture]
-    public class TestSceneOsuIcon : OsuTestScene
+    public partial class TestSceneOsuIcon : OsuTestScene
     {
         public TestSceneOsuIcon()
         {
@@ -47,7 +50,7 @@ namespace osu.Game.Tests.Visual.UserInterface
 
             foreach (var p in typeof(OsuIcon).GetProperties(BindingFlags.Public | BindingFlags.Static))
             {
-                var propValue = p.GetValue(null);
+                object propValue = p.GetValue(null);
                 Debug.Assert(propValue != null);
 
                 flow.Add(new Icon($"{nameof(OsuIcon)}.{p.Name}", (IconUsage)propValue));
@@ -57,9 +60,9 @@ namespace osu.Game.Tests.Visual.UserInterface
             AddStep("change icons", () => flow.Children.ForEach(i => i.SpriteIcon.Icon = new IconUsage((char)(i.SpriteIcon.Icon.Icon + 1))));
         }
 
-        private class Icon : Container, IHasTooltip
+        private partial class Icon : Container, IHasTooltip
         {
-            public string TooltipText { get; }
+            public LocalisableString TooltipText { get; }
 
             public SpriteIcon SpriteIcon { get; }
 

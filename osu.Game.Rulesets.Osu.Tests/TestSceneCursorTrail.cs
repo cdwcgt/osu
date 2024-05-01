@@ -1,15 +1,20 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using osu.Framework.Allocation;
 using osu.Framework.Audio.Sample;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Framework.Graphics.OpenGL.Textures;
+using osu.Framework.Graphics.Rendering;
 using osu.Framework.Graphics.Textures;
+using osu.Framework.Testing;
 using osu.Framework.Testing.Input;
 using osu.Game.Audio;
 using osu.Game.Rulesets.Osu.Skinning.Legacy;
@@ -20,8 +25,11 @@ using osuTK;
 
 namespace osu.Game.Rulesets.Osu.Tests
 {
-    public class TestSceneCursorTrail : OsuTestScene
+    public partial class TestSceneCursorTrail : OsuTestScene
     {
+        [Resolved]
+        private IRenderer renderer { get; set; }
+
         [Test]
         public void TestSmoothCursorTrail()
         {
@@ -39,19 +47,45 @@ namespace osu.Game.Rulesets.Osu.Tests
         [Test]
         public void TestLegacySmoothCursorTrail()
         {
-            createTest(() => new LegacySkinContainer(false)
+            createTest(() =>
             {
-                Child = new LegacyCursorTrail()
+                var skinContainer = new LegacySkinContainer(renderer, provideMiddle: false);
+                var legacyCursorTrail = new LegacyCursorTrail(skinContainer);
+
+                skinContainer.Child = legacyCursorTrail;
+
+                return skinContainer;
             });
         }
 
         [Test]
         public void TestLegacyDisjointCursorTrail()
         {
-            createTest(() => new LegacySkinContainer(true)
+            createTest(() =>
             {
-                Child = new LegacyCursorTrail()
+                var skinContainer = new LegacySkinContainer(renderer, provideMiddle: true);
+                var legacyCursorTrail = new LegacyCursorTrail(skinContainer);
+
+                skinContainer.Child = legacyCursorTrail;
+
+                return skinContainer;
             });
+        }
+
+        [Test]
+        public void TestLegacyDisjointCursorTrailViaNoCursor()
+        {
+            createTest(() =>
+            {
+                var skinContainer = new LegacySkinContainer(renderer, provideMiddle: false, provideCursor: false);
+                var legacyCursorTrail = new LegacyCursorTrail(skinContainer);
+
+                skinContainer.Child = legacyCursorTrail;
+
+                return skinContainer;
+            });
+
+            AddAssert("trail is disjoint", () => this.ChildrenOfType<LegacyCursorTrail>().Single().DisjointTrail, () => Is.True);
         }
 
         private void createTest(Func<Drawable> createContent) => AddStep("create trail", () =>
@@ -62,37 +96,40 @@ namespace osu.Game.Rulesets.Osu.Tests
             {
                 RelativeSizeAxes = Axes.Both,
                 Size = new Vector2(0.8f),
-                Child = new MovingCursorInputManager { Child = createContent?.Invoke() }
+                Child = new MovingCursorInputManager { Child = createContent() }
             });
         });
 
         [Cached(typeof(ISkinSource))]
-        private class LegacySkinContainer : Container, ISkinSource
+        private partial class LegacySkinContainer : Container, ISkinSource
         {
-            private readonly bool disjoint;
+            private readonly IRenderer renderer;
+            private readonly bool provideMiddle;
+            private readonly bool provideCursor;
 
-            public LegacySkinContainer(bool disjoint)
+            public LegacySkinContainer(IRenderer renderer, bool provideMiddle, bool provideCursor = true)
             {
-                this.disjoint = disjoint;
+                this.renderer = renderer;
+                this.provideMiddle = provideMiddle;
+                this.provideCursor = provideCursor;
 
                 RelativeSizeAxes = Axes.Both;
             }
 
-            public Drawable GetDrawableComponent(ISkinComponent component) => null;
+            public Drawable GetDrawableComponent(ISkinComponentLookup lookup) => null;
 
             public Texture GetTexture(string componentName, WrapMode wrapModeS, WrapMode wrapModeT)
             {
                 switch (componentName)
                 {
-                    case "cursortrail":
-                        var tex = new Texture(Texture.WhitePixel.TextureGL);
+                    case "cursor":
+                        return provideCursor ? new Texture(renderer.WhitePixel) : null;
 
-                        if (disjoint)
-                            tex.ScaleAdjust = 1 / 25f;
-                        return tex;
+                    case "cursortrail":
+                        return new Texture(renderer.WhitePixel);
 
                     case "cursormiddle":
-                        return disjoint ? null : Texture.WhitePixel;
+                        return provideMiddle ? null : renderer.WhitePixel;
                 }
 
                 return null;
@@ -102,6 +139,10 @@ namespace osu.Game.Rulesets.Osu.Tests
 
             public IBindable<TValue> GetConfig<TLookup, TValue>(TLookup lookup) => null;
 
+            public ISkin FindProvider(Func<ISkin, bool> lookupFunction) => lookupFunction(this) ? this : null;
+
+            public IEnumerable<ISkin> AllSources => new[] { this };
+
             public event Action SourceChanged
             {
                 add { }
@@ -109,7 +150,7 @@ namespace osu.Game.Rulesets.Osu.Tests
             }
         }
 
-        private class MovingCursorInputManager : ManualInputManager
+        private partial class MovingCursorInputManager : ManualInputManager
         {
             public MovingCursorInputManager()
             {

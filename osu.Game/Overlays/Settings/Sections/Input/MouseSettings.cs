@@ -1,30 +1,38 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
+using osu.Framework;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Configuration;
 using osu.Framework.Graphics;
 using osu.Framework.Input.Handlers.Mouse;
+using osu.Framework.Localisation;
 using osu.Game.Configuration;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Input;
+using osu.Game.Localisation;
 
 namespace osu.Game.Overlays.Settings.Sections.Input
 {
-    public class MouseSettings : SettingsSubsection
+    public partial class MouseSettings : SettingsSubsection
     {
         private readonly MouseHandler mouseHandler;
 
-        protected override string Header => "Mouse";
+        protected override LocalisableString Header => MouseSettingsStrings.Mouse;
 
         private Bindable<double> handlerSensitivity;
 
         private Bindable<double> localSensitivity;
 
         private Bindable<WindowMode> windowMode;
+        private Bindable<bool> minimiseOnFocusLoss;
         private SettingsEnumDropdown<OsuConfineMouseMode> confineMouseModeSetting;
         private Bindable<bool> relativeMode;
+
+        private SettingsCheckbox highPrecisionMouse;
 
         public MouseSettings(MouseHandler mouseHandler)
         {
@@ -40,32 +48,36 @@ namespace osu.Game.Overlays.Settings.Sections.Input
 
             relativeMode = mouseHandler.UseRelativeMode.GetBoundCopy();
             windowMode = config.GetBindable<WindowMode>(FrameworkSetting.WindowMode);
+            minimiseOnFocusLoss = config.GetBindable<bool>(FrameworkSetting.MinimiseOnFocusLossInFullscreen);
 
             Children = new Drawable[]
             {
-                new SettingsCheckbox
+                highPrecisionMouse = new SettingsCheckbox
                 {
-                    LabelText = "High precision mouse",
-                    Current = relativeMode
+                    LabelText = MouseSettingsStrings.HighPrecisionMouse,
+                    TooltipText = MouseSettingsStrings.HighPrecisionMouseTooltip,
+                    Current = relativeMode,
+                    Keywords = new[] { @"raw", @"input", @"relative", @"cursor" }
                 },
                 new SensitivitySetting
                 {
-                    LabelText = "Cursor sensitivity",
+                    LabelText = MouseSettingsStrings.CursorSensitivity,
                     Current = localSensitivity
                 },
                 confineMouseModeSetting = new SettingsEnumDropdown<OsuConfineMouseMode>
                 {
-                    LabelText = "Confine mouse cursor to window",
+                    LabelText = MouseSettingsStrings.ConfineMouseMode,
                     Current = osuConfig.GetBindable<OsuConfineMouseMode>(OsuSetting.ConfineMouseMode)
                 },
                 new SettingsCheckbox
                 {
-                    LabelText = "Disable mouse wheel during gameplay",
+                    LabelText = MouseSettingsStrings.DisableMouseWheelVolumeAdjust,
+                    TooltipText = MouseSettingsStrings.DisableMouseWheelVolumeAdjustTooltip,
                     Current = osuConfig.GetBindable<bool>(OsuSetting.MouseDisableWheel)
                 },
                 new SettingsCheckbox
                 {
-                    LabelText = "Disable mouse buttons during gameplay",
+                    LabelText = MouseSettingsStrings.DisableClicksDuringGameplay,
                     Current = osuConfig.GetBindable<bool>(OsuSetting.MouseDisableButtons)
                 },
             };
@@ -79,7 +91,7 @@ namespace osu.Game.Overlays.Settings.Sections.Input
 
             handlerSensitivity.BindValueChanged(val =>
             {
-                var disabled = localSensitivity.Disabled;
+                bool disabled = localSensitivity.Disabled;
 
                 localSensitivity.Disabled = false;
                 localSensitivity.Value = val.NewValue;
@@ -88,24 +100,41 @@ namespace osu.Game.Overlays.Settings.Sections.Input
 
             localSensitivity.BindValueChanged(val => handlerSensitivity.Value = val.NewValue);
 
-            windowMode.BindValueChanged(mode =>
-            {
-                var isFullscreen = mode.NewValue == WindowMode.Fullscreen;
+            windowMode.BindValueChanged(_ => updateConfineMouseModeSettingVisibility());
+            minimiseOnFocusLoss.BindValueChanged(_ => updateConfineMouseModeSettingVisibility(), true);
 
-                if (isFullscreen)
+            highPrecisionMouse.Current.BindValueChanged(highPrecision =>
+            {
+                if (RuntimeInfo.OS != RuntimeInfo.Platform.Windows)
                 {
-                    confineMouseModeSetting.Current.Disabled = true;
-                    confineMouseModeSetting.TooltipText = "Not applicable in full screen mode";
-                }
-                else
-                {
-                    confineMouseModeSetting.Current.Disabled = false;
-                    confineMouseModeSetting.TooltipText = string.Empty;
+                    if (highPrecision.NewValue)
+                        highPrecisionMouse.SetNoticeText(MouseSettingsStrings.HighPrecisionPlatformWarning, true);
+                    else
+                        highPrecisionMouse.ClearNoticeText();
                 }
             }, true);
         }
 
-        private class SensitivitySetting : SettingsSlider<double, SensitivitySlider>
+        /// <summary>
+        /// Updates disabled state and tooltip of <see cref="confineMouseModeSetting"/> to match when <see cref="ConfineMouseTracker"/> is overriding the confine mode.
+        /// </summary>
+        private void updateConfineMouseModeSettingVisibility()
+        {
+            bool confineModeOverriden = windowMode.Value == WindowMode.Fullscreen && minimiseOnFocusLoss.Value;
+
+            if (confineModeOverriden)
+            {
+                confineMouseModeSetting.Current.Disabled = true;
+                confineMouseModeSetting.TooltipText = MouseSettingsStrings.NotApplicableFullscreen;
+            }
+            else
+            {
+                confineMouseModeSetting.Current.Disabled = false;
+                confineMouseModeSetting.TooltipText = string.Empty;
+            }
+        }
+
+        public partial class SensitivitySetting : SettingsSlider<double, SensitivitySlider>
         {
             public SensitivitySetting()
             {
@@ -114,9 +143,9 @@ namespace osu.Game.Overlays.Settings.Sections.Input
             }
         }
 
-        private class SensitivitySlider : OsuSliderBar<double>
+        public partial class SensitivitySlider : RoundedSliderBar<double>
         {
-            public override string TooltipText => Current.Disabled ? "enable high precision mouse to adjust sensitivity" : $"{base.TooltipText}x";
+            public override LocalisableString TooltipText => Current.Disabled ? MouseSettingsStrings.EnableHighPrecisionForSensitivityAdjust : $"{base.TooltipText}x";
         }
     }
 }

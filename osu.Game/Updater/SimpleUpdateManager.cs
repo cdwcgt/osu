@@ -1,10 +1,11 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using osu.Framework;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics.Sprites;
@@ -18,12 +19,12 @@ namespace osu.Game.Updater
     /// An update manager that shows notifications if a newer release is detected.
     /// Installation is left up to the user.
     /// </summary>
-    public class SimpleUpdateManager : UpdateManager
+    public partial class SimpleUpdateManager : UpdateManager
     {
-        private string version;
+        private string version = null!;
 
         [Resolved]
-        private GameHost host { get; set; }
+        private GameHost host { get; set; } = null!;
 
         [BackgroundDependencyLoader]
         private void load(OsuGameBase game)
@@ -41,16 +42,21 @@ namespace osu.Game.Updater
 
                 var latest = releases.ResponseObject;
 
-                if (latest.TagName != version)
+                // avoid any discrepancies due to build suffixes for now.
+                // eventually we will want to support release streams and consider these.
+                version = version.Split('-').First();
+                string latestTagName = latest.TagName.Split('-').First();
+
+                if (latestTagName != version && tryGetBestUrl(latest, out string? url))
                 {
                     Notifications.Post(new SimpleNotification
                     {
-                        Text = $"A newer release of osu! has been found ({version} → {latest.TagName}).\n\n"
+                        Text = $"A newer release of osu! has been found ({version} → {latestTagName}).\n\n"
                                + "Click here to download the new version, which can be installed over the top of your existing installation",
-                        Icon = FontAwesome.Solid.Upload,
+                        Icon = FontAwesome.Solid.Download,
                         Activated = () =>
                         {
-                            host.OpenUrlExternally(getBestUrl(latest));
+                            host.OpenUrlExternally(url);
                             return true;
                         }
                     });
@@ -67,9 +73,10 @@ namespace osu.Game.Updater
             return false;
         }
 
-        private string getBestUrl(GitHubRelease release)
+        private bool tryGetBestUrl(GitHubRelease release, [NotNullWhen(true)] out string? url)
         {
-            GitHubAsset bestAsset = null;
+            url = null;
+            GitHubAsset? bestAsset = null;
 
             switch (RuntimeInfo.OS)
             {
@@ -78,7 +85,8 @@ namespace osu.Game.Updater
                     break;
 
                 case RuntimeInfo.Platform.macOS:
-                    bestAsset = release.Assets?.Find(f => f.Name.EndsWith(".app.zip", StringComparison.Ordinal));
+                    string arch = RuntimeInformation.OSArchitecture == Architecture.Arm64 ? "Apple.Silicon" : "Intel";
+                    bestAsset = release.Assets?.Find(f => f.Name.EndsWith($".app.{arch}.zip", StringComparison.Ordinal));
                     break;
 
                 case RuntimeInfo.Platform.Linux:
@@ -86,38 +94,23 @@ namespace osu.Game.Updater
                     break;
 
                 case RuntimeInfo.Platform.iOS:
-                    // iOS releases are available via testflight. this link seems to work well enough for now.
-                    // see https://stackoverflow.com/a/32960501
-                    return "itms-beta://beta.itunes.apple.com/v1/app/1447765923";
+                    if (release.Assets?.Exists(f => f.Name.EndsWith(".ipa", StringComparison.Ordinal)) == true)
+                        // iOS releases are available via testflight. this link seems to work well enough for now.
+                        // see https://stackoverflow.com/a/32960501
+                        url = "itms-beta://beta.itunes.apple.com/v1/app/1447765923";
+
+                    break;
 
                 case RuntimeInfo.Platform.Android:
-                    // on our testing device this causes the download to magically disappear.
-                    //bestAsset = release.Assets?.Find(f => f.Name.EndsWith(".apk"));
+                    if (release.Assets?.Exists(f => f.Name.EndsWith(".apk", StringComparison.Ordinal)) == true)
+                        // on our testing device using the .apk URL causes the download to magically disappear.
+                        url = release.HtmlUrl;
+
                     break;
             }
 
-            return bestAsset?.BrowserDownloadUrl ?? release.HtmlUrl;
-        }
-
-        public class GitHubRelease
-        {
-            [JsonProperty("html_url")]
-            public string HtmlUrl { get; set; }
-
-            [JsonProperty("tag_name")]
-            public string TagName { get; set; }
-
-            [JsonProperty("assets")]
-            public List<GitHubAsset> Assets { get; set; }
-        }
-
-        public class GitHubAsset
-        {
-            [JsonProperty("name")]
-            public string Name { get; set; }
-
-            [JsonProperty("browser_download_url")]
-            public string BrowserDownloadUrl { get; set; }
+            url ??= bestAsset?.BrowserDownloadUrl;
+            return url != null;
         }
     }
 }

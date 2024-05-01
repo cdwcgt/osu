@@ -1,34 +1,37 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System.Diagnostics;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Framework.Input;
-using osu.Framework.Input.Bindings;
 using osu.Framework.Platform;
 using osu.Game.Beatmaps;
+using osu.Game.Configuration;
 using osu.Game.Extensions;
+using osu.Game.IO.Serialization;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Edit;
 using osu.Game.Screens.Edit.Compose.Components.Timeline;
-using osu.Game.Skinning;
 
 namespace osu.Game.Screens.Edit.Compose
 {
-    public class ComposeScreen : EditorScreenWithTimeline, IKeyBindingHandler<PlatformAction>
+    public partial class ComposeScreen : EditorScreenWithTimeline, IGameplaySettings
     {
         [Resolved]
-        private IBindable<WorkingBeatmap> beatmap { get; set; }
-
-        [Resolved]
-        private GameHost host { get; set; }
+        private Clipboard hostClipboard { get; set; } = null!;
 
         [Resolved]
         private EditorClock clock { get; set; }
+
+        [Resolved]
+        private IGameplaySettings globalGameplaySettings { get; set; }
+
+        private Bindable<string> clipboard { get; set; }
 
         private HitObjectComposer composer;
 
@@ -43,7 +46,7 @@ namespace osu.Game.Screens.Edit.Compose
         {
             var dependencies = new DependencyContainer(base.CreateChildDependencies(parent));
 
-            ruleset = parent.Get<IBindable<WorkingBeatmap>>().Value.BeatmapInfo.Ruleset?.CreateInstance();
+            ruleset = parent.Get<IBindable<WorkingBeatmap>>().Value.BeatmapInfo.Ruleset.CreateInstance();
             composer = ruleset?.CreateHitObjectComposer();
 
             // make the composer available to the timeline and other components in this screen.
@@ -73,37 +76,88 @@ namespace osu.Game.Screens.Edit.Compose
         {
             Debug.Assert(ruleset != null);
 
-            var beatmapSkinProvider = new BeatmapSkinProvidingContainer(beatmap.Value.Skin);
-
-            // the beatmapSkinProvider is used as the fallback source here to allow the ruleset-specific skin implementation
-            // full access to all skin sources.
-            var rulesetSkinProvider = new SkinProvidingContainer(ruleset.CreateLegacySkinProvider(beatmapSkinProvider, EditorBeatmap.PlayableBeatmap));
-
-            // load the skinning hierarchy first.
-            // this is intentionally done in two stages to ensure things are in a loaded state before exposing the ruleset to skin sources.
-            return beatmapSkinProvider.WithChild(rulesetSkinProvider.WithChild(content));
+            return new EditorSkinProvidingContainer(EditorBeatmap).WithChild(content);
         }
 
-        #region Input Handling
-
-        public bool OnPressed(PlatformAction action)
+        [BackgroundDependencyLoader]
+        private void load(EditorClipboard clipboard)
         {
-            if (action.ActionType == PlatformActionType.Copy)
-                host.GetClipboard().SetText(formatSelectionAsString());
-
-            return false;
+            this.clipboard = clipboard.Content.GetBoundCopy();
         }
 
-        public void OnReleased(PlatformAction action)
+        protected override void LoadComplete()
         {
+            base.LoadComplete();
+
+            // May be null in the case of a ruleset that doesn't have editor support, see CreateMainContent().
+            if (composer == null)
+                return;
+
+            EditorBeatmap.SelectedHitObjects.BindCollectionChanged((_, _) => updateClipboardActionAvailability());
+            clipboard.BindValueChanged(_ => updateClipboardActionAvailability());
+            composer.OnLoadComplete += _ => updateClipboardActionAvailability();
+            updateClipboardActionAvailability();
         }
 
-        private string formatSelectionAsString()
+        #region Clipboard operations
+
+        public override void Cut()
+        {
+            if (!CanCut.Value)
+                return;
+
+            Copy();
+            EditorBeatmap.RemoveRange(EditorBeatmap.SelectedHitObjects.ToArray());
+        }
+
+        public override void Copy()
+        {
+            // on stable, pressing Ctrl-C would copy the current timestamp to system clipboard
+            // regardless of whether anything was even selected at all.
+            // UX-wise this is generally strange and unexpected, but make it work anyways to preserve muscle memory.
+            // note that this means that `getTimestamp()` must handle no-selection case, too.
+            hostClipboard.SetText(getTimestamp());
+
+            if (CanCopy.Value)
+                clipboard.Value = new ClipboardContent(EditorBeatmap).Serialize();
+        }
+
+        public override void Paste()
+        {
+            if (!CanPaste.Value)
+                return;
+
+            var objects = clipboard.Value.Deserialize<ClipboardContent>().HitObjects;
+
+            Debug.Assert(objects.Any());
+
+            double timeOffset = clock.CurrentTime - objects.Min(o => o.StartTime);
+
+            foreach (var h in objects)
+                h.StartTime += timeOffset;
+
+            EditorBeatmap.BeginChange();
+
+            EditorBeatmap.SelectedHitObjects.Clear();
+
+            EditorBeatmap.AddRange(objects);
+            EditorBeatmap.SelectedHitObjects.AddRange(objects);
+
+            EditorBeatmap.EndChange();
+        }
+
+        private void updateClipboardActionAvailability()
+        {
+            CanCut.Value = CanCopy.Value = EditorBeatmap.SelectedHitObjects.Any();
+            CanPaste.Value = composer.IsLoaded && !string.IsNullOrEmpty(clipboard.Value);
+        }
+
+        private string getTimestamp()
         {
             if (composer == null)
                 return string.Empty;
 
-            double displayTime = EditorBeatmap.SelectedHitObjects.OrderBy(h => h.StartTime).FirstOrDefault()?.StartTime ?? clock.CurrentTime;
+            double displayTime = EditorBeatmap.SelectedHitObjects.MinBy(h => h.StartTime)?.StartTime ?? clock.CurrentTime;
             string selectionAsString = composer.ConvertSelectionToString();
 
             return !string.IsNullOrEmpty(selectionAsString)
@@ -112,5 +166,12 @@ namespace osu.Game.Screens.Edit.Compose
         }
 
         #endregion
+
+        // Combo colour normalisation should not be applied in the editor.
+        // Note this doesn't affect editor test mode.
+        IBindable<float> IGameplaySettings.ComboColourNormalisationAmount => new Bindable<float>();
+
+        // Arguable.
+        IBindable<float> IGameplaySettings.PositionalHitsoundsLevel => globalGameplaySettings.PositionalHitsoundsLevel;
     }
 }

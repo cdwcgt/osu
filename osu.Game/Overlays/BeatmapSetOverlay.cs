@@ -1,36 +1,49 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Framework.Input.Events;
-using osu.Game.Beatmaps;
+using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
+using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Overlays.BeatmapSet;
 using osu.Game.Overlays.BeatmapSet.Scores;
 using osu.Game.Overlays.Comments;
-using osu.Game.Rulesets;
+using osu.Game.Rulesets.Mods;
+using osu.Game.Screens.Select.Details;
 using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Overlays
 {
-    public class BeatmapSetOverlay : OnlineOverlay<BeatmapSetHeader>
+    public partial class BeatmapSetOverlay : OnlineOverlay<BeatmapSetHeader>
     {
-        public const float X_PADDING = 40;
         public const float Y_PADDING = 25;
         public const float RIGHT_WIDTH = 275;
 
+        private readonly Bindable<APIBeatmapSet> beatmapSet = new Bindable<APIBeatmapSet>();
+
         [Resolved]
-        private RulesetStore rulesets { get; set; }
+        private IAPIProvider api { get; set; }
 
-        private readonly Bindable<BeatmapSetInfo> beatmapSet = new Bindable<BeatmapSetInfo>();
+        private IBindable<APIUser> apiUser;
 
-        // receive input outside our bounds so we can trigger a close event on ourselves.
-        public override bool ReceivePositionalInputAt(Vector2 screenSpacePos) => true;
+        private (BeatmapSetLookupType type, int id)? lastLookup;
+
+        /// <remarks>
+        /// Isolates the beatmap set overlay from the game-wide selected mods bindable
+        /// to avoid affecting the beatmap details section (i.e. <see cref="AdvancedStats.StatisticRow"/>).
+        /// </remarks>
+        [Cached]
+        [Cached(typeof(IBindable<IReadOnlyList<Mod>>))]
+        protected readonly Bindable<IReadOnlyList<Mod>> SelectedMods = new Bindable<IReadOnlyList<Mod>>(Array.Empty<Mod>());
 
         public BeatmapSetOverlay()
             : base(OverlayColourScheme.Blue)
@@ -61,9 +74,20 @@ namespace osu.Game.Overlays
 
             Header.HeaderContent.Picker.Beatmap.ValueChanged += b =>
             {
-                info.Beatmap = b.NewValue;
+                info.BeatmapInfo = b.NewValue;
                 ScrollFlow.ScrollToStart();
             };
+        }
+
+        [BackgroundDependencyLoader]
+        private void load()
+        {
+            apiUser = api.LocalUser.GetBoundCopy();
+            apiUser.BindValueChanged(_ => Schedule(() =>
+            {
+                if (api.IsLoggedIn)
+                    performFetch();
+            }));
         }
 
         protected override BeatmapSetHeader CreateHeader() => new BeatmapSetHeader();
@@ -76,35 +100,22 @@ namespace osu.Game.Overlays
             beatmapSet.Value = null;
         }
 
-        protected override bool OnClick(ClickEvent e)
-        {
-            Hide();
-            return true;
-        }
-
         public void FetchAndShowBeatmap(int beatmapId)
         {
+            lastLookup = (BeatmapSetLookupType.BeatmapId, beatmapId);
             beatmapSet.Value = null;
 
-            var req = new GetBeatmapSetRequest(beatmapId, BeatmapSetLookupType.BeatmapId);
-            req.Success += res =>
-            {
-                beatmapSet.Value = res.ToBeatmapSet(rulesets);
-                Header.HeaderContent.Picker.Beatmap.Value = Header.BeatmapSet.Value.Beatmaps.First(b => b.OnlineBeatmapID == beatmapId);
-            };
-            API.Queue(req);
-
+            performFetch();
             Show();
         }
 
         public void FetchAndShowBeatmapSet(int beatmapSetId)
         {
+            lastLookup = (BeatmapSetLookupType.SetId, beatmapSetId);
+
             beatmapSet.Value = null;
 
-            var req = new GetBeatmapSetRequest(beatmapSetId);
-            req.Success += res => beatmapSet.Value = res.ToBeatmapSet(rulesets);
-            API.Queue(req);
-
+            performFetch();
             Show();
         }
 
@@ -112,15 +123,33 @@ namespace osu.Game.Overlays
         /// Show an already fully-populated beatmap set.
         /// </summary>
         /// <param name="set">The set to show.</param>
-        public void ShowBeatmapSet(BeatmapSetInfo set)
+        public void ShowBeatmapSet(APIBeatmapSet set)
         {
             beatmapSet.Value = set;
             Show();
         }
 
-        private class CommentsSection : BeatmapSetLayoutSection
+        private void performFetch()
         {
-            public readonly Bindable<BeatmapSetInfo> BeatmapSet = new Bindable<BeatmapSetInfo>();
+            if (!api.IsLoggedIn)
+                return;
+
+            if (lastLookup == null)
+                return;
+
+            var req = new GetBeatmapSetRequest(lastLookup.Value.id, lastLookup.Value.type);
+            req.Success += res =>
+            {
+                beatmapSet.Value = res;
+                if (lastLookup.Value.type == BeatmapSetLookupType.BeatmapId)
+                    Header.HeaderContent.Picker.Beatmap.Value = Header.BeatmapSet.Value.Beatmaps.First(b => b.OnlineID == lastLookup.Value.id);
+            };
+            API.Queue(req);
+        }
+
+        private partial class CommentsSection : BeatmapSetLayoutSection
+        {
+            public readonly Bindable<APIBeatmapSet> BeatmapSet = new Bindable<APIBeatmapSet>();
 
             public CommentsSection()
             {
@@ -130,10 +159,10 @@ namespace osu.Game.Overlays
 
                 BeatmapSet.BindValueChanged(beatmapSet =>
                 {
-                    if (beatmapSet.NewValue?.OnlineBeatmapSetID is int onlineBeatmapSetID)
+                    if (beatmapSet.NewValue?.OnlineID > 0)
                     {
                         Show();
-                        comments.ShowComments(CommentableType.Beatmapset, onlineBeatmapSetID);
+                        comments.ShowComments(CommentableType.Beatmapset, beatmapSet.NewValue.OnlineID);
                     }
                     else
                     {

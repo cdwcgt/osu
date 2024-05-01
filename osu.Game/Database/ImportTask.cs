@@ -1,9 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-#nullable enable
-
 using System.IO;
+using osu.Framework.Extensions;
 using osu.Game.IO.Archives;
 using osu.Game.Utils;
 using SharpCompress.Common;
@@ -11,7 +10,7 @@ using SharpCompress.Common;
 namespace osu.Game.Database
 {
     /// <summary>
-    /// An encapsulated import task to be imported to an <see cref="ArchiveModelManager{TModel,TFileModel}"/>.
+    /// An encapsulated import task to be imported to an <see cref="RealmArchiveModelImporter{TModel}"/>.
     /// </summary>
     public class ImportTask
     {
@@ -34,7 +33,7 @@ namespace osu.Game.Database
         }
 
         /// <summary>
-        /// Construct a new import task from a stream.
+        /// Construct a new import task from a stream. The provided stream will be disposed after reading.
         /// </summary>
         public ImportTask(Stream stream, string filename)
         {
@@ -47,27 +46,38 @@ namespace osu.Game.Database
         /// </summary>
         public ArchiveReader GetReader()
         {
-            if (Stream != null)
-                return new ZipArchiveReader(Stream, Path);
+            if (Stream == null)
+            {
+                if (ZipUtils.IsZipArchive(Path))
+                    return new ZipArchiveReader(File.Open(Path, FileMode.Open, FileAccess.Read, FileShare.Read), System.IO.Path.GetFileName(Path));
+                if (Directory.Exists(Path))
+                    return new DirectoryArchiveReader(Path);
+                if (File.Exists(Path))
+                    return new SingleFileArchiveReader(Path);
 
-            return getReaderFrom(Path);
+                throw new InvalidFormatException($"{Path} is not a valid archive");
+            }
+
+            if (Stream is not MemoryStream memoryStream)
+            {
+                // Path used primarily in tests (converting `ManifestResourceStream`s to `MemoryStream`s).
+                memoryStream = new MemoryStream(Stream.ReadAllBytesToArray());
+                Stream.Dispose();
+            }
+
+            if (ZipUtils.IsZipArchive(memoryStream))
+                return new ZipArchiveReader(memoryStream, Path);
+
+            return new MemoryStreamArchiveReader(memoryStream, Path);
         }
 
         /// <summary>
-        /// Creates an <see cref="ArchiveReader"/> from a valid storage path.
+        /// Deletes the file that is encapsulated by this <see cref="ImportTask"/>.
         /// </summary>
-        /// <param name="path">A file or folder path resolving the archive content.</param>
-        /// <returns>A reader giving access to the archive's content.</returns>
-        private ArchiveReader getReaderFrom(string path)
+        public virtual void DeleteFile()
         {
-            if (ZipUtils.IsZipArchive(path))
-                return new ZipArchiveReader(File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read), System.IO.Path.GetFileName(path));
-            if (Directory.Exists(path))
-                return new LegacyDirectoryArchiveReader(path);
-            if (File.Exists(path))
-                return new LegacyFileArchiveReader(path);
-
-            throw new InvalidFormatException($"{path} is not a valid archive");
+            if (File.Exists(Path))
+                File.Delete(Path);
         }
 
         public override string ToString() => System.IO.Path.GetFileName(Path);

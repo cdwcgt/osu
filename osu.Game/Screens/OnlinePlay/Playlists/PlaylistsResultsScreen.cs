@@ -5,35 +5,41 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using JetBrains.Annotations;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Online.API;
 using osu.Game.Online.Rooms;
+using osu.Game.Rulesets;
 using osu.Game.Scoring;
 using osu.Game.Screens.Ranking;
 
 namespace osu.Game.Screens.OnlinePlay.Playlists
 {
-    public class PlaylistsResultsScreen : ResultsScreen
+    public partial class PlaylistsResultsScreen : ResultsScreen
     {
         private readonly long roomId;
         private readonly PlaylistItem playlistItem;
 
-        protected LoadingSpinner LeftSpinner { get; private set; }
-        protected LoadingSpinner CentreSpinner { get; private set; }
-        protected LoadingSpinner RightSpinner { get; private set; }
+        protected LoadingSpinner LeftSpinner { get; private set; } = null!;
+        protected LoadingSpinner CentreSpinner { get; private set; } = null!;
+        protected LoadingSpinner RightSpinner { get; private set; } = null!;
 
-        private MultiplayerScores higherScores;
-        private MultiplayerScores lowerScores;
+        private MultiplayerScores? higherScores;
+        private MultiplayerScores? lowerScores;
 
         [Resolved]
-        private IAPIProvider api { get; set; }
+        private IAPIProvider api { get; set; } = null!;
 
-        public PlaylistsResultsScreen(ScoreInfo score, long roomId, PlaylistItem playlistItem, bool allowRetry, bool allowWatchingReplay = true)
-            : base(score, allowRetry, allowWatchingReplay)
+        [Resolved]
+        private ScoreManager scoreManager { get; set; } = null!;
+
+        [Resolved]
+        private RulesetStore rulesets { get; set; } = null!;
+
+        public PlaylistsResultsScreen(ScoreInfo? score, long roomId, PlaylistItem playlistItem)
+            : base(score)
         {
             this.roomId = roomId;
             this.playlistItem = playlistItem;
@@ -80,6 +86,13 @@ namespace osu.Game.Screens.OnlinePlay.Playlists
             {
                 var allScores = new List<MultiplayerScore> { userScore };
 
+                // Other scores could have arrived between score submission and entering the results screen. Ensure the local player score position is up to date.
+                if (Score != null)
+                {
+                    Score.Position = userScore.Position;
+                    ScorePanelList.GetPanelForScore(Score).ScorePosition.Value = userScore.Position;
+                }
+
                 if (userScore.ScoresAround?.Higher != null)
                 {
                     allScores.AddRange(userScore.ScoresAround.Higher.Scores);
@@ -107,11 +120,11 @@ namespace osu.Game.Screens.OnlinePlay.Playlists
             return userScoreReq;
         }
 
-        protected override APIRequest FetchNextPage(int direction, Action<IEnumerable<ScoreInfo>> scoresCallback)
+        protected override APIRequest? FetchNextPage(int direction, Action<IEnumerable<ScoreInfo>> scoresCallback)
         {
             Debug.Assert(direction == 1 || direction == -1);
 
-            MultiplayerScores pivot = direction == -1 ? higherScores : lowerScores;
+            MultiplayerScores? pivot = direction == -1 ? higherScores : lowerScores;
 
             if (pivot?.Cursor == null)
                 return null;
@@ -131,7 +144,7 @@ namespace osu.Game.Screens.OnlinePlay.Playlists
         /// <param name="scoresCallback">The callback to perform with the resulting scores.</param>
         /// <param name="pivot">An optional score pivot to retrieve scores around. Can be null to retrieve scores from the highest score.</param>
         /// <returns>The indexing <see cref="APIRequest"/>.</returns>
-        private APIRequest createIndexRequest(Action<IEnumerable<ScoreInfo>> scoresCallback, [CanBeNull] MultiplayerScores pivot = null)
+        private APIRequest createIndexRequest(Action<IEnumerable<ScoreInfo>> scoresCallback, MultiplayerScores? pivot = null)
         {
             var indexReq = pivot != null
                 ? new IndexPlaylistScoresRequest(roomId, playlistItem.ID, pivot.Cursor, pivot.Params)
@@ -164,9 +177,9 @@ namespace osu.Game.Screens.OnlinePlay.Playlists
         /// <param name="callback">The callback to invoke with the final <see cref="ScoreInfo"/>s.</param>
         /// <param name="scores">The <see cref="MultiplayerScore"/>s that were retrieved from <see cref="APIRequest"/>s.</param>
         /// <param name="pivot">An optional pivot around which the scores were retrieved.</param>
-        private void performSuccessCallback([NotNull] Action<IEnumerable<ScoreInfo>> callback, [NotNull] List<MultiplayerScore> scores, [CanBeNull] MultiplayerScores pivot = null)
+        private void performSuccessCallback(Action<IEnumerable<ScoreInfo>> callback, List<MultiplayerScore> scores, MultiplayerScores? pivot = null) => Schedule(() =>
         {
-            var scoreInfos = new List<ScoreInfo>(scores.Select(s => s.CreateScoreInfo(playlistItem)));
+            var scoreInfos = scores.Select(s => s.CreateScoreInfo(scoreManager, rulesets, playlistItem, Beatmap.Value.BeatmapInfo)).OrderByTotalScore().ToArray();
 
             // Select a score if we don't already have one selected.
             // Note: This is done before the callback so that the panel list centres on the selected score before panels are added (eliminating initial scroll).
@@ -175,17 +188,17 @@ namespace osu.Game.Screens.OnlinePlay.Playlists
                 Schedule(() =>
                 {
                     // Prefer selecting the local user's score, or otherwise default to the first visible score.
-                    SelectedScore.Value = scoreInfos.FirstOrDefault(s => s.User.Id == api.LocalUser.Value.Id) ?? scoreInfos.FirstOrDefault();
+                    SelectedScore.Value = scoreInfos.FirstOrDefault(s => s.User.OnlineID == api.LocalUser.Value.Id) ?? scoreInfos.FirstOrDefault();
                 });
             }
 
             // Invoke callback to add the scores. Exclude the user's current score which was added previously.
-            callback.Invoke(scoreInfos.Where(s => s.OnlineScoreID != Score?.OnlineScoreID));
+            callback.Invoke(scoreInfos.Where(s => s.OnlineID != Score?.OnlineID));
 
             hideLoadingSpinners(pivot);
-        }
+        });
 
-        private void hideLoadingSpinners([CanBeNull] MultiplayerScores pivot = null)
+        private void hideLoadingSpinners(MultiplayerScores? pivot = null)
         {
             CentreSpinner.Hide();
 
@@ -201,7 +214,7 @@ namespace osu.Game.Screens.OnlinePlay.Playlists
         /// <param name="scores">The <see cref="MultiplayerScores"/> to set positions on.</param>
         /// <param name="pivot">The pivot.</param>
         /// <param name="increment">The amount to increment the pivot position by for each <see cref="MultiplayerScore"/> in <paramref name="scores"/>.</param>
-        private void setPositions([NotNull] MultiplayerScores scores, [CanBeNull] MultiplayerScores pivot, int increment)
+        private void setPositions(MultiplayerScores scores, MultiplayerScores? pivot, int increment)
             => setPositions(scores, pivot?.Scores[^1].Position ?? 0, increment);
 
         /// <summary>
@@ -210,7 +223,7 @@ namespace osu.Game.Screens.OnlinePlay.Playlists
         /// <param name="scores">The <see cref="MultiplayerScores"/> to set positions on.</param>
         /// <param name="pivotPosition">The pivot position.</param>
         /// <param name="increment">The amount to increment the pivot position by for each <see cref="MultiplayerScore"/> in <paramref name="scores"/>.</param>
-        private void setPositions([NotNull] MultiplayerScores scores, int pivotPosition, int increment)
+        private void setPositions(MultiplayerScores scores, int pivotPosition, int increment)
         {
             foreach (var s in scores.Scores)
             {
@@ -219,7 +232,7 @@ namespace osu.Game.Screens.OnlinePlay.Playlists
             }
         }
 
-        private class PanelListLoadingSpinner : LoadingSpinner
+        private partial class PanelListLoadingSpinner : LoadingSpinner
         {
             private readonly ScorePanelList list;
 

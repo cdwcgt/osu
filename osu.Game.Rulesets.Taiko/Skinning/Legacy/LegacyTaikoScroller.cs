@@ -15,7 +15,7 @@ using osuTK;
 
 namespace osu.Game.Rulesets.Taiko.Skinning.Legacy
 {
-    public class LegacyTaikoScroller : CompositeDrawable
+    public partial class LegacyTaikoScroller : CompositeDrawable
     {
         public Bindable<JudgementResult> LastResult = new Bindable<JudgementResult>();
 
@@ -25,10 +25,10 @@ namespace osu.Game.Rulesets.Taiko.Skinning.Legacy
         }
 
         [BackgroundDependencyLoader(true)]
-        private void load(GameplayBeatmap gameplayBeatmap)
+        private void load(GameplayState? gameplayState)
         {
-            if (gameplayBeatmap != null)
-                ((IBindable<JudgementResult>)LastResult).BindTo(gameplayBeatmap.LastJudgementResult);
+            if (gameplayState != null)
+                ((IBindable<JudgementResult>)LastResult).BindTo(gameplayState.LastJudgementResult);
         }
 
         private bool passing;
@@ -57,7 +57,7 @@ namespace osu.Game.Rulesets.Taiko.Skinning.Legacy
             base.Update();
 
             // store X before checking wide enough so if we perform layout there is no positional discrepancy.
-            float currentX = (InternalChildren?.FirstOrDefault()?.X ?? 0) - (float)Clock.ElapsedFrameTime * 0.1f;
+            float currentX = (InternalChildren.FirstOrDefault()?.X ?? 0) - (float)Clock.ElapsedFrameTime * 0.1f;
 
             // ensure we have enough sprites
             if (!InternalChildren.Any()
@@ -87,10 +87,10 @@ namespace osu.Game.Rulesets.Taiko.Skinning.Legacy
             }
         }
 
-        private class ScrollerSprite : CompositeDrawable
+        private partial class ScrollerSprite : CompositeDrawable
         {
-            private Sprite passingSprite;
-            private Sprite failingSprite;
+            private Sprite passingSprite = null!;
+            private Sprite failingSprite = null!;
 
             private bool passing = true;
 

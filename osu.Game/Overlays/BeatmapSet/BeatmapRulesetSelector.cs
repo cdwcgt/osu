@@ -3,17 +3,17 @@
 
 using osu.Framework.Bindables;
 using osu.Framework.Graphics.UserInterface;
-using osu.Game.Beatmaps;
 using osu.Game.Rulesets;
 using System.Linq;
+using osu.Game.Online.API.Requests.Responses;
 
 namespace osu.Game.Overlays.BeatmapSet
 {
-    public class BeatmapRulesetSelector : OverlayRulesetSelector
+    public partial class BeatmapRulesetSelector : OverlayRulesetSelector
     {
-        private readonly Bindable<BeatmapSetInfo> beatmapSet = new Bindable<BeatmapSetInfo>();
+        private readonly Bindable<APIBeatmapSet?> beatmapSet = new Bindable<APIBeatmapSet?>();
 
-        public BeatmapSetInfo BeatmapSet
+        public APIBeatmapSet? BeatmapSet
         {
             get => beatmapSet.Value;
             set
@@ -21,7 +21,7 @@ namespace osu.Game.Overlays.BeatmapSet
                 // propagate value to tab items first to enable only available rulesets.
                 beatmapSet.Value = value;
 
-                SelectTab(TabContainer.TabItems.FirstOrDefault(t => t.Enabled.Value));
+                Current.Value = TabContainer.TabItems.FirstOrDefault(t => t.Enabled.Value)?.Value;
             }
         }
 

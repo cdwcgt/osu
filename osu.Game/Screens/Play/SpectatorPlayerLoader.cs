@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -7,12 +7,12 @@ using osu.Game.Scoring;
 
 namespace osu.Game.Screens.Play
 {
-    public class SpectatorPlayerLoader : PlayerLoader
+    public partial class SpectatorPlayerLoader : PlayerLoader
     {
         public readonly ScoreInfo Score;
 
-        public SpectatorPlayerLoader(Score score)
-            : base(() => new SpectatorPlayer(score))
+        public SpectatorPlayerLoader(Score score, Func<SpectatorPlayer> createPlayer)
+            : base(createPlayer)
         {
             if (score.Replay == null)
                 throw new ArgumentException($"{nameof(score)} must have a non-null {nameof(score.Replay)}.", nameof(score));
@@ -20,13 +20,13 @@ namespace osu.Game.Screens.Play
             Score = score.ScoreInfo;
         }
 
-        public override void OnEntering(IScreen last)
+        public override void OnEntering(ScreenTransitionEvent e)
         {
             // these will be reverted thanks to PlayerLoader's lease.
             Mods.Value = Score.Mods;
             Ruleset.Value = Score.Ruleset;
 
-            base.OnEntering(last);
+            base.OnEntering(e);
         }
     }
 }

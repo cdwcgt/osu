@@ -13,12 +13,12 @@ using osu.Game.Beatmaps;
 
 namespace osu.Game.Screens.Menu
 {
-    public class SongTicker : Container
+    public partial class SongTicker : Container
     {
         private const int fade_duration = 800;
 
         [Resolved]
-        private Bindable<WorkingBeatmap> beatmap { get; set; }
+        private Bindable<WorkingBeatmap> beatmap { get; set; } = null!;
 
         private readonly OsuSpriteText title, artist;
 

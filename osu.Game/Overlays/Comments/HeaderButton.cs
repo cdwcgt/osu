@@ -6,11 +6,10 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Input.Events;
-using osu.Game.Graphics.UserInterface;
 
 namespace osu.Game.Overlays.Comments
 {
-    public class HeaderButton : Container
+    public partial class HeaderButton : Container
     {
         private const int transition_duration = 200;
 
@@ -39,7 +38,6 @@ namespace osu.Game.Overlays.Comments
                     Origin = Anchor.Centre,
                     Margin = new MarginPadding { Horizontal = 10 }
                 },
-                new HoverClickSounds(),
             });
         }
 

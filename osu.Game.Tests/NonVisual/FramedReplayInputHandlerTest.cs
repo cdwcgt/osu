@@ -1,8 +1,11 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using osu.Game.Replays;
 using osu.Game.Rulesets.Replays;
@@ -278,6 +281,54 @@ namespace osu.Game.Tests.NonVisual
             setTime(-100, -100);
         }
 
+        [Test]
+        public void TestReplayFramesSortStability()
+        {
+            const double repeating_time = 5000;
+
+            // add a collection of frames in shuffled order time-wise; each frame also stores its original index to check stability later.
+            // data is hand-picked and breaks if the unstable List<T>.Sort() is used.
+            // in theory this can still return a false-positive with another unstable algorithm if extremely unlucky,
+            // but there is no conceivable fool-proof way to prevent that anyways.
+            replay.Frames.AddRange(new[]
+            {
+                repeating_time,
+                0,
+                3000,
+                repeating_time,
+                repeating_time,
+                6000,
+                9000,
+                repeating_time,
+                repeating_time,
+                1000,
+                11000,
+                21000,
+                4000,
+                repeating_time,
+                repeating_time,
+                8000,
+                2000,
+                7000,
+                repeating_time,
+                repeating_time,
+                10000
+            }.Select((time, index) => new TestReplayFrame(time, true, index)));
+
+            replay.HasReceivedAllFrames = true;
+
+            // create a new handler with the replay for the sort to be performed.
+            handler = new TestInputHandler(replay);
+
+            // ensure sort stability by checking that the frames with time == repeating_time are sorted in ascending frame index order themselves.
+            var repeatingTimeFramesData = replay.Frames
+                                                .Cast<TestReplayFrame>()
+                                                .Where(f => f.Time == repeating_time)
+                                                .Select(f => f.FrameIndex);
+
+            Assert.That(repeatingTimeFramesData, Is.Ordered.Ascending);
+        }
+
         private void setReplayFrames()
         {
             replay.Frames = new List<ReplayFrame>
@@ -298,7 +349,7 @@ namespace osu.Game.Tests.NonVisual
         {
             for (int i = 0; i < 1000; i++)
             {
-                var time = handler.SetFrameFromTime(destination);
+                double? time = handler.SetFrameFromTime(destination);
                 if (time == null || time == destination)
                     return;
             }
@@ -313,22 +364,24 @@ namespace osu.Game.Tests.NonVisual
 
         private void confirmCurrentFrame(int? frame)
         {
-            Assert.AreEqual(frame is int x ? replay.Frames[x].Time : (double?)null, handler.CurrentFrame?.Time, "Unexpected current frame");
+            Assert.AreEqual(frame is int x ? replay.Frames[x].Time : null, handler.CurrentFrame?.Time, "Unexpected current frame");
         }
 
         private void confirmNextFrame(int? frame)
         {
-            Assert.AreEqual(frame is int x ? replay.Frames[x].Time : (double?)null, handler.NextFrame?.Time, "Unexpected next frame");
+            Assert.AreEqual(frame is int x ? replay.Frames[x].Time : null, handler.NextFrame?.Time, "Unexpected next frame");
         }
 
         private class TestReplayFrame : ReplayFrame
         {
             public readonly bool IsImportant;
+            public readonly int FrameIndex;
 
-            public TestReplayFrame(double time, bool isImportant = false)
+            public TestReplayFrame(double time, bool isImportant = false, int frameIndex = 0)
                 : base(time)
             {
                 IsImportant = isImportant;
+                FrameIndex = frameIndex;
             }
         }
 

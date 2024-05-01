@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
+using System.Collections.Generic;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics.Performance;
 using osu.Game.Rulesets.Judgements;
@@ -19,12 +21,45 @@ namespace osu.Game.Rulesets.Objects
         public readonly HitObject HitObject;
 
         /// <summary>
+        /// The list of <see cref="HitObjectLifetimeEntry"/> for the <see cref="HitObject"/>'s nested objects (if any).
+        /// </summary>
+        public List<HitObjectLifetimeEntry> NestedEntries { get; internal set; } = new List<HitObjectLifetimeEntry>();
+
+        /// <summary>
         /// The result that <see cref="HitObject"/> was judged with.
         /// This is set by the accompanying <see cref="DrawableHitObject"/>, and reused when required for rewinding.
         /// </summary>
-        internal JudgementResult Result;
+        internal JudgementResult? Result;
+
+        /// <summary>
+        /// Whether <see cref="HitObject"/> has been judged.
+        /// Note: This does NOT include nested hitobjects.
+        /// </summary>
+        public bool Judged => Result?.HasResult ?? false;
+
+        /// <summary>
+        /// Whether <see cref="HitObject"/> and all of its nested objects have been judged.
+        /// </summary>
+        public bool AllJudged
+        {
+            get
+            {
+                if (!Judged)
+                    return false;
+
+                foreach (var entry in NestedEntries)
+                {
+                    if (!entry.AllJudged)
+                        return false;
+                }
+
+                return true;
+            }
+        }
 
         private readonly IBindable<double> startTimeBindable = new BindableDouble();
+
+        internal event Action? RevertResult;
 
         /// <summary>
         /// Creates a new <see cref="HitObjectLifetimeEntry"/>.
@@ -35,43 +70,30 @@ namespace osu.Game.Rulesets.Objects
             HitObject = hitObject;
 
             startTimeBindable.BindTo(HitObject.StartTimeBindable);
-            startTimeBindable.BindValueChanged(onStartTimeChanged, true);
+            startTimeBindable.BindValueChanged(_ => SetInitialLifetime(), true);
+
+            // Subscribe to this event before the DrawableHitObject so that the local callback is invoked before the entry is re-applied as a result of DefaultsApplied.
+            // This way, the DrawableHitObject can use OnApply() to overwrite the LifetimeStart that was set inside setInitialLifetime().
+            HitObject.DefaultsApplied += _ => SetInitialLifetime();
         }
 
-        // The lifetime start, as set by the hitobject.
+        // The lifetime, as set by the hitobject.
         private double realLifetimeStart = double.MinValue;
-
-        /// <summary>
-        /// The time at which the <see cref="HitObject"/> should become alive.
-        /// </summary>
-        public new double LifetimeStart
-        {
-            get => realLifetimeStart;
-            set => setLifetime(realLifetimeStart = value, LifetimeEnd);
-        }
-
-        // The lifetime end, as set by the hitobject.
         private double realLifetimeEnd = double.MaxValue;
 
-        /// <summary>
-        /// The time at which the <see cref="HitObject"/> should become dead.
-        /// </summary>
-        public new double LifetimeEnd
+        // This method is called even if `start == LifetimeStart` when `KeepAlive` is true (necessary to update `realLifetimeStart`).
+        protected override void SetLifetimeStart(double start)
         {
-            get => realLifetimeEnd;
-            set => setLifetime(LifetimeStart, realLifetimeEnd = value);
+            realLifetimeStart = start;
+            if (!keepAlive)
+                base.SetLifetimeStart(start);
         }
 
-        private void setLifetime(double start, double end)
+        protected override void SetLifetimeEnd(double end)
         {
-            if (keepAlive)
-            {
-                start = double.MinValue;
-                end = double.MaxValue;
-            }
-
-            base.LifetimeStart = start;
-            base.LifetimeEnd = end;
+            realLifetimeEnd = end;
+            if (!keepAlive)
+                base.SetLifetimeEnd(end);
         }
 
         private bool keepAlive;
@@ -87,7 +109,10 @@ namespace osu.Game.Rulesets.Objects
                     return;
 
                 keepAlive = value;
-                setLifetime(realLifetimeStart, realLifetimeEnd);
+                if (keepAlive)
+                    SetLifetime(double.MinValue, double.MaxValue);
+                else
+                    SetLifetime(realLifetimeStart, realLifetimeEnd);
             }
         }
 
@@ -96,15 +121,16 @@ namespace osu.Game.Rulesets.Objects
         /// By default, <see cref="HitObject"/>s are assumed to display their contents within 10 seconds prior to their start time.
         /// </summary>
         /// <remarks>
-        /// This is only used as an optimisation to delay the initial update of the <see cref="HitObject"/> and may be tuned more aggressively if required.
-        /// It is indirectly used to decide the automatic transform offset provided to <see cref="DrawableHitObject.UpdateInitialTransforms"/>.
-        /// A more accurate <see cref="LifetimeStart"/> should be set for further optimisation (in <see cref="DrawableHitObject.LoadComplete"/>, for example).
+        /// This is only used as an optimisation to delay the initial application of the <see cref="HitObject"/> to a <see cref="DrawableHitObject"/>.
+        /// A more accurate <see cref="LifetimeEntry.LifetimeStart"/> should be set on the hit object application, for further optimisation.
         /// </remarks>
         protected virtual double InitialLifetimeOffset => 10000;
 
         /// <summary>
-        /// Resets <see cref="LifetimeStart"/> according to the change in start time of the <see cref="HitObject"/>.
+        /// Set <see cref="LifetimeEntry.LifetimeStart"/> using <see cref="InitialLifetimeOffset"/>.
         /// </summary>
-        private void onStartTimeChanged(ValueChangedEvent<double> startTime) => LifetimeStart = HitObject.StartTime - InitialLifetimeOffset;
+        internal void SetInitialLifetime() => LifetimeStart = HitObject.StartTime - InitialLifetimeOffset;
+
+        internal void OnRevertResult() => RevertResult?.Invoke();
     }
 }

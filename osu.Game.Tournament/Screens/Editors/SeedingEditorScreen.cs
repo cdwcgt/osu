@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Linq;
@@ -7,26 +7,22 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
-using osu.Game.Beatmaps;
 using osu.Game.Graphics;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
+using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Overlays.Settings;
-using osu.Game.Rulesets;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osuTK;
 
 namespace osu.Game.Tournament.Screens.Editors
 {
-    public class SeedingEditorScreen : TournamentEditorScreen<SeedingEditorScreen.SeedingResultRow, SeedingResult>
+    public partial class SeedingEditorScreen : TournamentEditorScreen<SeedingEditorScreen.SeedingResultRow, SeedingResult>
     {
         private readonly TournamentTeam team;
 
         protected override BindableList<SeedingResult> Storage => team.SeedingResults;
-
-        [Resolved(canBeNull: true)]
-        private TournamentSceneManager sceneManager { get; set; }
 
         public SeedingEditorScreen(TournamentTeam team, TournamentScreen parentScreen)
             : base(parentScreen)
@@ -34,12 +30,9 @@ namespace osu.Game.Tournament.Screens.Editors
             this.team = team;
         }
 
-        public class SeedingResultRow : CompositeDrawable, IModelBacked<SeedingResult>
+        public partial class SeedingResultRow : CompositeDrawable, IModelBacked<SeedingResult>
         {
             public SeedingResult Model { get; }
-
-            [Resolved]
-            private LadderInfo ladderInfo { get; set; }
 
             public SeedingResultRow(TournamentTeam team, SeedingResult round)
             {
@@ -111,7 +104,7 @@ namespace osu.Game.Tournament.Screens.Editors
                 AutoSizeAxes = Axes.Y;
             }
 
-            public class SeedingBeatmapEditor : CompositeDrawable
+            public partial class SeedingBeatmapEditor : CompositeDrawable
             {
                 private readonly SeedingResult round;
                 private readonly FillFlowContainer flow;
@@ -139,17 +132,17 @@ namespace osu.Game.Tournament.Screens.Editors
                     flow.Add(new SeedingBeatmapRow(round, user));
                 }
 
-                public class SeedingBeatmapRow : CompositeDrawable
+                public partial class SeedingBeatmapRow : CompositeDrawable
                 {
                     private readonly SeedingResult result;
                     public SeedingBeatmap Model { get; }
 
                     [Resolved]
-                    protected IAPIProvider API { get; private set; }
+                    protected IAPIProvider API { get; private set; } = null!;
 
-                    private readonly Bindable<string> beatmapId = new Bindable<string>();
+                    private readonly Bindable<int?> beatmapId = new Bindable<int?>();
 
-                    private readonly Bindable<string> score = new Bindable<string>();
+                    private readonly Bindable<string> score = new Bindable<string>(string.Empty);
 
                     private readonly Container drawableContainer;
 
@@ -226,39 +219,35 @@ namespace osu.Game.Tournament.Screens.Editors
                     }
 
                     [BackgroundDependencyLoader]
-                    private void load(RulesetStore rulesets)
+                    private void load()
                     {
-                        beatmapId.Value = Model.ID.ToString();
-                        beatmapId.BindValueChanged(idString =>
+                        beatmapId.Value = Model.ID;
+                        beatmapId.BindValueChanged(id =>
                         {
-                            int parsed;
+                            Model.ID = id.NewValue ?? 0;
 
-                            int.TryParse(idString.NewValue, out parsed);
+                            if (id.NewValue != id.OldValue)
+                                Model.Beatmap = null;
 
-                            Model.ID = parsed;
-
-                            if (idString.NewValue != idString.OldValue)
-                                Model.BeatmapInfo = null;
-
-                            if (Model.BeatmapInfo != null)
+                            if (Model.Beatmap != null)
                             {
                                 updatePanel();
                                 return;
                             }
 
-                            var req = new GetBeatmapRequest(new BeatmapInfo { OnlineBeatmapID = Model.ID });
+                            var req = new GetBeatmapRequest(new APIBeatmap { OnlineID = Model.ID });
 
-                            req.Success += res =>
+                            req.Success += res => Schedule(() =>
                             {
-                                Model.BeatmapInfo = res.ToBeatmap(rulesets);
+                                Model.Beatmap = new TournamentBeatmap(res);
                                 updatePanel();
-                            };
+                            });
 
-                            req.Failure += _ =>
+                            req.Failure += _ => Schedule(() =>
                             {
-                                Model.BeatmapInfo = null;
+                                Model.Beatmap = null;
                                 updatePanel();
-                            };
+                            });
 
                             API.Queue(req);
                         }, true);
@@ -271,9 +260,9 @@ namespace osu.Game.Tournament.Screens.Editors
                     {
                         drawableContainer.Clear();
 
-                        if (Model.BeatmapInfo != null)
+                        if (Model.Beatmap != null)
                         {
-                            drawableContainer.Child = new TournamentBeatmapPanel(Model.BeatmapInfo, result.Mod.Value)
+                            drawableContainer.Child = new TournamentBeatmapPanel(Model.Beatmap, result.Mod.Value)
                             {
                                 Anchor = Anchor.CentreLeft,
                                 Origin = Anchor.CentreLeft,

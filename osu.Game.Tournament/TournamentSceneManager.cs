@@ -7,11 +7,12 @@ using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
-using osu.Framework.Platform;
+using osu.Framework.Input.Events;
+using osu.Framework.Testing;
 using osu.Framework.Threading;
 using osu.Game.Graphics;
+using osu.Game.Graphics.Sprites;
 using osu.Game.Tournament.Components;
-using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens;
 using osu.Game.Tournament.Screens.Drawings;
 using osu.Game.Tournament.Screens.Editors;
@@ -25,26 +26,30 @@ using osu.Game.Tournament.Screens.TeamIntro;
 using osu.Game.Tournament.Screens.TeamWin;
 using osuTK;
 using osuTK.Graphics;
+using osuTK.Input;
 
 namespace osu.Game.Tournament
 {
     [Cached]
-    public class TournamentSceneManager : CompositeDrawable
+    public partial class TournamentSceneManager : CompositeDrawable
     {
-        private Container screens;
-        private TourneyVideo video;
+        private Container screens = null!;
+        private TourneyVideo video = null!;
 
-        public const float CONTROL_AREA_WIDTH = 160;
+        public const int CONTROL_AREA_WIDTH = 200;
 
-        public const float STREAM_AREA_WIDTH = 1366;
+        public const int STREAM_AREA_WIDTH = 1366;
+        public const int STREAM_AREA_HEIGHT = (int)(STREAM_AREA_WIDTH / ASPECT_RATIO);
 
-        public const double REQUIRED_WIDTH = CONTROL_AREA_WIDTH * 2 + STREAM_AREA_WIDTH;
+        public const float ASPECT_RATIO = 16 / 9f;
+
+        public const int REQUIRED_WIDTH = CONTROL_AREA_WIDTH * 2 + STREAM_AREA_WIDTH;
 
         [Cached]
         private TournamentMatchChatDisplay chat = new TournamentMatchChatDisplay();
 
-        private Container chatContainer;
-        private FillFlowContainer buttons;
+        private Container chatContainer = null!;
+        private FillFlowContainer buttons = null!;
 
         public TournamentSceneManager()
         {
@@ -52,7 +57,7 @@ namespace osu.Game.Tournament
         }
 
         [BackgroundDependencyLoader]
-        private void load(LadderInfo ladder, Storage storage)
+        private void load()
         {
             InternalChildren = new Drawable[]
             {
@@ -61,13 +66,20 @@ namespace osu.Game.Tournament
                     RelativeSizeAxes = Axes.Y,
                     X = CONTROL_AREA_WIDTH,
                     FillMode = FillMode.Fit,
-                    FillAspectRatio = 16 / 9f,
+                    FillAspectRatio = ASPECT_RATIO,
                     Anchor = Anchor.TopLeft,
                     Origin = Anchor.TopLeft,
                     Width = STREAM_AREA_WIDTH,
                     //Masking = true,
                     Children = new Drawable[]
                     {
+                        new Box
+                        {
+                            Colour = new Color4(20, 20, 20, 255),
+                            Anchor = Anchor.TopRight,
+                            RelativeSizeAxes = Axes.Both,
+                            Width = 10,
+                        },
                         video = new TourneyVideo("main", true)
                         {
                             Loop = true,
@@ -125,16 +137,16 @@ namespace osu.Game.Tournament
                                 new ScreenButton(typeof(RoundEditorScreen)) { Text = "Rounds Editor", RequestSelection = SetScreen },
                                 new ScreenButton(typeof(LadderEditorScreen)) { Text = "Bracket Editor", RequestSelection = SetScreen },
                                 new Separator(),
-                                new ScreenButton(typeof(ScheduleScreen)) { Text = "Schedule", RequestSelection = SetScreen },
-                                new ScreenButton(typeof(LadderScreen)) { Text = "Bracket", RequestSelection = SetScreen },
+                                new ScreenButton(typeof(ScheduleScreen), Key.S) { Text = "Schedule", RequestSelection = SetScreen },
+                                new ScreenButton(typeof(LadderScreen), Key.B) { Text = "Bracket", RequestSelection = SetScreen },
                                 new Separator(),
-                                new ScreenButton(typeof(TeamIntroScreen)) { Text = "Team Intro", RequestSelection = SetScreen },
-                                new ScreenButton(typeof(SeedingScreen)) { Text = "Seeding", RequestSelection = SetScreen },
+                                new ScreenButton(typeof(TeamIntroScreen), Key.I) { Text = "Team Intro", RequestSelection = SetScreen },
+                                new ScreenButton(typeof(SeedingScreen), Key.D) { Text = "Seeding", RequestSelection = SetScreen },
                                 new Separator(),
-                                new ScreenButton(typeof(MapPoolScreen)) { Text = "Map Pool", RequestSelection = SetScreen },
-                                new ScreenButton(typeof(GameplayScreen)) { Text = "Gameplay", RequestSelection = SetScreen },
+                                new ScreenButton(typeof(MapPoolScreen), Key.M) { Text = "Map Pool", RequestSelection = SetScreen },
+                                new ScreenButton(typeof(GameplayScreen), Key.G) { Text = "Gameplay", RequestSelection = SetScreen },
                                 new Separator(),
-                                new ScreenButton(typeof(TeamWinScreen)) { Text = "Win", RequestSelection = SetScreen },
+                                new ScreenButton(typeof(TeamWinScreen), Key.W) { Text = "Win", RequestSelection = SetScreen },
                                 new Separator(),
                                 new ScreenButton(typeof(DrawingsScreen)) { Text = "Drawings", RequestSelection = SetScreen },
                                 new ScreenButton(typeof(ShowcaseScreen)) { Text = "Showcase", RequestSelection = SetScreen },
@@ -152,10 +164,10 @@ namespace osu.Game.Tournament
 
         private float depth;
 
-        private Drawable currentScreen;
-        private ScheduledDelegate scheduledHide;
+        private Drawable? currentScreen;
+        private ScheduledDelegate? scheduledHide;
 
-        private Drawable temporaryScreen;
+        private Drawable? temporaryScreen;
 
         public void SetScreen(Drawable screen)
         {
@@ -183,7 +195,7 @@ namespace osu.Game.Tournament
             var lastScreen = currentScreen;
             currentScreen = target;
 
-            if (currentScreen is IProvideVideo)
+            if (currentScreen.ChildrenOfType<TourneyVideo>().FirstOrDefault()?.VideoAvailable == true)
             {
                 video.FadeOut(200);
 
@@ -201,12 +213,12 @@ namespace osu.Game.Tournament
 
             switch (currentScreen)
             {
-                case MapPoolScreen _:
+                case MapPoolScreen:
                     chatContainer.FadeIn(TournamentScreen.FADE_DELAY);
                     chatContainer.ResizeWidthTo(1, 500, Easing.OutQuint);
                     break;
 
-                case GameplayScreen _:
+                case GameplayScreen:
                     chatContainer.FadeIn(TournamentScreen.FADE_DELAY);
                     chatContainer.ResizeWidthTo(0.5f, 500, Easing.OutQuint);
                     break;
@@ -220,7 +232,7 @@ namespace osu.Game.Tournament
                 s.IsSelected = screenType == s.Type;
         }
 
-        private class Separator : CompositeDrawable
+        private partial class Separator : CompositeDrawable
         {
             public Separator()
             {
@@ -229,22 +241,68 @@ namespace osu.Game.Tournament
             }
         }
 
-        private class ScreenButton : TourneyButton
+        private partial class ScreenButton : TourneyButton
         {
             public readonly Type Type;
 
-            public ScreenButton(Type type)
+            private readonly Key? shortcutKey;
+
+            public ScreenButton(Type type, Key? shortcutKey = null)
             {
+                this.shortcutKey = shortcutKey;
+
                 Type = type;
+
                 BackgroundColour = OsuColour.Gray(0.2f);
-                Action = () => RequestSelection(type);
+                Action = () => RequestSelection?.Invoke(type);
 
                 RelativeSizeAxes = Axes.X;
+
+                if (shortcutKey != null)
+                {
+                    Add(new CircularContainer
+                    {
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        Size = new Vector2(24),
+                        Margin = new MarginPadding(5),
+                        Masking = true,
+                        Alpha = 0.5f,
+                        Blending = BlendingParameters.Additive,
+                        Children = new Drawable[]
+                        {
+                            new Box
+                            {
+                                Colour = OsuColour.Gray(0.1f),
+                                RelativeSizeAxes = Axes.Both,
+                            },
+                            new OsuSpriteText
+                            {
+                                Font = OsuFont.Default.With(size: 24),
+                                Y = -2,
+                                Anchor = Anchor.Centre,
+                                Origin = Anchor.Centre,
+                                Text = shortcutKey.Value.ToString(),
+                            }
+                        }
+                    });
+                }
+            }
+
+            protected override bool OnKeyDown(KeyDownEvent e)
+            {
+                if (e.Key == shortcutKey)
+                {
+                    TriggerClick();
+                    return true;
+                }
+
+                return base.OnKeyDown(e);
             }
 
             private bool isSelected;
 
-            public Action<Type> RequestSelection;
+            public Action<Type>? RequestSelection;
 
             public bool IsSelected
             {

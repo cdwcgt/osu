@@ -6,10 +6,11 @@ using osu.Framework.Graphics.Containers;
 using osu.Game.Screens.Select.Leaderboards;
 using osu.Framework.Graphics.Sprites;
 using osu.Game.Graphics.Sprites;
+using osu.Game.Resources.Localisation.Web;
 
 namespace osu.Game.Overlays.BeatmapSet.Scores
 {
-    public class NoScoresPlaceholder : Container
+    public partial class NoScoresPlaceholder : Container
     {
         private readonly SpriteText text;
 
@@ -30,15 +31,15 @@ namespace osu.Game.Overlays.BeatmapSet.Scores
             switch (scope)
             {
                 default:
-                    text.Text = @"No scores have been set yet. Maybe you can be the first!";
+                    text.Text = BeatmapsetsStrings.ShowScoreboardNoScoresGlobal;
                     break;
 
                 case BeatmapLeaderboardScope.Friend:
-                    text.Text = @"None of your friends have set a score on this map yet.";
+                    text.Text = BeatmapsetsStrings.ShowScoreboardNoScoresFriend;
                     break;
 
                 case BeatmapLeaderboardScope.Country:
-                    text.Text = @"No one from your country has set a score on this map yet.";
+                    text.Text = BeatmapsetsStrings.ShowScoreboardNoScoresCountry;
                     break;
             }
         }

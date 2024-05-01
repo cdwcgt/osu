@@ -1,8 +1,13 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
+using System;
 using System.Diagnostics;
 using System.Net.Http;
+using System.Net.Sockets;
+using Newtonsoft.Json;
 using osu.Framework.Bindables;
 
 namespace osu.Game.Online.API
@@ -32,30 +37,46 @@ namespace osu.Game.Online.API
             this.endpoint = endpoint;
         }
 
-        internal bool AuthenticateWithLogin(string username, string password)
+        internal void AuthenticateWithLogin(string username, string password)
         {
-            if (string.IsNullOrEmpty(username)) return false;
-            if (string.IsNullOrEmpty(password)) return false;
+            if (string.IsNullOrEmpty(username)) throw new ArgumentException("Missing username.");
+            if (string.IsNullOrEmpty(password)) throw new ArgumentException("Missing password.");
 
-            using (var req = new AccessTokenRequestPassword(username, password)
+            var accessTokenRequest = new AccessTokenRequestPassword(username, password)
             {
                 Url = $@"{endpoint}/oauth/token",
                 Method = HttpMethod.Post,
                 ClientId = clientId,
                 ClientSecret = clientSecret
-            })
+            };
+
+            using (accessTokenRequest)
             {
                 try
                 {
-                    req.Perform();
+                    accessTokenRequest.Perform();
                 }
-                catch
+                catch (Exception ex)
                 {
-                    return false;
+                    Token.Value = null;
+
+                    var throwableException = ex;
+
+                    try
+                    {
+                        // attempt to decode a displayable error string.
+                        var error = JsonConvert.DeserializeObject<OAuthError>(accessTokenRequest.GetResponseString() ?? string.Empty);
+                        if (error != null)
+                            throwableException = new APIException(error.UserDisplayableError, ex);
+                    }
+                    catch
+                    {
+                    }
+
+                    throw throwableException;
                 }
 
-                Token.Value = req.ResponseObject;
-                return true;
+                Token.Value = accessTokenRequest.ResponseObject;
             }
         }
 
@@ -63,23 +84,35 @@ namespace osu.Game.Online.API
         {
             try
             {
-                using (var req = new AccessTokenRequestRefresh(refresh)
+                var refreshRequest = new AccessTokenRequestRefresh(refresh)
                 {
                     Url = $@"{endpoint}/oauth/token",
                     Method = HttpMethod.Post,
                     ClientId = clientId,
                     ClientSecret = clientSecret
-                })
-                {
-                    req.Perform();
+                };
 
-                    Token.Value = req.ResponseObject;
+                using (refreshRequest)
+                {
+                    refreshRequest.Perform();
+
+                    Token.Value = refreshRequest.ResponseObject;
                     return true;
                 }
             }
+            catch (SocketException)
+            {
+                // Network failure.
+                return false;
+            }
+            catch (HttpRequestException)
+            {
+                // Network failure.
+                return false;
+            }
             catch
             {
-                //todo: potentially only kill the refresh token on certain exception types.
+                // Force a full re-authentication.
                 Token.Value = null;
                 return false;
             }
@@ -95,19 +128,12 @@ namespace osu.Game.Online.API
             // if we already have a valid access token, let's use it.
             if (accessTokenValid) return true;
 
-            // we want to ensure only a single authentication update is happening at once.
-            lock (access_token_retrieval_lock)
-            {
-                // re-check if valid, in case another request completed and revalidated our access.
-                if (accessTokenValid) return true;
+            // if not, let's try using our refresh token to request a new access token.
+            if (!string.IsNullOrEmpty(Token.Value?.RefreshToken))
+                // ReSharper disable once PossibleNullReferenceException
+                AuthenticateWithRefresh(Token.Value.RefreshToken);
 
-                // if not, let's try using our refresh token to request a new access token.
-                if (!string.IsNullOrEmpty(Token.Value?.RefreshToken))
-                    // ReSharper disable once PossibleNullReferenceException
-                    AuthenticateWithRefresh(Token.Value.RefreshToken);
-
-                return accessTokenValid;
-            }
+            return accessTokenValid;
         }
 
         private bool accessTokenValid => Token.Value?.IsValid ?? false;
@@ -116,14 +142,18 @@ namespace osu.Game.Online.API
 
         internal string RequestAccessToken()
         {
-            if (!ensureAccessToken()) return null;
+            lock (access_token_retrieval_lock)
+            {
+                if (!ensureAccessToken()) return null;
 
-            return Token.Value.AccessToken;
+                return Token.Value.AccessToken;
+            }
         }
 
         internal void Clear()
         {
-            Token.Value = null;
+            lock (access_token_retrieval_lock)
+                Token.Value = null;
         }
 
         private class AccessTokenRequestRefresh : AccessTokenRequest
@@ -181,6 +211,20 @@ namespace osu.Game.Online.API
 
                 base.PrePerform();
             }
+        }
+
+        private class OAuthError
+        {
+            public string UserDisplayableError => !string.IsNullOrEmpty(Hint) ? Hint : ErrorIdentifier;
+
+            [JsonProperty("error")]
+            public string ErrorIdentifier { get; set; }
+
+            [JsonProperty("hint")]
+            public string Hint { get; set; }
+
+            [JsonProperty("message")]
+            public string Message { get; set; }
         }
     }
 }

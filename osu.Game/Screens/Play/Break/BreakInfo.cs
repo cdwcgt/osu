@@ -5,15 +5,18 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
+using osu.Game.Resources.Localisation.Web;
 using osu.Game.Scoring;
 using osuTK;
 
 namespace osu.Game.Screens.Play.Break
 {
-    public class BreakInfo : Container
+    public partial class BreakInfo : Container
     {
         public PercentageBreakInfoLine AccuracyDisplay;
-        public BreakInfoLine<int> RankDisplay;
+
+        // Currently unused but may be revisited in a future design update (see https://github.com/ppy/osu/discussions/15185)
+        // public BreakInfoLine<int> RankDisplay;
         public BreakInfoLine<ScoreRank> GradeDisplay;
 
         public BreakInfo()
@@ -40,8 +43,9 @@ namespace osu.Game.Screens.Play.Break
                         Direction = FillDirection.Vertical,
                         Children = new Drawable[]
                         {
-                            AccuracyDisplay = new PercentageBreakInfoLine("Accuracy"),
-                            RankDisplay = new BreakInfoLine<int>("Rank"),
+                            AccuracyDisplay = new PercentageBreakInfoLine(BeatmapsetsStrings.ShowScoreboardHeadersAccuracy),
+                            // See https://github.com/ppy/osu/discussions/15185
+                            // RankDisplay = new BreakInfoLine<int>("Rank"),
                             GradeDisplay = new BreakInfoLine<ScoreRank>("Grade"),
                         },
                     }

@@ -1,73 +1,97 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
+using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Primitives;
+using osu.Framework.Graphics.UserInterface;
+using osu.Framework.Input.Events;
 using osu.Framework.Utils;
+using osu.Game.Extensions;
+using osu.Game.Graphics.UserInterface;
+using osu.Game.Rulesets.Edit;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Rulesets.Osu.Objects;
+using osu.Game.Rulesets.Osu.UI;
 using osu.Game.Screens.Edit.Compose.Components;
+using osu.Game.Utils;
 using osuTK;
+using osuTK.Input;
 
 namespace osu.Game.Rulesets.Osu.Edit
 {
-    public class OsuSelectionHandler : SelectionHandler
+    public partial class OsuSelectionHandler : EditorSelectionHandler
     {
+        [Resolved(CanBeNull = true)]
+        private IDistanceSnapProvider? snapProvider { get; set; }
+
+        /// <summary>
+        /// During a transform, the initial path types of a single selected slider are stored so they
+        /// can be maintained throughout the operation.
+        /// </summary>
+        private List<PathType?>? referencePathTypes;
+
         protected override void OnSelectionChanged()
         {
             base.OnSelectionChanged();
 
-            Quad quad = selectedMovableObjects.Length > 0 ? getSurroundingQuad(selectedMovableObjects) : new Quad();
+            Quad quad = selectedMovableObjects.Length > 0 ? GeometryUtils.GetSurroundingQuad(selectedMovableObjects) : new Quad();
 
-            SelectionBox.CanRotate = quad.Width > 0 || quad.Height > 0;
-            SelectionBox.CanScaleX = quad.Width > 0;
-            SelectionBox.CanScaleY = quad.Height > 0;
+            SelectionBox.CanFlipX = SelectionBox.CanScaleX = quad.Width > 0;
+            SelectionBox.CanFlipY = SelectionBox.CanScaleY = quad.Height > 0;
+            SelectionBox.CanScaleDiagonally = SelectionBox.CanScaleX && SelectionBox.CanScaleY;
             SelectionBox.CanReverse = EditorBeatmap.SelectedHitObjects.Count > 1 || EditorBeatmap.SelectedHitObjects.Any(s => s is Slider);
         }
 
         protected override void OnOperationEnded()
         {
             base.OnOperationEnded();
-            referenceOrigin = null;
             referencePathTypes = null;
         }
 
-        public override bool HandleMovement(MoveSelectionEvent moveEvent)
+        protected override bool OnKeyDown(KeyDownEvent e)
+        {
+            if (e.Key == Key.M && e.ControlPressed && e.ShiftPressed)
+            {
+                mergeSelection();
+                return true;
+            }
+
+            return false;
+        }
+
+        public override bool HandleMovement(MoveSelectionEvent<HitObject> moveEvent)
         {
             var hitObjects = selectedMovableObjects;
 
             // this will potentially move the selection out of bounds...
             foreach (var h in hitObjects)
-                h.Position += moveEvent.InstantDelta;
+                h.Position += this.ScreenSpaceDeltaToParentSpace(moveEvent.ScreenSpaceDelta);
 
             // but this will be corrected.
             moveSelectionInBounds();
             return true;
         }
 
-        /// <summary>
-        /// During a transform, the initial origin is stored so it can be used throughout the operation.
-        /// </summary>
-        private Vector2? referenceOrigin;
-
-        /// <summary>
-        /// During a transform, the initial path types of a single selected slider are stored so they
-        /// can be maintained throughout the operation.
-        /// </summary>
-        private List<PathType?> referencePathTypes;
-
         public override bool HandleReverse()
         {
-            var hitObjects = EditorBeatmap.SelectedHitObjects;
+            var hitObjects = EditorBeatmap.SelectedHitObjects
+                                          .OfType<OsuHitObject>()
+                                          .OrderBy(obj => obj.StartTime)
+                                          .ToList();
 
             double endTime = hitObjects.Max(h => h.GetEndTime());
             double startTime = hitObjects.Min(h => h.StartTime);
 
             bool moreThanOneObject = hitObjects.Count > 1;
+
+            // the expectation is that even if the objects themselves are reversed temporally,
+            // the position of new combos in the selection should remain the same.
+            // preserve it for later before doing the reversal.
+            var newComboOrder = hitObjects.Select(obj => obj.NewCombo).ToList();
 
             foreach (var h in hitObjects)
             {
@@ -76,75 +100,53 @@ namespace osu.Game.Rulesets.Osu.Edit
 
                 if (h is Slider slider)
                 {
-                    var points = slider.Path.ControlPoints.ToArray();
-                    Vector2 endPos = points.Last().Position.Value;
-
-                    slider.Path.ControlPoints.Clear();
-
-                    slider.Position += endPos;
-
-                    PathType? lastType = null;
-
-                    for (var i = 0; i < points.Length; i++)
-                    {
-                        var p = points[i];
-                        p.Position.Value -= endPos;
-
-                        // propagate types forwards to last null type
-                        if (i == points.Length - 1)
-                            p.Type.Value = lastType;
-                        else if (p.Type.Value != null)
-                        {
-                            var newType = p.Type.Value;
-                            p.Type.Value = lastType;
-                            lastType = newType;
-                        }
-
-                        slider.Path.ControlPoints.Insert(0, p);
-                    }
+                    slider.Path.Reverse(out Vector2 offset);
+                    slider.Position += offset;
                 }
             }
+
+            // re-order objects by start time again after reversing, and restore new combo flag positioning
+            hitObjects = hitObjects.OrderBy(obj => obj.StartTime).ToList();
+
+            for (int i = 0; i < hitObjects.Count; ++i)
+                hitObjects[i].NewCombo = newComboOrder[i];
 
             return true;
         }
 
-        public override bool HandleFlip(Direction direction)
+        public override bool HandleFlip(Direction direction, bool flipOverOrigin)
         {
             var hitObjects = selectedMovableObjects;
 
-            var selectedObjectsQuad = getSurroundingQuad(hitObjects);
-            var centre = selectedObjectsQuad.Centre;
+            var flipQuad = flipOverOrigin ? new Quad(0, 0, OsuPlayfield.BASE_SIZE.X, OsuPlayfield.BASE_SIZE.Y) : GeometryUtils.GetSurroundingQuad(hitObjects);
+
+            bool didFlip = false;
 
             foreach (var h in hitObjects)
             {
-                var pos = h.Position;
+                var flippedPosition = GeometryUtils.GetFlippedPosition(direction, flipQuad, h.Position);
 
-                switch (direction)
+                if (!Precision.AlmostEquals(flippedPosition, h.Position))
                 {
-                    case Direction.Horizontal:
-                        pos.X = centre.X - (pos.X - centre.X);
-                        break;
-
-                    case Direction.Vertical:
-                        pos.Y = centre.Y - (pos.Y - centre.Y);
-                        break;
+                    h.Position = flippedPosition;
+                    didFlip = true;
                 }
-
-                h.Position = pos;
 
                 if (h is Slider slider)
                 {
-                    foreach (var point in slider.Path.ControlPoints)
+                    didFlip = true;
+
+                    foreach (var cp in slider.Path.ControlPoints)
                     {
-                        point.Position.Value = new Vector2(
-                            (direction == Direction.Horizontal ? -1 : 1) * point.Position.Value.X,
-                            (direction == Direction.Vertical ? -1 : 1) * point.Position.Value.Y
+                        cp.Position = new Vector2(
+                            (direction == Direction.Horizontal ? -1 : 1) * cp.Position.X,
+                            (direction == Direction.Vertical ? -1 : 1) * cp.Position.Y
                         );
                     }
                 }
             }
 
-            return true;
+            return didFlip;
         }
 
         public override bool HandleScale(Vector2 scale, Anchor reference)
@@ -176,34 +178,13 @@ namespace osu.Game.Rulesets.Osu.Edit
             if ((reference & Anchor.y0) > 0) scale.Y = -scale.Y;
         }
 
-        public override bool HandleRotation(float delta)
-        {
-            var hitObjects = selectedMovableObjects;
-
-            Quad quad = getSurroundingQuad(hitObjects);
-
-            referenceOrigin ??= quad.Centre;
-
-            foreach (var h in hitObjects)
-            {
-                h.Position = rotatePointAroundOrigin(h.Position, referenceOrigin.Value, delta);
-
-                if (h is IHasPath path)
-                {
-                    foreach (var point in path.Path.ControlPoints)
-                        point.Position.Value = rotatePointAroundOrigin(point.Position.Value, Vector2.Zero, delta);
-                }
-            }
-
-            // this isn't always the case but let's be lenient for now.
-            return true;
-        }
+        public override SelectionRotationHandler CreateRotationHandler() => new OsuSelectionRotationHandler();
 
         private void scaleSlider(Slider slider, Vector2 scale)
         {
-            referencePathTypes ??= slider.Path.ControlPoints.Select(p => p.Type.Value).ToList();
+            referencePathTypes ??= slider.Path.ControlPoints.Select(p => p.Type).ToList();
 
-            Quad sliderQuad = getSurroundingQuad(slider.Path.ControlPoints.Select(p => p.Position.Value));
+            Quad sliderQuad = GeometryUtils.GetSurroundingQuad(slider.Path.ControlPoints.Select(p => p.Position));
 
             // Limit minimum distance between control points after scaling to almost 0. Less than 0 causes the slider to flip, exactly 0 causes a crash through division by 0.
             scale = Vector2.ComponentMax(new Vector2(Precision.FLOAT_EPSILON), sliderQuad.Size + scale) - sliderQuad.Size;
@@ -216,48 +197,39 @@ namespace osu.Game.Rulesets.Osu.Edit
 
             foreach (var point in slider.Path.ControlPoints)
             {
-                oldControlPoints.Enqueue(point.Position.Value);
-                point.Position.Value *= pathRelativeDeltaScale;
+                oldControlPoints.Enqueue(point.Position);
+                point.Position *= pathRelativeDeltaScale;
             }
 
             // Maintain the path types in case they were defaulted to bezier at some point during scaling
             for (int i = 0; i < slider.Path.ControlPoints.Count; ++i)
-                slider.Path.ControlPoints[i].Type.Value = referencePathTypes[i];
+                slider.Path.ControlPoints[i].Type = referencePathTypes[i];
+
+            // Snap the slider's length to the current beat divisor
+            // to calculate the final resulting duration / bounding box before the final checks.
+            slider.SnapTo(snapProvider);
 
             //if sliderhead or sliderend end up outside playfield, revert scaling.
-            Quad scaledQuad = getSurroundingQuad(new OsuHitObject[] { slider });
+            Quad scaledQuad = GeometryUtils.GetSurroundingQuad(new OsuHitObject[] { slider });
             (bool xInBounds, bool yInBounds) = isQuadInBounds(scaledQuad);
 
             if (xInBounds && yInBounds && slider.Path.HasValidLength)
                 return;
 
             foreach (var point in slider.Path.ControlPoints)
-                point.Position.Value = oldControlPoints.Dequeue();
+                point.Position = oldControlPoints.Dequeue();
+
+            // Snap the slider's length again to undo the potentially-invalid length applied by the previous snap.
+            slider.SnapTo(snapProvider);
         }
 
         private void scaleHitObjects(OsuHitObject[] hitObjects, Anchor reference, Vector2 scale)
         {
             scale = getClampedScale(hitObjects, reference, scale);
-
-            // move the selection before scaling if dragging from top or left anchors.
-            float xOffset = ((reference & Anchor.x0) > 0) ? -scale.X : 0;
-            float yOffset = ((reference & Anchor.y0) > 0) ? -scale.Y : 0;
-
-            Quad selectionQuad = getSurroundingQuad(hitObjects);
+            Quad selectionQuad = GeometryUtils.GetSurroundingQuad(hitObjects);
 
             foreach (var h in hitObjects)
-            {
-                var newPosition = h.Position;
-
-                // guard against no-ops and NaN.
-                if (scale.X != 0 && selectionQuad.Width > 0)
-                    newPosition.X = selectionQuad.TopLeft.X + xOffset + (h.X - selectionQuad.TopLeft.X) / selectionQuad.Width * (selectionQuad.Width + scale.X);
-
-                if (scale.Y != 0 && selectionQuad.Height > 0)
-                    newPosition.Y = selectionQuad.TopLeft.Y + yOffset + (h.Y - selectionQuad.TopLeft.Y) / selectionQuad.Height * (selectionQuad.Height + scale.Y);
-
-                h.Position = newPosition;
-            }
+                h.Position = GeometryUtils.GetScaledPosition(reference, scale, selectionQuad, h.Position);
         }
 
         private (bool X, bool Y) isQuadInBounds(Quad quad)
@@ -272,7 +244,7 @@ namespace osu.Game.Rulesets.Osu.Edit
         {
             var hitObjects = selectedMovableObjects;
 
-            Quad quad = getSurroundingQuad(hitObjects);
+            Quad quad = GeometryUtils.GetSurroundingQuad(hitObjects);
 
             Vector2 delta = Vector2.Zero;
 
@@ -302,7 +274,7 @@ namespace osu.Game.Rulesets.Osu.Edit
             float xOffset = ((reference & Anchor.x0) > 0) ? -scale.X : 0;
             float yOffset = ((reference & Anchor.y0) > 0) ? -scale.Y : 0;
 
-            Quad selectionQuad = getSurroundingQuad(hitObjects);
+            Quad selectionQuad = GeometryUtils.GetSurroundingQuad(hitObjects);
 
             //todo: this is not always correct for selections involving sliders. This approximation assumes each point is scaled independently, but sliderends move with the sliderhead.
             Quad scaledQuad = new Quad(selectionQuad.TopLeft.X + xOffset, selectionQuad.TopLeft.Y + yOffset, selectionQuad.Width + scale.X, selectionQuad.Height + scale.Y);
@@ -328,78 +300,117 @@ namespace osu.Game.Rulesets.Osu.Edit
         }
 
         /// <summary>
-        /// Returns a gamefield-space quad surrounding the provided hit objects.
-        /// </summary>
-        /// <param name="hitObjects">The hit objects to calculate a quad for.</param>
-        private Quad getSurroundingQuad(OsuHitObject[] hitObjects) =>
-            getSurroundingQuad(hitObjects.SelectMany(h =>
-            {
-                if (h is IHasPath path)
-                {
-                    return new[]
-                    {
-                        h.Position,
-                        // can't use EndPosition for reverse slider cases.
-                        h.Position + path.Path.PositionAt(1)
-                    };
-                }
-
-                return new[] { h.Position };
-            }));
-
-        /// <summary>
-        /// Returns a gamefield-space quad surrounding the provided points.
-        /// </summary>
-        /// <param name="points">The points to calculate a quad for.</param>
-        private Quad getSurroundingQuad(IEnumerable<Vector2> points)
-        {
-            if (!EditorBeatmap.SelectedHitObjects.Any())
-                return new Quad();
-
-            Vector2 minPosition = new Vector2(float.MaxValue, float.MaxValue);
-            Vector2 maxPosition = new Vector2(float.MinValue, float.MinValue);
-
-            // Go through all hitobjects to make sure they would remain in the bounds of the editor after movement, before any movement is attempted
-            foreach (var p in points)
-            {
-                minPosition = Vector2.ComponentMin(minPosition, p);
-                maxPosition = Vector2.ComponentMax(maxPosition, p);
-            }
-
-            Vector2 size = maxPosition - minPosition;
-
-            return new Quad(minPosition.X, minPosition.Y, size.X, size.Y);
-        }
-
-        /// <summary>
         /// All osu! hitobjects which can be moved/rotated/scaled.
         /// </summary>
-        private OsuHitObject[] selectedMovableObjects => EditorBeatmap.SelectedHitObjects
-                                                                      .OfType<OsuHitObject>()
-                                                                      .Where(h => !(h is Spinner))
+        private OsuHitObject[] selectedMovableObjects => SelectedItems.OfType<OsuHitObject>()
+                                                                      .Where(h => h is not Spinner)
                                                                       .ToArray();
 
         /// <summary>
-        /// Rotate a point around an arbitrary origin.
+        /// All osu! hitobjects which can be merged.
         /// </summary>
-        /// <param name="point">The point.</param>
-        /// <param name="origin">The centre origin to rotate around.</param>
-        /// <param name="angle">The angle to rotate (in degrees).</param>
-        private static Vector2 rotatePointAroundOrigin(Vector2 point, Vector2 origin, float angle)
+        private OsuHitObject[] selectedMergeableObjects => SelectedItems.OfType<OsuHitObject>()
+                                                                        .Where(h => h is HitCircle or Slider)
+                                                                        .OrderBy(h => h.StartTime)
+                                                                        .ToArray();
+
+        private void mergeSelection()
         {
-            angle = -angle;
+            var mergeableObjects = selectedMergeableObjects;
 
-            point.X -= origin.X;
-            point.Y -= origin.Y;
+            if (!canMerge(mergeableObjects))
+                return;
 
-            Vector2 ret;
-            ret.X = point.X * MathF.Cos(MathUtils.DegreesToRadians(angle)) + point.Y * MathF.Sin(MathUtils.DegreesToRadians(angle));
-            ret.Y = point.X * -MathF.Sin(MathUtils.DegreesToRadians(angle)) + point.Y * MathF.Cos(MathUtils.DegreesToRadians(angle));
+            EditorBeatmap.BeginChange();
 
-            ret.X += origin.X;
-            ret.Y += origin.Y;
+            // Have an initial slider object.
+            var firstHitObject = mergeableObjects[0];
+            var mergedHitObject = firstHitObject as Slider ?? new Slider
+            {
+                StartTime = firstHitObject.StartTime,
+                Position = firstHitObject.Position,
+                NewCombo = firstHitObject.NewCombo,
+                Samples = firstHitObject.Samples,
+            };
 
-            return ret;
+            if (mergedHitObject.Path.ControlPoints.Count == 0)
+            {
+                mergedHitObject.Path.ControlPoints.Add(new PathControlPoint(Vector2.Zero, PathType.LINEAR));
+            }
+
+            // Merge all the selected hit objects into one slider path.
+            bool lastCircle = firstHitObject is HitCircle;
+
+            foreach (var selectedMergeableObject in mergeableObjects.Skip(1))
+            {
+                if (selectedMergeableObject is IHasPath hasPath)
+                {
+                    var offset = lastCircle ? selectedMergeableObject.Position - mergedHitObject.Position : mergedHitObject.Path.ControlPoints[^1].Position;
+                    float distanceToLastControlPoint = Vector2.Distance(mergedHitObject.Path.ControlPoints[^1].Position, offset);
+
+                    // Calculate the distance required to travel to the expected distance of the merging slider.
+                    mergedHitObject.Path.ExpectedDistance.Value = mergedHitObject.Path.CalculatedDistance + distanceToLastControlPoint + hasPath.Path.Distance;
+
+                    // Remove the last control point if it sits exactly on the start of the next control point.
+                    if (Precision.AlmostEquals(distanceToLastControlPoint, 0))
+                    {
+                        mergedHitObject.Path.ControlPoints.RemoveAt(mergedHitObject.Path.ControlPoints.Count - 1);
+                    }
+
+                    mergedHitObject.Path.ControlPoints.AddRange(hasPath.Path.ControlPoints.Select(o => new PathControlPoint(o.Position + offset, o.Type)));
+                    lastCircle = false;
+                }
+                else
+                {
+                    // Turn the last control point into a linear type if this is the first merging circle in a sequence, so the subsequent control points can be inherited path type.
+                    if (!lastCircle)
+                    {
+                        mergedHitObject.Path.ControlPoints.Last().Type = PathType.LINEAR;
+                    }
+
+                    mergedHitObject.Path.ControlPoints.Add(new PathControlPoint(selectedMergeableObject.Position - mergedHitObject.Position));
+                    mergedHitObject.Path.ExpectedDistance.Value = null;
+                    lastCircle = true;
+                }
+            }
+
+            // Make sure only the merged hit object is in the beatmap.
+            if (firstHitObject is Slider)
+            {
+                foreach (var selectedMergeableObject in mergeableObjects.Skip(1))
+                {
+                    EditorBeatmap.Remove(selectedMergeableObject);
+                }
+            }
+            else
+            {
+                foreach (var selectedMergeableObject in mergeableObjects)
+                {
+                    EditorBeatmap.Remove(selectedMergeableObject);
+                }
+
+                EditorBeatmap.Add(mergedHitObject);
+            }
+
+            // Make sure the merged hitobject is selected.
+            SelectedItems.Clear();
+            SelectedItems.Add(mergedHitObject);
+
+            EditorBeatmap.EndChange();
         }
+
+        protected override IEnumerable<MenuItem> GetContextMenuItemsForSelection(IEnumerable<SelectionBlueprint<HitObject>> selection)
+        {
+            foreach (var item in base.GetContextMenuItemsForSelection(selection))
+                yield return item;
+
+            if (canMerge(selectedMergeableObjects))
+                yield return new OsuMenuItem("Merge selection", MenuItemType.Destructive, mergeSelection);
+        }
+
+        private bool canMerge(IReadOnlyList<OsuHitObject> objects) =>
+            objects.Count > 1
+            && (objects.Any(h => h is Slider)
+                || objects.Zip(objects.Skip(1), (h1, h2) => Precision.DefinitelyBigger(Vector2.DistanceSquared(h1.Position, h2.Position), 1)).Any(x => x));
     }
 }

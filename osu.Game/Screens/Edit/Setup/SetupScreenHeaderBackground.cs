@@ -10,16 +10,17 @@ using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Drawables;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
+using osu.Game.Localisation;
 
 namespace osu.Game.Screens.Edit.Setup
 {
-    public class SetupScreenHeaderBackground : CompositeDrawable
+    public partial class SetupScreenHeaderBackground : CompositeDrawable
     {
         [Resolved]
-        private OsuColour colours { get; set; }
+        private OsuColour colours { get; set; } = null!;
 
         [Resolved]
-        private IBindable<WorkingBeatmap> working { get; set; }
+        private IBindable<WorkingBeatmap> working { get; set; } = null!;
 
         private readonly Container content;
 
@@ -56,12 +57,12 @@ namespace osu.Game.Screens.Edit.Setup
                     {
                         new Box
                         {
-                            Colour = colours.GreySeafoamDarker,
+                            Colour = colours.GreySeaFoamDarker,
                             RelativeSizeAxes = Axes.Both,
                         },
                         new OsuTextFlowContainer(t => t.Font = OsuFont.Default.With(size: 24))
                         {
-                            Text = "Drag image here to set beatmap background!",
+                            Text = EditorSetupStrings.DragToSetBackground,
                             Anchor = Anchor.Centre,
                             Origin = Anchor.Centre,
                             AutoSizeAxes = Axes.Both

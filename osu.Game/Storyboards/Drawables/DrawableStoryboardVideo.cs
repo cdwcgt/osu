@@ -1,21 +1,19 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System;
 using osu.Framework.Allocation;
-using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Textures;
 using osu.Framework.Graphics.Video;
-using osu.Game.Beatmaps;
 
 namespace osu.Game.Storyboards.Drawables
 {
-    public class DrawableStoryboardVideo : CompositeDrawable
+    public partial class DrawableStoryboardVideo : CompositeDrawable
     {
         public readonly StoryboardVideo Video;
-        private Video video;
+
+        private Video? drawableVideo;
 
         public override bool RemoveWhenNotAlive => false;
 
@@ -23,42 +21,53 @@ namespace osu.Game.Storyboards.Drawables
         {
             Video = video;
 
-            RelativeSizeAxes = Axes.Both;
+            // In osu-stable, a mapper can add a scale command for a storyboard video.
+            // This allows scaling based on the video's absolute size.
+            //
+            // If not specified we take up the full available space.
+            bool useRelative = !video.TimelineGroup.Scale.HasCommands;
+
+            RelativeSizeAxes = useRelative ? Axes.Both : Axes.None;
+            AutoSizeAxes = useRelative ? Axes.None : Axes.Both;
+
+            Anchor = Anchor.Centre;
+            Origin = Anchor.Centre;
         }
 
         [BackgroundDependencyLoader(true)]
-        private void load(IBindable<WorkingBeatmap> beatmap, TextureStore textureStore)
+        private void load(TextureStore textureStore)
         {
-            var path = beatmap.Value.BeatmapSetInfo?.Files?.Find(f => f.Filename.Equals(Video.Path, StringComparison.OrdinalIgnoreCase))?.FileInfo.StoragePath;
-
-            if (path == null)
-                return;
-
-            var stream = textureStore.GetStream(path);
+            var stream = textureStore.GetStream(Video.Path);
 
             if (stream == null)
                 return;
 
-            InternalChild = video = new Video(stream, false)
+            InternalChild = drawableVideo = new Video(stream, false)
             {
-                RelativeSizeAxes = Axes.Both,
+                RelativeSizeAxes = RelativeSizeAxes,
                 FillMode = FillMode.Fill,
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre,
                 Alpha = 0,
             };
+
+            Video.ApplyTransforms(drawableVideo);
         }
 
         protected override void LoadComplete()
         {
             base.LoadComplete();
 
-            if (video == null) return;
+            if (drawableVideo == null) return;
 
-            using (video.BeginAbsoluteSequence(Video.StartTime))
+            using (drawableVideo.BeginAbsoluteSequence(Video.StartTime))
             {
-                Schedule(() => video.PlaybackPosition = Time.Current - Video.StartTime);
-                video.FadeIn(500);
+                Schedule(() => drawableVideo.PlaybackPosition = Time.Current - Video.StartTime);
+
+                drawableVideo.FadeIn(500);
+
+                using (drawableVideo.BeginDelayedSequence(drawableVideo.Duration - 500))
+                    drawableVideo.FadeOut(500);
             }
         }
     }

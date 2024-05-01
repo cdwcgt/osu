@@ -1,11 +1,13 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using osu.Framework.Platform;
+using osu.Game.Utils;
 
 namespace osu.Game.IO
 {
@@ -24,6 +26,11 @@ namespace osu.Game.IO
         /// </summary>
         public virtual string[] IgnoreFiles => Array.Empty<string>();
 
+        /// <summary>
+        /// A list of file/directory suffixes which should not be migrated.
+        /// </summary>
+        public virtual string[] IgnoreSuffixes => Array.Empty<string>();
+
         protected MigratableStorage(Storage storage, string subPath = null)
             : base(storage, subPath)
         {
@@ -33,7 +40,8 @@ namespace osu.Game.IO
         /// A general purpose migration method to move the storage to a different location.
         /// <param name="newStorage">The target storage of the migration.</param>
         /// </summary>
-        public virtual void Migrate(Storage newStorage)
+        /// <returns>Whether cleanup could complete.</returns>
+        public virtual bool Migrate(Storage newStorage)
         {
             var source = new DirectoryInfo(GetFullPath("."));
             var destination = new DirectoryInfo(newStorage.GetFullPath("."));
@@ -57,17 +65,23 @@ namespace osu.Game.IO
 
             CopyRecursive(source, destination);
             ChangeTargetStorage(newStorage);
-            DeleteRecursive(source);
+
+            return DeleteRecursive(source);
         }
 
-        protected void DeleteRecursive(DirectoryInfo target, bool topLevelExcludes = true)
+        protected bool DeleteRecursive(DirectoryInfo target, bool topLevelExcludes = true)
         {
+            bool allFilesDeleted = true;
+
             foreach (System.IO.FileInfo fi in target.GetFiles())
             {
                 if (topLevelExcludes && IgnoreFiles.Contains(fi.Name))
                     continue;
 
-                AttemptOperation(() => fi.Delete());
+                if (IgnoreSuffixes.Any(suffix => fi.Name.EndsWith(suffix, StringComparison.Ordinal)))
+                    continue;
+
+                allFilesDeleted &= FileUtils.AttemptOperation(() => fi.Delete(), throwOnFailure: false);
             }
 
             foreach (DirectoryInfo dir in target.GetDirectories())
@@ -75,11 +89,16 @@ namespace osu.Game.IO
                 if (topLevelExcludes && IgnoreDirectories.Contains(dir.Name))
                     continue;
 
-                AttemptOperation(() => dir.Delete(true));
+                if (IgnoreSuffixes.Any(suffix => dir.Name.EndsWith(suffix, StringComparison.Ordinal)))
+                    continue;
+
+                allFilesDeleted &= FileUtils.AttemptOperation(() => dir.Delete(true), throwOnFailure: false);
             }
 
             if (target.GetFiles().Length == 0 && target.GetDirectories().Length == 0)
-                AttemptOperation(target.Delete);
+                allFilesDeleted &= FileUtils.AttemptOperation(target.Delete, throwOnFailure: false);
+
+            return allFilesDeleted;
         }
 
         protected void CopyRecursive(DirectoryInfo source, DirectoryInfo destination, bool topLevelExcludes = true)
@@ -88,12 +107,25 @@ namespace osu.Game.IO
             if (!destination.Exists)
                 Directory.CreateDirectory(destination.FullName);
 
-            foreach (System.IO.FileInfo fi in source.GetFiles())
+            foreach (System.IO.FileInfo fileInfo in source.GetFiles())
             {
-                if (topLevelExcludes && IgnoreFiles.Contains(fi.Name))
+                if (topLevelExcludes && IgnoreFiles.Contains(fileInfo.Name))
                     continue;
 
-                AttemptOperation(() => fi.CopyTo(Path.Combine(destination.FullName, fi.Name), true));
+                if (IgnoreSuffixes.Any(suffix => fileInfo.Name.EndsWith(suffix, StringComparison.Ordinal)))
+                    continue;
+
+                FileUtils.AttemptOperation(() =>
+                {
+                    fileInfo.Refresh();
+
+                    // A temporary file may have been deleted since the initial GetFiles operation.
+                    // We don't want the whole migration process to fail in such a case.
+                    if (!fileInfo.Exists)
+                        return;
+
+                    fileInfo.CopyTo(Path.Combine(destination.FullName, fileInfo.Name), true);
+                });
             }
 
             foreach (DirectoryInfo dir in source.GetDirectories())
@@ -101,31 +133,10 @@ namespace osu.Game.IO
                 if (topLevelExcludes && IgnoreDirectories.Contains(dir.Name))
                     continue;
 
+                if (IgnoreSuffixes.Any(suffix => dir.Name.EndsWith(suffix, StringComparison.Ordinal)))
+                    continue;
+
                 CopyRecursive(dir, destination.CreateSubdirectory(dir.Name), false);
-            }
-        }
-
-        /// <summary>
-        /// Attempt an IO operation multiple times and only throw if none of the attempts succeed.
-        /// </summary>
-        /// <param name="action">The action to perform.</param>
-        /// <param name="attempts">The number of attempts (250ms wait between each).</param>
-        protected static void AttemptOperation(Action action, int attempts = 10)
-        {
-            while (true)
-            {
-                try
-                {
-                    action();
-                    return;
-                }
-                catch (Exception)
-                {
-                    if (attempts-- == 0)
-                        throw;
-                }
-
-                Thread.Sleep(250);
             }
         }
     }

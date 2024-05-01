@@ -1,56 +1,68 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System.Collections.Generic;
+using System;
 using System.Linq;
+using osu.Framework.Allocation;
+using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Framework.Graphics.Pooling;
 using osu.Game.Rulesets.Judgements;
 using osu.Game.Rulesets.Mania.Beatmaps;
 using osu.Game.Rulesets.Mania.Objects;
 using osu.Game.Rulesets.Mania.Objects.Drawables;
+using osu.Game.Rulesets.Mania.Scoring;
+using osu.Game.Rulesets.Mania.Skinning;
 using osu.Game.Rulesets.Mania.UI.Components;
+using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Drawables;
+using osu.Game.Rulesets.Scoring;
 using osu.Game.Rulesets.UI;
 using osu.Game.Rulesets.UI.Scrolling;
 using osu.Game.Skinning;
 using osuTK;
-using osuTK.Graphics;
 
 namespace osu.Game.Rulesets.Mania.UI
 {
     /// <summary>
     /// A collection of <see cref="Column"/>s.
     /// </summary>
-    public class Stage : ScrollingPlayfield
+    public partial class Stage : ScrollingPlayfield
     {
+        [Cached]
+        public readonly StageDefinition Definition;
+
         public const float COLUMN_SPACING = 1;
 
         public const float HIT_TARGET_POSITION = 110;
 
-        public IReadOnlyList<Column> Columns => columnFlow.Content;
+        public Column[] Columns => columnFlow.Content;
         private readonly ColumnFlow<Column> columnFlow;
 
         private readonly JudgementContainer<DrawableManiaJudgement> judgements;
-        private readonly DrawablePool<DrawableManiaJudgement> judgementPool;
+        private readonly JudgementPooler<DrawableManiaJudgement> judgementPooler;
 
         private readonly Drawable barLineContainer;
 
-        private readonly Dictionary<ColumnType, Color4> columnColours = new Dictionary<ColumnType, Color4>
+        public override bool ReceivePositionalInputAt(Vector2 screenSpacePos)
         {
-            { ColumnType.Even, new Color4(6, 84, 0, 255) },
-            { ColumnType.Odd, new Color4(94, 0, 57, 255) },
-            { ColumnType.Special, new Color4(0, 48, 63, 255) }
-        };
+            foreach (var c in Columns)
+            {
+                if (c.ReceivePositionalInputAt(screenSpacePos))
+                    return true;
+            }
 
-        public override bool ReceivePositionalInputAt(Vector2 screenSpacePos) => Columns.Any(c => c.ReceivePositionalInputAt(screenSpacePos));
+            return false;
+        }
 
         private readonly int firstColumnIndex;
+
+        private ISkinSource currentSkin = null!;
 
         public Stage(int firstColumnIndex, StageDefinition definition, ref ManiaAction normalColumnStartAction, ref ManiaAction specialColumnStartAction)
         {
             this.firstColumnIndex = firstColumnIndex;
+            Definition = definition;
 
             Name = "Stage";
 
@@ -59,11 +71,11 @@ namespace osu.Game.Rulesets.Mania.UI
             RelativeSizeAxes = Axes.Y;
             AutoSizeAxes = Axes.X;
 
+            Container columnBackgrounds;
             Container topLevelContainer;
 
             InternalChildren = new Drawable[]
             {
-                judgementPool = new DrawablePool<DrawableManiaJudgement>(2),
                 new Container
                 {
                     Anchor = Anchor.TopCentre,
@@ -72,13 +84,14 @@ namespace osu.Game.Rulesets.Mania.UI
                     AutoSizeAxes = Axes.X,
                     Children = new Drawable[]
                     {
-                        new SkinnableDrawable(new ManiaSkinComponent(ManiaSkinComponents.StageBackground, stageDefinition: definition), _ => new DefaultStageBackground())
+                        new SkinnableDrawable(new ManiaSkinComponentLookup(ManiaSkinComponents.StageBackground), _ => new DefaultStageBackground())
                         {
                             RelativeSizeAxes = Axes.Both
                         },
-                        columnFlow = new ColumnFlow<Column>(definition)
+                        columnBackgrounds = new Container
                         {
-                            RelativeSizeAxes = Axes.Y,
+                            Name = "Column backgrounds",
+                            RelativeSizeAxes = Axes.Both,
                         },
                         new Container
                         {
@@ -97,7 +110,11 @@ namespace osu.Game.Rulesets.Mania.UI
                                 RelativeSizeAxes = Axes.Y,
                             }
                         },
-                        new SkinnableDrawable(new ManiaSkinComponent(ManiaSkinComponents.StageForeground, stageDefinition: definition), _ => null)
+                        columnFlow = new ColumnFlow<Column>(definition)
+                        {
+                            RelativeSizeAxes = Axes.Y,
+                        },
+                        new SkinnableDrawable(new ManiaSkinComponentLookup(ManiaSkinComponents.StageForeground))
                         {
                             RelativeSizeAxes = Axes.Both
                         },
@@ -115,70 +132,89 @@ namespace osu.Game.Rulesets.Mania.UI
 
             for (int i = 0; i < definition.Columns; i++)
             {
-                var columnType = definition.GetTypeOfColumn(i);
+                bool isSpecial = definition.IsSpecialColumn(i);
 
-                var column = new Column(firstColumnIndex + i)
+                var column = new Column(firstColumnIndex + i, isSpecial)
                 {
                     RelativeSizeAxes = Axes.Both,
                     Width = 1,
-                    ColumnType = columnType,
-                    AccentColour = columnColours[columnType],
-                    Action = { Value = columnType == ColumnType.Special ? specialColumnStartAction++ : normalColumnStartAction++ }
+                    Action = { Value = isSpecial ? specialColumnStartAction++ : normalColumnStartAction++ }
                 };
 
                 topLevelContainer.Add(column.TopLevelContainer.CreateProxy());
+                columnBackgrounds.Add(column.BackgroundContainer.CreateProxy());
                 columnFlow.SetContentForColumn(i, column);
                 AddNested(column);
             }
+
+            var hitWindows = new ManiaHitWindows();
+
+            AddInternal(judgementPooler = new JudgementPooler<DrawableManiaJudgement>(Enum.GetValues<HitResult>().Where(r => hitWindows.IsHitResultAllowed(r))));
+
+            RegisterPool<BarLine, DrawableBarLine>(50, 200);
         }
 
-        public override void Add(DrawableHitObject h)
+        [BackgroundDependencyLoader]
+        private void load(ISkinSource skin)
         {
-            var maniaObject = (ManiaHitObject)h.HitObject;
+            currentSkin = skin;
 
-            int columnIndex = -1;
+            skin.SourceChanged += onSkinChanged;
+            onSkinChanged();
+        }
 
-            maniaObject.ColumnBindable.BindValueChanged(_ =>
+        private void onSkinChanged()
+        {
+            float paddingTop = currentSkin.GetConfig<ManiaSkinConfigurationLookup, float>(new ManiaSkinConfigurationLookup(LegacyManiaSkinConfigurationLookups.StagePaddingTop))?.Value ?? 0;
+            float paddingBottom = currentSkin.GetConfig<ManiaSkinConfigurationLookup, float>(new ManiaSkinConfigurationLookup(LegacyManiaSkinConfigurationLookups.StagePaddingBottom))?.Value ?? 0;
+
+            Padding = new MarginPadding
             {
-                if (columnIndex != -1)
-                    Columns.ElementAt(columnIndex).Remove(h);
-
-                columnIndex = maniaObject.Column - firstColumnIndex;
-                Columns.ElementAt(columnIndex).Add(h);
-            }, true);
-
-            h.OnNewResult += OnNewResult;
+                Top = paddingTop,
+                Bottom = paddingBottom,
+            };
         }
 
-        public override bool Remove(DrawableHitObject h)
+        protected override void Dispose(bool isDisposing)
         {
-            var maniaObject = (ManiaHitObject)h.HitObject;
-            int columnIndex = maniaObject.Column - firstColumnIndex;
-            Columns.ElementAt(columnIndex).Remove(h);
+            // must happen before children are disposed in base call to prevent illegal accesses to the judgement pool.
+            NewResult -= OnNewResult;
 
-            h.OnNewResult -= OnNewResult;
-            return true;
+            base.Dispose(isDisposing);
+
+            if (currentSkin.IsNotNull())
+                currentSkin.SourceChanged -= onSkinChanged;
         }
 
-        public void Add(BarLine barline) => base.Add(new DrawableBarLine(barline));
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+            NewResult += OnNewResult;
+        }
+
+        public override void Add(HitObject hitObject) => Columns[((ManiaHitObject)hitObject).Column - firstColumnIndex].Add(hitObject);
+
+        public override bool Remove(HitObject hitObject) => Columns[((ManiaHitObject)hitObject).Column - firstColumnIndex].Remove(hitObject);
+
+        public override void Add(DrawableHitObject h) => Columns[((ManiaHitObject)h.HitObject).Column - firstColumnIndex].Add(h);
+
+        public override bool Remove(DrawableHitObject h) => Columns[((ManiaHitObject)h.HitObject).Column - firstColumnIndex].Remove(h);
+
+        public void Add(BarLine barLine) => base.Add(barLine);
 
         internal void OnNewResult(DrawableHitObject judgedObject, JudgementResult result)
         {
             if (!judgedObject.DisplayResult || !DisplayJudgements.Value)
                 return;
 
-            // Tick judgements should not display text.
-            if (judgedObject is DrawableHoldNoteTick)
-                return;
-
             judgements.Clear(false);
-            judgements.Add(judgementPool.Get(j =>
+            judgements.Add(judgementPooler.Get(result.Type, j =>
             {
                 j.Apply(result, judgedObject);
 
                 j.Anchor = Anchor.Centre;
                 j.Origin = Anchor.Centre;
-            }));
+            })!);
         }
 
         protected override void Update()

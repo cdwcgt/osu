@@ -4,13 +4,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using JetBrains.Annotations;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Input.Events;
+using osu.Framework.Localisation;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
@@ -23,12 +23,12 @@ namespace osu.Game.Overlays.Profile
     /// </summary>
     /// <typeparam name="TKey">Type of data to be used for X-axis of the graph.</typeparam>
     /// <typeparam name="TValue">Type of data to be used for Y-axis of the graph.</typeparam>
-    public abstract class UserGraph<TKey, TValue> : Container, IHasCustomTooltip
+    public abstract partial class UserGraph<TKey, TValue> : Container, IHasCustomTooltip<UserGraphTooltipContent?>
     {
         protected const float FADE_DURATION = 150;
 
         private readonly UserLineGraph graph;
-        private KeyValuePair<TKey, TValue>[] data;
+        private KeyValuePair<TKey, TValue>[]? data;
         private int hoveredIndex = -1;
 
         protected UserGraph()
@@ -80,8 +80,7 @@ namespace osu.Game.Overlays.Profile
         /// <summary>
         /// Set of values which will be used to create a graph.
         /// </summary>
-        [CanBeNull]
-        protected KeyValuePair<TKey, TValue>[] Data
+        protected KeyValuePair<TKey, TValue>[]? Data
         {
             set
             {
@@ -117,11 +116,9 @@ namespace osu.Game.Overlays.Profile
         protected virtual void ShowGraph() => graph.FadeIn(FADE_DURATION, Easing.Out);
         protected virtual void HideGraph() => graph.FadeOut(FADE_DURATION, Easing.Out);
 
-        public ITooltip GetCustomTooltip() => GetTooltip();
+        public ITooltip<UserGraphTooltipContent?> GetCustomTooltip() => new UserGraphTooltip();
 
-        protected abstract UserGraphTooltip GetTooltip();
-
-        public object TooltipContent
+        public UserGraphTooltipContent? TooltipContent
         {
             get
             {
@@ -133,16 +130,16 @@ namespace osu.Game.Overlays.Profile
             }
         }
 
-        protected abstract object GetTooltipContent(TKey key, TValue value);
+        protected abstract UserGraphTooltipContent GetTooltipContent(TKey key, TValue value);
 
-        protected class UserLineGraph : LineGraph
+        protected partial class UserLineGraph : LineGraph
         {
             private readonly CircularContainer movingBall;
             private readonly Container bar;
             private readonly Box ballBg;
             private readonly Box line;
 
-            public Action<int> OnBallMove;
+            public Action<int>? OnBallMove;
 
             public UserLineGraph()
             {
@@ -190,7 +187,7 @@ namespace osu.Game.Overlays.Profile
                 Vector2 position = calculateBallPosition(index);
                 movingBall.MoveToY(position.Y, duration, Easing.OutQuint);
                 bar.MoveToX(position.X, duration, Easing.OutQuint);
-                OnBallMove.Invoke(index);
+                OnBallMove?.Invoke(index);
             }
 
             public void ShowBar() => bar.FadeIn(FADE_DURATION);
@@ -206,12 +203,12 @@ namespace osu.Game.Overlays.Profile
             }
         }
 
-        protected abstract class UserGraphTooltip : VisibilityContainer, ITooltip
+        private partial class UserGraphTooltip : VisibilityContainer, ITooltip<UserGraphTooltipContent?>
         {
-            protected readonly OsuSpriteText Counter, BottomText;
+            protected readonly OsuSpriteText Label, Counter, BottomText;
             private readonly Box background;
 
-            protected UserGraphTooltip(string tooltipCounterName)
+            public UserGraphTooltip()
             {
                 AutoSizeAxes = Axes.Both;
                 Masking = true;
@@ -237,10 +234,9 @@ namespace osu.Game.Overlays.Profile
                                 Spacing = new Vector2(3, 0),
                                 Children = new Drawable[]
                                 {
-                                    new OsuSpriteText
+                                    Label = new OsuSpriteText
                                     {
                                         Font = OsuFont.GetFont(size: 12, weight: FontWeight.Bold),
-                                        Text = tooltipCounterName
                                     },
                                     Counter = new OsuSpriteText
                                     {
@@ -267,7 +263,15 @@ namespace osu.Game.Overlays.Profile
                 background.Colour = colours.Gray1;
             }
 
-            public abstract bool SetContent(object content);
+            public void SetContent(UserGraphTooltipContent? content)
+            {
+                if (content == null)
+                    return;
+
+                Label.Text = content.Name;
+                Counter.Text = content.Count;
+                BottomText.Text = content.Time;
+            }
 
             private bool instantMove = true;
 
@@ -290,5 +294,12 @@ namespace osu.Game.Overlays.Profile
 
             protected override void PopOut() => this.FadeOut(200, Easing.OutQuint);
         }
+    }
+
+    public class UserGraphTooltipContent
+    {
+        public LocalisableString Name { get; init; }
+        public LocalisableString Count { get; init; }
+        public LocalisableString Time { get; init; }
     }
 }

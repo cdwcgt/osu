@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Collections.Generic;
@@ -22,13 +22,19 @@ using osuTK;
 
 namespace osu.Game.Rulesets.Mania.Tests.Editor
 {
-    public class TestSceneManiaBeatSnapGrid : EditorClockTestScene
+    public partial class TestSceneManiaBeatSnapGrid : EditorClockTestScene
     {
         [Cached(typeof(IScrollingInfo))]
         private ScrollingTestContainer.TestScrollingInfo scrollingInfo = new ScrollingTestContainer.TestScrollingInfo();
 
         [Cached(typeof(EditorBeatmap))]
-        private EditorBeatmap editorBeatmap = new EditorBeatmap(new ManiaBeatmap(new StageDefinition()));
+        private EditorBeatmap editorBeatmap = new EditorBeatmap(new ManiaBeatmap(new StageDefinition(2))
+        {
+            BeatmapInfo =
+            {
+                Ruleset = new ManiaRuleset().RulesetInfo
+            }
+        });
 
         private readonly ManiaBeatSnapGrid beatSnapGrid;
 
@@ -48,8 +54,8 @@ namespace osu.Game.Rulesets.Mania.Tests.Editor
             {
                 Playfield = new ManiaPlayfield(new List<StageDefinition>
                 {
-                    new StageDefinition { Columns = 4 },
-                    new StageDefinition { Columns = 3 }
+                    new StageDefinition(4),
+                    new StageDefinition(3)
                 })
                 {
                     Clock = new FramedClock(new StopwatchClock())
@@ -75,13 +81,14 @@ namespace osu.Game.Rulesets.Mania.Tests.Editor
         public ManiaPlayfield Playfield { get; }
     }
 
-    public class TestHitObjectComposer : HitObjectComposer
+    public partial class TestHitObjectComposer : HitObjectComposer
     {
         public override Playfield Playfield { get; }
         public override IEnumerable<DrawableHitObject> HitObjects => Enumerable.Empty<DrawableHitObject>();
         public override bool CursorInPlacementArea => false;
 
         public TestHitObjectComposer(Playfield playfield)
+            : base(new ManiaRuleset())
         {
             Playfield = playfield;
         }
@@ -91,37 +98,7 @@ namespace osu.Game.Rulesets.Mania.Tests.Editor
             set => InternalChild = value;
         }
 
-        public override SnapResult SnapScreenSpacePositionToValidTime(Vector2 screenSpacePosition)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public override SnapResult SnapScreenSpacePositionToValidPosition(Vector2 screenSpacePosition)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public override float GetBeatSnapDistanceAt(double referenceTime)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public override float DurationToDistance(double referenceTime, double duration)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public override double DistanceToDuration(double referenceTime, float distance)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public override double GetSnappedDurationFromDistance(double referenceTime, float distance)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public override float GetSnappedDistanceFromDistance(double referenceTime, float distance)
+        public override SnapResult FindSnappedPositionAndTime(Vector2 screenSpacePosition, SnapType snapType = SnapType.All)
         {
             throw new System.NotImplementedException();
         }

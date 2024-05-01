@@ -1,90 +1,198 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Collections.Generic;
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions;
+using osu.Framework.Extensions.IEnumerableExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Framework.Graphics.Shapes;
-using osu.Game.Beatmaps.ControlPoints;
+using osu.Framework.Graphics.Cursor;
+using osu.Framework.Graphics.UserInterface;
+using osu.Framework.Input.Events;
+using osu.Game.Audio;
 using osu.Game.Graphics;
-using osu.Game.Graphics.Sprites;
+using osu.Game.Graphics.UserInterfaceV2;
+using osu.Game.Rulesets.Objects;
+using osu.Game.Rulesets.Objects.Drawables;
+using osu.Game.Screens.Edit.Timing;
+using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Screens.Edit.Compose.Components.Timeline
 {
-    public class SamplePointPiece : CompositeDrawable
+    public partial class SamplePointPiece : HitObjectPointPiece, IHasPopover
     {
-        private readonly SampleControlPoint samplePoint;
+        public readonly HitObject HitObject;
 
-        private readonly Bindable<string> bank;
-        private readonly BindableNumber<int> volume;
+        private readonly BindableList<HitSampleInfo> samplesBindable;
 
-        private OsuSpriteText text;
-        private Container volumeBox;
-
-        private const int max_volume_height = 22;
-
-        public SamplePointPiece(SampleControlPoint samplePoint)
+        public SamplePointPiece(HitObject hitObject)
         {
-            this.samplePoint = samplePoint;
-            volume = samplePoint.SampleVolumeBindable.GetBoundCopy();
-            bank = samplePoint.SampleBankBindable.GetBoundCopy();
+            HitObject = hitObject;
+            samplesBindable = hitObject.SamplesBindable.GetBoundCopy();
         }
 
+        protected override Color4 GetRepresentingColour(OsuColour colours) => colours.Pink;
+
         [BackgroundDependencyLoader]
-        private void load(OsuColour colours)
+        private void load()
         {
-            Margin = new MarginPadding { Vertical = 5 };
+            samplesBindable.BindCollectionChanged((_, _) => updateText(), true);
+        }
 
-            Origin = Anchor.BottomCentre;
-            Anchor = Anchor.BottomCentre;
+        protected override bool OnClick(ClickEvent e)
+        {
+            this.ShowPopover();
+            return true;
+        }
 
-            AutoSizeAxes = Axes.X;
-            RelativeSizeAxes = Axes.Y;
+        private void updateText()
+        {
+            Label.Text = $"{GetBankValue(samplesBindable)} {GetVolumeValue(samplesBindable)}";
+        }
 
-            Color4 colour = samplePoint.GetRepresentingColour(colours);
+        public static string? GetBankValue(IEnumerable<HitSampleInfo> samples)
+        {
+            return samples.FirstOrDefault()?.Bank;
+        }
 
-            InternalChildren = new Drawable[]
+        public static int GetVolumeValue(ICollection<HitSampleInfo> samples)
+        {
+            return samples.Count == 0 ? 0 : samples.Max(o => o.Volume);
+        }
+
+        public Popover GetPopover() => new SampleEditPopover(HitObject);
+
+        public partial class SampleEditPopover : OsuPopover
+        {
+            private readonly HitObject hitObject;
+
+            private LabelledTextBox bank = null!;
+            private IndeterminateSliderWithTextBoxInput<int> volume = null!;
+
+            [Resolved(canBeNull: true)]
+            private EditorBeatmap beatmap { get; set; } = null!;
+
+            public SampleEditPopover(HitObject hitObject)
             {
-                volumeBox = new Circle
+                this.hitObject = hitObject;
+            }
+
+            [BackgroundDependencyLoader]
+            private void load()
+            {
+                FillFlowContainer flow;
+
+                Children = new Drawable[]
                 {
-                    CornerRadius = 5,
-                    Anchor = Anchor.BottomCentre,
-                    Origin = Anchor.BottomCentre,
-                    Y = -20,
-                    Width = 10,
-                    Colour = colour,
-                },
-                new Container
-                {
-                    AutoSizeAxes = Axes.X,
-                    Height = 16,
-                    Masking = true,
-                    CornerRadius = 8,
-                    Anchor = Anchor.BottomCentre,
-                    Origin = Anchor.BottomCentre,
-                    Children = new Drawable[]
+                    flow = new FillFlowContainer
                     {
-                        new Box
+                        Width = 200,
+                        Direction = FillDirection.Vertical,
+                        AutoSizeAxes = Axes.Y,
+                        Spacing = new Vector2(0, 10),
+                        Children = new Drawable[]
                         {
-                            Colour = colour,
-                            RelativeSizeAxes = Axes.Both,
-                        },
-                        text = new OsuSpriteText
-                        {
-                            Anchor = Anchor.Centre,
-                            Origin = Anchor.Centre,
-                            Padding = new MarginPadding(5),
-                            Font = OsuFont.Default.With(size: 12, weight: FontWeight.SemiBold),
-                            Colour = colours.B5,
+                            bank = new LabelledTextBox
+                            {
+                                Label = "Bank Name",
+                            },
+                            volume = new IndeterminateSliderWithTextBoxInput<int>("Volume", new BindableInt(100)
+                            {
+                                MinValue = DrawableHitObject.MINIMUM_SAMPLE_VOLUME,
+                                MaxValue = 100,
+                            })
                         }
                     }
-                },
-            };
+                };
 
-            volume.BindValueChanged(volume => volumeBox.Height = max_volume_height * volume.NewValue / 100f, true);
-            bank.BindValueChanged(bank => text.Text = bank.NewValue, true);
+                bank.TabbableContentContainer = flow;
+                volume.TabbableContentContainer = flow;
+
+                // if the piece belongs to a currently selected object, assume that the user wants to change all selected objects.
+                // if the piece belongs to an unselected object, operate on that object alone, independently of the selection.
+                var relevantObjects = (beatmap.SelectedHitObjects.Contains(hitObject) ? beatmap.SelectedHitObjects : hitObject.Yield()).ToArray();
+                var relevantSamples = relevantObjects.Select(h => h.Samples).ToArray();
+
+                // even if there are multiple objects selected, we can still display sample volume or bank if they all have the same value.
+                string? commonBank = getCommonBank(relevantSamples);
+                if (!string.IsNullOrEmpty(commonBank))
+                    bank.Current.Value = commonBank;
+
+                int? commonVolume = getCommonVolume(relevantSamples);
+                if (commonVolume != null)
+                    volume.Current.Value = commonVolume.Value;
+
+                updateBankPlaceholderText(relevantObjects);
+                bank.Current.BindValueChanged(val =>
+                {
+                    updateBankFor(relevantObjects, val.NewValue);
+                    updateBankPlaceholderText(relevantObjects);
+                });
+                // on commit, ensure that the value is correct by sourcing it from the objects' samples again.
+                // this ensures that committing empty text causes a revert to the previous value.
+                bank.OnCommit += (_, _) => bank.Current.Value = getCommonBank(relevantSamples);
+
+                volume.Current.BindValueChanged(val => updateVolumeFor(relevantObjects, val.NewValue));
+            }
+
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+                ScheduleAfterChildren(() => GetContainingInputManager().ChangeFocus(volume));
+            }
+
+            private static string? getCommonBank(IList<HitSampleInfo>[] relevantSamples) => relevantSamples.Select(GetBankValue).Distinct().Count() == 1 ? GetBankValue(relevantSamples.First()) : null;
+            private static int? getCommonVolume(IList<HitSampleInfo>[] relevantSamples) => relevantSamples.Select(GetVolumeValue).Distinct().Count() == 1 ? GetVolumeValue(relevantSamples.First()) : null;
+
+            private void updateBankFor(IEnumerable<HitObject> objects, string? newBank)
+            {
+                if (string.IsNullOrEmpty(newBank))
+                    return;
+
+                beatmap.BeginChange();
+
+                foreach (var h in objects)
+                {
+                    for (int i = 0; i < h.Samples.Count; i++)
+                    {
+                        h.Samples[i] = h.Samples[i].With(newBank: newBank);
+                    }
+
+                    beatmap.Update(h);
+                }
+
+                beatmap.EndChange();
+            }
+
+            private void updateBankPlaceholderText(IEnumerable<HitObject> objects)
+            {
+                string? commonBank = getCommonBank(objects.Select(h => h.Samples).ToArray());
+                bank.PlaceholderText = string.IsNullOrEmpty(commonBank) ? "(multiple)" : string.Empty;
+            }
+
+            private void updateVolumeFor(IEnumerable<HitObject> objects, int? newVolume)
+            {
+                if (newVolume == null)
+                    return;
+
+                beatmap.BeginChange();
+
+                foreach (var h in objects)
+                {
+                    for (int i = 0; i < h.Samples.Count; i++)
+                    {
+                        h.Samples[i] = h.Samples[i].With(newVolume: newVolume.Value);
+                    }
+
+                    beatmap.Update(h);
+                }
+
+                beatmap.EndChange();
+            }
         }
     }
 }

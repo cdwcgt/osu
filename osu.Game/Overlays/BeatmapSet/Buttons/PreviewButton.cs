@@ -8,24 +8,23 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Input.Events;
 using osu.Game.Audio;
-using osu.Game.Beatmaps;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
-using osu.Game.Overlays.BeatmapListing.Panels;
+using osu.Game.Online.API.Requests.Responses;
 using osuTK;
 
 namespace osu.Game.Overlays.BeatmapSet.Buttons
 {
-    public class PreviewButton : OsuClickableContainer
+    public partial class PreviewButton : OsuClickableContainer
     {
         private readonly Box background, progress;
         private readonly PlayButton playButton;
 
-        private PreviewTrack preview => playButton.Preview;
+        private PreviewTrack? preview => playButton.Preview;
 
         public IBindable<bool> Playing => playButton.Playing;
 
-        public BeatmapSetInfo BeatmapSet
+        public APIBeatmapSet BeatmapSet
         {
             get => playButton.BeatmapSet;
             set => playButton.BeatmapSet = value;
@@ -63,7 +62,7 @@ namespace osu.Game.Overlays.BeatmapSet.Buttons
                 },
             };
 
-            Action = () => playButton.Click();
+            Action = () => playButton.TriggerClick();
             Playing.ValueChanged += playing => progress.FadeTo(playing.NewValue ? 1 : 0, 100);
         }
 

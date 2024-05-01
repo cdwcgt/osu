@@ -2,48 +2,123 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using osu.Framework.Extensions;
+using osu.Framework.Extensions.EnumExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input.Bindings;
 using osu.Framework.IO.Stores;
+using osu.Framework.Localisation;
 using osu.Game.Beatmaps;
-using osu.Game.Overlays.Settings;
-using osu.Game.Rulesets.Edit;
-using osu.Game.Rulesets.Mods;
-using osu.Game.Rulesets.Replays.Types;
-using osu.Game.Rulesets.UI;
 using osu.Game.Beatmaps.Legacy;
 using osu.Game.Configuration;
+using osu.Game.Extensions;
+using osu.Game.Overlays.Settings;
 using osu.Game.Rulesets.Configuration;
 using osu.Game.Rulesets.Difficulty;
+using osu.Game.Rulesets.Edit;
+using osu.Game.Rulesets.Filter;
+using osu.Game.Rulesets.Mods;
+using osu.Game.Rulesets.Replays.Types;
 using osu.Game.Rulesets.Scoring;
+using osu.Game.Rulesets.UI;
 using osu.Game.Scoring;
+using osu.Game.Screens.Edit.Setup;
+using osu.Game.Screens.Ranking.Statistics;
 using osu.Game.Skinning;
 using osu.Game.Users;
-using JetBrains.Annotations;
-using osu.Framework.Extensions;
-using osu.Framework.Extensions.EnumExtensions;
-using osu.Framework.Testing;
-using osu.Game.Rulesets.Filter;
-using osu.Game.Screens.Ranking.Statistics;
 
 namespace osu.Game.Rulesets
 {
-    [ExcludeFromDynamicCompile]
     public abstract class Ruleset
     {
-        public RulesetInfo RulesetInfo { get; internal set; }
+        public RulesetInfo RulesetInfo { get; }
 
-        public IEnumerable<Mod> GetAllMods() => Enum.GetValues(typeof(ModType)).Cast<ModType>()
-                                                    // Confine all mods of each mod type into a single IEnumerable<Mod>
-                                                    .SelectMany(GetModsFor)
-                                                    // Filter out all null mods
-                                                    .Where(mod => mod != null)
-                                                    // Resolve MultiMods as their .Mods property
-                                                    .SelectMany(mod => (mod as MultiMod)?.Mods ?? new[] { mod });
+        private static readonly ConcurrentDictionary<string, IMod[]> mod_reference_cache = new ConcurrentDictionary<string, IMod[]>();
 
+        /// <summary>
+        /// Version history:
+        /// 2022.205.0   FramedReplayInputHandler.CollectPendingInputs renamed to FramedReplayHandler.CollectReplayInputs.
+        /// 2022.822.0   All strings return values have been converted to LocalisableString to allow for localisation support.
+        /// </summary>
+        public const string CURRENT_RULESET_API_VERSION = "2022.822.0";
+
+        /// <summary>
+        /// Define the ruleset API version supported by this ruleset.
+        /// Ruleset implementations should be updated to support the latest version to ensure they can still be loaded.
+        /// </summary>
+        /// <remarks>
+        /// Generally, all ruleset implementations should point this directly to <see cref="CURRENT_RULESET_API_VERSION"/>.
+        /// This will ensure that each time you compile a new release, it will pull in the most recent version.
+        /// See https://github.com/ppy/osu/wiki/Breaking-Changes for full details on required ongoing changes.
+        /// </remarks>
+        public virtual string RulesetAPIVersionSupported => string.Empty;
+
+        /// <summary>
+        /// A queryable source containing all available mods.
+        /// Call <see cref="IMod.CreateInstance"/> for consumption purposes.
+        /// </summary>
+        public IEnumerable<IMod> AllMods
+        {
+            get
+            {
+                // Is the case for many test usages.
+                if (string.IsNullOrEmpty(ShortName))
+                    return CreateAllMods();
+
+                if (!mod_reference_cache.TryGetValue(ShortName, out var mods))
+                    mod_reference_cache[ShortName] = mods = CreateAllMods().Cast<IMod>().ToArray();
+
+                return mods;
+            }
+        }
+
+        /// <summary>
+        /// Returns fresh instances of all mods.
+        /// </summary>
+        /// <remarks>
+        /// This comes with considerable allocation overhead. If only accessing for reference purposes (ie. not changing bindables / settings)
+        /// use <see cref="AllMods"/> instead.
+        /// </remarks>
+        public IEnumerable<Mod> CreateAllMods() => Enum.GetValues<ModType>()
+                                                       // Confine all mods of each mod type into a single IEnumerable<Mod>
+                                                       .SelectMany(GetModsFor)
+                                                       // Filter out all null mods
+                                                       // This is to handle old rulesets which were doing mods bad. Can be removed at some point we are sure nulls will not appear here.
+                                                       // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
+                                                       .Where(mod => mod != null)
+                                                       // Resolve MultiMods as their .Mods property
+                                                       .SelectMany(mod => (mod as MultiMod)?.Mods ?? new[] { mod });
+
+        /// <summary>
+        /// Returns a fresh instance of the mod matching the specified acronym.
+        /// </summary>
+        /// <param name="acronym">The acronym to query for .</param>
+        public Mod? CreateModFromAcronym(string acronym)
+        {
+            return AllMods.FirstOrDefault(m => m.Acronym == acronym)?.CreateInstance();
+        }
+
+        /// <summary>
+        /// Returns a fresh instance of the mod matching the specified type.
+        /// </summary>
+        public T? CreateMod<T>()
+            where T : Mod
+        {
+            return AllMods.FirstOrDefault(m => m is T)?.CreateInstance() as T;
+        }
+
+        /// <summary>
+        /// Creates an enumerable with mods that are supported by the ruleset for the supplied <paramref name="type"/>.
+        /// </summary>
+        /// <remarks>
+        /// If there are no applicable mods from the given <paramref name="type"/> in this ruleset,
+        /// then the proper behaviour is to return an empty enumerable.
+        /// <see langword="null"/> mods should not be present in the returned enumerable.
+        /// </remarks>
         public abstract IEnumerable<Mod> GetModsFor(ModType type);
 
         /// <summary>
@@ -66,56 +141,60 @@ namespace osu.Game.Rulesets
             {
                 switch (mod)
                 {
-                    case ModNoFail _:
+                    case ModNoFail:
                         value |= LegacyMods.NoFail;
                         break;
 
-                    case ModEasy _:
+                    case ModEasy:
                         value |= LegacyMods.Easy;
                         break;
 
-                    case ModHidden _:
+                    case ModHidden:
                         value |= LegacyMods.Hidden;
                         break;
 
-                    case ModHardRock _:
+                    case ModHardRock:
                         value |= LegacyMods.HardRock;
                         break;
 
-                    case ModPerfect _:
-                        value |= LegacyMods.Perfect;
+                    case ModPerfect:
+                        value |= LegacyMods.Perfect | LegacyMods.SuddenDeath;
                         break;
 
-                    case ModSuddenDeath _:
+                    case ModSuddenDeath:
                         value |= LegacyMods.SuddenDeath;
                         break;
 
-                    case ModNightcore _:
-                        value |= LegacyMods.Nightcore;
+                    case ModNightcore:
+                        value |= LegacyMods.Nightcore | LegacyMods.DoubleTime;
                         break;
 
-                    case ModDoubleTime _:
+                    case ModDoubleTime:
                         value |= LegacyMods.DoubleTime;
                         break;
 
-                    case ModRelax _:
+                    case ModRelax:
                         value |= LegacyMods.Relax;
                         break;
 
-                    case ModHalfTime _:
+                    case ModHalfTime:
                         value |= LegacyMods.HalfTime;
                         break;
 
-                    case ModFlashlight _:
+                    case ModFlashlight:
                         value |= LegacyMods.Flashlight;
                         break;
 
-                    case ModCinema _:
-                        value |= LegacyMods.Cinema;
+                    case ModCinema:
+                        value |= LegacyMods.Cinema | LegacyMods.Autoplay;
                         break;
 
-                    case ModAutoplay _:
+                    case ModAutoplay:
                         value |= LegacyMods.Autoplay;
+                        break;
+
+                    case ModScoreV2:
+                        value |= LegacyMods.ScoreV2;
                         break;
                 }
             }
@@ -123,10 +202,17 @@ namespace osu.Game.Rulesets
             return value;
         }
 
-        [CanBeNull]
-        public ModAutoplay GetAutoplayMod() => GetAllMods().OfType<ModAutoplay>().FirstOrDefault();
+        public ModAutoplay? GetAutoplayMod() => CreateMod<ModAutoplay>();
 
-        public virtual ISkin CreateLegacySkinProvider(ISkinSource source, IBeatmap beatmap) => null;
+        public ModTouchDevice? GetTouchDeviceMod() => CreateMod<ModTouchDevice>();
+
+        /// <summary>
+        /// Create a transformer which adds lookups specific to a ruleset to skin sources.
+        /// </summary>
+        /// <param name="skin">The source skin.</param>
+        /// <param name="beatmap">The current beatmap.</param>
+        /// <returns>A skin with a transformer applied, or null if no transformation is provided by this ruleset.</returns>
+        public virtual ISkin? CreateSkinTransformer(ISkin skin, IBeatmap beatmap) => null;
 
         protected Ruleset()
         {
@@ -134,8 +220,8 @@ namespace osu.Game.Rulesets
             {
                 Name = Description,
                 ShortName = ShortName,
-                ID = (this as ILegacyRuleset)?.LegacyID,
-                InstantiationInfo = GetType().AssemblyQualifiedName,
+                OnlineID = (this as ILegacyRuleset)?.LegacyID ?? -1,
+                InstantiationInfo = GetType().GetInvariantInstantiationInfo(),
                 Available = true,
             };
         }
@@ -146,13 +232,13 @@ namespace osu.Game.Rulesets
         /// <param name="beatmap">The beatmap to create the hit renderer for.</param>
         /// <param name="mods">The <see cref="Mod"/>s to apply.</param>
         /// <exception cref="BeatmapInvalidForRulesetException">Unable to successfully load the beatmap to be usable with this ruleset.</exception>
-        public abstract DrawableRuleset CreateDrawableRulesetWith(IBeatmap beatmap, IReadOnlyList<Mod> mods = null);
+        public abstract DrawableRuleset CreateDrawableRulesetWith(IBeatmap beatmap, IReadOnlyList<Mod>? mods = null);
 
         /// <summary>
         /// Creates a <see cref="ScoreProcessor"/> for this <see cref="Ruleset"/>.
         /// </summary>
         /// <returns>The score processor.</returns>
-        public virtual ScoreProcessor CreateScoreProcessor() => new ScoreProcessor();
+        public virtual ScoreProcessor CreateScoreProcessor() => new ScoreProcessor(this);
 
         /// <summary>
         /// Creates a <see cref="HealthProcessor"/> for this <see cref="Ruleset"/>.
@@ -172,36 +258,19 @@ namespace osu.Game.Rulesets
         /// </summary>
         /// <param name="beatmap">The <see cref="IBeatmap"/> to be processed.</param>
         /// <returns>The <see cref="IBeatmapProcessor"/>.</returns>
-        public virtual IBeatmapProcessor CreateBeatmapProcessor(IBeatmap beatmap) => null;
+        public virtual IBeatmapProcessor? CreateBeatmapProcessor(IBeatmap beatmap) => null;
 
-        public abstract DifficultyCalculator CreateDifficultyCalculator(WorkingBeatmap beatmap);
-
-        /// <summary>
-        /// Optionally creates a <see cref="PerformanceCalculator"/> to generate performance data from the provided score.
-        /// </summary>
-        /// <param name="attributes">Difficulty attributes for the beatmap related to the provided score.</param>
-        /// <param name="score">The score to be processed.</param>
-        /// <returns>A performance calculator instance for the provided score.</returns>
-        [CanBeNull]
-        public virtual PerformanceCalculator CreatePerformanceCalculator(DifficultyAttributes attributes, ScoreInfo score) => null;
+        public abstract DifficultyCalculator CreateDifficultyCalculator(IWorkingBeatmap beatmap);
 
         /// <summary>
         /// Optionally creates a <see cref="PerformanceCalculator"/> to generate performance data from the provided score.
         /// </summary>
-        /// <param name="beatmap">The beatmap to use as a source for generating <see cref="DifficultyAttributes"/>.</param>
-        /// <param name="score">The score to be processed.</param>
         /// <returns>A performance calculator instance for the provided score.</returns>
-        [CanBeNull]
-        public PerformanceCalculator CreatePerformanceCalculator(WorkingBeatmap beatmap, ScoreInfo score)
-        {
-            var difficultyCalculator = CreateDifficultyCalculator(beatmap);
-            var difficultyAttributes = difficultyCalculator.Calculate(score.Mods);
-            return CreatePerformanceCalculator(difficultyAttributes, score);
-        }
+        public virtual PerformanceCalculator? CreatePerformanceCalculator() => null;
 
-        public virtual HitObjectComposer CreateHitObjectComposer() => null;
+        public virtual HitObjectComposer? CreateHitObjectComposer() => null;
 
-        public virtual IBeatmapVerifier CreateBeatmapVerifier() => null;
+        public virtual IBeatmapVerifier? CreateBeatmapVerifier() => null;
 
         public virtual Drawable CreateIcon() => new SpriteIcon { Icon = FontAwesome.Solid.QuestionCircle };
 
@@ -209,13 +278,13 @@ namespace osu.Game.Rulesets
 
         public abstract string Description { get; }
 
-        public virtual RulesetSettingsSubsection CreateSettings() => null;
+        public virtual RulesetSettingsSubsection? CreateSettings() => null;
 
         /// <summary>
         /// Creates the <see cref="IRulesetConfigManager"/> for this <see cref="Ruleset"/>.
         /// </summary>
         /// <param name="settings">The <see cref="SettingsStore"/> to store the settings.</param>
-        public virtual IRulesetConfigManager CreateConfig(SettingsStore settings) => null;
+        public virtual IRulesetConfigManager? CreateConfig(SettingsStore? settings) => null;
 
         /// <summary>
         /// A unique short name to reference this ruleset in online requests.
@@ -223,9 +292,9 @@ namespace osu.Game.Rulesets
         public abstract string ShortName { get; }
 
         /// <summary>
-        /// The playing verb to be shown in the <see cref="UserActivity.SoloGame.Status"/>.
+        /// The playing verb to be shown in the <see cref="UserActivity.InGame"/> activities.
         /// </summary>
-        public virtual string PlayingVerb => "Playing solo";
+        public virtual string PlayingVerb => "Playing";
 
         /// <summary>
         /// A list of available variant ids.
@@ -244,23 +313,22 @@ namespace osu.Game.Rulesets
         /// </summary>
         /// <param name="variant">The variant.</param>
         /// <returns>A descriptive name of the variant.</returns>
-        public virtual string GetVariantName(int variant) => string.Empty;
+        public virtual LocalisableString GetVariantName(int variant) => string.Empty;
 
         /// <summary>
         /// For rulesets which support legacy (osu-stable) replay conversion, this method will create an empty replay frame
         /// for conversion use.
         /// </summary>
         /// <returns>An empty frame for the current ruleset, or null if unsupported.</returns>
-        public virtual IConvertibleReplayFrame CreateConvertibleReplayFrame() => null;
+        public virtual IConvertibleReplayFrame? CreateConvertibleReplayFrame() => null;
 
         /// <summary>
         /// Creates the statistics for a <see cref="ScoreInfo"/> to be displayed in the results screen.
         /// </summary>
         /// <param name="score">The <see cref="ScoreInfo"/> to create the statistics for. The score is guaranteed to have <see cref="ScoreInfo.HitEvents"/> populated.</param>
         /// <param name="playableBeatmap">The <see cref="IBeatmap"/>, converted for this <see cref="Ruleset"/> with all relevant <see cref="Mod"/>s applied.</param>
-        /// <returns>The <see cref="StatisticRow"/>s to display. Each <see cref="StatisticRow"/> may contain 0 or more <see cref="StatisticItem"/>.</returns>
-        [NotNull]
-        public virtual StatisticRow[] CreateStatisticsForScore(ScoreInfo score, IBeatmap playableBeatmap) => Array.Empty<StatisticRow>();
+        /// <returns>The <see cref="StatisticItem"/>s to display.</returns>
+        public virtual StatisticItem[] CreateStatisticsForScore(ScoreInfo score, IBeatmap playableBeatmap) => Array.Empty<StatisticItem>();
 
         /// <summary>
         /// Get all valid <see cref="HitResult"/>s for this ruleset.
@@ -269,7 +337,7 @@ namespace osu.Game.Rulesets
         /// <returns>
         /// All valid <see cref="HitResult"/>s along with a display-friendly name.
         /// </returns>
-        public IEnumerable<(HitResult result, string displayName)> GetHitResults()
+        public IEnumerable<(HitResult result, LocalisableString displayName)> GetHitResults()
         {
             var validResults = GetValidHitResults();
 
@@ -307,12 +375,32 @@ namespace osu.Game.Rulesets
         /// </summary>
         /// <param name="result">The result type to get the name for.</param>
         /// <returns>The display name.</returns>
-        public virtual string GetDisplayNameForHitResult(HitResult result) => result.GetDescription();
+        public virtual LocalisableString GetDisplayNameForHitResult(HitResult result) => result.GetLocalisableDescription();
+
+        /// <summary>
+        /// Applies changes to difficulty attributes for presenting to a user a rough estimate of how rate adjust mods affect difficulty.
+        /// Importantly, this should NOT BE USED FOR ANY CALCULATIONS.
+        ///
+        /// It is also not always correct, and arguably is never correct depending on your frame of mind.
+        /// </summary>
+        /// <param name="difficulty">>The <see cref="IBeatmapDifficultyInfo"/> that will be adjusted.</param>
+        /// <param name="rate">The rate adjustment multiplier from mods. For example 1.5 for DT.</param>
+        /// <returns>The adjusted difficulty attributes.</returns>
+        public virtual BeatmapDifficulty GetRateAdjustedDisplayDifficulty(IBeatmapDifficultyInfo difficulty, double rate) => new BeatmapDifficulty(difficulty);
 
         /// <summary>
         /// Creates ruleset-specific beatmap filter criteria to be used on the song select screen.
         /// </summary>
-        [CanBeNull]
-        public virtual IRulesetFilterCriteria CreateRulesetFilterCriteria() => null;
+        public virtual IRulesetFilterCriteria? CreateRulesetFilterCriteria() => null;
+
+        /// <summary>
+        /// Can be overridden to add a ruleset-specific section to the editor beatmap setup screen.
+        /// </summary>
+        public virtual RulesetSetupSection? CreateEditorSetupSection() => null;
+
+        /// <summary>
+        /// Can be overridden to alter the difficulty section to the editor beatmap setup screen.
+        /// </summary>
+        public virtual DifficultySection? CreateEditorDifficultySection() => null;
     }
 }

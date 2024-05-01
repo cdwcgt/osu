@@ -2,8 +2,10 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using osu.Framework;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Configuration;
@@ -13,74 +15,112 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Localisation;
 using osu.Framework.Platform;
+using osu.Framework.Platform.Windows;
 using osu.Game.Configuration;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Localisation;
+using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Overlays.Settings.Sections.Graphics
 {
-    public class LayoutSettings : SettingsSubsection
+    public partial class LayoutSettings : SettingsSubsection
     {
-        protected override string Header => "Layout";
+        protected override LocalisableString Header => GraphicsSettingsStrings.LayoutHeader;
 
-        private FillFlowContainer<SettingsSlider<float>> scalingSettings;
+        private FillFlowContainer<SettingsSlider<float>> scalingSettings = null!;
+        private SettingsSlider<float> dimSlider = null!;
 
-        private readonly IBindable<Display> currentDisplay = new Bindable<Display>();
-        private readonly IBindableList<WindowMode> windowModes = new BindableList<WindowMode>();
+        private readonly Bindable<Display> currentDisplay = new Bindable<Display>();
 
-        private Bindable<ScalingMode> scalingMode;
-        private Bindable<Size> sizeFullscreen;
+        private Bindable<ScalingMode> scalingMode = null!;
+        private Bindable<Size> sizeFullscreen = null!;
 
         private readonly BindableList<Size> resolutions = new BindableList<Size>(new[] { new Size(9999, 9999) });
+        private readonly IBindable<FullscreenCapability> fullscreenCapability = new Bindable<FullscreenCapability>(FullscreenCapability.Capable);
 
         [Resolved]
-        private OsuGameBase game { get; set; }
+        private OsuGameBase game { get; set; } = null!;
 
-        private SettingsDropdown<Size> resolutionDropdown;
-        private SettingsDropdown<WindowMode> windowModeDropdown;
+        [Resolved]
+        private GameHost host { get; set; } = null!;
 
-        private Bindable<float> scalingPositionX;
-        private Bindable<float> scalingPositionY;
-        private Bindable<float> scalingSizeX;
-        private Bindable<float> scalingSizeY;
+        private IWindow? window;
+
+        private SettingsDropdown<Size> resolutionDropdown = null!;
+        private SettingsDropdown<Display> displayDropdown = null!;
+        private SettingsDropdown<WindowMode> windowModeDropdown = null!;
+        private SettingsCheckbox minimiseOnFocusLossCheckbox = null!;
+        private SettingsCheckbox safeAreaConsiderationsCheckbox = null!;
+
+        private Bindable<float> scalingPositionX = null!;
+        private Bindable<float> scalingPositionY = null!;
+        private Bindable<float> scalingSizeX = null!;
+        private Bindable<float> scalingSizeY = null!;
+
+        private Bindable<float> scalingBackgroundDim = null!;
 
         private const int transition_duration = 400;
 
         [BackgroundDependencyLoader]
         private void load(FrameworkConfigManager config, OsuConfigManager osuConfig, GameHost host)
         {
+            window = host.Window;
+
             scalingMode = osuConfig.GetBindable<ScalingMode>(OsuSetting.Scaling);
             sizeFullscreen = config.GetBindable<Size>(FrameworkSetting.SizeFullscreen);
             scalingSizeX = osuConfig.GetBindable<float>(OsuSetting.ScalingSizeX);
             scalingSizeY = osuConfig.GetBindable<float>(OsuSetting.ScalingSizeY);
             scalingPositionX = osuConfig.GetBindable<float>(OsuSetting.ScalingPositionX);
             scalingPositionY = osuConfig.GetBindable<float>(OsuSetting.ScalingPositionY);
+            scalingBackgroundDim = osuConfig.GetBindable<float>(OsuSetting.ScalingBackgroundDim);
 
-            if (host.Window != null)
+            if (window != null)
             {
-                currentDisplay.BindTo(host.Window.CurrentDisplayBindable);
-                windowModes.BindTo(host.Window.SupportedWindowModes);
+                currentDisplay.BindTo(window.CurrentDisplayBindable);
+                window.DisplaysChanged += onDisplaysChanged;
             }
+
+            if (host.Renderer is IWindowsRenderer windowsRenderer)
+                fullscreenCapability.BindTo(windowsRenderer.FullscreenCapability);
 
             Children = new Drawable[]
             {
                 windowModeDropdown = new SettingsDropdown<WindowMode>
                 {
-                    LabelText = "Screen mode",
-                    ItemSource = windowModes,
+                    LabelText = GraphicsSettingsStrings.ScreenMode,
+                    Items = window?.SupportedWindowModes,
+                    CanBeShown = { Value = window?.SupportedWindowModes.Count() > 1 },
                     Current = config.GetBindable<WindowMode>(FrameworkSetting.WindowMode),
+                },
+                displayDropdown = new DisplaySettingsDropdown
+                {
+                    LabelText = GraphicsSettingsStrings.Display,
+                    Items = window?.Displays,
+                    Current = currentDisplay,
                 },
                 resolutionDropdown = new ResolutionSettingsDropdown
                 {
-                    LabelText = "Resolution",
+                    LabelText = GraphicsSettingsStrings.Resolution,
                     ShowsDefaultIndicator = false,
                     ItemSource = resolutions,
                     Current = sizeFullscreen
                 },
+                minimiseOnFocusLossCheckbox = new SettingsCheckbox
+                {
+                    LabelText = GraphicsSettingsStrings.MinimiseOnFocusLoss,
+                    Current = config.GetBindable<bool>(FrameworkSetting.MinimiseOnFocusLossInFullscreen),
+                    Keywords = new[] { "alt-tab", "minimize", "focus", "hide" },
+                },
+                safeAreaConsiderationsCheckbox = new SettingsCheckbox
+                {
+                    LabelText = GraphicsSettingsStrings.ShrinkGameToSafeArea,
+                    Current = osuConfig.GetBindable<bool>(OsuSetting.SafeAreaConsiderations),
+                },
                 new SettingsSlider<float, UIScaleSlider>
                 {
-                    LabelText = "UI Scaling",
+                    LabelText = GraphicsSettingsStrings.UIScaling,
                     TransferValueOnCommit = true,
                     Current = osuConfig.GetBindable<float>(OsuSetting.UIScale),
                     KeyboardStep = 0.01f,
@@ -88,7 +128,7 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
                 },
                 new SettingsEnumDropdown<ScalingMode>
                 {
-                    LabelText = "Screen Scaling",
+                    LabelText = GraphicsSettingsStrings.ScreenScaling,
                     Current = osuConfig.GetBindable<ScalingMode>(OsuSetting.Scaling),
                     Keywords = new[] { "scale", "letterbox" },
                 },
@@ -97,42 +137,53 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
                     Direction = FillDirection.Vertical,
                     RelativeSizeAxes = Axes.X,
                     AutoSizeAxes = Axes.Y,
-                    AutoSizeDuration = transition_duration,
-                    AutoSizeEasing = Easing.OutQuint,
                     Masking = true,
                     Children = new[]
                     {
                         new SettingsSlider<float>
                         {
-                            LabelText = "Horizontal position",
+                            LabelText = GraphicsSettingsStrings.HorizontalPosition,
+                            Keywords = new[] { "screen", "scaling" },
                             Current = scalingPositionX,
                             KeyboardStep = 0.01f,
                             DisplayAsPercentage = true
                         },
                         new SettingsSlider<float>
                         {
-                            LabelText = "Vertical position",
+                            LabelText = GraphicsSettingsStrings.VerticalPosition,
+                            Keywords = new[] { "screen", "scaling" },
                             Current = scalingPositionY,
                             KeyboardStep = 0.01f,
                             DisplayAsPercentage = true
                         },
                         new SettingsSlider<float>
                         {
-                            LabelText = "Horizontal scale",
+                            LabelText = GraphicsSettingsStrings.HorizontalScale,
+                            Keywords = new[] { "screen", "scaling" },
                             Current = scalingSizeX,
                             KeyboardStep = 0.01f,
                             DisplayAsPercentage = true
                         },
                         new SettingsSlider<float>
                         {
-                            LabelText = "Vertical scale",
+                            LabelText = GraphicsSettingsStrings.VerticalScale,
+                            Keywords = new[] { "screen", "scaling" },
                             Current = scalingSizeY,
                             KeyboardStep = 0.01f,
                             DisplayAsPercentage = true
                         },
+                        dimSlider = new SettingsSlider<float>
+                        {
+                            LabelText = GameplaySettingsStrings.BackgroundDim,
+                            Current = scalingBackgroundDim,
+                            KeyboardStep = 0.01f,
+                            DisplayAsPercentage = true,
+                        },
                     }
                 },
             };
+
+            fullscreenCapability.BindValueChanged(_ => Schedule(updateScreenModeWarning), true);
         }
 
         protected override void LoadComplete()
@@ -141,49 +192,119 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
 
             scalingSettings.ForEach(s => bindPreviewEvent(s.Current));
 
-            windowModeDropdown.Current.ValueChanged += _ => updateResolutionDropdown();
-
-            windowModes.BindCollectionChanged((sender, args) =>
+            windowModeDropdown.Current.BindValueChanged(_ =>
             {
-                if (windowModes.Count > 1)
-                    windowModeDropdown.Show();
-                else
-                    windowModeDropdown.Hide();
+                updateDisplaySettingsVisibility();
+                updateScreenModeWarning();
             }, true);
 
             currentDisplay.BindValueChanged(display => Schedule(() =>
             {
-                resolutions.RemoveRange(1, resolutions.Count - 1);
-
-                if (display.NewValue != null)
+                if (display.NewValue == null)
                 {
-                    resolutions.AddRange(display.NewValue.DisplayModes
-                                                .Where(m => m.Size.Width >= 800 && m.Size.Height >= 600)
-                                                .OrderByDescending(m => Math.Max(m.Size.Height, m.Size.Width))
-                                                .Select(m => m.Size)
-                                                .Distinct());
+                    resolutions.Clear();
+                    return;
                 }
 
-                updateResolutionDropdown();
+                resolutions.ReplaceRange(1, resolutions.Count - 1, display.NewValue.DisplayModes
+                                                                          .Where(m => m.Size.Width >= 800 && m.Size.Height >= 600)
+                                                                          .OrderByDescending(m => Math.Max(m.Size.Height, m.Size.Width))
+                                                                          .Select(m => m.Size)
+                                                                          .Distinct());
+
+                updateDisplaySettingsVisibility();
             }), true);
 
-            scalingMode.BindValueChanged(mode =>
+            scalingMode.BindValueChanged(_ =>
             {
                 scalingSettings.ClearTransforms();
-                scalingSettings.AutoSizeAxes = mode.NewValue != ScalingMode.Off ? Axes.Y : Axes.None;
+                scalingSettings.AutoSizeDuration = transition_duration;
+                scalingSettings.AutoSizeEasing = Easing.OutQuint;
 
-                if (mode.NewValue == ScalingMode.Off)
+                updateScalingModeVisibility();
+            });
+
+            // initial update bypasses transforms
+            updateScalingModeVisibility();
+
+            void updateScalingModeVisibility()
+            {
+                if (scalingMode.Value == ScalingMode.Off)
                     scalingSettings.ResizeHeightTo(0, transition_duration, Easing.OutQuint);
 
-                scalingSettings.ForEach(s => s.TransferValueOnCommit = mode.NewValue == ScalingMode.Everything);
-            }, true);
+                scalingSettings.AutoSizeAxes = scalingMode.Value != ScalingMode.Off ? Axes.Y : Axes.None;
+                scalingSettings.ForEach(s =>
+                {
+                    if (s == dimSlider)
+                    {
+                        s.CanBeShown.Value = scalingMode.Value == ScalingMode.Everything || scalingMode.Value == ScalingMode.ExcludeOverlays;
+                    }
+                    else
+                    {
+                        s.TransferValueOnCommit = scalingMode.Value == ScalingMode.Everything;
+                        s.CanBeShown.Value = scalingMode.Value != ScalingMode.Off;
+                    }
+                });
+            }
+        }
 
-            void updateResolutionDropdown()
+        private void onDisplaysChanged(IEnumerable<Display> displays)
+        {
+            Scheduler.AddOnce(d =>
             {
-                if (resolutions.Count > 1 && windowModeDropdown.Current.Value == WindowMode.Fullscreen)
-                    resolutionDropdown.Show();
+                if (!displayDropdown.Items.SequenceEqual(d, DisplayListComparer.DEFAULT))
+                    displayDropdown.Items = d;
+                updateDisplaySettingsVisibility();
+            }, displays);
+        }
+
+        private void updateDisplaySettingsVisibility()
+        {
+            resolutionDropdown.CanBeShown.Value = resolutions.Count > 1 && windowModeDropdown.Current.Value == WindowMode.Fullscreen;
+            displayDropdown.CanBeShown.Value = displayDropdown.Items.Count() > 1;
+            minimiseOnFocusLossCheckbox.CanBeShown.Value = RuntimeInfo.IsDesktop && windowModeDropdown.Current.Value == WindowMode.Fullscreen;
+            safeAreaConsiderationsCheckbox.CanBeShown.Value = host.Window?.SafeAreaPadding.Value.Total != Vector2.Zero;
+        }
+
+        private void updateScreenModeWarning()
+        {
+            if (RuntimeInfo.OS == RuntimeInfo.Platform.macOS)
+            {
+                if (windowModeDropdown.Current.Value == WindowMode.Fullscreen)
+                    windowModeDropdown.SetNoticeText(LayoutSettingsStrings.FullscreenMacOSNote, true);
                 else
-                    resolutionDropdown.Hide();
+                    windowModeDropdown.ClearNoticeText();
+
+                return;
+            }
+
+            if (windowModeDropdown.Current.Value != WindowMode.Fullscreen)
+            {
+                windowModeDropdown.SetNoticeText(GraphicsSettingsStrings.NotFullscreenNote, true);
+                return;
+            }
+
+            if (host.Renderer is IWindowsRenderer)
+            {
+                switch (fullscreenCapability.Value)
+                {
+                    case FullscreenCapability.Unknown:
+                        windowModeDropdown.SetNoticeText(LayoutSettingsStrings.CheckingForFullscreenCapabilities, true);
+                        break;
+
+                    case FullscreenCapability.Capable:
+                        windowModeDropdown.SetNoticeText(LayoutSettingsStrings.OsuIsRunningExclusiveFullscreen);
+                        break;
+
+                    case FullscreenCapability.Incapable:
+                        windowModeDropdown.SetNoticeText(LayoutSettingsStrings.UnableToRunExclusiveFullscreen, true);
+                        break;
+                }
+            }
+            else
+            {
+                // We can only detect exclusive fullscreen status on windows currently.
+                windowModeDropdown.ClearNoticeText();
             }
         }
 
@@ -200,7 +321,7 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
             };
         }
 
-        private Drawable preview;
+        private Drawable? preview;
 
         private void showPreview()
         {
@@ -211,7 +332,15 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
             preview.Expire();
         }
 
-        private class ScalingPreview : ScalingContainer
+        protected override void Dispose(bool isDisposing)
+        {
+            if (window != null)
+                window.DisplaysChanged -= onDisplaysChanged;
+
+            base.Dispose(isDisposing);
+        }
+
+        private partial class ScalingPreview : ScalingContainer
         {
             public ScalingPreview()
             {
@@ -224,24 +353,75 @@ namespace osu.Game.Overlays.Settings.Sections.Graphics
             }
         }
 
-        private class UIScaleSlider : OsuSliderBar<float>
+        private partial class UIScaleSlider : RoundedSliderBar<float>
         {
-            public override string TooltipText => base.TooltipText + "x";
+            public override LocalisableString TooltipText => base.TooltipText + "x";
         }
 
-        private class ResolutionSettingsDropdown : SettingsDropdown<Size>
+        private partial class DisplaySettingsDropdown : SettingsDropdown<Display>
+        {
+            protected override OsuDropdown<Display> CreateDropdown() => new DisplaySettingsDropdownControl();
+
+            private partial class DisplaySettingsDropdownControl : DropdownControl
+            {
+                protected override LocalisableString GenerateItemText(Display item)
+                {
+                    return $"{item.Index}: {item.Name} ({item.Bounds.Width}x{item.Bounds.Height})";
+                }
+            }
+        }
+
+        private partial class ResolutionSettingsDropdown : SettingsDropdown<Size>
         {
             protected override OsuDropdown<Size> CreateDropdown() => new ResolutionDropdownControl();
 
-            private class ResolutionDropdownControl : DropdownControl
+            private partial class ResolutionDropdownControl : DropdownControl
             {
                 protected override LocalisableString GenerateItemText(Size item)
                 {
                     if (item == new Size(9999, 9999))
-                        return "Default";
+                        return CommonStrings.Default;
 
                     return $"{item.Width}x{item.Height}";
                 }
+            }
+        }
+
+        /// <summary>
+        /// Contrary to <see cref="Display.Equals(osu.Framework.Platform.Display?)"/>, this comparer disregards the value of <see cref="Display.Bounds"/>.
+        /// We want to just show a list of displays, and for the purposes of settings we don't care about their bounds when it comes to the list.
+        /// However, <see cref="IWindow.DisplaysChanged"/> fires even if only the resolution of the current display was changed
+        /// (because it causes the bounds of all displays to also change).
+        /// We're not interested in those changes, so compare only the rest that we actually care about.
+        /// This helps to avoid a bindable/event feedback loop, in which a resolution change
+        /// would trigger a display "change", which would in turn reset resolution again.
+        /// </summary>
+        private class DisplayListComparer : IEqualityComparer<Display>
+        {
+            public static readonly DisplayListComparer DEFAULT = new DisplayListComparer();
+
+            public bool Equals(Display? x, Display? y)
+            {
+                if (ReferenceEquals(x, y)) return true;
+                if (ReferenceEquals(x, null)) return false;
+                if (ReferenceEquals(y, null)) return false;
+
+                return x.Index == y.Index
+                       && x.Name == y.Name
+                       && x.DisplayModes.SequenceEqual(y.DisplayModes);
+            }
+
+            public int GetHashCode(Display obj)
+            {
+                var hashCode = new HashCode();
+
+                hashCode.Add(obj.Index);
+                hashCode.Add(obj.Name);
+                hashCode.Add(obj.DisplayModes.Length);
+                foreach (var displayMode in obj.DisplayModes)
+                    hashCode.Add(displayMode);
+
+                return hashCode.ToHashCode();
             }
         }
     }

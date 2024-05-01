@@ -15,33 +15,37 @@ using osu.Game.Overlays.Settings;
 using osu.Game.Screens.Menu;
 using osuTK;
 using osuTK.Graphics;
+using osu.Game.Localisation;
 
 namespace osu.Game.Overlays.AccountCreation
 {
-    public class ScreenWarning : AccountCreationScreen
+    public partial class ScreenWarning : AccountCreationScreen
     {
-        private OsuTextFlowContainer multiAccountExplanationText;
-        private LinkFlowContainer furtherAssistance;
+        private OsuTextFlowContainer multiAccountExplanationText = null!;
+        private LinkFlowContainer furtherAssistance = null!;
 
-        [Resolved(CanBeNull = true)]
-        private IAPIProvider api { get; set; }
+        [Resolved]
+        private IAPIProvider? api { get; set; }
+
+        [Resolved]
+        private OsuGame? game { get; set; }
 
         private const string help_centre_url = "/help/wiki/Help_Centre#login";
 
-        public override void OnEntering(IScreen last)
+        public override void OnEntering(ScreenTransitionEvent e)
         {
-            if (string.IsNullOrEmpty(api?.ProvidedUsername))
+            if (string.IsNullOrEmpty(api?.ProvidedUsername) || game?.UseDevelopmentServer == true)
             {
                 this.FadeOut();
                 this.Push(new ScreenEntry());
                 return;
             }
 
-            base.OnEntering(last);
+            base.OnEntering(e);
         }
 
         [BackgroundDependencyLoader(true)]
-        private void load(OsuColour colours, OsuGame game, TextureStore textures)
+        private void load(OsuColour colours, TextureStore textures)
         {
             if (string.IsNullOrEmpty(api?.ProvidedUsername))
                 return;
@@ -96,13 +100,13 @@ namespace osu.Game.Overlays.AccountCreation
                         },
                         new SettingsButton
                         {
-                            Text = "Help, I can't access my account!",
+                            Text = AccountCreationStrings.MultiAccountWarningHelp,
                             Margin = new MarginPadding { Top = 50 },
                             Action = () => game?.OpenUrlExternally(help_centre_url)
                         },
                         new DangerousSettingsButton
                         {
-                            Text = "I understand. This account isn't for me.",
+                            Text = AccountCreationStrings.MultiAccountWarningAccept,
                             Action = () => this.Push(new ScreenEntry())
                         },
                         furtherAssistance = new LinkFlowContainer(cp => cp.Font = cp.Font.With(size: 12))

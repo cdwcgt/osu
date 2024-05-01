@@ -4,32 +4,34 @@
 using System;
 using osu.Framework.Graphics.Sprites;
 using osu.Game.Overlays.Dialog;
+using osu.Game.Localisation;
 
 namespace osu.Game.Screens.Edit
 {
-    public class PromptForSaveDialog : PopupDialog
+    public partial class PromptForSaveDialog : PopupDialog
     {
-        public PromptForSaveDialog(Action exit, Action saveAndExit)
+        public PromptForSaveDialog(Action exit, Action saveAndExit, Action cancel)
         {
-            HeaderText = "Did you want to save your changes?";
+            HeaderText = EditorDialogsStrings.SaveDialogHeader;
 
             Icon = FontAwesome.Regular.Save;
 
             Buttons = new PopupDialogButton[]
             {
-                new PopupDialogCancelButton
-                {
-                    Text = @"Save my masterpiece!",
-                    Action = saveAndExit
-                },
                 new PopupDialogOkButton
                 {
-                    Text = @"Forget all changes",
+                    Text = EditorDialogsStrings.Save,
+                    Action = saveAndExit
+                },
+                new PopupDialogDangerousButton
+                {
+                    Text = EditorDialogsStrings.ForgetAllChanges,
                     Action = exit
                 },
                 new PopupDialogCancelButton
                 {
-                    Text = @"Oops, continue editing",
+                    Text = EditorDialogsStrings.ContinueEditing,
+                    Action = cancel
                 },
             };
         }

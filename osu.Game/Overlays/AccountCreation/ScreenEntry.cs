@@ -2,11 +2,11 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
-using osu.Framework.Extensions.IEnumerableExtensions;
+using osu.Framework.Bindables;
+using osu.Framework.Extensions.LocalisationExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Utils;
@@ -16,37 +16,44 @@ using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Localisation;
 using osu.Game.Online.API;
 using osu.Game.Overlays.Settings;
+using osu.Game.Resources.Localisation.Web;
 using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Overlays.AccountCreation
 {
-    public class ScreenEntry : AccountCreationScreen
+    public partial class ScreenEntry : AccountCreationScreen
     {
-        private ErrorTextFlowContainer usernameDescription;
-        private ErrorTextFlowContainer emailAddressDescription;
-        private ErrorTextFlowContainer passwordDescription;
+        private ErrorTextFlowContainer usernameDescription = null!;
+        private ErrorTextFlowContainer emailAddressDescription = null!;
+        private ErrorTextFlowContainer passwordDescription = null!;
 
-        private OsuTextBox usernameTextBox;
-        private OsuTextBox emailTextBox;
-        private OsuPasswordTextBox passwordTextBox;
-
-        [Resolved]
-        private IAPIProvider api { get; set; }
-
-        private ShakeContainer registerShake;
-        private IEnumerable<Drawable> characterCheckText;
-
-        private OsuTextBox[] textboxes;
-        private LoadingLayer loadingLayer;
+        private OsuTextBox usernameTextBox = null!;
+        private OsuTextBox emailTextBox = null!;
+        private OsuPasswordTextBox passwordTextBox = null!;
 
         [Resolved]
-        private GameHost host { get; set; }
+        private IAPIProvider api { get; set; } = null!;
+
+        private IBindable<APIState> apiState = null!;
+
+        private ShakeContainer registerShake = null!;
+        private ITextPart characterCheckText = null!;
+
+        private OsuTextBox[] textboxes = null!;
+        private LoadingLayer loadingLayer = null!;
+
+        [Resolved]
+        private GameHost? host { get; set; }
+
+        [Resolved]
+        private OsuGame? game { get; set; }
 
         [BackgroundDependencyLoader]
-        private void load(OsuColour colours)
+        private void load()
         {
             InternalChildren = new Drawable[]
             {
@@ -66,11 +73,11 @@ namespace osu.Game.Overlays.AccountCreation
                             Anchor = Anchor.TopCentre,
                             Origin = Anchor.TopCentre,
                             Font = OsuFont.GetFont(size: 20),
-                            Text = "Let's create an account!",
+                            Text = AccountCreationStrings.LetsCreateAnAccount
                         },
                         usernameTextBox = new OsuTextBox
                         {
-                            PlaceholderText = "username",
+                            PlaceholderText = UsersStrings.LoginUsername.ToLower(),
                             RelativeSizeAxes = Axes.X,
                             TabbableContentContainer = this
                         },
@@ -81,7 +88,7 @@ namespace osu.Game.Overlays.AccountCreation
                         },
                         emailTextBox = new OsuTextBox
                         {
-                            PlaceholderText = "email address",
+                            PlaceholderText = ModelValidationStrings.UserAttributesUserEmail.ToLower(),
                             RelativeSizeAxes = Axes.X,
                             TabbableContentContainer = this
                         },
@@ -92,7 +99,7 @@ namespace osu.Game.Overlays.AccountCreation
                         },
                         passwordTextBox = new OsuPasswordTextBox
                         {
-                            PlaceholderText = "password",
+                            PlaceholderText = UsersStrings.LoginPassword.ToLower(),
                             RelativeSizeAxes = Axes.X,
                             TabbableContentContainer = this,
                         },
@@ -113,7 +120,7 @@ namespace osu.Game.Overlays.AccountCreation
                                     AutoSizeAxes = Axes.Y,
                                     Child = new SettingsButton
                                     {
-                                        Text = "Register",
+                                        Text = LoginPanelStrings.Register,
                                         Margin = new MarginPadding { Vertical = 20 },
                                         Action = performRegistration
                                     }
@@ -127,30 +134,41 @@ namespace osu.Game.Overlays.AccountCreation
 
             textboxes = new[] { usernameTextBox, emailTextBox, passwordTextBox };
 
-            usernameDescription.AddText("This will be your public presence. No profanity, no impersonation. Avoid exposing your own personal details, too!");
+            usernameDescription.AddText(AccountCreationStrings.UsernameDescription);
 
-            emailAddressDescription.AddText("Will be used for notifications, account verification and in the case you forget your password. No spam, ever.");
-            emailAddressDescription.AddText(" Make sure to get it right!", cp => cp.Font = cp.Font.With(Typeface.Torus, weight: FontWeight.Bold));
+            emailAddressDescription.AddText(AccountCreationStrings.EmailDescription1);
+            emailAddressDescription.AddText(AccountCreationStrings.EmailDescription2, cp => cp.Font = cp.Font.With(Typeface.Torus, weight: FontWeight.Bold));
 
             passwordDescription.AddText("At least ");
             characterCheckText = passwordDescription.AddText("8 characters long");
             passwordDescription.AddText(". Choose something long but also something you will remember, like a line from your favourite song.");
 
-            passwordTextBox.Current.ValueChanged += password => { characterCheckText.ForEach(s => s.Colour = password.NewValue.Length == 0 ? Color4.White : Interpolation.ValueAt(password.NewValue.Length, Color4.OrangeRed, Color4.YellowGreen, 0, 8, Easing.In)); };
+            passwordTextBox.Current.BindValueChanged(_ => updateCharacterCheckTextColour(), true);
+            characterCheckText.DrawablePartsRecreated += _ => updateCharacterCheckTextColour();
+
+            apiState = api.State.GetBoundCopy();
         }
 
-        public override void OnEntering(IScreen last)
+        private void updateCharacterCheckTextColour()
         {
-            base.OnEntering(last);
+            string password = passwordTextBox.Text;
+
+            foreach (var d in characterCheckText.Drawables)
+                d.Colour = password.Length == 0 ? Color4.White : Interpolation.ValueAt(password.Length, Color4.OrangeRed, Color4.YellowGreen, 0, 8, Easing.In);
+        }
+
+        public override void OnEntering(ScreenTransitionEvent e)
+        {
+            base.OnEntering(e);
             loadingLayer.Hide();
 
             if (host?.OnScreenKeyboardOverlapsGameWindow != true)
-                focusNextTextbox();
+                focusNextTextBox();
         }
 
         private void performRegistration()
         {
-            if (focusNextTextbox())
+            if (focusNextTextBox())
             {
                 registerShake.Shake();
                 return;
@@ -165,7 +183,7 @@ namespace osu.Game.Overlays.AccountCreation
             Task.Run(() =>
             {
                 bool success;
-                RegistrationRequest.RegistrationRequestErrors errors = null;
+                RegistrationRequest.RegistrationRequestErrors? errors = null;
 
                 try
                 {
@@ -183,9 +201,20 @@ namespace osu.Game.Overlays.AccountCreation
                     {
                         if (errors != null)
                         {
-                            usernameDescription.AddErrors(errors.User.Username);
-                            emailAddressDescription.AddErrors(errors.User.Email);
-                            passwordDescription.AddErrors(errors.User.Password);
+                            if (errors.User != null)
+                            {
+                                usernameDescription.AddErrors(errors.User.Username);
+                                emailAddressDescription.AddErrors(errors.User.Email);
+                                passwordDescription.AddErrors(errors.User.Password);
+                            }
+
+                            if (!string.IsNullOrEmpty(errors.Redirect))
+                            {
+                                if (!string.IsNullOrEmpty(errors.Message))
+                                    passwordDescription.AddErrors(new[] { errors.Message });
+
+                                game?.OpenUrlExternally($"{errors.Redirect}?username={usernameTextBox.Text}&email={emailTextBox.Text}", true);
+                            }
                         }
                         else
                         {
@@ -197,24 +226,30 @@ namespace osu.Game.Overlays.AccountCreation
                         return;
                     }
 
+                    apiState.BindValueChanged(state =>
+                    {
+                        if (state.NewValue == APIState.RequiresSecondFactorAuth)
+                            this.Push(new ScreenEmailVerification());
+                    });
+
                     api.Login(usernameTextBox.Text, passwordTextBox.Text);
                 });
             });
         }
 
-        private bool focusNextTextbox()
+        private bool focusNextTextBox()
         {
-            var nextTextbox = nextUnfilledTextbox();
+            var nextTextBox = nextUnfilledTextBox();
 
-            if (nextTextbox != null)
+            if (nextTextBox != null)
             {
-                Schedule(() => GetContainingInputManager().ChangeFocus(nextTextbox));
+                Schedule(() => GetContainingInputManager().ChangeFocus(nextTextBox));
                 return true;
             }
 
             return false;
         }
 
-        private OsuTextBox nextUnfilledTextbox() => textboxes.FirstOrDefault(t => string.IsNullOrEmpty(t.Text));
+        private OsuTextBox? nextUnfilledTextBox() => textboxes.FirstOrDefault(t => string.IsNullOrEmpty(t.Text));
     }
 }

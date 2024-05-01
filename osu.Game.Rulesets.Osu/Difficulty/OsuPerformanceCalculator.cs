@@ -1,11 +1,10 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using MathNet.Numerics.Distributions;
-using osu.Framework.Extensions;
 using osu.Game.Rulesets.Difficulty;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Osu.Mods;
@@ -16,50 +15,48 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 {
     public class OsuPerformanceCalculator : PerformanceCalculator
     {
-        public new OsuDifficultyAttributes Attributes => (OsuDifficultyAttributes)base.Attributes;
+        public const double PERFORMANCE_BASE_MULTIPLIER = 1.12; // This is being adjusted to keep the final pp value scaled around what it used to be when changing things.
 
-        public OsuPerformanceCalculator(Ruleset ruleset, DifficultyAttributes attributes, ScoreInfo score)
-            : base(ruleset, attributes, score)
+        public OsuPerformanceCalculator()
+            : base(new OsuRuleset())
         {
         }
 
-        public override double Calculate(Dictionary<string, double> categoryRatings = null)
+        protected override PerformanceAttributes CreatePerformanceAttributes(ScoreInfo score, DifficultyAttributes attributes)
         {
-            Mod[] mods = Score.Mods;
+            var osuAttributes = (OsuDifficultyAttributes)attributes;
+
+            Mod[] mods = score.Mods;
             Mod[] visualMods = mods.Where(m => m is ModWithVisibilityAdjustment).ToArray();
-            int scoreMaxCombo = Score.MaxCombo;
-            int countGreat = Score.Statistics.GetOrDefault(HitResult.Great);
-            int countOk = Score.Statistics.GetOrDefault(HitResult.Ok);
-            int countMeh = Score.Statistics.GetOrDefault(HitResult.Meh);
-            int countMiss = Score.Statistics.GetOrDefault(HitResult.Miss);
+            int scoreMaxCombo = score.MaxCombo;
+            int countGreat = score.Statistics.GetValueOrDefault(HitResult.Great);
+            int countOk = score.Statistics.GetValueOrDefault(HitResult.Ok);
+            int countMeh = score.Statistics.GetValueOrDefault(HitResult.Meh);
+            int countMiss = score.Statistics.GetValueOrDefault(HitResult.Miss);
             int totalHits = countGreat + countOk + countMeh + countMiss;
 
-            // Don't count scores made with supposedly unranked mods
-            if (mods.Any(m => !m.Ranked))
-                return 0;
-
-            double multiplier = 1.12; // This is being adjusted to keep the final pp value scaled around what it used to be when changing things
+            double multiplier = PERFORMANCE_BASE_MULTIPLIER;
 
             // Custom multipliers for NoFail and SpunOut.
             if (mods.Any(m => m is OsuModNoFail))
                 multiplier *= Math.Max(0.90, 1.0 - 0.02 * countMiss);
 
             if (mods.Any(m => m is OsuModSpunOut))
-                multiplier *= 1.0 - Math.Pow((double)Attributes.SpinnerCount / totalHits, 0.85);
+                multiplier *= 1.0 - Math.Pow((double)osuAttributes.SpinnerCount / totalHits, 0.85);
 
-            double normalisedHitError = calculateNormalisedHitError(Attributes.OverallDifficulty, totalHits, Attributes.HitCircleCount, countGreat);
+            double normalisedHitError = calculateNormalisedHitError(osuAttributes.OverallDifficulty, totalHits, osuAttributes.HitCircleCount, countGreat);
             double missWeight = calculateMissWeight(countMiss);
-            double aimWeight = calculateAimWeight(missWeight, normalisedHitError, scoreMaxCombo, Attributes.MaxCombo, totalHits, visualMods);
-            double speedWeight = calculateSpeedWeight(missWeight, normalisedHitError, scoreMaxCombo, Attributes.MaxCombo);
-            double accuracyWeight = calculateAccuracyWeight(Attributes.HitCircleCount, visualMods);
+            double aimWeight = calculateAimWeight(missWeight, normalisedHitError, scoreMaxCombo, osuAttributes.MaxCombo, totalHits, visualMods);
+            double speedWeight = calculateSpeedWeight(missWeight, normalisedHitError, scoreMaxCombo, osuAttributes.MaxCombo);
+            double accuracyWeight = calculateAccuracyWeight(osuAttributes.HitCircleCount, visualMods);
 
-            double aimValue = calculateSkillValue(Attributes.AimStrain) * aimWeight;
-            double jumpAimValue = calculateSkillValue(Attributes.JumpAimStrain) * aimWeight;
-            double flowAimValue = calculateSkillValue(Attributes.FlowAimStrain) * aimWeight;
-            double precisionValue = calculateSkillValue(Attributes.PrecisionStrain) * aimWeight;
-            double speedValue = calculateSkillValue(Attributes.SpeedStrain) * speedWeight;
-            double staminaValue = calculateSkillValue(Attributes.StaminaStrain) * speedWeight;
-            double accuracyValue = calculateAccuracyValue(normalisedHitError) * Attributes.AccuracyStrain * accuracyWeight;
+            double aimValue = calculateSkillValue(osuAttributes.AimDifficulty) * aimWeight;
+            double jumpAimValue = calculateSkillValue(osuAttributes.JumpAimDifficulty) * aimWeight;
+            double flowAimValue = calculateSkillValue(osuAttributes.FlowAimDifficulty) * aimWeight;
+            double precisionValue = calculateSkillValue(osuAttributes.PrecisionDifficulty) * aimWeight;
+            double speedValue = calculateSkillValue(osuAttributes.SpeedDifficulty) * speedWeight;
+            double staminaValue = calculateSkillValue(osuAttributes.StaminaDifficulty) * speedWeight;
+            double accuracyValue = calculateAccuracyValue(normalisedHitError) * osuAttributes.AccuracyDifficulty * accuracyWeight;
 
             double totalValue = Math.Pow(
                 Math.Pow(aimValue, 1.1) +
@@ -68,21 +65,17 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 1.0 / 1.1
             ) * multiplier;
 
-            if (categoryRatings != null)
+            return new OsuPerformanceAttributes
             {
-                categoryRatings.Add("Aim", aimValue);
-                categoryRatings.Add("Jump Aim", jumpAimValue);
-                categoryRatings.Add("Flow Aim", flowAimValue);
-                categoryRatings.Add("Precision", precisionValue);
-                categoryRatings.Add("Speed", speedValue);
-                categoryRatings.Add("Stamina", staminaValue);
-                categoryRatings.Add("Accuracy", accuracyValue);
-                categoryRatings.Add("OD", Attributes.OverallDifficulty);
-                categoryRatings.Add("AR", Attributes.ApproachRate);
-                categoryRatings.Add("Max Combo", Attributes.MaxCombo);
-            }
-
-            return totalValue;
+                Aim = aimValue,
+                JumpAim = jumpAimValue,
+                FlowAim = flowAimValue,
+                Precision = precisionValue,
+                Speed = speedValue,
+                Stamina = staminaValue,
+                Accuracy = accuracyValue,
+                Total = totalValue
+            };
         }
 
         private static double calculateSkillValue(double skillDiff) => Math.Pow(skillDiff, 3) * 3.9;

@@ -11,7 +11,7 @@ namespace osu.Game.Rulesets.Edit.Checks
     {
         protected abstract CheckCategory Category { get; }
         protected abstract string TypeOfFile { get; }
-        protected abstract string GetFilename(IBeatmap playableBeatmap);
+        protected abstract string? GetFilename(IBeatmap beatmap);
 
         public CheckMetadata Metadata => new CheckMetadata(Category, $"Missing {TypeOfFile}");
 
@@ -21,11 +21,11 @@ namespace osu.Game.Rulesets.Edit.Checks
             new IssueTemplateDoesNotExist(this)
         };
 
-        public IEnumerable<Issue> Run(IBeatmap playableBeatmap, IWorkingBeatmap workingBeatmap)
+        public IEnumerable<Issue> Run(BeatmapVerifierContext context)
         {
-            var filename = GetFilename(playableBeatmap);
+            string? filename = GetFilename(context.Beatmap);
 
-            if (filename == null)
+            if (string.IsNullOrEmpty(filename))
             {
                 yield return new IssueTemplateNoneSet(this).Create(TypeOfFile);
 
@@ -33,7 +33,7 @@ namespace osu.Game.Rulesets.Edit.Checks
             }
 
             // If the file is set, also make sure it still exists.
-            var storagePath = playableBeatmap.BeatmapInfo.BeatmapSet.GetPathForFile(filename);
+            string? storagePath = context.Beatmap.BeatmapInfo.BeatmapSet?.GetPathForFile(filename);
             if (storagePath != null)
                 yield break;
 

@@ -16,7 +16,7 @@ using osuTK.Graphics;
 
 namespace osu.Game.Online.Leaderboards
 {
-    public class DrawableRank : CompositeDrawable
+    public partial class DrawableRank : CompositeDrawable
     {
         private readonly ScoreRank rank;
 
@@ -95,8 +95,12 @@ namespace osu.Game.Online.Leaderboards
                 case ScoreRank.C:
                     return Color4Extensions.FromHex(@"473625");
 
-                default:
+                case ScoreRank.D:
                     return Color4Extensions.FromHex(@"512525");
+
+                case ScoreRank.F:
+                default:
+                    return Color4Extensions.FromHex(@"CC3333");
             }
         }
     }

@@ -7,18 +7,19 @@ using osu.Game.Graphics.UserInterface;
 
 namespace osu.Game.Overlays.Settings
 {
-    public class SettingsEnumDropdown<T> : SettingsDropdown<T>
+    public partial class SettingsEnumDropdown<T> : SettingsDropdown<T>
         where T : struct, Enum
     {
         protected override OsuDropdown<T> CreateDropdown() => new DropdownControl();
 
-        protected new class DropdownControl : OsuEnumDropdown<T>
+        protected new partial class DropdownControl : OsuEnumDropdown<T>
         {
             public DropdownControl()
             {
-                Margin = new MarginPadding { Top = 5 };
                 RelativeSizeAxes = Axes.X;
             }
+
+            protected override DropdownMenu CreateMenu() => base.CreateMenu().With(m => m.MaxHeight = 200);
         }
     }
 }

@@ -2,15 +2,20 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Audio;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Logging;
+using osu.Framework.Testing;
 using osu.Framework.Timing;
+using osu.Game.Beatmaps;
 using osu.Game.Input.Handlers;
 using osu.Game.Screens.Play;
+using osu.Game.Utils;
 
 namespace osu.Game.Rulesets.UI
 {
@@ -18,74 +23,91 @@ namespace osu.Game.Rulesets.UI
     /// A container which consumes a parent gameplay clock and standardises frame counts for children.
     /// Will ensure a minimum of 50 frames per clock second is maintained, regardless of any system lag or seeks.
     /// </summary>
-    public class FrameStabilityContainer : Container, IHasReplayHandler
+    [Cached(typeof(IGameplayClock))]
+    [Cached(typeof(IFrameStableClock))]
+    public sealed partial class FrameStabilityContainer : Container, IHasReplayHandler, IFrameStableClock
     {
-        private readonly double gameplayStartTime;
+        public ReplayInputHandler? ReplayInputHandler { get; set; }
+
+        public bool AllowBackwardsSeeks { get; set; }
+        private double? lastBackwardsSeekLogTime;
 
         /// <summary>
-        /// The number of frames (per parent frame) which can be run in an attempt to catch-up to real-time.
+        /// The number of CPU milliseconds to spend at most during seek catch-up.
         /// </summary>
-        public int MaxCatchUpFrames { get; set; } = 5;
+        private const double max_catchup_milliseconds = 10;
 
         /// <summary>
         /// Whether to enable frame-stable playback.
         /// </summary>
-        internal bool FrameStablePlayback = true;
+        internal bool FrameStablePlayback { get; set; } = true;
 
-        public IFrameStableClock FrameStableClock => frameStableClock;
+        private readonly Bindable<bool> isCatchingUp = new Bindable<bool>();
 
-        [Cached(typeof(GameplayClock))]
-        private readonly FrameStabilityClock frameStableClock;
+        private readonly Bindable<bool> waitingOnFrames = new Bindable<bool>();
+
+        private readonly double gameplayStartTime;
+
+        private IGameplayClock? parentGameplayClock;
+
+        /// <summary>
+        /// A clock which is used as reference for time, rate and running state.
+        /// </summary>
+        private IClock referenceClock = null!;
+
+        /// <summary>
+        /// A local manual clock which tracks the reference clock.
+        /// Values are transferred from <see cref="referenceClock"/> each update call.
+        /// </summary>
+        private readonly ManualClock manualClock;
+
+        /// <summary>
+        /// The main framed clock which has stability applied to it.
+        /// This gets exposed to children as an <see cref="IGameplayClock"/>.
+        /// </summary>
+        private readonly FramedClock framedClock;
+
+        private readonly Stopwatch stopwatch = new Stopwatch();
+
+        /// <summary>
+        /// The current direction of playback to be exposed to frame stable children.
+        /// </summary>
+        /// <remarks>
+        /// Initially it is presumed that playback will proceed in the forward direction.
+        /// </remarks>
+        private int direction = 1;
+
+        private PlaybackState state;
+
+        private bool hasReplayAttached => ReplayInputHandler != null;
+
+        private bool firstConsumption = true;
 
         public FrameStabilityContainer(double gameplayStartTime = double.MinValue)
         {
             RelativeSizeAxes = Axes.Both;
 
-            frameStableClock = new FrameStabilityClock(framedClock = new FramedClock(manualClock = new ManualClock()));
+            framedClock = new FramedClock(manualClock = new ManualClock());
 
             this.gameplayStartTime = gameplayStartTime;
         }
 
-        private readonly ManualClock manualClock;
-
-        private readonly FramedClock framedClock;
-
-        private IFrameBasedClock parentGameplayClock;
-
-        /// <summary>
-        /// The current direction of playback to be exposed to frame stable children.
-        /// </summary>
-        private int direction;
-
         [BackgroundDependencyLoader(true)]
-        private void load(GameplayClock clock, ISamplePlaybackDisabler sampleDisabler)
+        private void load(IGameplayClock? gameplayClock)
         {
-            if (clock != null)
+            if (gameplayClock != null)
             {
-                parentGameplayClock = frameStableClock.ParentGameplayClock = clock;
-                frameStableClock.IsPaused.BindTo(clock.IsPaused);
+                parentGameplayClock = gameplayClock;
+                IsPaused.BindTo(parentGameplayClock.IsPaused);
             }
+
+            referenceClock = gameplayClock ?? Clock;
+            Clock = this;
         }
-
-        protected override void LoadComplete()
-        {
-            base.LoadComplete();
-            setClock();
-        }
-
-        private PlaybackState state;
-
-        protected override bool RequiresChildrenUpdate => base.RequiresChildrenUpdate && state != PlaybackState.NotValid;
-
-        private bool hasReplayAttached => ReplayInputHandler != null;
-
-        private const double sixty_frame_time = 1000.0 / 60;
-
-        private bool firstConsumption = true;
 
         public override bool UpdateSubTree()
         {
-            int loops = MaxCatchUpFrames;
+            stopwatch.Restart();
 
             do
             {
@@ -98,19 +120,19 @@ namespace osu.Game.Rulesets.UI
 
                 base.UpdateSubTree();
                 UpdateSubTreeMasking(this, ScreenSpaceDrawQuad.AABBFloat);
-            } while (state == PlaybackState.RequiresCatchUp && loops-- > 0);
+            } while (state == PlaybackState.RequiresCatchUp && stopwatch.ElapsedMilliseconds < max_catchup_milliseconds);
 
             return true;
         }
 
         private void updateClock()
         {
-            if (frameStableClock.WaitingOnFrames.Value)
+            if (waitingOnFrames.Value)
             {
                 // if waiting on frames, run one update loop to determine if frames have arrived.
                 state = PlaybackState.Valid;
             }
-            else if (frameStableClock.IsPaused.Value)
+            else if (IsPaused.Value && !hasReplayAttached)
             {
                 // time should not advance while paused, nor should anything run.
                 state = PlaybackState.NotValid;
@@ -121,10 +143,7 @@ namespace osu.Game.Rulesets.UI
                 state = PlaybackState.Valid;
             }
 
-            if (parentGameplayClock == null)
-                setClock(); // LoadComplete may not be run yet, but we still want the clock.
-
-            double proposedTime = parentGameplayClock.CurrentTime;
+            double proposedTime = referenceClock.CurrentTime;
 
             if (FrameStablePlayback)
                 // if we require frame stability, the proposed time will be adjusted to move at most one known
@@ -139,17 +158,42 @@ namespace osu.Game.Rulesets.UI
                     state = PlaybackState.NotValid;
             }
 
-            if (state == PlaybackState.Valid)
+            // This is a hotfix for https://github.com/ppy/osu/issues/26879 while we figure how the hell time is seeking
+            // backwards by 11,850 ms for some users during gameplay.
+            //
+            // It basically says that "while we're running in frame stable mode, and don't have a replay attached,
+            // time should never go backwards". If it does, we stop running gameplay until it returns to normal.
+            if (!hasReplayAttached && FrameStablePlayback && proposedTime > referenceClock.CurrentTime && !AllowBackwardsSeeks)
+            {
+                if (lastBackwardsSeekLogTime == null || Math.Abs(Clock.CurrentTime - lastBackwardsSeekLogTime.Value) > 1000)
+                {
+                    lastBackwardsSeekLogTime = Clock.CurrentTime;
+
+                    string loggableContent = $"Denying backwards seek during gameplay (reference: {referenceClock.CurrentTime:N2} stable: {proposedTime:N2})";
+
+                    if (parentGameplayClock is GameplayClockContainer gcc)
+                        loggableContent += $"\n{gcc.ChildrenOfType<FramedBeatmapClock>().Single().GetSnapshot()}";
+
+                    Logger.Error(new SentryOnlyDiagnosticsException("backwards seek"), loggableContent);
+                }
+
+                state = PlaybackState.NotValid;
+                return;
+            }
+
+            // if the proposed time is the same as the current time, assume that the clock will continue progressing in the same direction as previously.
+            // this avoids spurious flips in direction from -1 to 1 during rewinds.
+            if (state == PlaybackState.Valid && proposedTime != manualClock.CurrentTime)
                 direction = proposedTime >= manualClock.CurrentTime ? 1 : -1;
 
-            double timeBehind = Math.Abs(proposedTime - parentGameplayClock.CurrentTime);
+            double timeBehind = Math.Abs(proposedTime - referenceClock.CurrentTime);
 
-            frameStableClock.IsCatchingUp.Value = timeBehind > 200;
-            frameStableClock.WaitingOnFrames.Value = state == PlaybackState.NotValid;
+            isCatchingUp.Value = timeBehind > 200;
+            waitingOnFrames.Value = hasReplayAttached && state == PlaybackState.NotValid;
 
             manualClock.CurrentTime = proposedTime;
-            manualClock.Rate = Math.Abs(parentGameplayClock.Rate) * direction;
-            manualClock.IsRunning = parentGameplayClock.IsRunning;
+            manualClock.Rate = Math.Abs(referenceClock.Rate) * direction;
+            manualClock.IsRunning = referenceClock.IsRunning;
 
             // determine whether catch-up is required.
             if (state == PlaybackState.Valid && timeBehind > 0)
@@ -158,6 +202,9 @@ namespace osu.Game.Rulesets.UI
             // The manual clock time has changed in the above code. The framed clock now needs to be updated
             // to ensure that the its time is valid for our children before input is processed
             framedClock.ProcessFrame();
+
+            if (framedClock.ElapsedFrameTime != 0)
+                IsRewinding = framedClock.ElapsedFrameTime < 0;
         }
 
         /// <summary>
@@ -167,6 +214,8 @@ namespace osu.Game.Rulesets.UI
         /// <returns>Whether playback is still valid.</returns>
         private bool updateReplay(ref double proposedTime)
         {
+            Debug.Assert(ReplayInputHandler != null);
+
             double? newTime;
 
             if (FrameStablePlayback)
@@ -203,6 +252,8 @@ namespace osu.Game.Rulesets.UI
         /// <param name="proposedTime">The time which is to be displayed.</param>
         private void applyFrameStability(ref double proposedTime)
         {
+            const double sixty_frame_time = 1000.0 / 60;
+
             if (firstConsumption)
             {
                 // On the first update, frame-stability seeking would result in unexpected/unwanted behaviour.
@@ -226,20 +277,38 @@ namespace osu.Game.Rulesets.UI
             }
         }
 
-        private void setClock()
-        {
-            if (parentGameplayClock == null)
-            {
-                // in case a parent gameplay clock isn't available, just use the parent clock.
-                parentGameplayClock ??= Clock;
-            }
-            else
-            {
-                Clock = frameStableClock;
-            }
-        }
+        #region Delegation of IGameplayClock
 
-        public ReplayInputHandler ReplayInputHandler { get; set; }
+        public IBindable<bool> IsPaused { get; } = new BindableBool();
+
+        public bool IsRewinding { get; private set; }
+
+        public double CurrentTime => framedClock.CurrentTime;
+
+        public double Rate => framedClock.Rate;
+
+        public bool IsRunning => framedClock.IsRunning;
+
+        public void ProcessFrame() { }
+
+        public double ElapsedFrameTime => framedClock.ElapsedFrameTime;
+
+        public double FramesPerSecond => framedClock.FramesPerSecond;
+
+        public double StartTime => parentGameplayClock?.StartTime ?? 0;
+
+        private readonly AudioAdjustments gameplayAdjustments = new AudioAdjustments();
+
+        public IAdjustableAudioComponent AdjustmentsFromMods => parentGameplayClock?.AdjustmentsFromMods ?? gameplayAdjustments;
+
+        #endregion
+
+        #region Delegation of IFrameStableClock
+
+        IBindable<bool> IFrameStableClock.IsCatchingUp => isCatchingUp;
+        IBindable<bool> IFrameStableClock.WaitingOnFrames => waitingOnFrames;
+
+        #endregion
 
         private enum PlaybackState
         {
@@ -258,26 +327,6 @@ namespace osu.Game.Rulesets.UI
             /// In a valid state, progressing one child hierarchy loop per game loop.
             /// </summary>
             Valid
-        }
-
-        private class FrameStabilityClock : GameplayClock, IFrameStableClock
-        {
-            public GameplayClock ParentGameplayClock;
-
-            public readonly Bindable<bool> IsCatchingUp = new Bindable<bool>();
-
-            public readonly Bindable<bool> WaitingOnFrames = new Bindable<bool>();
-
-            public override IEnumerable<Bindable<double>> NonGameplayAdjustments => ParentGameplayClock?.NonGameplayAdjustments ?? Enumerable.Empty<Bindable<double>>();
-
-            public FrameStabilityClock(FramedClock underlyingClock)
-                : base(underlyingClock)
-            {
-            }
-
-            IBindable<bool> IFrameStableClock.IsCatchingUp => IsCatchingUp;
-
-            IBindable<bool> IFrameStableClock.WaitingOnFrames => WaitingOnFrames;
         }
     }
 }

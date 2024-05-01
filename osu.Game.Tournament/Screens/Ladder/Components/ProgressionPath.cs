@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Linq;
@@ -8,7 +8,7 @@ using osuTK;
 
 namespace osu.Game.Tournament.Screens.Ladder.Components
 {
-    public class ProgressionPath : Path
+    public partial class ProgressionPath : Path
     {
         public DrawableTournamentMatch Source { get; }
         public DrawableTournamentMatch Destination { get; }
@@ -36,11 +36,7 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
             bool progressionToRight = q2.TopLeft.X > q1.TopLeft.X;
 
             if (!progressionToRight)
-            {
-                var temp = q2;
-                q2 = q1;
-                q1 = temp;
-            }
+                (q2, q1) = (q1, q2);
 
             var c1 = getCenteredVector(q1.TopRight, q1.BottomRight) + new Vector2(padding, 0);
             var c2 = getCenteredVector(q2.TopLeft, q2.BottomLeft) - new Vector2(padding, 0);
@@ -64,8 +60,9 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
 
             var topLeft = new Vector2(minX, minY);
 
-            Position = Parent.ToLocalSpace(topLeft);
-            Vertices = points.Select(p => Parent.ToLocalSpace(p) - Parent.ToLocalSpace(topLeft)).ToList();
+            OriginPosition = new Vector2(PathRadius);
+            Position = Parent!.ToLocalSpace(topLeft);
+            Vertices = points.Select(p => Parent!.ToLocalSpace(p) - Parent!.ToLocalSpace(topLeft)).ToList();
         }
     }
 }

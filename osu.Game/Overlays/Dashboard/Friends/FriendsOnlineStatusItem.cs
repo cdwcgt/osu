@@ -2,21 +2,23 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using osu.Framework.Extensions;
+using osu.Framework.Localisation;
 using osu.Game.Graphics;
 using osuTK.Graphics;
 
 namespace osu.Game.Overlays.Dashboard.Friends
 {
-    public class FriendsOnlineStatusItem : OverlayStreamItem<FriendStream>
+    public partial class FriendsOnlineStatusItem : OverlayStreamItem<FriendStream>
     {
         public FriendsOnlineStatusItem(FriendStream value)
             : base(value)
         {
         }
 
-        protected override string MainText => Value.Status.ToString();
+        protected override LocalisableString MainText => Value.Status.GetLocalisableDescription();
 
-        protected override string AdditionalText => Value.Count.ToString();
+        protected override LocalisableString AdditionalText => Value.Count.ToString();
 
         protected override Color4 GetBarColour(OsuColour colours)
         {

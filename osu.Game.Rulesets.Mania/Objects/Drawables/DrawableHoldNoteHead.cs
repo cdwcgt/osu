@@ -1,6 +1,10 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
+using osu.Framework.Graphics;
+using osu.Framework.Input.Events;
 using osu.Game.Rulesets.Objects.Drawables;
 
 namespace osu.Game.Rulesets.Mania.Objects.Drawables
@@ -8,24 +12,23 @@ namespace osu.Game.Rulesets.Mania.Objects.Drawables
     /// <summary>
     /// The head of a <see cref="DrawableHoldNote"/>.
     /// </summary>
-    public class DrawableHoldNoteHead : DrawableNote
+    public partial class DrawableHoldNoteHead : DrawableNote
     {
         protected override ManiaSkinComponents Component => ManiaSkinComponents.HoldNoteHead;
 
-        public DrawableHoldNoteHead(DrawableHoldNote holdNote)
-            : base(holdNote.HitObject.Head)
+        public DrawableHoldNoteHead()
+            : this(null)
         {
         }
 
-        public void UpdateResult() => base.UpdateResult(true);
-
-        protected override void UpdateInitialTransforms()
+        public DrawableHoldNoteHead(HeadNote headNote)
+            : base(headNote)
         {
-            base.UpdateInitialTransforms();
-
-            // This hitobject should never expire, so this is just a safe maximum.
-            LifetimeEnd = LifetimeStart + 30000;
+            Anchor = Anchor.TopCentre;
+            Origin = Anchor.TopCentre;
         }
+
+        public bool UpdateResult() => base.UpdateResult(true);
 
         protected override void UpdateHitStateTransforms(ArmedState state)
         {
@@ -33,11 +36,14 @@ namespace osu.Game.Rulesets.Mania.Objects.Drawables
             // the hold note head should never change its visual state on its own due to the "freezing" mechanic
             // (when hit, it remains visible in place at the judgement line; when dropped, it will scroll past the line).
             // it will be hidden along with its parenting hold note when required.
+
+            // Set `LifetimeEnd` explicitly to a non-`double.MaxValue` because otherwise this DHO is automatically expired.
+            LifetimeEnd = double.PositiveInfinity;
         }
 
-        public override bool OnPressed(ManiaAction action) => false; // Handled by the hold note
+        public override bool OnPressed(KeyBindingPressEvent<ManiaAction> e) => false; // Handled by the hold note
 
-        public override void OnReleased(ManiaAction action)
+        public override void OnReleased(KeyBindingReleaseEvent<ManiaAction> e)
         {
         }
     }

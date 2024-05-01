@@ -8,7 +8,7 @@ using osuTK.Graphics;
 
 namespace osu.Game.Screens.Backgrounds
 {
-    public class BackgroundScreenBlack : BackgroundScreen
+    public partial class BackgroundScreenBlack : BackgroundScreen
     {
         public BackgroundScreenBlack()
         {
@@ -19,7 +19,7 @@ namespace osu.Game.Screens.Backgrounds
             };
         }
 
-        public override void OnEntering(IScreen last)
+        public override void OnEntering(ScreenTransitionEvent e)
         {
             Show();
         }

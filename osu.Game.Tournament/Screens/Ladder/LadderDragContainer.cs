@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
@@ -10,7 +10,7 @@ using osuTK;
 
 namespace osu.Game.Tournament.Screens.Ladder
 {
-    public class LadderDragContainer : Container
+    public partial class LadderDragContainer : Container
     {
         protected override bool OnDragStart(DragStartEvent e) => true;
 
@@ -34,10 +34,10 @@ namespace osu.Game.Tournament.Screens.Ladder
 
         protected override bool OnScroll(ScrollEvent e)
         {
-            var newScale = Math.Clamp(scale + e.ScrollDelta.Y / 15 * scale, min_scale, max_scale);
+            float newScale = Math.Clamp(scale + e.ScrollDelta.Y / 15 * scale, min_scale, max_scale);
 
-            this.MoveTo(target -= e.MousePosition * (newScale - scale), 2000, Easing.OutQuint);
-            this.ScaleTo(scale = newScale, 2000, Easing.OutQuint);
+            this.MoveTo(target -= e.MousePosition * (newScale - scale), 1000, Easing.OutQuint);
+            this.ScaleTo(scale = newScale, 1000, Easing.OutQuint);
 
             return true;
         }

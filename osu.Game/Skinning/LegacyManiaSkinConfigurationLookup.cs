@@ -3,18 +3,35 @@
 
 namespace osu.Game.Skinning
 {
+    /// <summary>
+    /// This class exists for the explicit purpose of ferrying information from ManiaBeatmap in a way LegacySkin can use it.
+    /// This is because half of the mania legacy skin implementation is in LegacySkin (osu.Game project) which doesn't have visibility
+    /// over ManiaBeatmap / StageDefinition.
+    /// </summary>
     public class LegacyManiaSkinConfigurationLookup
     {
-        public readonly int Keys;
-        public readonly LegacyManiaSkinConfigurationLookups Lookup;
-        public readonly int? TargetColumn;
+        /// <summary>
+        /// Total columns across all stages.
+        /// </summary>
+        public readonly int TotalColumns;
 
-        public LegacyManiaSkinConfigurationLookup(int keys, LegacyManiaSkinConfigurationLookups lookup, int? targetColumn = null)
+        /// <summary>
+        /// The column which is being looked up.
+        /// May be null if the configuration does not apply to a specific column.
+        /// Note that this is the absolute index across all stages.
+        /// </summary>
+        public readonly int? ColumnIndex;
+
+        public readonly LegacyManiaSkinConfigurationLookups Lookup;
+
+        public LegacyManiaSkinConfigurationLookup(int totalColumns, LegacyManiaSkinConfigurationLookups lookup, int? columnIndex = null)
         {
-            Keys = keys;
+            TotalColumns = totalColumns;
             Lookup = lookup;
-            TargetColumn = targetColumn;
+            ColumnIndex = columnIndex;
         }
+
+        public override string ToString() => $"[{nameof(LegacyManiaSkinConfigurationLookup)} lookup:{Lookup} col:{ColumnIndex} totalcols:{TotalColumns}]";
     }
 
     public enum LegacyManiaSkinConfigurationLookups
@@ -27,6 +44,8 @@ namespace osu.Game.Skinning
         HitPosition,
         ScorePosition,
         LightPosition,
+        StagePaddingTop,
+        StagePaddingBottom,
         HitTargetImage,
         ShowJudgementLine,
         KeyImage,
@@ -37,6 +56,7 @@ namespace osu.Game.Skinning
         HoldNoteBodyImage,
         HoldNoteLightImage,
         HoldNoteLightScale,
+        WidthForNoteHeightScale,
         ExplosionImage,
         ExplosionScale,
         ColumnLineColour,
@@ -54,5 +74,7 @@ namespace osu.Game.Skinning
         Hit50,
         Hit0,
         KeysUnderNotes,
+        NoteBodyStyle,
+        LightFramePerSecond
     }
 }

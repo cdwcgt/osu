@@ -1,18 +1,22 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System.Collections.Generic;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.UserInterface;
 using osu.Game.Beatmaps.Timing;
 using osu.Game.Rulesets.Scoring;
+using osu.Game.Scoring;
 using osu.Game.Screens.Play.Break;
 
 namespace osu.Game.Screens.Play
 {
-    public class BreakOverlay : Container
+    public partial class BreakOverlay : Container
     {
         /// <summary>
         /// The duration of the break overlay fading.
@@ -44,12 +48,13 @@ namespace osu.Game.Screens.Play
         private readonly Container remainingTimeBox;
         private readonly RemainingTimeCounter remainingTimeCounter;
         private readonly BreakArrows breakArrows;
+        private readonly ScoreProcessor scoreProcessor;
+        private readonly BreakInfo info;
 
         public BreakOverlay(bool letterboxing, ScoreProcessor scoreProcessor)
         {
+            this.scoreProcessor = scoreProcessor;
             RelativeSizeAxes = Axes.Both;
-
-            BreakInfo info;
 
             Child = fadeContainer = new Container
             {
@@ -100,18 +105,18 @@ namespace osu.Game.Screens.Play
                     }
                 }
             };
-
-            if (scoreProcessor != null)
-            {
-                info.AccuracyDisplay.Current.BindTo(scoreProcessor.Accuracy);
-                info.GradeDisplay.Current.BindTo(scoreProcessor.Rank);
-            }
         }
 
         protected override void LoadComplete()
         {
             base.LoadComplete();
             initializeBreaks();
+
+            if (scoreProcessor != null)
+            {
+                info.AccuracyDisplay.Current.BindTo(scoreProcessor.Accuracy);
+                ((IBindable<ScoreRank>)info.GradeDisplay.Current).BindTo(scoreProcessor.Rank);
+            }
         }
 
         private void initializeBreaks()
@@ -126,7 +131,7 @@ namespace osu.Game.Screens.Play
                 if (!b.HasEffect)
                     continue;
 
-                using (BeginAbsoluteSequence(b.StartTime, true))
+                using (BeginAbsoluteSequence(b.StartTime))
                 {
                     fadeContainer.FadeIn(BREAK_FADE_DURATION);
                     breakArrows.Show(BREAK_FADE_DURATION);
@@ -143,7 +148,7 @@ namespace osu.Game.Screens.Play
 
                     remainingTimeCounter.CountTo(b.Duration).CountTo(0, b.Duration);
 
-                    using (BeginDelayedSequence(b.Duration - BREAK_FADE_DURATION, true))
+                    using (BeginDelayedSequence(b.Duration - BREAK_FADE_DURATION))
                     {
                         fadeContainer.FadeOut(BREAK_FADE_DURATION);
                         breakArrows.Hide(BREAK_FADE_DURATION);

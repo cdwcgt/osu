@@ -10,9 +10,8 @@ namespace osu.Game.Skinning
     /// <summary>
     /// An integer <see cref="RollingCounter{T}"/> that uses number sprites from a legacy skin.
     /// </summary>
-    public class LegacyRollingCounter : RollingCounter<int>
+    public partial class LegacyRollingCounter : RollingCounter<int>
     {
-        private readonly ISkin skin;
         private readonly LegacyFont font;
 
         protected override bool IsRollingProportional => true;
@@ -20,11 +19,9 @@ namespace osu.Game.Skinning
         /// <summary>
         /// Creates a new <see cref="LegacyRollingCounter"/>.
         /// </summary>
-        /// <param name="skin">The <see cref="ISkin"/> from which to get counter number sprites.</param>
         /// <param name="font">The legacy font to use for the counter.</param>
-        public LegacyRollingCounter(ISkin skin, LegacyFont font)
+        public LegacyRollingCounter(LegacyFont font)
         {
-            this.skin = skin;
             this.font = font;
         }
 
@@ -33,6 +30,6 @@ namespace osu.Game.Skinning
             return Math.Abs(newValue - currentValue) * 75.0;
         }
 
-        protected sealed override OsuSpriteText CreateSpriteText() => new LegacySpriteText(skin, font);
+        protected sealed override OsuSpriteText CreateSpriteText() => new LegacySpriteText(font);
     }
 }

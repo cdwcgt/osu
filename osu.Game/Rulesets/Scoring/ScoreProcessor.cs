@@ -5,29 +5,73 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using MessagePack;
 using osu.Framework.Bindables;
-using osu.Framework.Extensions;
-using osu.Framework.Utils;
+using osu.Framework.Localisation;
+using osu.Game.Beatmaps;
+using osu.Game.Extensions;
+using osu.Game.Localisation;
 using osu.Game.Rulesets.Judgements;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Objects;
+using osu.Game.Rulesets.Replays;
 using osu.Game.Scoring;
 
 namespace osu.Game.Rulesets.Scoring
 {
-    public class ScoreProcessor : JudgementProcessor
+    public partial class ScoreProcessor : JudgementProcessor
     {
-        private const double max_score = 1000000;
+        /// <summary>
+        /// The exponent applied to combo in the default implementation of <see cref="GetComboScoreChange"/>.
+        /// </summary>
+        /// <remarks>
+        /// If a custom implementation overrides <see cref="GetComboScoreChange"/> this may not be relevant.
+        /// </remarks>
+        public const double COMBO_EXPONENT = 0.5;
+
+        public const double MAX_SCORE = 1000000;
+
+        private const double accuracy_cutoff_x = 1;
+        private const double accuracy_cutoff_s = 0.95;
+        private const double accuracy_cutoff_a = 0.9;
+        private const double accuracy_cutoff_b = 0.8;
+        private const double accuracy_cutoff_c = 0.7;
+        private const double accuracy_cutoff_d = 0;
+
+        /// <summary>
+        /// Whether <see cref="HitEvents"/> should be populated during application of results.
+        /// </summary>
+        /// <remarks>
+        /// Should only be disabled for special cases.
+        /// When disabled, <see cref="JudgementProcessor.RevertResult"/> cannot be used.</remarks>
+        internal bool TrackHitEvents = true;
+
+        /// <summary>
+        /// Invoked when this <see cref="ScoreProcessor"/> was reset from a replay frame.
+        /// </summary>
+        public event Action? OnResetFromReplayFrame;
 
         /// <summary>
         /// The current total score.
         /// </summary>
-        public readonly BindableDouble TotalScore = new BindableDouble { MinValue = 0 };
+        public readonly BindableLong TotalScore = new BindableLong { MinValue = 0 };
 
         /// <summary>
         /// The current accuracy.
         /// </summary>
         public readonly BindableDouble Accuracy = new BindableDouble(1) { MinValue = 0, MaxValue = 1 };
+
+        /// <summary>
+        /// The minimum achievable accuracy for the whole beatmap at this stage of gameplay.
+        /// Assumes that all objects that have not been judged yet will receive the minimum hit result.
+        /// </summary>
+        public readonly BindableDouble MinimumAccuracy = new BindableDouble { MinValue = 0, MaxValue = 1 };
+
+        /// <summary>
+        /// The maximum achievable accuracy for the whole beatmap at this stage of gameplay.
+        /// Assumes that all objects that have not been judged yet will receive the maximum hit result.
+        /// </summary>
+        public readonly BindableDouble MaximumAccuracy = new BindableDouble(1) { MinValue = 0, MaxValue = 1 };
 
         /// <summary>
         /// The current combo.
@@ -42,7 +86,9 @@ namespace osu.Game.Rulesets.Scoring
         /// <summary>
         /// The current rank.
         /// </summary>
-        public readonly Bindable<ScoreRank> Rank = new Bindable<ScoreRank>(ScoreRank.X);
+        public IBindable<ScoreRank> Rank => rank;
+
+        private readonly Bindable<ScoreRank> rank = new Bindable<ScoreRank>(ScoreRank.X);
 
         /// <summary>
         /// The highest combo achieved by this score.
@@ -50,55 +96,100 @@ namespace osu.Game.Rulesets.Scoring
         public readonly BindableInt HighestCombo = new BindableInt();
 
         /// <summary>
-        /// The <see cref="ScoringMode"/> used to calculate scores.
+        /// The <see cref="HitEvent"/>s collected during gameplay thus far.
+        /// Intended for use with various statistics displays.
         /// </summary>
-        public readonly Bindable<ScoringMode> Mode = new Bindable<ScoringMode>();
+        public IReadOnlyList<HitEvent> HitEvents => hitEvents;
 
         /// <summary>
-        /// The default portion of <see cref="max_score"/> awarded for hitting <see cref="HitObject"/>s accurately. Defaults to 30%.
+        /// The ruleset this score processor is valid for.
         /// </summary>
-        protected virtual double DefaultAccuracyPortion => 0.3;
+        public readonly Ruleset Ruleset;
 
         /// <summary>
-        /// The default portion of <see cref="max_score"/> awarded for achieving a high combo. Default to 70%.
+        /// The maximum achievable total score.
         /// </summary>
-        protected virtual double DefaultComboPortion => 0.7;
-
-        private readonly double accuracyPortion;
-        private readonly double comboPortion;
-
-        private int maxAchievableCombo;
+        public long MaximumTotalScore { get; private set; }
 
         /// <summary>
-        /// The maximum achievable base score.
+        /// The maximum sum of accuracy-affecting judgements at the current point in time.
         /// </summary>
-        private double maxBaseScore;
+        /// <remarks>
+        /// Used to compute accuracy.
+        /// </remarks>
+        private double currentMaximumBaseScore;
 
-        private double rollingMaxBaseScore;
-        private double baseScore;
+        /// <summary>
+        /// The sum of all accuracy-affecting judgements at the current point in time.
+        /// </summary>
+        /// <remarks>
+        /// Used to compute accuracy.
+        /// </remarks>
+        private double currentBaseScore;
 
-        private readonly List<HitEvent> hitEvents = new List<HitEvent>();
-        private HitObject lastHitObject;
+        /// <summary>
+        /// The maximum sum of all accuracy-affecting judgements in the beatmap.
+        /// </summary>
+        private double maximumBaseScore;
 
+        /// <summary>
+        /// The count of all accuracy-affecting judgements in the beatmap.
+        /// </summary>
+        private int maximumAccuracyJudgementCount;
+
+        /// <summary>
+        /// The count of accuracy-affecting judgements at the current point in time.
+        /// </summary>
+        private int currentAccuracyJudgementCount;
+
+        /// <summary>
+        /// The maximum combo score in the beatmap.
+        /// </summary>
+        private double maximumComboPortion;
+
+        /// <summary>
+        /// The combo score at the current point in time.
+        /// </summary>
+        private double currentComboPortion;
+
+        /// <summary>
+        /// The bonus score at the current point in time.
+        /// </summary>
+        private double currentBonusPortion;
+
+        /// <summary>
+        /// The total score multiplier.
+        /// </summary>
         private double scoreMultiplier = 1;
 
-        public ScoreProcessor()
+        public Dictionary<HitResult, int> MaximumStatistics
         {
-            accuracyPortion = DefaultAccuracyPortion;
-            comboPortion = DefaultComboPortion;
+            get
+            {
+                if (!beatmapApplied)
+                    throw new InvalidOperationException($"Cannot access maximum statistics before calling {nameof(ApplyBeatmap)}.");
 
-            if (!Precision.AlmostEquals(1.0, accuracyPortion + comboPortion))
-                throw new InvalidOperationException($"{nameof(DefaultAccuracyPortion)} + {nameof(DefaultComboPortion)} must equal 1.");
+                return new Dictionary<HitResult, int>(MaximumResultCounts);
+            }
+        }
+
+        private bool beatmapApplied;
+
+        protected readonly Dictionary<HitResult, int> ScoreResultCounts = new Dictionary<HitResult, int>();
+        protected readonly Dictionary<HitResult, int> MaximumResultCounts = new Dictionary<HitResult, int>();
+
+        private readonly List<HitEvent> hitEvents = new List<HitEvent>();
+        private HitObject? lastHitObject;
+
+        public bool ApplyNewJudgementsWhenFailed { get; set; }
+
+        public ScoreProcessor(Ruleset ruleset)
+        {
+            Ruleset = ruleset;
 
             Combo.ValueChanged += combo => HighestCombo.Value = Math.Max(HighestCombo.Value, combo.NewValue);
-            Accuracy.ValueChanged += accuracy =>
-            {
-                Rank.Value = rankFrom(accuracy.NewValue);
-                foreach (var mod in Mods.Value.OfType<IApplicableToScoreProcessor>())
-                    Rank.Value = mod.AdjustRank(Rank.Value, accuracy.NewValue);
-            };
+            Accuracy.ValueChanged += _ => updateRank();
 
-            Mode.ValueChanged += _ => updateScore();
             Mods.ValueChanged += mods =>
             {
                 scoreMultiplier = 1;
@@ -107,51 +198,59 @@ namespace osu.Game.Rulesets.Scoring
                     scoreMultiplier *= m.ScoreMultiplier;
 
                 updateScore();
+                updateRank();
             };
         }
 
-        private readonly Dictionary<HitResult, int> scoreResultCounts = new Dictionary<HitResult, int>();
+        public override void ApplyBeatmap(IBeatmap beatmap)
+        {
+            base.ApplyBeatmap(beatmap);
+            beatmapApplied = true;
+        }
 
         protected sealed override void ApplyResultInternal(JudgementResult result)
         {
             result.ComboAtJudgement = Combo.Value;
             result.HighestComboAtJudgement = HighestCombo.Value;
 
-            if (result.FailedAtJudgement)
+            if (result.FailedAtJudgement && !ApplyNewJudgementsWhenFailed)
                 return;
 
-            if (!result.Type.IsScorable())
-                return;
+            ScoreResultCounts[result.Type] = ScoreResultCounts.GetValueOrDefault(result.Type) + 1;
 
-            if (result.Type.AffectsCombo())
+            if (result.Type.IncreasesCombo())
+                Combo.Value++;
+            else if (result.Type.BreaksCombo())
+                Combo.Value = 0;
+
+            result.ComboAfterJudgement = Combo.Value;
+
+            if (result.Judgement.MaxResult.AffectsAccuracy())
             {
-                switch (result.Type)
+                currentMaximumBaseScore += GetBaseScoreForResult(result.Judgement.MaxResult);
+                currentAccuracyJudgementCount++;
+            }
+
+            if (result.Type.AffectsAccuracy())
+                currentBaseScore += GetBaseScoreForResult(result.Type);
+
+            if (result.Type.IsBonus())
+                currentBonusPortion += GetBonusScoreChange(result);
+            else if (result.Type.IsScorable())
+                currentComboPortion += GetComboScoreChange(result);
+
+            ApplyScoreChange(result);
+
+            if (!IsSimulating)
+            {
+                if (TrackHitEvents)
                 {
-                    case HitResult.Miss:
-                    case HitResult.LargeTickMiss:
-                        Combo.Value = 0;
-                        break;
-
-                    default:
-                        Combo.Value++;
-                        break;
+                    hitEvents.Add(CreateHitEvent(result));
+                    lastHitObject = result.HitObject;
                 }
+
+                updateScore();
             }
-
-            double scoreIncrease = result.Type.IsHit() ? result.Judgement.NumericResultFor(result) : 0;
-
-            if (!result.Type.IsBonus())
-            {
-                baseScore += scoreIncrease;
-                rollingMaxBaseScore += result.Judgement.MaxNumericResult;
-            }
-
-            scoreResultCounts[result.Type] = scoreResultCounts.GetOrDefault(result.Type) + 1;
-
-            hitEvents.Add(CreateHitEvent(result));
-            lastHitObject = result.HitObject;
-
-            updateScore();
         }
 
         /// <summary>
@@ -160,28 +259,36 @@ namespace osu.Game.Rulesets.Scoring
         /// <param name="result">The <see cref="JudgementResult"/> to describe.</param>
         /// <returns>The <see cref="HitEvent"/>.</returns>
         protected virtual HitEvent CreateHitEvent(JudgementResult result)
-            => new HitEvent(result.TimeOffset, result.Type, result.HitObject, lastHitObject, null);
+            => new HitEvent(result.TimeOffset, result.GameplayRate, result.Type, result.HitObject, lastHitObject, null);
 
         protected sealed override void RevertResultInternal(JudgementResult result)
         {
+            if (!TrackHitEvents)
+                throw new InvalidOperationException(@$"Rewind is not supported when {nameof(TrackHitEvents)} is disabled.");
+
             Combo.Value = result.ComboAtJudgement;
             HighestCombo.Value = result.HighestComboAtJudgement;
 
-            if (result.FailedAtJudgement)
+            if (result.FailedAtJudgement && !ApplyNewJudgementsWhenFailed)
                 return;
 
-            if (!result.Type.IsScorable())
-                return;
+            ScoreResultCounts[result.Type] = ScoreResultCounts.GetValueOrDefault(result.Type) - 1;
 
-            double scoreIncrease = result.Type.IsHit() ? result.Judgement.NumericResultFor(result) : 0;
-
-            if (!result.Type.IsBonus())
+            if (result.Judgement.MaxResult.AffectsAccuracy())
             {
-                baseScore -= scoreIncrease;
-                rollingMaxBaseScore -= result.Judgement.MaxNumericResult;
+                currentMaximumBaseScore -= GetBaseScoreForResult(result.Judgement.MaxResult);
+                currentAccuracyJudgementCount--;
             }
 
-            scoreResultCounts[result.Type] = scoreResultCounts.GetOrDefault(result.Type) - 1;
+            if (result.Type.AffectsAccuracy())
+                currentBaseScore -= GetBaseScoreForResult(result.Type);
+
+            if (result.Type.IsBonus())
+                currentBonusPortion -= GetBonusScoreChange(result);
+            else if (result.Type.IsScorable())
+                currentComboPortion -= GetComboScoreChange(result);
+
+            RemoveScoreChange(result);
 
             Debug.Assert(hitEvents.Count > 0);
             lastHitObject = hitEvents[^1].LastHitObject;
@@ -190,110 +297,92 @@ namespace osu.Game.Rulesets.Scoring
             updateScore();
         }
 
-        private void updateScore()
-        {
-            if (rollingMaxBaseScore != 0)
-                Accuracy.Value = calculateAccuracyRatio(baseScore, true);
-
-            TotalScore.Value = getScore(Mode.Value);
-        }
-
-        private double getScore(ScoringMode mode)
-        {
-            return GetScore(mode, maxAchievableCombo,
-                calculateAccuracyRatio(baseScore),
-                calculateComboRatio(HighestCombo.Value),
-                scoreResultCounts);
-        }
+        /// <summary>
+        /// Gets the final score change to be applied to the bonus portion of the score.
+        /// </summary>
+        /// <param name="result">The judgement result.</param>
+        protected virtual double GetBonusScoreChange(JudgementResult result) => GetBaseScoreForResult(result.Type);
 
         /// <summary>
-        /// Computes the total score.
+        /// Gets the final score change to be applied to the combo portion of the score.
         /// </summary>
-        /// <param name="mode">The <see cref="ScoringMode"/> to compute the total score in.</param>
-        /// <param name="maxCombo">The maximum combo achievable in the beatmap.</param>
-        /// <param name="accuracyRatio">The accuracy percentage achieved by the player.</param>
-        /// <param name="comboRatio">The proportion of <paramref name="maxCombo"/> achieved by the player.</param>
-        /// <param name="statistics">Any statistics to be factored in.</param>
-        /// <returns>The total score.</returns>
-        public double GetScore(ScoringMode mode, int maxCombo, double accuracyRatio, double comboRatio, Dictionary<HitResult, int> statistics)
+        /// <param name="result">The judgement result.</param>
+        protected virtual double GetComboScoreChange(JudgementResult result) => GetBaseScoreForResult(result.Judgement.MaxResult) * Math.Pow(result.ComboAfterJudgement, COMBO_EXPONENT);
+
+        public virtual int GetBaseScoreForResult(HitResult result)
         {
-            switch (mode)
+            switch (result)
             {
                 default:
-                case ScoringMode.Standardised:
-                    double accuracyScore = accuracyPortion * accuracyRatio;
-                    double comboScore = comboPortion * comboRatio;
+                    return 0;
 
-                    return (max_score * (accuracyScore + comboScore) + getBonusScore(statistics)) * scoreMultiplier;
+                case HitResult.SmallTickHit:
+                    return 10;
 
-                case ScoringMode.Classic:
-                    // should emulate osu-stable's scoring as closely as we can (https://osu.ppy.sh/help/wiki/Score/ScoreV1)
-                    return getBonusScore(statistics) + (accuracyRatio * Math.Max(1, maxCombo) * 300) * (1 + Math.Max(0, (comboRatio * maxCombo) - 1) * scoreMultiplier / 25);
+                case HitResult.LargeTickHit:
+                    return 30;
+
+                case HitResult.SliderTailHit:
+                    return 150;
+
+                case HitResult.Meh:
+                    return 50;
+
+                case HitResult.Ok:
+                    return 100;
+
+                case HitResult.Good:
+                    return 200;
+
+                case HitResult.Great:
+                case HitResult.Perfect: // Perfect doesn't actually give more score / accuracy directly.
+                    return 300;
+
+                case HitResult.SmallBonus:
+                    return 10;
+
+                case HitResult.LargeBonus:
+                    return 50;
             }
         }
 
-        /// <summary>
-        /// Given a minimal set of inputs, return the computed score for the tracked beatmap / mods combination, at the current point in time.
-        /// </summary>
-        /// <param name="mode">The <see cref="ScoringMode"/> to compute the total score in.</param>
-        /// <param name="maxCombo">The maximum combo achievable in the beatmap.</param>
-        /// <param name="statistics">Statistics to be used for calculating accuracy, bonus score, etc.</param>
-        /// <returns>The computed score for provided inputs.</returns>
-        public double GetImmediateScore(ScoringMode mode, int maxCombo, Dictionary<HitResult, int> statistics)
+        protected virtual void ApplyScoreChange(JudgementResult result)
         {
-            // calculate base score from statistics pairs
-            int computedBaseScore = 0;
-
-            foreach (var pair in statistics)
-            {
-                if (!pair.Key.AffectsAccuracy())
-                    continue;
-
-                computedBaseScore += Judgement.ToNumericResult(pair.Key) * pair.Value;
-            }
-
-            return GetScore(mode, maxAchievableCombo, calculateAccuracyRatio(computedBaseScore), calculateComboRatio(maxCombo), scoreResultCounts);
         }
 
-        /// <summary>
-        /// Get the accuracy fraction for the provided base score.
-        /// </summary>
-        /// <param name="baseScore">The score to be used for accuracy calculation.</param>
-        /// <param name="preferRolling">Whether the rolling base score should be used (ie. for the current point in time based on Apply/Reverted results).</param>
-        /// <returns>The computed accuracy.</returns>
-        private double calculateAccuracyRatio(double baseScore, bool preferRolling = false)
+        protected virtual void RemoveScoreChange(JudgementResult result)
         {
-            if (preferRolling && rollingMaxBaseScore != 0)
-                return baseScore / rollingMaxBaseScore;
-
-            return maxBaseScore > 0 ? baseScore / maxBaseScore : 0;
         }
 
-        private double calculateComboRatio(int maxCombo) => maxAchievableCombo > 0 ? (double)maxCombo / maxAchievableCombo : 1;
-
-        private double getBonusScore(Dictionary<HitResult, int> statistics)
-            => statistics.GetOrDefault(HitResult.SmallBonus) * Judgement.SMALL_BONUS_SCORE
-               + statistics.GetOrDefault(HitResult.LargeBonus) * Judgement.LARGE_BONUS_SCORE;
-
-        private ScoreRank rankFrom(double acc)
+        private void updateScore()
         {
-            if (acc == 1)
-                return ScoreRank.X;
-            if (acc > 0.95)
-                return ScoreRank.S;
-            if (acc > 0.9)
-                return ScoreRank.A;
-            if (acc > 0.8)
-                return ScoreRank.B;
-            if (acc > 0.7)
-                return ScoreRank.C;
+            Accuracy.Value = currentMaximumBaseScore > 0 ? currentBaseScore / currentMaximumBaseScore : 1;
+            MinimumAccuracy.Value = maximumBaseScore > 0 ? currentBaseScore / maximumBaseScore : 0;
+            MaximumAccuracy.Value = maximumBaseScore > 0 ? (currentBaseScore + (maximumBaseScore - currentMaximumBaseScore)) / maximumBaseScore : 1;
 
-            return ScoreRank.D;
+            double comboProgress = maximumComboPortion > 0 ? currentComboPortion / maximumComboPortion : 1;
+            double accuracyProcess = maximumAccuracyJudgementCount > 0 ? (double)currentAccuracyJudgementCount / maximumAccuracyJudgementCount : 1;
+
+            TotalScore.Value = (long)Math.Round(ComputeTotalScore(comboProgress, accuracyProcess, currentBonusPortion) * scoreMultiplier);
         }
 
-        public int GetStatistic(HitResult result) => scoreResultCounts.GetOrDefault(result);
+        private void updateRank()
+        {
+            // Once failed, we shouldn't update the rank anymore.
+            if (rank.Value == ScoreRank.F)
+                return;
 
-        public double GetStandardisedScore() => getScore(ScoringMode.Standardised);
+            rank.Value = RankFromScore(Accuracy.Value, ScoreResultCounts);
+            foreach (var mod in Mods.Value.OfType<IApplicableToScoreProcessor>())
+                rank.Value = mod.AdjustRank(Rank.Value, Accuracy.Value);
+        }
+
+        protected virtual double ComputeTotalScore(double comboProgress, double accuracyProgress, double bonusPortion)
+        {
+            return 500000 * Accuracy.Value * comboProgress +
+                   500000 * Math.Pow(Accuracy.Value, 5) * accuracyProgress +
+                   bonusPortion;
+        }
 
         /// <summary>
         /// Resets this ScoreProcessor to a default state.
@@ -301,32 +390,40 @@ namespace osu.Game.Rulesets.Scoring
         /// <param name="storeResults">Whether to store the current state of the <see cref="ScoreProcessor"/> for future use.</param>
         protected override void Reset(bool storeResults)
         {
+            // Run one last time to store max values.
+            updateScore();
+
             base.Reset(storeResults);
 
-            scoreResultCounts.Clear();
             hitEvents.Clear();
             lastHitObject = null;
 
             if (storeResults)
             {
-                maxAchievableCombo = HighestCombo.Value;
-                maxBaseScore = baseScore;
+                maximumBaseScore = currentBaseScore;
+
+                maximumComboPortion = currentComboPortion;
+                maximumAccuracyJudgementCount = currentAccuracyJudgementCount;
+
+                MaximumResultCounts.Clear();
+                MaximumResultCounts.AddRange(ScoreResultCounts);
+
+                MaximumTotalScore = TotalScore.Value;
             }
 
-            baseScore = 0;
-            rollingMaxBaseScore = 0;
+            ScoreResultCounts.Clear();
+
+            currentBaseScore = 0;
+            currentMaximumBaseScore = 0;
+            currentAccuracyJudgementCount = 0;
+            currentComboPortion = 0;
+            currentBonusPortion = 0;
 
             TotalScore.Value = 0;
             Accuracy.Value = 1;
             Combo.Value = 0;
-            Rank.Value = ScoreRank.X;
             HighestCombo.Value = 0;
-        }
-
-        protected override void Dispose(bool isDisposing)
-        {
-            base.Dispose(isDisposing);
-            hitEvents.Clear();
+            updateRank();
         }
 
         /// <summary>
@@ -334,23 +431,188 @@ namespace osu.Game.Rulesets.Scoring
         /// </summary>
         public virtual void PopulateScore(ScoreInfo score)
         {
-            score.TotalScore = (long)Math.Round(GetStandardisedScore());
             score.Combo = Combo.Value;
             score.MaxCombo = HighestCombo.Value;
             score.Accuracy = Accuracy.Value;
             score.Rank = Rank.Value;
-            score.Date = DateTimeOffset.Now;
-
-            foreach (var result in Enum.GetValues(typeof(HitResult)).OfType<HitResult>().Where(r => r.IsScorable()))
-                score.Statistics[result] = GetStatistic(result);
-
             score.HitEvents = hitEvents;
+            score.Statistics.Clear();
+            score.MaximumStatistics.Clear();
+
+            foreach (var result in HitResultExtensions.ALL_TYPES)
+                score.Statistics[result] = ScoreResultCounts.GetValueOrDefault(result);
+
+            foreach (var result in HitResultExtensions.ALL_TYPES)
+                score.MaximumStatistics[result] = MaximumResultCounts.GetValueOrDefault(result);
+
+            // Populate total score after everything else.
+            score.TotalScore = TotalScore.Value;
+        }
+
+        /// <summary>
+        /// Populates a failed score, marking it with the <see cref="ScoreRank.F"/> rank.
+        /// </summary>
+        public void FailScore(ScoreInfo score)
+        {
+            if (Rank.Value == ScoreRank.F)
+                return;
+
+            score.Passed = false;
+            rank.Value = ScoreRank.F;
+
+            PopulateScore(score);
+        }
+
+        public override void ResetFromReplayFrame(ReplayFrame frame)
+        {
+            base.ResetFromReplayFrame(frame);
+
+            if (frame.Header == null)
+                return;
+
+            Combo.Value = frame.Header.Combo;
+            HighestCombo.Value = frame.Header.MaxCombo;
+            TotalScore.Value = frame.Header.TotalScore;
+
+            ScoreResultCounts.Clear();
+            ScoreResultCounts.AddRange(frame.Header.Statistics);
+
+            SetScoreProcessorStatistics(frame.Header.ScoreProcessorStatistics);
+
+            updateScore();
+
+            OnResetFromReplayFrame?.Invoke();
+        }
+
+        public ScoreProcessorStatistics GetScoreProcessorStatistics() => new ScoreProcessorStatistics
+        {
+            MaximumBaseScore = currentMaximumBaseScore,
+            BaseScore = currentBaseScore,
+            AccuracyJudgementCount = currentAccuracyJudgementCount,
+            ComboPortion = currentComboPortion,
+            BonusPortion = currentBonusPortion
+        };
+
+        public void SetScoreProcessorStatistics(ScoreProcessorStatistics statistics)
+        {
+            currentMaximumBaseScore = statistics.MaximumBaseScore;
+            currentBaseScore = statistics.BaseScore;
+            currentAccuracyJudgementCount = statistics.AccuracyJudgementCount;
+            currentComboPortion = statistics.ComboPortion;
+            currentBonusPortion = statistics.BonusPortion;
+        }
+
+        #region Static helper methods
+
+        /// <summary>
+        /// Given an accuracy (0..1), return the correct <see cref="ScoreRank"/>.
+        /// </summary>
+        public virtual ScoreRank RankFromScore(double accuracy, IReadOnlyDictionary<HitResult, int> results)
+        {
+            if (accuracy == accuracy_cutoff_x)
+                return ScoreRank.X;
+            if (accuracy >= accuracy_cutoff_s)
+                return ScoreRank.S;
+            if (accuracy >= accuracy_cutoff_a)
+                return ScoreRank.A;
+            if (accuracy >= accuracy_cutoff_b)
+                return ScoreRank.B;
+            if (accuracy >= accuracy_cutoff_c)
+                return ScoreRank.C;
+
+            return ScoreRank.D;
+        }
+
+        /// <summary>
+        /// Given a <see cref="ScoreRank"/>, return the cutoff accuracy (0..1).
+        /// Accuracy must be greater than or equal to the cutoff to qualify for the provided rank.
+        /// </summary>
+        public virtual double AccuracyCutoffFromRank(ScoreRank rank)
+        {
+            switch (rank)
+            {
+                case ScoreRank.X:
+                case ScoreRank.XH:
+                    return accuracy_cutoff_x;
+
+                case ScoreRank.S:
+                case ScoreRank.SH:
+                    return accuracy_cutoff_s;
+
+                case ScoreRank.A:
+                    return accuracy_cutoff_a;
+
+                case ScoreRank.B:
+                    return accuracy_cutoff_b;
+
+                case ScoreRank.C:
+                    return accuracy_cutoff_c;
+
+                case ScoreRank.D:
+                    return accuracy_cutoff_d;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(rank), rank, null);
+            }
+        }
+
+        #endregion
+
+        protected override void Dispose(bool isDisposing)
+        {
+            base.Dispose(isDisposing);
+            hitEvents.Clear();
         }
     }
 
     public enum ScoringMode
     {
+        [LocalisableDescription(typeof(GameplaySettingsStrings), nameof(GameplaySettingsStrings.StandardisedScoreDisplay))]
         Standardised,
+
+        [LocalisableDescription(typeof(GameplaySettingsStrings), nameof(GameplaySettingsStrings.ClassicScoreDisplay))]
         Classic
+    }
+
+    [Serializable]
+    [MessagePackObject]
+    public class ScoreProcessorStatistics
+    {
+        /// <summary>
+        /// The sum of all accuracy-affecting judgements at the current point in time.
+        /// </summary>
+        /// <remarks>
+        /// Used to compute accuracy.
+        /// See: <see cref="HitResultExtensions.IsBasic"/> and <see cref="ScoreProcessor.GetBaseScoreForResult"/>.
+        /// </remarks>
+        [Key(0)]
+        public double BaseScore { get; set; }
+
+        /// <summary>
+        /// The maximum sum of accuracy-affecting judgements at the current point in time.
+        /// </summary>
+        /// <remarks>
+        /// Used to compute accuracy.
+        /// </remarks>
+        [Key(1)]
+        public double MaximumBaseScore { get; set; }
+
+        /// <summary>
+        /// The count of accuracy-affecting judgements at the current point in time.
+        /// </summary>
+        [Key(2)]
+        public int AccuracyJudgementCount { get; set; }
+
+        /// <summary>
+        /// The combo score at the current point in time.
+        /// </summary>
+        [Key(3)]
+        public double ComboPortion { get; set; }
+
+        /// <summary>
+        /// The bonus score at the current point in time.
+        /// </summary>
+        [Key(4)]
+        public double BonusPortion { get; set; }
     }
 }

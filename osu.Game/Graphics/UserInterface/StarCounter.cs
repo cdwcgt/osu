@@ -11,7 +11,7 @@ using osu.Framework.Graphics.Sprites;
 
 namespace osu.Game.Graphics.UserInterface
 {
-    public class StarCounter : Container
+    public partial class StarCounter : Container
     {
         private readonly FillFlowContainer<Star> stars;
 
@@ -29,6 +29,11 @@ namespace osu.Game.Graphics.UserInterface
         protected virtual double AnimationDelay => 80;
 
         private const float star_spacing = 4;
+
+        public virtual FillDirection Direction
+        {
+            set => stars.Direction = value;
+        }
 
         private float current;
 
@@ -64,9 +69,8 @@ namespace osu.Game.Graphics.UserInterface
                 stars = new FillFlowContainer<Star>
                 {
                     AutoSizeAxes = Axes.Both,
-                    Direction = FillDirection.Horizontal,
                     Spacing = new Vector2(star_spacing),
-                    ChildrenEnumerable = Enumerable.Range(0, StarCount).Select(i => CreateStar())
+                    ChildrenEnumerable = Enumerable.Range(0, StarCount).Select(_ => CreateStar())
                 }
             };
         }
@@ -89,7 +93,7 @@ namespace osu.Game.Graphics.UserInterface
 
         public void ReplayAnimation()
         {
-            var t = current;
+            float t = current;
             ResetCount();
             Current = t;
         }
@@ -97,7 +101,7 @@ namespace osu.Game.Graphics.UserInterface
         public void StopAnimation()
         {
             animate(current);
-            foreach (var star in stars.Children)
+            foreach (var star in stars)
                 star.FinishTransforms(true);
         }
 
@@ -105,20 +109,20 @@ namespace osu.Game.Graphics.UserInterface
 
         private void animate(float newValue)
         {
-            for (var i = 0; i < stars.Children.Count; i++)
+            for (int i = 0; i < stars.Children.Count; i++)
             {
                 var star = stars.Children[i];
 
                 star.ClearTransforms(true);
 
-                double delay = (current <= newValue ? Math.Max(i - current, 0) : Math.Max(current - 1 - i, 0)) * AnimationDelay;
+                double delay = Math.Max(current <= newValue ? i - current : Math.Min(current, StarCount) - 1 - i, 0) * AnimationDelay;
 
-                using (star.BeginDelayedSequence(delay, true))
+                using (star.BeginDelayedSequence(delay))
                     star.DisplayAt(getStarScale(i, newValue));
             }
         }
 
-        public class DefaultStar : Star
+        public partial class DefaultStar : Star
         {
             private const double scaling_duration = 1000;
 
@@ -154,7 +158,7 @@ namespace osu.Game.Graphics.UserInterface
             }
         }
 
-        public abstract class Star : CompositeDrawable
+        public abstract partial class Star : CompositeDrawable
         {
             public abstract void DisplayAt(float scale);
         }

@@ -1,6 +1,8 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
@@ -17,18 +19,13 @@ using osu.Framework.Input.Events;
 using osu.Framework.Utils;
 using osu.Game.Beatmaps.ControlPoints;
 using osu.Game.Graphics.Containers;
+using osu.Game.Overlays;
 using osuTK;
 
 namespace osu.Game.Graphics.UserInterface
 {
-    public class OsuTextBox : BasicTextBox
+    public partial class OsuTextBox : BasicTextBox
     {
-        private readonly Sample[] textAddedSamples = new Sample[4];
-        private Sample capsTextAddedSample;
-        private Sample textRemovedSample;
-        private Sample textCommittedSample;
-        private Sample caretMovedSample;
-
         /// <summary>
         /// Whether to allow playing a different samples based on the type of character.
         /// If set to false, the same sample will be used for all characters.
@@ -42,9 +39,29 @@ namespace osu.Game.Graphics.UserInterface
         protected override SpriteText CreatePlaceholder() => new OsuSpriteText
         {
             Font = OsuFont.GetFont(italics: true),
-            Colour = new Color4(180, 180, 180, 255),
             Margin = new MarginPadding { Left = 2 },
         };
+
+        private OsuCaret? caret;
+
+        private bool selectionStarted;
+        private double sampleLastPlaybackTime;
+
+        protected enum FeedbackSampleType
+        {
+            TextAdd,
+            TextAddCaps,
+            TextRemove,
+            TextConfirm,
+            TextInvalid,
+            CaretMove,
+            SelectCharacter,
+            SelectWord,
+            SelectAll,
+            Deselect
+        }
+
+        private Dictionary<FeedbackSampleType, Sample?[]> sampleMap = new Dictionary<FeedbackSampleType, Sample?[]>();
 
         public OsuTextBox()
         {
@@ -56,64 +73,194 @@ namespace osu.Game.Graphics.UserInterface
             Current.DisabledChanged += disabled => { Alpha = disabled ? 0.3f : 1; };
         }
 
-        [BackgroundDependencyLoader]
-        private void load(OsuColour colour, AudioManager audio)
+        [BackgroundDependencyLoader(true)]
+        private void load(OverlayColourProvider? colourProvider, OsuColour colour, AudioManager audio)
         {
-            BackgroundUnfocused = Color4.Black.Opacity(0.5f);
-            BackgroundFocused = OsuColour.Gray(0.3f).Opacity(0.8f);
-            BackgroundCommit = BorderColour = colour.Yellow;
+            BackgroundUnfocused = colourProvider?.Background5 ?? Color4.Black.Opacity(0.5f);
+            BackgroundFocused = colourProvider?.Background4 ?? OsuColour.Gray(0.3f).Opacity(0.8f);
+            BackgroundCommit = BorderColour = colourProvider?.Highlight1 ?? colour.Yellow;
+            selectionColour = colourProvider?.Background1 ?? new Color4(249, 90, 255, 255);
 
+            if (caret != null)
+                caret.SelectionColour = selectionColour;
+
+            Placeholder.Colour = colourProvider?.Foreground1 ?? new Color4(180, 180, 180, 255);
+
+            // Note that `KeyBindingRow` uses similar logic for input feedback, so remember to update there if changing here.
+            var textAddedSamples = new Sample?[4];
             for (int i = 0; i < textAddedSamples.Length; i++)
                 textAddedSamples[i] = audio.Samples.Get($@"Keyboard/key-press-{1 + i}");
 
-            capsTextAddedSample = audio.Samples.Get(@"Keyboard/key-caps");
-            textRemovedSample = audio.Samples.Get(@"Keyboard/key-delete");
-            textCommittedSample = audio.Samples.Get(@"Keyboard/key-confirm");
-            caretMovedSample = audio.Samples.Get(@"Keyboard/key-movement");
+            sampleMap = new Dictionary<FeedbackSampleType, Sample?[]>
+            {
+                { FeedbackSampleType.TextAdd, textAddedSamples },
+                { FeedbackSampleType.TextAddCaps, new[] { audio.Samples.Get(@"Keyboard/key-caps") } },
+                { FeedbackSampleType.TextRemove, new[] { audio.Samples.Get(@"Keyboard/key-delete") } },
+                { FeedbackSampleType.TextConfirm, new[] { audio.Samples.Get(@"Keyboard/key-confirm") } },
+                { FeedbackSampleType.TextInvalid, new[] { audio.Samples.Get(@"Keyboard/key-invalid") } },
+                { FeedbackSampleType.CaretMove, new[] { audio.Samples.Get(@"Keyboard/key-movement") } },
+                { FeedbackSampleType.SelectCharacter, new[] { audio.Samples.Get(@"Keyboard/select-char") } },
+                { FeedbackSampleType.SelectWord, new[] { audio.Samples.Get(@"Keyboard/select-word") } },
+                { FeedbackSampleType.SelectAll, new[] { audio.Samples.Get(@"Keyboard/select-all") } },
+                { FeedbackSampleType.Deselect, new[] { audio.Samples.Get(@"Keyboard/deselect") } }
+            };
         }
 
-        protected override Color4 SelectionColour => new Color4(249, 90, 255, 255);
+        private Color4 selectionColour;
+
+        protected override Color4 SelectionColour => selectionColour;
 
         protected override void OnUserTextAdded(string added)
         {
             base.OnUserTextAdded(added);
 
+            if (!added.Any(CanAddCharacter))
+                return;
+
             if (added.Any(char.IsUpper) && AllowUniqueCharacterSamples)
-                capsTextAddedSample?.Play();
+                PlayFeedbackSample(FeedbackSampleType.TextAddCaps);
             else
-                textAddedSamples[RNG.Next(0, 3)]?.Play();
+                PlayFeedbackSample(FeedbackSampleType.TextAdd);
         }
 
         protected override void OnUserTextRemoved(string removed)
         {
             base.OnUserTextRemoved(removed);
 
-            textRemovedSample?.Play();
+            PlayFeedbackSample(FeedbackSampleType.TextRemove);
+        }
+
+        protected override void NotifyInputError()
+        {
+            base.NotifyInputError();
+
+            PlayFeedbackSample(FeedbackSampleType.TextInvalid);
         }
 
         protected override void OnTextCommitted(bool textChanged)
         {
             base.OnTextCommitted(textChanged);
 
-            textCommittedSample?.Play();
+            PlayFeedbackSample(FeedbackSampleType.TextConfirm);
         }
 
         protected override void OnCaretMoved(bool selecting)
         {
             base.OnCaretMoved(selecting);
 
-            caretMovedSample?.Play();
+            if (!selecting)
+                PlayFeedbackSample(FeedbackSampleType.CaretMove);
+        }
+
+        protected override void OnTextSelectionChanged(TextSelectionType selectionType)
+        {
+            base.OnTextSelectionChanged(selectionType);
+
+            switch (selectionType)
+            {
+                case TextSelectionType.Character:
+                    PlayFeedbackSample(FeedbackSampleType.SelectCharacter);
+                    break;
+
+                case TextSelectionType.Word:
+                    PlayFeedbackSample(selectionStarted ? FeedbackSampleType.SelectCharacter : FeedbackSampleType.SelectWord);
+                    break;
+
+                case TextSelectionType.All:
+                    PlayFeedbackSample(FeedbackSampleType.SelectAll);
+                    break;
+            }
+
+            selectionStarted = true;
+        }
+
+        protected override void OnTextDeselected()
+        {
+            base.OnTextDeselected();
+
+            if (!selectionStarted) return;
+
+            PlayFeedbackSample(FeedbackSampleType.Deselect);
+
+            selectionStarted = false;
+        }
+
+        protected override void OnImeComposition(string newComposition, int removedTextLength, int addedTextLength, bool caretMoved)
+        {
+            base.OnImeComposition(newComposition, removedTextLength, addedTextLength, caretMoved);
+
+            if (string.IsNullOrEmpty(newComposition))
+            {
+                switch (removedTextLength)
+                {
+                    case 0:
+                        // empty composition event, composition wasn't changed, don't play anything.
+                        return;
+
+                    case 1:
+                        // composition probably ended by pressing backspace, or was cancelled.
+                        PlayFeedbackSample(FeedbackSampleType.TextRemove);
+                        return;
+
+                    default:
+                        // longer text removed, composition ended because it was cancelled.
+                        // could be a different sample if desired.
+                        PlayFeedbackSample(FeedbackSampleType.TextRemove);
+                        return;
+                }
+            }
+
+            if (addedTextLength > 0)
+            {
+                // some text was added, probably due to typing new text or by changing the candidate.
+                PlayFeedbackSample(FeedbackSampleType.TextAdd);
+                return;
+            }
+
+            if (removedTextLength > 0)
+            {
+                // text was probably removed by backspacing.
+                // it's also possible that a candidate that only removed text was changed to.
+                PlayFeedbackSample(FeedbackSampleType.TextRemove);
+                return;
+            }
+
+            if (caretMoved)
+            {
+                // only the caret/selection was moved.
+                PlayFeedbackSample(FeedbackSampleType.CaretMove);
+            }
+        }
+
+        protected override void OnImeResult(string result, bool successful)
+        {
+            base.OnImeResult(result, successful);
+
+            if (successful)
+            {
+                // composition was successfully completed, usually by pressing the enter key.
+                PlayFeedbackSample(FeedbackSampleType.TextConfirm);
+            }
+            else
+            {
+                // composition was prematurely ended, eg. by clicking inside the textbox.
+                // could be a different sample if desired.
+                PlayFeedbackSample(FeedbackSampleType.TextConfirm);
+            }
         }
 
         protected override void OnFocus(FocusEvent e)
         {
-            BorderThickness = 3;
+            if (Masking)
+                BorderThickness = 3;
+
             base.OnFocus(e);
         }
 
         protected override void OnFocusLost(FocusLostEvent e)
         {
-            BorderThickness = 0;
+            if (Masking)
+                BorderThickness = 0;
 
             base.OnFocusLost(e);
         }
@@ -121,16 +268,45 @@ namespace osu.Game.Graphics.UserInterface
         protected override Drawable GetDrawableCharacter(char c) => new FallingDownContainer
         {
             AutoSizeAxes = Axes.Both,
-            Child = new OsuSpriteText { Text = c.ToString(), Font = OsuFont.GetFont(size: CalculatedTextSize) },
+            Child = new OsuSpriteText { Text = c.ToString(), Font = OsuFont.GetFont(size: FontSize) },
         };
 
-        protected override Caret CreateCaret() => new OsuCaret
+        protected override Caret CreateCaret() => caret = new OsuCaret
         {
             CaretWidth = CaretWidth,
             SelectionColour = SelectionColour,
         };
 
-        private class OsuCaret : Caret
+        private SampleChannel? getSampleChannel(FeedbackSampleType feedbackSampleType)
+        {
+            var samples = sampleMap[feedbackSampleType];
+
+            if (samples.Length == 0)
+                return null;
+
+            return samples[RNG.Next(0, samples.Length)]?.GetChannel();
+        }
+
+        protected void PlayFeedbackSample(FeedbackSampleType feedbackSample) => Schedule(() =>
+        {
+            if (Time.Current < sampleLastPlaybackTime + 15) return;
+
+            SampleChannel? channel = getSampleChannel(feedbackSample);
+
+            if (channel == null) return;
+
+            double pitch = 0.98 + RNG.NextDouble(0.04);
+
+            if (feedbackSample == FeedbackSampleType.SelectCharacter)
+                pitch += ((double)SelectedText.Length / Math.Max(1, Text.Length)) * 0.15f;
+
+            channel.Frequency.Value = pitch;
+            channel.Play();
+
+            sampleLastPlaybackTime = Time.Current;
+        });
+
+        private partial class OsuCaret : Caret
         {
             private const float caret_move_time = 60;
 
@@ -138,18 +314,16 @@ namespace osu.Game.Graphics.UserInterface
 
             public OsuCaret()
             {
-                RelativeSizeAxes = Axes.Y;
-                Size = new Vector2(1, 0.9f);
-
                 Colour = Color4.Transparent;
-                Anchor = Anchor.CentreLeft;
-                Origin = Anchor.CentreLeft;
 
-                Masking = true;
-                CornerRadius = 1;
                 InternalChild = beatSync = new CaretBeatSyncedContainer
                 {
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.CentreLeft,
+                    Masking = true,
+                    CornerRadius = 1f,
                     RelativeSizeAxes = Axes.Both,
+                    Height = 0.9f,
                 };
             }
 
@@ -177,7 +351,7 @@ namespace osu.Game.Graphics.UserInterface
                 }
             }
 
-            private class CaretBeatSyncedContainer : BeatSyncedContainer
+            private partial class CaretBeatSyncedContainer : BeatSyncedContainer
             {
                 private bool hasSelection;
 

@@ -1,26 +1,27 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using osu.Game.Beatmaps.ControlPoints;
-using osu.Game.IO.Serialization;
 
 namespace osu.Game.Rulesets.Timing
 {
     /// <summary>
-    /// A control point which adds an aggregated multiplier based on the provided <see cref="TimingPoint"/>'s BeatLength and <see cref="DifficultyPoint"/>'s SpeedMultiplier.
+    /// A control point which adds an aggregated multiplier based on the provided <see cref="TimingPoint"/>'s BeatLength and <see cref="EffectPoint"/>'s SpeedMultiplier.
     /// </summary>
-    public class MultiplierControlPoint : IJsonSerializable, IComparable<MultiplierControlPoint>
+    public class MultiplierControlPoint : IComparable<MultiplierControlPoint>, IControlPoint
     {
         /// <summary>
         /// The time in milliseconds at which this <see cref="MultiplierControlPoint"/> starts.
         /// </summary>
-        public double StartTime;
+        public double Time { get; set; }
 
         /// <summary>
         /// The aggregate multiplier which this <see cref="MultiplierControlPoint"/> provides.
         /// </summary>
-        public double Multiplier => Velocity * DifficultyPoint.SpeedMultiplier * BaseBeatLength / TimingPoint.BeatLength;
+        public double Multiplier => Velocity * EffectPoint.ScrollSpeed * BaseBeatLength / TimingPoint.BeatLength;
 
         /// <summary>
         /// The base beat length to scale the <see cref="TimingPoint"/> provided multiplier relative to.
@@ -39,9 +40,9 @@ namespace osu.Game.Rulesets.Timing
         public TimingControlPoint TimingPoint = new TimingControlPoint();
 
         /// <summary>
-        /// The <see cref="DifficultyControlPoint"/> that provides additional difficulty information for this <see cref="MultiplierControlPoint"/>.
+        /// The <see cref="EffectControlPoint"/> that provides additional difficulty information for this <see cref="MultiplierControlPoint"/>.
         /// </summary>
-        public DifficultyControlPoint DifficultyPoint = new DifficultyControlPoint();
+        public EffectControlPoint EffectPoint = new EffectControlPoint();
 
         /// <summary>
         /// Creates a <see cref="MultiplierControlPoint"/>. This is required for JSON serialization
@@ -53,13 +54,13 @@ namespace osu.Game.Rulesets.Timing
         /// <summary>
         /// Creates a <see cref="MultiplierControlPoint"/>.
         /// </summary>
-        /// <param name="startTime">The start time of this <see cref="MultiplierControlPoint"/>.</param>
-        public MultiplierControlPoint(double startTime)
+        /// <param name="time">The start time of this <see cref="MultiplierControlPoint"/>.</param>
+        public MultiplierControlPoint(double time)
         {
-            StartTime = startTime;
+            Time = time;
         }
 
         // ReSharper disable once ImpureMethodCallOnReadonlyValueField
-        public int CompareTo(MultiplierControlPoint other) => StartTime.CompareTo(other?.StartTime);
+        public int CompareTo(MultiplierControlPoint other) => Time.CompareTo(other?.Time);
     }
 }

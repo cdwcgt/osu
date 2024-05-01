@@ -1,4 +1,4 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
@@ -12,7 +12,7 @@ using osu.Game.Skinning;
 
 namespace osu.Game.Rulesets.Mania.UI.Components
 {
-    public class HitObjectArea : SkinReloadableDrawable
+    public partial class HitObjectArea : SkinReloadableDrawable
     {
         protected readonly IBindable<ScrollingDirection> Direction = new Bindable<ScrollingDirection>();
         public readonly HitObjectContainer HitObjectContainer;
@@ -33,9 +33,9 @@ namespace osu.Game.Rulesets.Mania.UI.Components
             Direction.BindValueChanged(onDirectionChanged, true);
         }
 
-        protected override void SkinChanged(ISkinSource skin, bool allowFallback)
+        protected override void SkinChanged(ISkinSource skin)
         {
-            base.SkinChanged(skin, allowFallback);
+            base.SkinChanged(skin);
             UpdateHitPosition();
         }
 

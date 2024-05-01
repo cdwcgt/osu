@@ -10,7 +10,7 @@ using osu.Game.Skinning;
 
 namespace osu.Game.Storyboards.Drawables
 {
-    public class DrawableStoryboardSample : PausableSkinnableSound
+    public partial class DrawableStoryboardSample : PausableSkinnableSound
     {
         /// <summary>
         /// The amount of time allowable beyond the start time of the sample, for the sample to start.
@@ -29,16 +29,19 @@ namespace osu.Game.Storyboards.Drawables
         }
 
         [Resolved]
-        private IBindable<IReadOnlyList<Mod>> mods { get; set; }
+        private IReadOnlyList<Mod>? mods { get; set; }
 
-        protected override void SkinChanged(ISkinSource skin, bool allowFallback)
+        protected override void SkinChanged(ISkinSource skin)
         {
-            base.SkinChanged(skin, allowFallback);
+            base.SkinChanged(skin);
 
-            foreach (var mod in mods.Value.OfType<IApplicableToSample>())
+            if (mods != null)
             {
-                foreach (var sample in DrawableSamples)
-                    mod.ApplyToSample(sample);
+                foreach (var mod in mods.OfType<IApplicableToSample>())
+                {
+                    foreach (var sample in DrawableSamples)
+                        mod.ApplyToSample(sample);
+                }
             }
         }
 

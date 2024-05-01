@@ -6,18 +6,20 @@ using System.Collections.Generic;
 using System.Linq;
 using Humanizer;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.LocalisationExtensions;
 using osu.Framework.Graphics;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
+using osu.Game.Resources.Localisation.Web;
 using osu.Game.Users;
 
 namespace osu.Game.Overlays.Profile.Header.Components
 {
-    public class RankGraph : UserGraph<int, int>
+    public partial class RankGraph : UserGraph<int, int>
     {
         private const int ranked_days = 88;
 
-        public readonly Bindable<UserStatistics> Statistics = new Bindable<UserStatistics>();
+        public readonly Bindable<UserStatistics?> Statistics = new Bindable<UserStatistics?>();
 
         private readonly OsuSpriteText placeholder;
 
@@ -27,7 +29,7 @@ namespace osu.Game.Overlays.Profile.Header.Components
             {
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre,
-                Text = "No recent plays",
+                Text = UsersStrings.ShowExtraUnranked,
                 Font = OsuFont.GetFont(size: 12, weight: FontWeight.Regular)
             });
         }
@@ -38,9 +40,11 @@ namespace osu.Game.Overlays.Profile.Header.Components
             Statistics.BindValueChanged(statistics => updateStatistics(statistics.NewValue), true);
         }
 
-        private void updateStatistics(UserStatistics statistics)
+        private void updateStatistics(UserStatistics? statistics)
         {
-            int[] userRanks = statistics?.RankHistory?.Data;
+            // checking both IsRanked and RankHistory is required.
+            // see https://github.com/ppy/osu-web/blob/154ceafba0f35a1dd935df53ec98ae2ea5615f9f/resources/assets/lib/profile-page/rank-chart.tsx#L46
+            int[]? userRanks = statistics?.IsRanked == true ? statistics.RankHistory?.Data : null;
             Data = userRanks?.Select((x, index) => new KeyValuePair<int, int>(index, x)).Where(x => x.Value != 0).ToArray();
         }
 
@@ -58,41 +62,16 @@ namespace osu.Game.Overlays.Profile.Header.Components
             placeholder.FadeIn(FADE_DURATION, Easing.Out);
         }
 
-        protected override object GetTooltipContent(int index, int rank)
+        protected override UserGraphTooltipContent GetTooltipContent(int index, int rank)
         {
-            var days = ranked_days - index + 1;
+            int days = ranked_days - index + 1;
 
-            return new TooltipDisplayContent
+            return new UserGraphTooltipContent
             {
-                Rank = $"#{rank:N0}",
-                Time = days == 0 ? "now" : $"{"day".ToQuantity(days)} ago"
+                Name = UsersStrings.ShowRankGlobalSimple,
+                Count = rank.ToLocalisableString("\\##,##0"),
+                Time = days == 0 ? "now" : $"{"day".ToQuantity(days)} ago",
             };
-        }
-
-        protected override UserGraphTooltip GetTooltip() => new RankGraphTooltip();
-
-        private class RankGraphTooltip : UserGraphTooltip
-        {
-            public RankGraphTooltip()
-                : base("Global Ranking")
-            {
-            }
-
-            public override bool SetContent(object content)
-            {
-                if (!(content is TooltipDisplayContent info))
-                    return false;
-
-                Counter.Text = info.Rank;
-                BottomText.Text = info.Time;
-                return true;
-            }
-        }
-
-        private class TooltipDisplayContent
-        {
-            public string Rank;
-            public string Time;
         }
     }
 }

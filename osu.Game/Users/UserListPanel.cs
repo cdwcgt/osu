@@ -7,14 +7,15 @@ using osu.Framework.Graphics.Colour;
 using osu.Framework.Extensions.Color4Extensions;
 using osuTK.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Game.Online.API.Requests.Responses;
 using osuTK;
 using osu.Game.Overlays.Profile.Header.Components;
 
 namespace osu.Game.Users
 {
-    public class UserListPanel : ExtendedUserPanel
+    public partial class UserListPanel : ExtendedUserPanel
     {
-        public UserListPanel(User user)
+        public UserListPanel(APIUser user)
             : base(user)
         {
             RelativeSizeAxes = Axes.X;
@@ -64,6 +65,7 @@ namespace osu.Game.Users
                             {
                                 username.Anchor = Anchor.CentreLeft;
                                 username.Origin = Anchor.CentreLeft;
+                                username.UseFullGlyphHeight = false;
                             })
                         }
                     },
@@ -92,13 +94,23 @@ namespace osu.Game.Users
                 }
             };
 
+            if (User.Groups != null)
+            {
+                details.Add(new GroupBadgeFlow
+                {
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.CentreLeft,
+                    User = { Value = User }
+                });
+            }
+
             if (User.IsSupporter)
             {
                 details.Add(new SupporterIcon
                 {
                     Anchor = Anchor.CentreLeft,
                     Origin = Anchor.CentreLeft,
-                    Height = 20,
+                    Height = 16,
                     SupportLevel = User.SupportLevel
                 });
             }

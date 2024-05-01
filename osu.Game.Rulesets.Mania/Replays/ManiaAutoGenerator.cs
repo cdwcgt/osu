@@ -3,7 +3,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using osu.Game.Replays;
+using osu.Framework.Extensions.ObjectExtensions;
 using osu.Game.Rulesets.Mania.Beatmaps;
 using osu.Game.Rulesets.Mania.Objects;
 using osu.Game.Rulesets.Objects;
@@ -11,7 +11,7 @@ using osu.Game.Rulesets.Replays;
 
 namespace osu.Game.Rulesets.Mania.Replays
 {
-    internal class ManiaAutoGenerator : AutoGenerator
+    internal class ManiaAutoGenerator : AutoGenerator<ManiaReplayFrame>
     {
         public const double RELEASE_DELAY = 20;
 
@@ -22,8 +22,6 @@ namespace osu.Game.Rulesets.Mania.Replays
         public ManiaAutoGenerator(ManiaBeatmap beatmap)
             : base(beatmap)
         {
-            Replay = new Replay();
-
             columnActions = new ManiaAction[Beatmap.TotalColumns];
 
             var normalAction = ManiaAction.Key1;
@@ -43,12 +41,10 @@ namespace osu.Game.Rulesets.Mania.Replays
             }
         }
 
-        protected Replay Replay;
-
-        public override Replay Generate()
+        protected override void GenerateFrames()
         {
             if (Beatmap.HitObjects.Count == 0)
-                return Replay;
+                return;
 
             var pointGroups = generateActionPoints().GroupBy(a => a.Time).OrderBy(g => g.First().Time);
 
@@ -60,20 +56,18 @@ namespace osu.Game.Rulesets.Mania.Replays
                 {
                     switch (point)
                     {
-                        case HitPoint _:
+                        case HitPoint:
                             actions.Add(columnActions[point.Column]);
                             break;
 
-                        case ReleasePoint _:
+                        case ReleasePoint:
                             actions.Remove(columnActions[point.Column]);
                             break;
                     }
                 }
 
-                Replay.Frames.Add(new ManiaReplayFrame(group.First().Time, actions.ToArray()));
+                Frames.Add(new ManiaReplayFrame(group.First().Time, actions.ToArray()));
             }
-
-            return Replay;
         }
 
         private IEnumerable<IActionPoint> generateActionPoints()
@@ -82,7 +76,7 @@ namespace osu.Game.Rulesets.Mania.Replays
             {
                 var currentObject = Beatmap.HitObjects[i];
                 var nextObjectInColumn = GetNextObject(i); // Get the next object that requires pressing the same button
-                var releaseTime = calculateReleaseTime(currentObject, nextObjectInColumn);
+                double releaseTime = calculateReleaseTime(currentObject, nextObjectInColumn);
 
                 yield return new HitPoint { Time = currentObject.StartTime, Column = currentObject.Column };
 
@@ -90,21 +84,28 @@ namespace osu.Game.Rulesets.Mania.Replays
             }
         }
 
-        private double calculateReleaseTime(HitObject currentObject, HitObject nextObject)
+        private double calculateReleaseTime(HitObject currentObject, HitObject? nextObject)
         {
             double endTime = currentObject.GetEndTime();
+            double releaseDelay = RELEASE_DELAY;
 
-            if (currentObject is HoldNote)
-                // hold note releases must be timed exactly.
-                return endTime;
+            if (currentObject is HoldNote hold)
+            {
+                if (hold.Duration > 0)
+                    // hold note releases must be timed exactly.
+                    return endTime;
+
+                // Special case for super short hold notes
+                releaseDelay = 1;
+            }
 
             bool canDelayKeyUpFully = nextObject == null ||
-                                      nextObject.StartTime > endTime + RELEASE_DELAY;
+                                      nextObject.StartTime > endTime + releaseDelay;
 
-            return endTime + (canDelayKeyUpFully ? RELEASE_DELAY : (nextObject.StartTime - endTime) * 0.9);
+            return endTime + (canDelayKeyUpFully ? releaseDelay : (nextObject.AsNonNull().StartTime - endTime) * 0.9);
         }
 
-        protected override HitObject GetNextObject(int currentIndex)
+        protected override HitObject? GetNextObject(int currentIndex)
         {
             int desiredColumn = Beatmap.HitObjects[currentIndex].Column;
 

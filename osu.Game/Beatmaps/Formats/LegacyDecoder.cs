@@ -27,9 +27,9 @@ namespace osu.Game.Beatmaps.Formats
 
         protected override void ParseStreamInto(LineBufferedReader stream, T output)
         {
-            Section section = Section.None;
+            Section section = Section.General;
 
-            string line;
+            string? line;
 
             while ((line = stream.ReadLine()) != null)
             {
@@ -47,10 +47,7 @@ namespace osu.Game.Beatmaps.Formats
                 if (line.StartsWith('[') && line.EndsWith(']'))
                 {
                     if (!Enum.TryParse(line[1..^1], out section))
-                    {
                         Logger.Log($"Unknown section \"{line}\" in \"{output}\"");
-                        section = Section.None;
-                    }
 
                     OnBeginNewSection(section);
                     continue;
@@ -62,7 +59,7 @@ namespace osu.Game.Beatmaps.Formats
                 }
                 catch (Exception e)
                 {
-                    Logger.Log($"Failed to process line \"{line}\" into \"{output}\": {e.Message}", LoggingTarget.Runtime, LogLevel.Important);
+                    Logger.Log($"Failed to process line \"{line}\" into \"{output}\": {e.Message}");
                 }
             }
         }
@@ -82,21 +79,21 @@ namespace osu.Game.Beatmaps.Formats
             switch (section)
             {
                 case Section.Colours:
-                    HandleColours(output, line);
+                    HandleColours(output, line, false);
                     return;
             }
         }
 
         protected string StripComments(string line)
         {
-            var index = line.AsSpan().IndexOf("//".AsSpan());
+            int index = line.AsSpan().IndexOf("//".AsSpan());
             if (index > 0)
                 return line.Substring(0, index);
 
             return line;
         }
 
-        protected void HandleColours<TModel>(TModel output, string line)
+        protected void HandleColours<TModel>(TModel output, string line, bool allowAlpha)
         {
             var pair = SplitKeyVal(line);
 
@@ -111,7 +108,7 @@ namespace osu.Game.Beatmaps.Formats
 
             try
             {
-                byte alpha = split.Length == 4 ? byte.Parse(split[3]) : (byte)255;
+                byte alpha = allowAlpha && split.Length == 4 ? byte.Parse(split[3]) : (byte)255;
                 colour = new Color4(byte.Parse(split[0]), byte.Parse(split[1]), byte.Parse(split[2]), alpha);
             }
             catch
@@ -123,7 +120,7 @@ namespace osu.Game.Beatmaps.Formats
             {
                 if (!(output is IHasComboColours tHasComboColours)) return;
 
-                tHasComboColours.AddComboColours(colour);
+                tHasComboColours.CustomComboColours.Add(colour);
             }
             else
             {
@@ -133,22 +130,25 @@ namespace osu.Game.Beatmaps.Formats
             }
         }
 
-        protected KeyValuePair<string, string> SplitKeyVal(string line, char separator = ':')
+        protected KeyValuePair<string, string> SplitKeyVal(string line, char separator = ':', bool shouldTrim = true)
         {
-            var split = line.Split(separator, 2);
+            string[] split = line.Split(separator, 2, shouldTrim ? StringSplitOptions.TrimEntries : StringSplitOptions.None);
 
             return new KeyValuePair<string, string>
             (
-                split[0].Trim(),
-                split.Length > 1 ? split[1].Trim() : string.Empty
+                split[0],
+                split.Length > 1 ? split[1] : string.Empty
             );
         }
 
-        protected string CleanFilename(string path) => path.Trim('"').ToStandardisedPath();
+        protected string CleanFilename(string path) => path
+                                                       // User error which is supported by stable (https://github.com/ppy/osu/issues/21204)
+                                                       .Replace(@"\\", @"\")
+                                                       .Trim('"')
+                                                       .ToStandardisedPath();
 
-        protected enum Section
+        public enum Section
         {
-            None,
             General,
             Editor,
             Metadata,
@@ -163,50 +163,25 @@ namespace osu.Game.Beatmaps.Formats
             Mania,
         }
 
-        [Obsolete("Do not use unless you're a legacy ruleset and 100% sure.")]
-        public class LegacyDifficultyControlPoint : DifficultyControlPoint
-        {
-            /// <summary>
-            /// Legacy BPM multiplier that introduces floating-point errors for rulesets that depend on it.
-            /// DO NOT USE THIS UNLESS 100% SURE.
-            /// </summary>
-            public double BpmMultiplier { get; private set; }
-
-            public LegacyDifficultyControlPoint(double beatLength)
-                : this()
-            {
-                // Note: In stable, the division occurs on floats, but with compiler optimisations turned on actually seems to occur on doubles via some .NET black magic (possibly inlining?).
-                BpmMultiplier = beatLength < 0 ? Math.Clamp((float)-beatLength, 10, 10000) / 100.0 : 1;
-            }
-
-            public LegacyDifficultyControlPoint()
-            {
-                SpeedMultiplierBindable.Precision = double.Epsilon;
-            }
-
-            public override void CopyFrom(ControlPoint other)
-            {
-                base.CopyFrom(other);
-
-                BpmMultiplier = ((LegacyDifficultyControlPoint)other).BpmMultiplier;
-            }
-        }
-
-        internal class LegacySampleControlPoint : SampleControlPoint
+        internal class LegacySampleControlPoint : SampleControlPoint, IEquatable<LegacySampleControlPoint>
         {
             public int CustomSampleBank;
 
             public override HitSampleInfo ApplyTo(HitSampleInfo hitSampleInfo)
             {
-                var baseInfo = base.ApplyTo(hitSampleInfo);
+                if (hitSampleInfo is ConvertHitObjectParser.LegacyHitSampleInfo legacy)
+                {
+                    return legacy.With(
+                        newCustomSampleBank: legacy.CustomSampleBank > 0 ? legacy.CustomSampleBank : CustomSampleBank,
+                        newVolume: hitSampleInfo.Volume > 0 ? hitSampleInfo.Volume : SampleVolume,
+                        newBank: legacy.BankSpecified ? legacy.Bank : SampleBank
+                    );
+                }
 
-                if (baseInfo is ConvertHitObjectParser.LegacyHitSampleInfo legacy && legacy.CustomSampleBank == 0)
-                    return legacy.With(newCustomSampleBank: CustomSampleBank);
-
-                return baseInfo;
+                return base.ApplyTo(hitSampleInfo);
             }
 
-            public override bool IsRedundant(ControlPoint existing)
+            public override bool IsRedundant(ControlPoint? existing)
                 => base.IsRedundant(existing)
                    && existing is LegacySampleControlPoint existingSample
                    && CustomSampleBank == existingSample.CustomSampleBank;
@@ -217,6 +192,17 @@ namespace osu.Game.Beatmaps.Formats
 
                 CustomSampleBank = ((LegacySampleControlPoint)other).CustomSampleBank;
             }
+
+            public override bool Equals(ControlPoint? other)
+                => other is LegacySampleControlPoint otherLegacySampleControlPoint
+                   && Equals(otherLegacySampleControlPoint);
+
+            public bool Equals(LegacySampleControlPoint? other)
+                => base.Equals(other)
+                   && CustomSampleBank == other.CustomSampleBank;
+
+            // ReSharper disable once NonReadonlyMemberInGetHashCode
+            public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), CustomSampleBank);
         }
     }
 }

@@ -1,12 +1,14 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using System.Linq;
 using JetBrains.Annotations;
 using osu.Game.Beatmaps;
-using osu.Game.Rulesets.Mania.MathUtils;
 using osu.Game.Rulesets.Objects;
+using osu.Game.Utils;
 
 namespace osu.Game.Rulesets.Mania.Beatmaps.Patterns.Legacy
 {
@@ -23,22 +25,14 @@ namespace osu.Game.Rulesets.Mania.Beatmaps.Patterns.Legacy
         /// <summary>
         /// The random number generator to use.
         /// </summary>
-        protected readonly FastRandom Random;
+        protected readonly LegacyRandom Random;
 
-        /// <summary>
-        /// The beatmap which <see cref="HitObject"/> is being converted from.
-        /// </summary>
-        protected readonly IBeatmap OriginalBeatmap;
-
-        protected PatternGenerator(FastRandom random, HitObject hitObject, ManiaBeatmap beatmap, Pattern previousPattern, IBeatmap originalBeatmap)
-            : base(hitObject, beatmap, previousPattern)
+        protected PatternGenerator(LegacyRandom random, HitObject hitObject, IBeatmap beatmap, Pattern previousPattern, int totalColumns)
+            : base(hitObject, beatmap, totalColumns, previousPattern)
         {
-            if (random == null) throw new ArgumentNullException(nameof(random));
-            if (originalBeatmap == null) throw new ArgumentNullException(nameof(originalBeatmap));
+            ArgumentNullException.ThrowIfNull(random);
 
             Random = random;
-            OriginalBeatmap = originalBeatmap;
-
             RandomStart = TotalColumns == 8 ? 1 : 0;
         }
 
@@ -102,17 +96,17 @@ namespace osu.Game.Rulesets.Mania.Beatmaps.Patterns.Legacy
                 if (conversionDifficulty != null)
                     return conversionDifficulty.Value;
 
-                HitObject lastObject = OriginalBeatmap.HitObjects.LastOrDefault();
-                HitObject firstObject = OriginalBeatmap.HitObjects.FirstOrDefault();
+                HitObject lastObject = Beatmap.HitObjects.LastOrDefault();
+                HitObject firstObject = Beatmap.HitObjects.FirstOrDefault();
 
                 // Drain time in seconds
-                int drainTime = (int)(((lastObject?.StartTime ?? 0) - (firstObject?.StartTime ?? 0) - OriginalBeatmap.TotalBreakTime) / 1000);
+                int drainTime = (int)(((lastObject?.StartTime ?? 0) - (firstObject?.StartTime ?? 0) - Beatmap.TotalBreakTime) / 1000);
 
                 if (drainTime == 0)
                     drainTime = 10000;
 
-                BeatmapDifficulty difficulty = OriginalBeatmap.BeatmapInfo.BaseDifficulty;
-                conversionDifficulty = ((difficulty.DrainRate + Math.Clamp(difficulty.ApproachRate, 4, 7)) / 1.5 + (double)OriginalBeatmap.HitObjects.Count / drainTime * 9f) / 38f * 5f / 1.15;
+                IBeatmapDifficultyInfo difficulty = Beatmap.Difficulty;
+                conversionDifficulty = ((difficulty.DrainRate + Math.Clamp(difficulty.ApproachRate, 4, 7)) / 1.5 + (double)Beatmap.HitObjects.Count / drainTime * 9f) / 38f * 5f / 1.15;
                 conversionDifficulty = Math.Min(conversionDifficulty.Value, 12);
 
                 return conversionDifficulty.Value;
@@ -149,7 +143,7 @@ namespace osu.Game.Rulesets.Mania.Beatmaps.Patterns.Legacy
         {
             lowerBound ??= RandomStart;
             upperBound ??= TotalColumns;
-            nextColumn ??= (_ => GetRandomColumn(lowerBound, upperBound));
+            nextColumn ??= _ => GetRandomColumn(lowerBound, upperBound);
 
             // Check for the initial column
             if (isValid(initialColumn))
@@ -176,7 +170,19 @@ namespace osu.Game.Rulesets.Mania.Beatmaps.Patterns.Legacy
 
             return initialColumn;
 
-            bool isValid(int column) => validation?.Invoke(column) != false && !patterns.Any(p => p.ColumnHasObject(column));
+            bool isValid(int column)
+            {
+                if (validation?.Invoke(column) == false)
+                    return false;
+
+                foreach (var p in patterns)
+                {
+                    if (p.ColumnHasObject(column))
+                        return false;
+                }
+
+                return true;
+            }
         }
 
         /// <summary>

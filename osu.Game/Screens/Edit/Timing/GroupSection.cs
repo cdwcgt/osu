@@ -13,23 +13,23 @@ using osuTK;
 
 namespace osu.Game.Screens.Edit.Timing
 {
-    internal class GroupSection : CompositeDrawable
+    internal partial class GroupSection : CompositeDrawable
     {
-        private LabelledTextBox textBox;
+        private LabelledTextBox textBox = null!;
 
-        private TriangleButton button;
-
-        [Resolved]
-        protected Bindable<ControlPointGroup> SelectedGroup { get; private set; }
+        private OsuButton button = null!;
 
         [Resolved]
-        protected EditorBeatmap Beatmap { get; private set; }
+        protected Bindable<ControlPointGroup> SelectedGroup { get; private set; } = null!;
 
         [Resolved]
-        private EditorClock clock { get; set; }
+        protected EditorBeatmap Beatmap { get; private set; } = null!;
 
-        [Resolved(canBeNull: true)]
-        private IEditorChangeHandler changeHandler { get; set; }
+        [Resolved]
+        private EditorClock clock { get; set; } = null!;
+
+        [Resolved]
+        private IEditorChangeHandler? changeHandler { get; set; }
 
         [BackgroundDependencyLoader]
         private void load()
@@ -37,7 +37,7 @@ namespace osu.Game.Screens.Edit.Timing
             RelativeSizeAxes = Axes.X;
             AutoSizeAxes = Axes.Y;
 
-            Padding = new MarginPadding(10);
+            Padding = new MarginPadding(10) { Bottom = 0 };
 
             InternalChildren = new Drawable[]
             {
@@ -53,7 +53,7 @@ namespace osu.Game.Screens.Edit.Timing
                         {
                             Label = "Time"
                         },
-                        button = new TriangleButton
+                        button = new RoundedButton
                         {
                             Text = "Use current time",
                             RelativeSizeAxes = Axes.X,
@@ -68,7 +68,7 @@ namespace osu.Game.Screens.Edit.Timing
                 if (!isNew)
                     return;
 
-                if (double.TryParse(sender.Text, out var newTime))
+                if (double.TryParse(sender.Text, out double newTime))
                 {
                     changeSelectedGroupTime(newTime);
                 }
