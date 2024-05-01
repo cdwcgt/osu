@@ -24,7 +24,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         {
         }
 
-        protected override void Process(DifficultyHitObject current)
+        public override void Process(DifficultyHitObject current)
         {
             var osuCurrent = (OsuDifficultyHitObject)current;
 
@@ -49,14 +49,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         {
             double rhythmBonus = 0.05 * current.Flow;
 
-            if (Previous.Count == 0)
+            if (current.Index == 0)
                 return rhythmBonus;
 
-            if (Previous[0].BaseObject is HitCircle)
+            if (current.Previous(0).BaseObject is HitCircle)
                 rhythmBonus += calculateCircleToCircleRhythmBonus(current);
-            else if (Previous[0].BaseObject is Slider)
+            else if (current.Previous(0).BaseObject is Slider)
                 rhythmBonus += calculateSliderToCircleRhythmBonus(current);
-            else if (Previous[0].BaseObject is Spinner)
+            else if (current.Previous(0).BaseObject is Spinner)
                 isPreviousOffbeat = false;
 
             return rhythmBonus;
@@ -64,13 +64,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         private double calculateCircleToCircleRhythmBonus(OsuDifficultyHitObject current)
         {
-            var previous = (OsuDifficultyHitObject)Previous[0];
+            var previous = (OsuDifficultyHitObject)current.Previous(0);
             double rhythmBonus = 0;
 
             if (isPreviousOffbeat && Utils.IsRatioEqualGreater(1.5, current.GapTime, previous.GapTime))
             {
                 rhythmBonus = 5; // Doubles, Quads etc.
-                foreach (var previousDouble in previousDoubles.Skip(Math.Max(0, previousDoubles.Count - 10)))
+                foreach (int previousDouble in previousDoubles.Skip(Math.Max(0, previousDoubles.Count - 10)))
                 {
                     if (previousDouble > 0) // -1 is used to mark 1/3s
                         rhythmBonus *= 1 - 0.5 * Math.Pow(0.9, noteIndex - previousDouble); // Reduce the value of repeated doubles.
@@ -127,8 +127,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             double streamBpm = 15000 / current.GapTime;
             double isFlowSpeed = Utils.TransitionToTrue(streamBpm, 120, 30);
 
-            double distanceOffset = (Math.Tanh((streamBpm - 140) / 20) + 2) * OsuDifficultyHitObject.NORMALIZED_RADIUS;
-            double isFlowDistance = Utils.TransitionToFalse(current.JumpDistance, distanceOffset, OsuDifficultyHitObject.NORMALIZED_RADIUS);
+            double distanceOffset = (Math.Tanh((streamBpm - 140) / 20) + 2) * OsuDifficultyHitObject.NORMALISED_RADIUS;
+            double isFlowDistance = Utils.TransitionToFalse(current.JumpDistance, distanceOffset, OsuDifficultyHitObject.NORMALISED_RADIUS);
 
             return isFlowSpeed * isFlowDistance;
         }
