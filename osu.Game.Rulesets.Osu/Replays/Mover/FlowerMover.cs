@@ -85,7 +85,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Mover
             lastPoint = CurrentPosition;
             path = new SliderPath(new[]
             {
-                new PathControlPoint(CurrentPosition, PathType.Bezier),
+                new PathControlPoint(CurrentPosition, PathType.BEZIER),
                 new PathControlPoint(p1),
                 new PathControlPoint(p2),
                 new PathControlPoint(TargetPosition)
