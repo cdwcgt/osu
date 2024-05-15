@@ -35,15 +35,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             int countMiss = score.Statistics.GetValueOrDefault(HitResult.Miss);
             int totalHits = countGreat + countOk + countMeh + countMiss;
 
-            double multiplier = PERFORMANCE_BASE_MULTIPLIER;
-
-            // Custom multipliers for NoFail and SpunOut.
-            if (mods.Any(m => m is OsuModNoFail))
-                multiplier *= Math.Max(0.90, 1.0 - 0.02 * countMiss);
-
-            if (mods.Any(m => m is OsuModSpunOut))
-                multiplier *= 1.0 - Math.Pow((double)osuAttributes.SpinnerCount / totalHits, 0.85);
-
             double normalisedHitError = calculateNormalisedHitError(osuAttributes.OverallDifficulty, totalHits, osuAttributes.HitCircleCount, countGreat);
             double missWeight = calculateMissWeight(countMiss);
             double aimWeight = calculateAimWeight(missWeight, normalisedHitError, scoreMaxCombo, osuAttributes.MaxCombo, totalHits, visualMods);
@@ -63,7 +54,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 Math.Pow(Math.Max(speedValue, staminaValue), 1.1) +
                 Math.Pow(accuracyValue, 1.1),
                 1.0 / 1.1
-            ) * multiplier;
+            ) * PERFORMANCE_BASE_MULTIPLIER;
 
             return new OsuPerformanceAttributes
             {
