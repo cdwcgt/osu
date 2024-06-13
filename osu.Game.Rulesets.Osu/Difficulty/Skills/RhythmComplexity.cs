@@ -14,7 +14,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 {
     public class RhythmComplexity : Skill
     {
-        private int amountHitObjectsWithAccuracy;
+        private int circleCount;
         private int noteIndex;
         private bool isPreviousOffbeat;
         private readonly List<int> previousDoubles = new List<int>();
@@ -30,7 +30,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             {
                 var osuCurrent = (OsuDifficultyHitObject)current;
                 difficultyTotal += calculateRhythmBonus(osuCurrent);
-                amountHitObjectsWithAccuracy++;
+                circleCount++;
             }
             else
                 isPreviousOffbeat = false;
@@ -40,11 +40,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         public override double DifficultyValue()
         {
-            if (amountHitObjectsWithAccuracy == 0)
+            if (circleCount == 0)
                 return 0;
 
-            double lengthRequirement = Math.Tanh(amountHitObjectsWithAccuracy / 50.0);
-            return 1 + difficultyTotal / amountHitObjectsWithAccuracy * lengthRequirement;
+            double lengthRequirement = Math.Tanh(circleCount / 50.0);
+            return 1 + difficultyTotal / circleCount * lengthRequirement;
         }
 
         private double calculateRhythmBonus(OsuDifficultyHitObject current)
