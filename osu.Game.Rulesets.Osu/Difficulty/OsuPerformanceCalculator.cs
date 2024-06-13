@@ -75,7 +75,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         {
             int circle300Count = count300 - (objectCount - circleCount);
             if (circle300Count <= 0)
-                return 0;
+                return double.NaN;
 
             // Probability of landing a 300 where the player has a 20% chance of getting at least the given amount of 300s.
             double probability = Beta.InvCDF(circle300Count, 1 + circleCount - circle300Count, 0.2);
