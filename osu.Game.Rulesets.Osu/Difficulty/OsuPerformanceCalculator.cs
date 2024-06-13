@@ -75,7 +75,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         {
             int circle300Count = count300 - (objectCount - circleCount);
             if (circle300Count <= 0)
-                return 140 - 8 * od;    // Hit window for a 50. Worst case scenario for a score with no guarenteed circle 300s.
+                return 200 - od * 10;    // Hit window for a 50. Worst case scenario for a score with no guarenteed circle 300s.
 
             // Probability of landing a 300 where the player has a 20% chance of getting at least the given amount of 300s.
             double probability = Beta.InvCDF(circle300Count, 1 + circleCount - circle300Count, 0.2);
