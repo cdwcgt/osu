@@ -75,7 +75,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         {
             int circle300Count = count300 - (objectCount - circleCount);
             if (circle300Count <= 0)
-                return double.NaN;
+                return 200 - od * 10;    // Hit window for a 50. Worst case scenario for a score with no guarenteed circle 300s.
 
             // Probability of landing a 300 where the player has a 20% chance of getting at least the given amount of 300s.
             double probability = Beta.InvCDF(circle300Count, 1 + circleCount - circle300Count, 0.2);
@@ -91,7 +91,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
         private static double calculateAimWeight(double missWeight, double normalizedHitError, int combo, int maxCombo, int objectCount, Mod[] visualMods)
         {
-            double accuracyWeight = double.IsNaN(normalizedHitError) ? 0 : Math.Pow(0.995, normalizedHitError) * 1.04;
+            double accuracyWeight = Math.Pow(0.995, normalizedHitError) * 1.04;
             double comboWeight = Math.Pow(combo, 0.8) / Math.Pow(maxCombo, 0.8);
             double flashlightLengthWeight = visualMods.Any(m => m is OsuModFlashlight) ? 1 + Math.Atan(objectCount / 2000.0) : 1;
 
@@ -100,7 +100,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
         private static double calculateSpeedWeight(double missWeight, double normalizedHitError, int combo, int maxCombo)
         {
-            double accuracyWeight = double.IsNaN(normalizedHitError) ? 0 : Math.Pow(0.985, normalizedHitError) * 1.12;
+            double accuracyWeight = Math.Pow(0.985, normalizedHitError) * 1.12;
             double comboWeight = Math.Pow(combo, 0.4) / Math.Pow(maxCombo, 0.4);
 
             return accuracyWeight * comboWeight * missWeight;
@@ -119,6 +119,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             return lengthWeight * modWeight;
         }
 
-        private static double calculateAccuracyValue(double normalizedHitError) => double.IsNaN(normalizedHitError) ? 0 : 560 * Math.Pow(0.85, normalizedHitError);
+        private static double calculateAccuracyValue(double normalizedHitError) => 560 * Math.Pow(0.85, normalizedHitError);
     }
 }
