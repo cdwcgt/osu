@@ -41,8 +41,8 @@ namespace osu.Game.Tournament.Components
         [Resolved]
         private TextureStore textures { get; set; } = null!;
 
-        public TournamentBeatmapPanel(RoundBeatmap beatmap, int? id = null)
-            : this(beatmap.Beatmap, beatmap.Mods)
+        public TournamentBeatmapPanel(RoundBeatmap beatmap, int? id = null, bool isMappool = false)
+            : this(beatmap.Beatmap, beatmap.Mods, isMappool: isMappool)
         {
             this.id = id;
             backgroundColor = beatmap.BackgroundColor;
@@ -50,14 +50,16 @@ namespace osu.Game.Tournament.Components
         }
 
         private readonly int? id;
+        private readonly bool isMappool;
         private readonly Colour4 textColor;
         private readonly Colour4 backgroundColor;
         private Container container = null!;
 
-        public TournamentBeatmapPanel(IBeatmapInfo? beatmap, string mod = "", float cornerRadius = 0)
+        public TournamentBeatmapPanel(IBeatmapInfo? beatmap, string mod = "", float cornerRadius = 0, bool isMappool = false)
         {
             Beatmap = beatmap;
             this.mod = mod;
+            this.isMappool = isMappool;
 
             Width = mod == "TB" ? 600 : 400;
             Height = HEIGHT;
@@ -246,7 +248,7 @@ namespace osu.Game.Tournament.Components
             }
 
             var found = currentMatch.Value.PicksBans.Where(p => p.BeatmapID == Beatmap?.OnlineID).ToList();
-            var foundProtected = found.FirstOrDefault(s => s.Type == ChoiceType.Protected);
+            var foundProtected = isMappool ? found.FirstOrDefault(s => s.Type == ChoiceType.Protected) : null;
             var lastFound = found.LastOrDefault();
 
             bool shouldFlash = lastFound != choice;
