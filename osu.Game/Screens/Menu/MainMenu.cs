@@ -31,6 +31,7 @@ using osu.Game.Overlays.SkinEditor;
 using osu.Game.Rulesets;
 using osu.Game.Screens.Backgrounds;
 using osu.Game.Screens.Edit;
+using osu.Game.Screens.OnlinePlay.DailyChallenge;
 using osu.Game.Screens.OnlinePlay.Multiplayer;
 using osu.Game.Screens.OnlinePlay.Playlists;
 using osu.Game.Screens.Select;
@@ -148,6 +149,10 @@ namespace osu.Game.Screens.Menu
                             OnSolo = loadSoloSongSelect,
                             OnMultiplayer = () => this.Push(new Multiplayer()),
                             OnPlaylists = () => this.Push(new Playlists()),
+                            OnDailyChallenge = room =>
+                            {
+                                this.Push(new DailyChallenge(room));
+                            },
                             OnReplayVs = () => this.Push(new ReplayVsSelectScreen()),
                             OnExit = () =>
                             {

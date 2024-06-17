@@ -36,6 +36,8 @@ namespace osu.Game.Rulesets.Mods
         {
             overlay.ShowHud.Value = false;
             overlay.ShowHud.Disabled = true;
+
+            overlay.PlayfieldSkinLayer.Hide();
         }
 
         public override void ApplyToPlayer(Player player)

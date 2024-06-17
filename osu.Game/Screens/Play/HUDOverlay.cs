@@ -109,7 +109,10 @@ namespace osu.Game.Screens.Play
 
         private readonly List<Drawable> hideTargets;
 
-        private readonly Drawable playfieldComponents;
+        /// <summary>
+        /// The container for skin components attached to <see cref="SkinComponentsContainerLookup.TargetArea.Playfield"/>
+        /// </summary>
+        internal readonly Drawable PlayfieldSkinLayer;
 
         private bool wasSpnning = false;
 
@@ -131,7 +134,7 @@ namespace osu.Game.Screens.Play
                 drawableRuleset != null
                     ? (rulesetComponents = new HUDComponentsContainer(drawableRuleset.Ruleset.RulesetInfo) { AlwaysPresent = true, })
                     : Empty(),
-                playfieldComponents = drawableRuleset != null
+                PlayfieldSkinLayer = drawableRuleset != null
                     ? new SkinComponentsContainer(new SkinComponentsContainerLookup(SkinComponentsContainerLookup.TargetArea.Playfield, drawableRuleset.Ruleset.RulesetInfo)) { AlwaysPresent = true, }
                     : Empty(),
                 topRightElements = new FillFlowContainer
@@ -173,7 +176,7 @@ namespace osu.Game.Screens.Play
                 },
             };
 
-            hideTargets = new List<Drawable> { mainComponents, playfieldComponents, topRightElements };
+            hideTargets = new List<Drawable> { mainComponents, topRightElements };
 
             if (rulesetComponents != null)
                 hideTargets.Add(rulesetComponents);
@@ -272,10 +275,10 @@ namespace osu.Game.Screens.Play
             {
                 Quad playfieldScreenSpaceDrawQuad = drawableRuleset.Playfield.SkinnableComponentScreenSpaceDrawQuad;
 
-                playfieldComponents.Position = ToLocalSpace(playfieldScreenSpaceDrawQuad.TopLeft);
-                playfieldComponents.Width = (ToLocalSpace(playfieldScreenSpaceDrawQuad.TopRight) - ToLocalSpace(playfieldScreenSpaceDrawQuad.TopLeft)).Length;
-                playfieldComponents.Height = (ToLocalSpace(playfieldScreenSpaceDrawQuad.BottomLeft) - ToLocalSpace(playfieldScreenSpaceDrawQuad.TopLeft)).Length;
-                playfieldComponents.Rotation = drawableRuleset.Playfield.Rotation;
+                PlayfieldSkinLayer.Position = ToLocalSpace(playfieldScreenSpaceDrawQuad.TopLeft);
+                PlayfieldSkinLayer.Width = (ToLocalSpace(playfieldScreenSpaceDrawQuad.TopRight) - ToLocalSpace(playfieldScreenSpaceDrawQuad.TopLeft)).Length;
+                PlayfieldSkinLayer.Height = (ToLocalSpace(playfieldScreenSpaceDrawQuad.BottomLeft) - ToLocalSpace(playfieldScreenSpaceDrawQuad.TopLeft)).Length;
+                PlayfieldSkinLayer.Rotation = drawableRuleset.Playfield.Rotation;
             }
 
             float? lowestTopScreenSpaceLeft = null;
