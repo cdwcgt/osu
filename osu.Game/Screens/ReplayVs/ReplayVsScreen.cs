@@ -33,7 +33,7 @@ namespace osu.Game.Screens.ReplayVs
         /// <summary>
         /// Whether all spectating players have finished loading.
         /// </summary>
-        public bool AllPlayersLoaded => instances.All(p => p.PlayerLoaded == true);
+        public bool AllPlayersLoaded => instances.All(p => p.PlayerLoaded);
 
         [Resolved]
         private OsuColour colours { get; set; } = null!;
@@ -43,7 +43,7 @@ namespace osu.Game.Screens.ReplayVs
         private MasterGameplayClockContainer masterClockContainer = null!;
         private SpectatorSyncManager syncManager = null!;
         private PlayerGrid grid = null!;
-        private PlayerArea? currentAudioSource = null!;
+        private PlayerArea? currentAudioSource;
         private readonly int replayCount;
         private readonly Score[] teamRedScores;
         private readonly Score[] teamBlueScores;
@@ -75,7 +75,10 @@ namespace osu.Game.Screens.ReplayVs
                 masterClockContainer.WithChild(new GridContainer
                 {
                     RelativeSizeAxes = Axes.Both,
-                    RowDimensions = new[] { new Dimension(), new Dimension(GridSizeMode.AutoSize) },
+                    RowDimensions = new[]
+                    {
+                        new Dimension(), new Dimension(GridSizeMode.AutoSize)
+                    },
                     Content = new[]
                     {
                         new Drawable[]
@@ -120,8 +123,14 @@ namespace osu.Game.Screens.ReplayVs
             {
                 LoadComponentAsync(new MatchScoreDisplay
                 {
-                    Team1Score = { BindTarget = teamRedScore },
-                    Team2Score = { BindTarget = teamBlueScore },
+                    Team1Score =
+                    {
+                        BindTarget = teamRedScore
+                    },
+                    Team2Score =
+                    {
+                        BindTarget = teamBlueScore
+                    },
                 }, scoreDisplayContainer.Add);
             }
 
