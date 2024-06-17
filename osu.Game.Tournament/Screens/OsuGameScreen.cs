@@ -77,6 +77,7 @@ namespace osu.Game.Tournament.Screens
     public class ForwardingAPIAccess : IAPIProvider
     {
         private readonly IAPIProvider api;
+        private readonly Bindable<UserActivity> activity = new Bindable<UserActivity>();
 
         public ForwardingAPIAccess(IAPIProvider api)
         {
@@ -85,7 +86,9 @@ namespace osu.Game.Tournament.Screens
 
         public IBindable<APIUser> LocalUser => api.LocalUser;
         public IBindableList<APIUser> Friends => api.Friends;
-        public IBindable<UserActivity> Activity => api.Activity;
+
+        // Not using api.Activity because the tournament client MetadataClient has already bound to it
+        public IBindable<UserActivity> Activity => activity;
         public IBindable<UserStatistics?> Statistics => api.Statistics;
         public Language Language => api.Language;
         public string AccessToken => api.AccessToken;
@@ -139,14 +142,8 @@ namespace osu.Game.Tournament.Screens
 
         public INotificationsClient NotificationsClient => api.NotificationsClient;
 
-        public IChatClient GetChatClient()
-        {
-            return api.GetChatClient();
-        }
+        public IChatClient GetChatClient() => api.GetChatClient();
 
-        public RegistrationRequest.RegistrationRequestErrors? CreateAccount(string email, string username, string password)
-        {
-            return api.CreateAccount(email, username, password);
-        }
+        public RegistrationRequest.RegistrationRequestErrors? CreateAccount(string email, string username, string password) => api.CreateAccount(email, username, password);
     }
 }

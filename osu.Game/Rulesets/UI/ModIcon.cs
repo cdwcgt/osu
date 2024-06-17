@@ -231,7 +231,7 @@ namespace osu.Game.Rulesets.UI
         {
             bool showExtended = showExtendedInformation && !string.IsNullOrEmpty(mod.ExtendedIconInformation);
 
-            extendedContent.Alpha = showExtended ? 1 : 0;
+            extendedContent.Alpha = showExtended && !allowLegacy ? 1 : 0;
             extendedText.Text = mod.ExtendedIconInformation;
         }
 
