@@ -64,18 +64,6 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                         {
                             LabelText = "Show specific team",
                             Current = currentTeam,
-                        },
-                        new TourneyButton
-                        {
-                            RelativeSizeAxes = Axes.X,
-                            Text = "Next Team",
-                            Action = nextTeam
-                        },
-                        new TourneyButton
-                        {
-                            RelativeSizeAxes = Axes.X,
-                            Text = "prevous Team",
-                            Action = prevoursTeam
                         }
                     }
                 }
@@ -85,20 +73,6 @@ namespace osu.Game.Tournament.Screens.TeamIntro
         }
 
         private void teamChanged(ValueChangedEvent<TournamentTeam?> team) => updateTeamDisplay();
-
-        private void nextTeam()
-        {
-            List<TournamentTeam> teamList = LadderInfo.Teams.ToList();
-            int i = teamList.FindIndex(x => x == currentTeam.Value);
-            currentTeam.Value = LadderInfo.Teams[i - 1];
-        }
-
-        private void prevoursTeam()
-        {
-            List<TournamentTeam> teamList = LadderInfo.Teams.ToList();
-            int i = teamList.FindIndex(x => x == currentTeam.Value);
-            currentTeam.Value = LadderInfo.Teams[i + 1];
-        }
 
         public override void Show()
         {

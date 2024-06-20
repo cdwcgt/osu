@@ -29,7 +29,7 @@ namespace osu.Game.Tournament.Screens.Editors
     {
         protected override BindableList<TournamentTeam> Storage => LadderInfo.Teams;
 
-        private SettingsTextBox teamData;
+        private SettingsTextBox teamData = null!;
 
         [BackgroundDependencyLoader]
         private void load()
@@ -96,28 +96,29 @@ namespace osu.Game.Tournament.Screens.Editors
                 string path = teamData.Current.Value;
                 string[] content = File.ReadAllText(path, Encoding.UTF8).Split(Environment.NewLine.ToCharArray());
 
-                foreach (string item in content)
+                int[] beatmaps = content[0].Split(",").Skip(2).Select(int.Parse).ToArray();
+
+                foreach (string item in content.Skip(1))
                 {
                     try
                     {
                         string[] data = item.Split(",");
 
-                        int[] beatmaps = { 4183097, 4183112, 4183098, 4183099, 4183114, 4183113, 4183117, 4183100 };
-
                         int[][] point =
                         {
-                            new[] { 0 },
-                            new[] { 1, 6, 7 },
-                            new[] { 2, 5 },
-                            new[] { 3, 4 }
+                            new[] { 0, 1, 2 },
+                            new[] { 3, 4 },
+                            new[] { 5, 6 },
+                            new[] { 7, 8 }
                         };
 
-                        string[] mods = { "SV", "RC", "HB", "LN" };
+                        string[] mods = { "RC", "HB", "LN", "SV" };
 
                         var team = new TournamentTeam
                         {
                             FullName = { Value = data[0] },
-                            Seed = { Value = data[3] },
+                            Seed = { Value = data[19] },
+                            Acronym = { Value = data[0] },
                             FlagName = { Value = data[1] }
                         };
 
@@ -128,9 +129,8 @@ namespace osu.Game.Tournament.Screens.Editors
                                 OnlineID = id
                             });
                         }
-                        else return;
 
-                        for (int i = 0; i < 4; i++)
+                        for (int i = 0; i < mods.Length; i++)
                         {
                             var result = new SeedingResult();
                             result.Mod.Value = mods[i];
@@ -141,16 +141,16 @@ namespace osu.Game.Tournament.Screens.Editors
                                 var beatmap = new SeedingBeatmap
                                 {
                                     ID = beatmaps[p],
-                                    Score = int.Parse(data[p + 4]),
+                                    Score = int.Parse(data[p + 2]),
                                     Seed =
                                     {
-                                        Value = int.Parse(data[p + 12])
+                                        Value = int.Parse(data[p + 10])
                                     }
                                 };
                                 result.Beatmaps.Add(beatmap);
                             }
 
-                            result.Seed.Value = int.Parse(data[i + 24]);
+                            result.Seed.Value = int.Parse(data[i + 20]);
 
                             team.SeedingResults.Add(result);
                         }
