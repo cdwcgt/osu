@@ -100,5 +100,6 @@ namespace osu.Game.Tournament.Models
         bool IBeatmapSetOnlineInfo.HasStoryboard => throw new NotImplementedException();
 
         #endregion
+
     }
 }

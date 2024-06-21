@@ -76,8 +76,8 @@ namespace osu.Game.Tournament.Components
             {
                 new FillFlowContainer
                 {
-                    RelativeSizeAxes = Axes.Both,
-                    Width = id.HasValue ? 0.95f : 1,
+                    RelativeSizeAxes = Axes.Y,
+                    Width = Width - 30,
                     Direction = FillDirection.Horizontal,
                     Children = new Drawable[]
                     {
@@ -188,8 +188,7 @@ namespace osu.Game.Tournament.Components
                         new Container
                         {
                             AutoSizeAxes = Axes.Y,
-                            RelativeSizeAxes = Axes.X,
-                            Width = 0.05f,
+                            Width = 30,
                             Alpha = id.HasValue ? 1 : 0,
                             Children = new Drawable[]
                             {
@@ -201,11 +200,11 @@ namespace osu.Game.Tournament.Components
                                 },
                                 new TournamentSpriteText
                                 {
-                                    Anchor = Anchor.TopLeft,
+                                    Anchor = Anchor.Centre,
+                                    Origin = Anchor.Centre,
                                     Text = id.GetValueOrDefault().ToString(),
                                     Colour = textColor,
-                                    Margin = new MarginPadding { Top = 5, Left = 3 },
-                                    Font = OsuFont.Torus.With(weight: FontWeight.SemiBold, size: 30)
+                                    Font = OsuFont.Torus.With(size: 30)
                                 }
                             }
                         }

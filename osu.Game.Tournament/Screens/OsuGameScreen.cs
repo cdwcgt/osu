@@ -41,7 +41,8 @@ namespace osu.Game.Tournament.Screens
 
         public override void Hide()
         {
-            if (nestedGame != null) RemoveInternal(nestedGame, true);
+            if (nestedGame != null)
+                RemoveInternal(nestedGame, true);
 
             base.Hide();
         }
@@ -100,45 +101,21 @@ namespace osu.Game.Tournament.Screens
         public Exception? LastLoginError => api.LastLoginError;
         public IBindable<APIState> State => api.State;
 
-        public void Queue(APIRequest request)
-        {
-            api.Queue(request);
-        }
+        public void Queue(APIRequest request) => api.Queue(request);
 
-        public void Perform(APIRequest request)
-        {
-            api.Perform(request);
-        }
+        public void Perform(APIRequest request) => api.Perform(request);
 
-        public Task PerformAsync(APIRequest request)
-        {
-            return api.PerformAsync(request);
-        }
+        public Task PerformAsync(APIRequest request) => api.PerformAsync(request);
 
-        public void Login(string username, string password)
-        {
-            api.Login(username, password);
-        }
+        public void Login(string username, string password) => api.Login(username, password);
 
-        public void AuthenticateSecondFactor(string code)
-        {
-            api.AuthenticateSecondFactor(code);
-        }
+        public void AuthenticateSecondFactor(string code) => api.AuthenticateSecondFactor(code);
 
-        public void Logout()
-        {
-            api.Logout();
-        }
+        public void Logout() => api.Logout();
 
-        public void UpdateStatistics(UserStatistics newStatistics)
-        {
-            api.UpdateStatistics(newStatistics);
-        }
+        public void UpdateStatistics(UserStatistics newStatistics) => api.UpdateStatistics(newStatistics);
 
-        public IHubClientConnector? GetHubConnector(string clientName, string endpoint, bool preferMessagePack = true)
-        {
-            return api.GetHubConnector(clientName, endpoint, preferMessagePack);
-        }
+        public IHubClientConnector? GetHubConnector(string clientName, string endpoint, bool preferMessagePack = true) => api.GetHubConnector(clientName, endpoint, preferMessagePack);
 
         public INotificationsClient NotificationsClient => api.NotificationsClient;
 
