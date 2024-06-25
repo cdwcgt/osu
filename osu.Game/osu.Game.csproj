@@ -51,6 +51,6 @@
     <PackageReference Include="System.Runtime.Handles" Version="4.3.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\M.Resources\M.Resources.csproj" />
+    <ProjectReference Include="..\osu.Game.Resources.Custom\osu.Game.Resources.Custom.csproj" />
   </ItemGroup>
 </Project>

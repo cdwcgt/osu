@@ -259,7 +259,7 @@ namespace osu.Game
             VersionHash = "7db43a71ccfea1f9166e46fb13447f3f";
 
             Resources.AddStore(new DllResourceStore(OsuResources.ResourceAssembly));
-            Resources.AddStore(new DllResourceStore(M.Resources.MResources.ResourceAssembly));
+            Resources.AddStore(new DllResourceStore(osu.Game.Resources.Custom.CustomResources.ResourceAssembly));
 
             dependencies.Cache(realm = new RealmAccess(Storage, CLIENT_DATABASE_FILENAME, Host.UpdateThread));
 
