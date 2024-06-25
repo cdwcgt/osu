@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -34,6 +35,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private TournamentMatchChatDisplay chat { get; set; } = null!;
 
         private Drawable chroma = null!;
+
+        protected override SongBar CreateSongBar() => new GameplaySongBar
+        {
+            Depth = float.MinValue
+        };
 
         [BackgroundDependencyLoader]
         private void load(MatchIPCInfo ipc)
@@ -135,6 +141,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 warmupButton.Alpha = !w.NewValue ? 0.5f : 1;
                 header.ShowScores = !w.NewValue;
             }, true);
+
+            SongBar.Margin = new MarginPadding { Bottom = 7f };
         }
 
         protected override void LoadComplete()

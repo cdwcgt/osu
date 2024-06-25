@@ -38,6 +38,39 @@ namespace osu.Game.Tournament.Components
         private TournamentModIcon? modIcon;
         private FillFlowContainer modContainer = null!;
 
+        public bool IsTextCenter
+        {
+            get => isTextCenter;
+            set
+            {
+                isTextCenter = value;
+
+                if (IsLoaded)
+                    updateIsCenter();
+            }
+        }
+
+        private void updateIsCenter()
+        {
+            setAnchor(information, isTextCenter);
+            information.Anchor = isTextCenter ? Anchor.Centre : Anchor.CentreLeft;
+            information.Origin = isTextCenter ? Anchor.Centre : Anchor.CentreLeft;
+        }
+
+        private void setAnchor(FillFlowContainer fillContainer, bool isCenter)
+        {
+            foreach (var child in fillContainer.Children)
+            {
+                if (child is FillFlowContainer fillChild)
+                {
+                    setAnchor(fillChild, isCenter);
+                }
+
+                child.Anchor = isCenter ? Anchor.Centre : Anchor.TopLeft;
+                child.Origin = isCenter ? Anchor.Centre : Anchor.TopLeft;
+            }
+        }
+
         [Resolved]
         private TextureStore textures { get; set; } = null!;
 
@@ -76,8 +109,7 @@ namespace osu.Game.Tournament.Components
             {
                 new FillFlowContainer
                 {
-                    RelativeSizeAxes = Axes.Y,
-                    Width = Width - 30,
+                    RelativeSizeAxes = Axes.Both,
                     Direction = FillDirection.Horizontal,
                     Children = new Drawable[]
                     {
@@ -103,7 +135,7 @@ namespace osu.Game.Tournament.Components
                                             Colour = OsuColour.Gray(0.5f),
                                             OnlineInfo = (Beatmap as IBeatmapSetOnlineInfo),
                                         },
-                                        new FillFlowContainer
+                                        information = new FillFlowContainer
                                         {
                                             AutoSizeAxes = Axes.Both,
                                             Anchor = Anchor.CentreLeft,
@@ -222,6 +254,8 @@ namespace osu.Game.Tournament.Components
                     RelativeSizeAxes = Axes.Y,
                 });
             }
+
+            updateIsCenter();
         }
 
         private void matchChanged(ValueChangedEvent<TournamentMatch?> match)
@@ -238,6 +272,8 @@ namespace osu.Game.Tournament.Components
             => Scheduler.AddOnce(updateState);
 
         private BeatmapChoice? choice;
+        private bool isTextCenter = false;
+        private FillFlowContainer information;
 
         private void updateState()
         {
