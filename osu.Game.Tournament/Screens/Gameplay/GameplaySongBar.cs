@@ -132,8 +132,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
             ArrowColor.BindValueChanged(c =>
             {
-                leftArrow.Colour = c.NewValue;
-                rightArrow.Colour = c.NewValue;
+                leftArrow.FadeColour(c.NewValue, 300);
+                rightArrow.FadeColour(c.NewValue, 300);
             });
         }
 
