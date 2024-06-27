@@ -96,9 +96,9 @@ namespace osu.Game.Tournament.Screens.Editors
                 string path = teamData.Current.Value;
                 string[] content = File.ReadAllText(path, Encoding.UTF8).Split(Environment.NewLine.ToCharArray());
 
-                int[] beatmaps = content[0].Split(",").Skip(2).Select(int.Parse).ToArray();
+                int[] beatmaps = { 4651348, 4651383, 4651380, 4651402, 4651382, 4651381, 4651386, 4651408 };
 
-                foreach (string item in content.Skip(1))
+                foreach (string item in content)
                 {
                     try
                     {
@@ -109,7 +109,7 @@ namespace osu.Game.Tournament.Screens.Editors
                             new[] { 0, 1, 2 },
                             new[] { 3, 4 },
                             new[] { 5, 6 },
-                            new[] { 7, 8 }
+                            new[] { 7 }
                         };
 
                         string[] mods = { "RC", "HB", "LN", "SV" };
@@ -117,7 +117,7 @@ namespace osu.Game.Tournament.Screens.Editors
                         var team = new TournamentTeam
                         {
                             FullName = { Value = data[0] },
-                            Seed = { Value = data[19] },
+                            Seed = { Value = data[3] },
                             Acronym = { Value = data[0] },
                             FlagName = { Value = data[1] }
                         };
@@ -141,16 +141,16 @@ namespace osu.Game.Tournament.Screens.Editors
                                 var beatmap = new SeedingBeatmap
                                 {
                                     ID = beatmaps[p],
-                                    Score = int.Parse(data[p + 2]),
+                                    Score = int.Parse(data[p + 4]),
                                     Seed =
                                     {
-                                        Value = int.Parse(data[p + 10])
+                                        Value = int.Parse(data[p + 12])
                                     }
                                 };
                                 result.Beatmaps.Add(beatmap);
                             }
 
-                            result.Seed.Value = int.Parse(data[i + 20]);
+                            result.Seed.Value = int.Parse(data[i + 24]);
 
                             team.SeedingResults.Add(result);
                         }
