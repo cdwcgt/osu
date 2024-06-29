@@ -5,6 +5,7 @@ using System.Collections.Specialized;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
@@ -160,7 +161,9 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 return;
             }
 
-            arrowColor.Value = TournamentGame.GetTeamColour(isChoice.Team);
+            arrowColor.Value = GetTeamColour(isChoice.Team);
+
+            static ColourInfo GetTeamColour(TeamColour teamColour) => teamColour == TeamColour.Red ? Color4Extensions.FromHex("#D43030") : Color4Extensions.FromHex("#2A82E4");
         }
 
         protected override void PostUpdate()
