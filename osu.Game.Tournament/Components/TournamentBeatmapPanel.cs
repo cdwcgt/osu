@@ -38,12 +38,12 @@ namespace osu.Game.Tournament.Components
         private TournamentModIcon? modIcon;
         private FillFlowContainer modContainer = null!;
 
-        public bool IsTextCenter
+        public bool CenterText
         {
-            get => isTextCenter;
+            get => centerText;
             set
             {
-                isTextCenter = value;
+                centerText = value;
 
                 if (IsLoaded)
                     updateIsCenter();
@@ -52,9 +52,9 @@ namespace osu.Game.Tournament.Components
 
         private void updateIsCenter()
         {
-            setAnchor(information, isTextCenter);
-            information.Anchor = isTextCenter ? Anchor.Centre : Anchor.CentreLeft;
-            information.Origin = isTextCenter ? Anchor.Centre : Anchor.CentreLeft;
+            setAnchor(information, centerText);
+            information.Anchor = centerText ? Anchor.Centre : Anchor.CentreLeft;
+            information.Origin = centerText ? Anchor.Centre : Anchor.CentreLeft;
         }
 
         private void setAnchor(FillFlowContainer fillContainer, bool isCenter)
@@ -110,10 +110,9 @@ namespace osu.Game.Tournament.Components
                 new GridContainer
                 {
                     RelativeSizeAxes = Axes.Both,
-                    RowDimensions = new[] { new Dimension() },
                     ColumnDimensions = new[]
                     {
-                        new Dimension(size: 400, minSize: 370, maxSize: 600),
+                        new Dimension(),
                         new Dimension(GridSizeMode.AutoSize, maxSize: 30)
                     },
                     Content = new[]
@@ -279,7 +278,7 @@ namespace osu.Game.Tournament.Components
             => Scheduler.AddOnce(updateState);
 
         private BeatmapChoice? choice;
-        private bool isTextCenter = false;
+        private bool centerText = false;
         private FillFlowContainer information;
 
         private void updateState()

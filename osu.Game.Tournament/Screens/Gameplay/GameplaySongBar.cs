@@ -27,7 +27,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
         public new const float HEIGHT = 50;
 
-        private Bindable<ColourInfo> ArrowColor = new Bindable<ColourInfo>(Color4.White);
+        private readonly Bindable<ColourInfo> arrowColor = new Bindable<ColourInfo>(Color4.White);
 
         [Resolved]
         private IBindable<RulesetInfo> ruleset { get; set; } = null!;
@@ -94,7 +94,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                         Child = new TournamentBeatmapPanel(beatmap)
                         {
                             Width = 500,
-                            IsTextCenter = true
+                            CenterText = true
                         },
                     },
                     new Container
@@ -130,7 +130,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 }
             };
 
-            ArrowColor.BindValueChanged(c =>
+            arrowColor.BindValueChanged(c =>
             {
                 leftArrow.FadeColour(c.NewValue, 300);
                 rightArrow.FadeColour(c.NewValue, 300);
@@ -156,11 +156,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
             if (isChoice == null)
             {
-                ArrowColor.Value = Color4.White;
+                arrowColor.Value = Color4.White;
                 return;
             }
 
-            ArrowColor.Value = TournamentGame.GetTeamColour(isChoice.Team);
+            arrowColor.Value = TournamentGame.GetTeamColour(isChoice.Team);
         }
 
         protected override void PostUpdate()
@@ -200,7 +200,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
             beatmapPanel.Child = new TournamentBeatmapPanel(beatmap)
             {
                 Width = 500,
-                IsTextCenter = true,
+                CenterText = true,
             };
         }
     }
