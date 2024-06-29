@@ -256,10 +256,10 @@ namespace osu.Game
         [BackgroundDependencyLoader]
         private void load(ReadableKeyCombinationProvider keyCombinationProvider, FrameworkConfigManager frameworkConfig)
         {
-            VersionHash = "f2850f01142d787ae797730368d42e0d";
+            VersionHash = "52d8e8bcb96a2b53b2eabc13bf0d7d55";
 
             Resources.AddStore(new DllResourceStore(OsuResources.ResourceAssembly));
-            Resources.AddStore(new DllResourceStore(M.Resources.MResources.ResourceAssembly));
+            Resources.AddStore(new DllResourceStore(osu.Game.Resources.Custom.CustomResources.ResourceAssembly));
 
             dependencies.Cache(realm = new RealmAccess(Storage, CLIENT_DATABASE_FILENAME, Host.UpdateThread));
 

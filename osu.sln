@@ -95,7 +95,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Game.Rulesets.Pippidon"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Game.Rulesets.Pippidon.Tests", "Templates\Rulesets\ruleset-scrolling-example\osu.Game.Rulesets.Pippidon.Tests\osu.Game.Rulesets.Pippidon.Tests.csproj", "{1743BF7C-E6AE-4A06-BAD9-166D62894303}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "M.Resources", "M.Resources\M.Resources.csproj", "{41602934-6726-4C7D-ACA6-C6CC24138063}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "osu.Game.Resources.Custom", "osu.Game.Resources.Custom\osu.Game.Resources.Custom.csproj", "{41602934-6726-4C7D-ACA6-C6CC24138063}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
