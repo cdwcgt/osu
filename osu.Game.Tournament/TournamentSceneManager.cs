@@ -108,8 +108,10 @@ namespace osu.Game.Tournament
                         },
                         chatContainer = new Container
                         {
+                            Position = new Vector2(332, -142),
+                            Width = 700,
                             Anchor = Anchor.BottomLeft,
-                            Origin = Anchor.BottomLeft,
+                            Origin = Anchor.TopLeft,
                             Child = chat
                         },
                     }
@@ -218,16 +220,12 @@ namespace osu.Game.Tournament
             {
                 case MapPoolScreen:
                     chatContainer.FadeIn(TournamentScreen.FADE_DELAY);
-                    chatContainer.MoveTo(new Vector2(0, 0), 500, Easing.OutQuint);
-                    chatContainer.ResizeWidthTo(1366, 500, Easing.OutQuint);
-                    chatContainer.ResizeHeightTo(145, 500, Easing.OutQuint);
+                    chatContainer.ResizeHeightTo(142, 200, Easing.OutQuint);
                     break;
 
                 case GameplayScreen:
                     chatContainer.FadeIn(TournamentScreen.FADE_DELAY);
-                    chatContainer.ResizeWidthTo(700, 500, Easing.OutQuint);
-                    chatContainer.ResizeHeightTo(82, 500, Easing.OutQuint);
-                    chatContainer.MoveTo(new Vector2(332, -60), 500, Easing.OutQuint);
+                    chatContainer.ResizeHeightTo(82, 200, Easing.OutQuint);
                     break;
 
                 default:
