@@ -67,7 +67,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     new Container
                     {
                         RelativeSizeAxes = Axes.Y,
-                        Width = 210,
+                        Width = 180,
                         Name = "Left data",
                         Children = new Drawable[]
                         {
@@ -100,7 +100,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     new Container
                     {
                         RelativeSizeAxes = Axes.Y,
-                        Width = 210,
+                        Width = 240,
                         Name = "Right data",
                         Children = new Drawable[]
                         {
