@@ -279,7 +279,7 @@ namespace osu.Game.Tournament.Components
 
         private BeatmapChoice? choice;
         private bool centerText = false;
-        private FillFlowContainer information;
+        private FillFlowContainer information = null!;
 
         private void updateState()
         {
