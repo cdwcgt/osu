@@ -1,16 +1,21 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
+using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Text;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.IEnumerableExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Input.Events;
+using osu.Game.Graphics.Sprites;
 using osu.Game.Overlays.Settings;
 using osu.Game.Screens.Play.PlayerSettings;
 using osu.Game.Tournament.Components;
@@ -26,6 +31,9 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
         private DateTextBox dateTimeBox = null!;
         private SettingsTeamDropdown team1Dropdown = null!;
         private SettingsTeamDropdown team2Dropdown = null!;
+        private SettingsTextBox dataPathTextBox = null!;
+        public readonly BindableList<TournamentMatch> MatchInfoList = new BindableList<TournamentMatch>();
+        private OsuSpriteText remainData = null!;
 
         [Resolved]
         private LadderEditorInfo editorInfo { get; set; } = null!;
@@ -52,6 +60,9 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
                     roundDropdown = new SettingsRoundDropdown(ladderInfo.Rounds) { LabelText = "Round" },
                     losersCheckbox = new PlayerCheckbox { LabelText = "Losers Bracket" },
                     dateTimeBox = new DateTextBox { LabelText = "Match Time" },
+                    dataPathTextBox = new SettingsTextBox { LabelText = "Data path" },
+                    new SettingsButton { Text = "Import data", Action = importCsvData },
+                    remainData = new OsuSpriteText()
                 },
             };
 
@@ -73,6 +84,58 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
 
                 roundDropdown.Current.ValueChanged += roundDropdownChanged;
             };
+
+            MatchInfoList.BindCollectionChanged((_, _) =>
+            {
+                remainData.Current.Value = $"Remain data: {MatchInfoList.Count}";
+            }, true);
+        }
+
+        private void importCsvData()
+        {
+            try
+            {
+                string path = dataPathTextBox.Current.Value;
+                string[] content = File.ReadAllText(path, Encoding.UTF8).Split(Environment.NewLine.ToCharArray());
+
+                const string dateFormat = "'('ddd')' MMM d";
+                const string timeFormat = "h\\:mm";
+
+                foreach (string datas in content)
+                {
+                    try
+                    {
+                        string[] data = datas.Split(",");
+
+                        DateTime date = DateTime.ParseExact(data[0], dateFormat, CultureInfo.InvariantCulture);
+                        TimeSpan time = TimeSpan.ParseExact(data[1], timeFormat, CultureInfo.InvariantCulture);
+                        DateTime combinedDateTime = date.Add(time);
+
+                        TournamentTeam? team1 = ladderInfo.Teams.FirstOrDefault(t => t.FullName.Value == data[2]);
+                        TournamentTeam? team2 = ladderInfo.Teams.FirstOrDefault(t => t.FullName.Value == data[3]);
+
+                        var match = new TournamentMatch
+                        {
+                            Date =
+                            {
+                                Value = combinedDateTime
+                            },
+                            ID = 0,
+                            Team1Acronym = team1?.Acronym.Value,
+                            Team2Acronym = team2?.Acronym.Value
+                        };
+
+                        MatchInfoList.Add(match);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                    }
+                }
+            }
+            catch
+            {
+            }
         }
 
         private void roundDropdownChanged(ValueChangedEvent<TournamentRound?> round)

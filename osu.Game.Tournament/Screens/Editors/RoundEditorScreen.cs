@@ -1,7 +1,10 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
+using System.IO;
 using System.Linq;
+using System.Text;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -34,6 +37,9 @@ namespace osu.Game.Tournament.Screens.Editors
             [Resolved]
             private IDialogOverlay? dialogOverlay { get; set; }
 
+            private SettingsTextBox dataPathTextBox;
+            private readonly RoundBeatmapEditor beatmapEditor;
+
             public RoundRow(TournamentRound round)
             {
                 Model = round;
@@ -41,7 +47,7 @@ namespace osu.Game.Tournament.Screens.Editors
                 Masking = true;
                 CornerRadius = 10;
 
-                RoundBeatmapEditor beatmapEditor = new RoundBeatmapEditor(round)
+                beatmapEditor = new RoundBeatmapEditor(round)
                 {
                     Width = 0.95f
                 };
@@ -100,7 +106,17 @@ namespace osu.Game.Tournament.Screens.Editors
                                 Text = "Add beatmap",
                                 Action = () => beatmapEditor.CreateNew()
                             },
-                            beatmapEditor
+                            beatmapEditor,
+                            dataPathTextBox = new SettingsTextBox
+                            {
+                                LabelText = "data path",
+                                Width = 1f,
+                            },
+                            new SettingsButton()
+                            {
+                                Text = "Import data",
+                                Action = importCsvData
+                            }
                         }
                     },
                     new DangerousSettingsButton
@@ -120,6 +136,38 @@ namespace osu.Game.Tournament.Screens.Editors
 
                 RelativeSizeAxes = Axes.X;
                 AutoSizeAxes = Axes.Y;
+            }
+
+            private void importCsvData()
+            {
+                try
+                {
+                    string path = dataPathTextBox.Current.Value;
+                    string[] content = File.ReadAllText(path, Encoding.UTF8).Split(Environment.NewLine.ToCharArray());
+
+                    foreach (string datas in content)
+                    {
+                        try
+                        {
+                            string[] data = datas.Split(",");
+
+                            var b = new RoundBeatmap
+                            {
+                                Mods = data[0],
+                                ID = int.Parse(data[1]),
+                            };
+
+                            beatmapEditor.CreateNew(b);
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e);
+                        }
+                    }
+                }
+                catch
+                {
+                }
             }
 
             public partial class RoundBeatmapEditor : CompositeDrawable
@@ -147,6 +195,13 @@ namespace osu.Game.Tournament.Screens.Editors
                 {
                     var b = new RoundBeatmap();
 
+                    round.Beatmaps.Add(b);
+
+                    flow.Add(new RoundBeatmapRow(round, b));
+                }
+
+                public void CreateNew(RoundBeatmap b)
+                {
                     round.Beatmaps.Add(b);
 
                     flow.Add(new RoundBeatmapRow(round, b));

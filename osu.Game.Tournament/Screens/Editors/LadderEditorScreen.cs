@@ -5,6 +5,7 @@ using System;
 using System.Drawing;
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Cursor;
@@ -36,6 +37,8 @@ namespace osu.Game.Tournament.Screens.Editors
 
         private RectangularPositionSnapGrid grid = null!;
 
+        public readonly BindableList<TournamentMatch> MatchInfoList = new BindableList<TournamentMatch>();
+
         [Resolved]
         private IDialogOverlay? dialogOverlay { get; set; }
 
@@ -44,10 +47,14 @@ namespace osu.Game.Tournament.Screens.Editors
         [BackgroundDependencyLoader]
         private void load()
         {
+            var ladderEditorSettings = new LadderEditorSettings();
+
             AddInternal(new ControlPanel
             {
-                Child = new LadderEditorSettings(),
+                Child = ladderEditorSettings,
             });
+
+            MatchInfoList.BindTo(ladderEditorSettings.MatchInfoList);
 
             AddInternal(rightClickMessage = new WarningBox("Right click to place and link matches"));
 
@@ -63,6 +70,19 @@ namespace osu.Game.Tournament.Screens.Editors
 
             LadderInfo.Matches.CollectionChanged += (_, _) => updateMessage();
             updateMessage();
+
+            editorInfo.Selected.BindValueChanged(m =>
+            {
+                if (MatchInfoList.Count == 0)
+                    return;
+
+                TournamentMatch match = MatchInfoList[0];
+                editorInfo.Selected.Value.Date.Value = match.Date.Value;
+                editorInfo.Selected.Value.Team1Acronym = match.Team1Acronym;
+                editorInfo.Selected.Value.Team2Acronym = match.Team2Acronym;
+
+                MatchInfoList.RemoveAt(0);
+            });
         }
 
         protected override void Update()
