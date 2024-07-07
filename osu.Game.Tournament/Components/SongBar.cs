@@ -64,7 +64,7 @@ namespace osu.Game.Tournament.Components
 
         private bool expanded;
 
-        public bool Expanded
+        public virtual bool Expanded
         {
             get => expanded;
             set
