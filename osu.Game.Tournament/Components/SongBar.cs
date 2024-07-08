@@ -26,7 +26,7 @@ namespace osu.Game.Tournament.Components
 {
     public partial class SongBar : CompositeDrawable
     {
-        private IBeatmapInfo? beatmap;
+        protected IBeatmapInfo? beatmap;
 
         public const float HEIGHT = 145 / 2f;
 
@@ -48,7 +48,7 @@ namespace osu.Game.Tournament.Components
         [Resolved]
         private IAPIProvider api { get; set; } = null!;
 
-        private LegacyMods mods;
+        protected LegacyMods mods;
 
         public LegacyMods Mods
         {
@@ -60,17 +60,17 @@ namespace osu.Game.Tournament.Components
             }
         }
 
-        private FillFlowContainer flow = null!;
+        protected FillFlowContainer Flow = null!;
 
         private bool expanded;
 
-        public bool Expanded
+        public virtual bool Expanded
         {
             get => expanded;
             set
             {
                 expanded = value;
-                flow.Direction = expanded ? FillDirection.Full : FillDirection.Vertical;
+                Flow.Direction = expanded ? FillDirection.Full : FillDirection.Vertical;
             }
         }
 
@@ -80,12 +80,15 @@ namespace osu.Game.Tournament.Components
         [Resolved]
         private TextureStore store { get; set; } = null!;
 
-        [BackgroundDependencyLoader]
-        private void load(OsuColour colours)
+        public SongBar()
         {
             RelativeSizeAxes = Axes.X;
             AutoSizeAxes = Axes.Y;
+        }
 
+        [BackgroundDependencyLoader]
+        private void load(OsuColour colours)
+        {
             Masking = true;
             CornerRadius = 5;
 
@@ -97,7 +100,7 @@ namespace osu.Game.Tournament.Components
                     RelativeSizeAxes = Axes.Both,
                     Alpha = 0.4f,
                 },
-                flow = new FillFlowContainer
+                Flow = new FillFlowContainer
                 {
                     RelativeSizeAxes = Axes.X,
                     AutoSizeAxes = Axes.Y,
@@ -134,7 +137,7 @@ namespace osu.Game.Tournament.Components
                     },
                 };
 
-                Schedule(postUpdate);
+                Schedule(PostUpdate);
                 return;
             }
 
@@ -142,100 +145,20 @@ namespace osu.Game.Tournament.Components
             req.Success += res =>
             {
                 ((TournamentBeatmap)beatmap).StarRating = res.Attributes.StarRating;
-                Schedule(postUpdate);
+                Schedule(PostUpdate);
             };
             req.Failure += _ =>
             {
-                Schedule(postUpdate);
+                Schedule(PostUpdate);
             };
             api.Queue(req);
         }
 
-        private void postUpdate()
+        protected virtual void PostUpdate()
         {
-            double bpm = beatmap!.BPM;
-            double length = beatmap.Length;
-            string hardRockExtra = "";
-            string srExtra = "";
+            GetBeatmapInformation(out double bpm, out double length, out string srExtra, out var stats);
 
-            float ar = beatmap.Difficulty.ApproachRate;
-            float cs = beatmap.Difficulty.CircleSize;
-            float od = beatmap.Difficulty.OverallDifficulty;
-            float hp = beatmap.Difficulty.DrainRate;
-
-            if ((mods & LegacyMods.Easy) > 0)
-            {
-                cs /= 2;
-                ar /= 2;
-                od /= 2;
-                hp /= 2;
-                hardRockExtra = "*";
-            }
-
-            if ((mods & LegacyMods.HardRock) > 0)
-            {
-                cs = MathF.Min(cs * 1.3f, 10);
-                ar = MathF.Min(ar * 1.4f, 10);
-                od = MathF.Min(od * 1.4f, 10);
-                hp = MathF.Min(hp * 1.4f, 10);
-                hardRockExtra = "*";
-            }
-
-            double preempt = (int)IBeatmapDifficultyInfo.DifficultyRange(ar, 1800, 1200, 450);
-            double hitWindow = (int)IBeatmapDifficultyInfo.DifficultyRange(od, 80, 50, 20);
-
-            if ((mods & LegacyMods.DoubleTime) > 0)
-            {
-                preempt /= 1.5;
-                hitWindow /= 1.5;
-                bpm *= 1.5f;
-                length /= 1.5f;
-            }
-
-            if ((mods & LegacyMods.HalfTime) > 0)
-            {
-                preempt /= 0.75;
-                hitWindow /= 0.75;
-                bpm *= 0.75f;
-                length /= 0.75f;
-            }
-
-            // temporary local calculation (taken from OsuDifficultyCalculator)
-            ar = (float)(preempt > 1200 ? (1800 - preempt) / 120 : (1200 - preempt) / 150 + 5);
-            od = (float)((80 - hitWindow) / 6);
-
-            (string heading, string content)[] stats;
-
-            switch (ruleset.Value.OnlineID)
-            {
-                default:
-                    stats = new (string heading, string content)[]
-                    {
-                        ("圆圈大小", $"{cs:0.#}{hardRockExtra}"),
-                        ("缩圈速度", $"{ar:0.#}{hardRockExtra}"),
-                        ("准度要求", $"{od:0.#}{hardRockExtra}"),
-                    };
-                    break;
-
-                case 1:
-                case 3:
-                    stats = new (string heading, string content)[]
-                    {
-                        ("准度要求", $"{beatmap.Difficulty.OverallDifficulty:0.#}{hardRockExtra}"),
-                        ("掉血速度", $"{hp:0.#}{hardRockExtra}")
-                    };
-                    break;
-
-                case 2:
-                    stats = new (string heading, string content)[]
-                    {
-                        ("圆圈大小", $"{cs:0.#}{hardRockExtra}"),
-                        ("缩圈速度", $"{ar:0.#}"),
-                    };
-                    break;
-            }
-
-            flow.Children = new Drawable[]
+            Flow.Children = new Drawable[]
             {
                 new Container
                 {
@@ -317,6 +240,89 @@ namespace osu.Game.Tournament.Components
                     Origin = Anchor.BottomRight,
                 }
             };
+        }
+
+        protected void GetBeatmapInformation(out double bpm, out double length, out string srExtra, out (string heading, string content)[] stats)
+        {
+            bpm = beatmap!.BPM;
+            length = beatmap.Length;
+            string hardRockExtra = "";
+            srExtra = "";
+
+            float ar = beatmap.Difficulty.ApproachRate;
+            float cs = beatmap.Difficulty.CircleSize;
+            float od = beatmap.Difficulty.OverallDifficulty;
+            float hp = beatmap.Difficulty.DrainRate;
+
+            if ((mods & LegacyMods.Easy) > 0)
+            {
+                cs /= 2;
+                ar /= 2;
+                od /= 2;
+                hp /= 2;
+                hardRockExtra = "*";
+            }
+
+            if ((mods & LegacyMods.HardRock) > 0)
+            {
+                cs = MathF.Min(cs * 1.3f, 10);
+                ar = MathF.Min(ar * 1.4f, 10);
+                od = MathF.Min(od * 1.4f, 10);
+                hp = MathF.Min(hp * 1.4f, 10);
+                hardRockExtra = "*";
+            }
+
+            double preempt = (int)IBeatmapDifficultyInfo.DifficultyRange(ar, 1800, 1200, 450);
+            double hitWindow = (int)IBeatmapDifficultyInfo.DifficultyRange(od, 80, 50, 20);
+
+            if ((mods & LegacyMods.DoubleTime) > 0)
+            {
+                preempt /= 1.5;
+                hitWindow /= 1.5;
+                bpm *= 1.5f;
+                length /= 1.5f;
+            }
+
+            if ((mods & LegacyMods.HalfTime) > 0)
+            {
+                preempt /= 0.75;
+                hitWindow /= 0.75;
+                bpm *= 0.75f;
+                length /= 0.75f;
+            }
+
+            // temporary local calculation (taken from OsuDifficultyCalculator)
+            ar = (float)(preempt > 1200 ? (1800 - preempt) / 120 : (1200 - preempt) / 150 + 5);
+            od = (float)((80 - hitWindow) / 6);
+
+            switch (ruleset.Value.OnlineID)
+            {
+                default:
+                    stats = new (string heading, string content)[]
+                    {
+                        ("圆圈大小", $"{cs:0.#}{hardRockExtra}"),
+                        ("缩圈速度", $"{ar:0.#}{hardRockExtra}"),
+                        ("准度要求", $"{od:0.#}{hardRockExtra}"),
+                    };
+                    break;
+
+                case 1:
+                case 3:
+                    stats = new (string heading, string content)[]
+                    {
+                        ("准度要求", $"{beatmap.Difficulty.OverallDifficulty:0.#}{hardRockExtra}"),
+                        ("掉血速度", $"{hp:0.#}{hardRockExtra}")
+                    };
+                    break;
+
+                case 2:
+                    stats = new (string heading, string content)[]
+                    {
+                        ("圆圈大小", $"{cs:0.#}{hardRockExtra}"),
+                        ("缩圈速度", $"{ar:0.#}"),
+                    };
+                    break;
+            }
         }
 
         public partial class DiffPiece : TextFlowContainer

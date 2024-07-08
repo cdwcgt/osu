@@ -35,6 +35,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         private Drawable chroma = null!;
 
+        protected override SongBar CreateSongBar() => new GameplaySongBar
+        {
+            Depth = float.MinValue
+        };
+
         [BackgroundDependencyLoader]
         private void load(MatchIPCInfo ipc)
         {
