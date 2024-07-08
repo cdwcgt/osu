@@ -224,7 +224,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private void updatePosition()
         {
-            this.MoveTo(expanded ? new Vector2(0, -25) : Vector2.Zero, 300);
+            this.MoveTo(expanded ? new Vector2(0, -25) : Vector2.Zero, 300, Easing.InQuint);
         }
 
         protected override void PostUpdate()
