@@ -190,11 +190,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
             scheduledContract?.Cancel();
 
             chat.Contract();
+            SongBar.Expanded = true;
 
             using (BeginDelayedSequence(300))
             {
                 scoreDisplay.FadeIn(100);
-                SongBar.Expanded = true;
             }
         }
 
