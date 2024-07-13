@@ -10,6 +10,11 @@ namespace osu.Game.Localisation
         private const string prefix = @"osu.Game.Resources.Localisation.Editor";
 
         /// <summary>
+        /// "Beatmap editor"
+        /// </summary>
+        public static LocalisableString BeatmapEditor => new TranslatableString(getKey(@"beatmap_editor"), @"Beatmap editor");
+
+        /// <summary>
         /// "Waveform opacity"
         /// </summary>
         public static LocalisableString WaveformOpacity => new TranslatableString(getKey(@"waveform_opacity"), @"Waveform opacity");
@@ -95,16 +100,6 @@ namespace osu.Game.Localisation
         public static LocalisableString TestBeatmap => new TranslatableString(getKey(@"test_beatmap"), @"Test!");
 
         /// <summary>
-        /// "Waveform"
-        /// </summary>
-        public static LocalisableString TimelineWaveform => new TranslatableString(getKey(@"timeline_waveform"), @"Waveform");
-
-        /// <summary>
-        /// "Ticks"
-        /// </summary>
-        public static LocalisableString TimelineTicks => new TranslatableString(getKey(@"timeline_ticks"), @"Ticks");
-
-        /// <summary>
         /// "{0:0}&#176;"
         /// </summary>
         public static LocalisableString RotationUnsnapped(float newRotation) => new TranslatableString(getKey(@"rotation_unsnapped"), @"{0:0}°", newRotation);
@@ -118,6 +113,31 @@ namespace osu.Game.Localisation
         /// "Limit distance snap placement to current time"
         /// </summary>
         public static LocalisableString LimitedDistanceSnap => new TranslatableString(getKey(@"limited_distance_snap_grid"), @"Limit distance snap placement to current time");
+
+        /// <summary>
+        /// "Must be in edit mode to handle editor links"
+        /// </summary>
+        public static LocalisableString MustBeInEditorToHandleLinks => new TranslatableString(getKey(@"must_be_in_editor_to_handle_links"), @"Must be in edit mode to handle editor links");
+
+        /// <summary>
+        /// "Failed to parse editor link"
+        /// </summary>
+        public static LocalisableString FailedToParseEditorLink => new TranslatableString(getKey(@"failed_to_parse_edtior_link"), @"Failed to parse editor link");
+
+        /// <summary>
+        /// "Timeline"
+        /// </summary>
+        public static LocalisableString Timeline => new TranslatableString(getKey(@"timeline"), @"Timeline");
+
+        /// <summary>
+        /// "Show timing changes"
+        /// </summary>
+        public static LocalisableString TimelineShowTimingChanges => new TranslatableString(getKey(@"timeline_show_timing_changes"), @"Show timing changes");
+
+        /// <summary>
+        /// "Show ticks"
+        /// </summary>
+        public static LocalisableString TimelineShowTicks => new TranslatableString(getKey(@"timeline_show_ticks"), @"Show ticks");
 
         private static string getKey(string key) => $@"{prefix}:{key}";
     }

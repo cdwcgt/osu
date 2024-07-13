@@ -17,12 +17,9 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Shapes;
-using osu.Framework.Input.Bindings;
-using osu.Framework.Input.Events;
 using osu.Framework.Screens;
 using osu.Game.Audio;
 using osu.Game.Beatmaps;
-using osu.Game.Input.Bindings;
 using osu.Game.Online.API;
 using osu.Game.Online.Rooms;
 using osu.Game.Overlays;
@@ -41,7 +38,7 @@ namespace osu.Game.Screens.OnlinePlay.Match
         [Cached(typeof(IBindable<PlaylistItem>))]
         public readonly Bindable<PlaylistItem> SelectedItem = new Bindable<PlaylistItem>();
 
-        public override bool? AllowTrackAdjustments => true;
+        public override bool? ApplyModTrackAdjustments => true;
 
         protected override BackgroundScreen CreateBackground() => new RoomBackgroundScreen(Room.Playlist.FirstOrDefault())
         {
@@ -75,13 +72,16 @@ namespace osu.Game.Screens.OnlinePlay.Match
         private BeatmapManager beatmapManager { get; set; }
 
         [Resolved]
-        private RulesetStore rulesets { get; set; }
+        protected RulesetStore Rulesets { get; private set; }
 
         [Resolved]
         private IAPIProvider api { get; set; } = null!;
 
         [Resolved(canBeNull: true)]
         protected OnlinePlayScreen ParentScreen { get; private set; }
+
+        [Resolved]
+        private PreviewTrackManager previewTrackManager { get; set; } = null!;
 
         [Cached]
         private readonly OnlinePlayBeatmapAvailabilityTracker beatmapAvailabilityTracker = new OnlinePlayBeatmapAvailabilityTracker();
@@ -241,8 +241,9 @@ namespace osu.Game.Screens.OnlinePlay.Match
                 }
             };
 
-            LoadComponent(UserModsSelectOverlay = new UserModSelectOverlay(OverlayColourScheme.Plum)
+            LoadComponent(UserModsSelectOverlay = new RoomModSelectOverlay
             {
+                SelectedItem = { BindTarget = SelectedItem },
                 SelectedMods = { BindTarget = UserMods },
                 IsValidMod = _ => false
             });
@@ -371,8 +372,11 @@ namespace osu.Game.Screens.OnlinePlay.Match
                 return true;
 
             // if the dialog is already displayed, block exiting until the user explicitly makes a decision.
-            if (dialogOverlay.CurrentDialog is ConfirmDiscardChangesDialog)
+            if (dialogOverlay.CurrentDialog is ConfirmDiscardChangesDialog discardChangesDialog)
+            {
+                discardChangesDialog.Flash();
                 return false;
+            }
 
             dialogOverlay.Push(new ConfirmDiscardChangesDialog(() =>
             {
@@ -419,7 +423,7 @@ namespace osu.Game.Screens.OnlinePlay.Match
             if (selected == null)
                 return;
 
-            var rulesetInstance = rulesets.GetRuleset(SelectedItem.Value.RulesetID)?.CreateInstance();
+            var rulesetInstance = Rulesets.GetRuleset(SelectedItem.Value.RulesetID)?.CreateInstance();
             Debug.Assert(rulesetInstance != null);
             var allowedMods = SelectedItem.Value.AllowedMods.Select(m => m.ToMod(rulesetInstance));
 
@@ -452,7 +456,7 @@ namespace osu.Game.Screens.OnlinePlay.Match
             // Retrieve the corresponding local beatmap, since we can't directly use the playlist's beatmap info
             var localBeatmap = beatmap == null ? null : beatmapManager.QueryBeatmap(b => b.OnlineID == beatmap.OnlineID);
 
-            Beatmap.Value = beatmapManager.GetWorkingBeatmap(localBeatmap);
+            UserModsSelectOverlay.Beatmap.Value = Beatmap.Value = beatmapManager.GetWorkingBeatmap(localBeatmap);
         }
 
         protected virtual void UpdateMods()
@@ -460,7 +464,7 @@ namespace osu.Game.Screens.OnlinePlay.Match
             if (SelectedItem.Value == null || !this.IsCurrentScreen())
                 return;
 
-            var rulesetInstance = rulesets.GetRuleset(SelectedItem.Value.RulesetID)?.CreateInstance();
+            var rulesetInstance = Rulesets.GetRuleset(SelectedItem.Value.RulesetID)?.CreateInstance();
             Debug.Assert(rulesetInstance != null);
             Mods.Value = UserMods.Value.Concat(SelectedItem.Value.RequiredMods.Select(m => m.ToMod(rulesetInstance))).ToList();
         }
@@ -470,7 +474,7 @@ namespace osu.Game.Screens.OnlinePlay.Match
             if (SelectedItem.Value == null || !this.IsCurrentScreen())
                 return;
 
-            Ruleset.Value = rulesets.GetRuleset(SelectedItem.Value.RulesetID);
+            Ruleset.Value = Rulesets.GetRuleset(SelectedItem.Value.RulesetID);
         }
 
         private void beginHandlingTrack()
@@ -482,6 +486,8 @@ namespace osu.Game.Screens.OnlinePlay.Match
         {
             UserModsSelectOverlay.Hide();
             endHandlingTrack();
+
+            previewTrackManager.StopAnyPlaying(this);
         }
 
         private void endHandlingTrack()
@@ -506,7 +512,7 @@ namespace osu.Game.Screens.OnlinePlay.Match
 
         private void cancelTrackLooping()
         {
-            var track = Beatmap?.Value?.Track;
+            var track = Beatmap.Value?.Track;
 
             if (track != null)
                 track.Looping = false;
@@ -527,22 +533,6 @@ namespace osu.Game.Screens.OnlinePlay.Match
         /// </summary>
         /// <param name="room">The room to change the settings of.</param>
         protected abstract RoomSettingsOverlay CreateRoomSettingsOverlay(Room room);
-
-        public partial class UserModSelectButton : PurpleRoundedButton, IKeyBindingHandler<GlobalAction>
-        {
-            public bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
-            {
-                if (e.Action == GlobalAction.ToggleModSelection && !e.Repeat)
-                {
-                    TriggerClick();
-                    return true;
-                }
-
-                return false;
-            }
-
-            public void OnReleased(KeyBindingReleaseEvent<GlobalAction> e) { }
-        }
 
         protected override void Dispose(bool isDisposing)
         {

@@ -10,6 +10,8 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Graphics.Textures;
+using osu.Framework.Localisation;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Drawables;
 using osu.Game.Graphics;
@@ -21,22 +23,23 @@ namespace osu.Game.Tournament.Components
 {
     public partial class TournamentBeatmapPanel : CompositeDrawable
     {
-        public readonly TournamentBeatmap Beatmap;
+        public readonly IBeatmapInfo? Beatmap;
 
         private readonly string? mod;
 
         public const float HEIGHT = 50;
 
-        private readonly Bindable<TournamentMatch> currentMatch = new Bindable<TournamentMatch>();
-        private Box? flash;
-        private PadLock? padLock;
+        private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
 
-        public TournamentBeatmapPanel(TournamentBeatmap beatmap, string? mod = null)
+        private Box flash = null!;
+        private PadLock padLock = null!;
+        private readonly bool isMappool;
+
+        public TournamentBeatmapPanel(IBeatmapInfo? beatmap, string mod = "", bool isMappool = false)
         {
-            ArgumentNullException.ThrowIfNull(beatmap);
-
             Beatmap = beatmap;
             this.mod = mod;
+            this.isMappool = isMappool;
 
             Width = 400;
             Height = HEIGHT;
@@ -57,11 +60,11 @@ namespace osu.Game.Tournament.Components
                     RelativeSizeAxes = Axes.Both,
                     Colour = Color4.Black,
                 },
-                new UpdateableOnlineBeatmapSetCover
+                new NoUnloadBeatmapSetCover
                 {
                     RelativeSizeAxes = Axes.Both,
                     Colour = OsuColour.Gray(0.5f),
-                    OnlineInfo = Beatmap,
+                    OnlineInfo = (Beatmap as IBeatmapSetOnlineInfo),
                 },
                 padLock = new PadLock
                 {
@@ -80,7 +83,7 @@ namespace osu.Game.Tournament.Components
                     {
                         new TournamentSpriteText
                         {
-                            Text = Beatmap.GetDisplayTitleRomanisable(false, false),
+                            Text = Beatmap?.GetDisplayTitleRomanisable(false, false) ?? (LocalisableString)@"unknown",
                             Font = OsuFont.Torus.With(weight: FontWeight.Bold),
                         },
                         new FillFlowContainer
@@ -97,7 +100,7 @@ namespace osu.Game.Tournament.Components
                                 },
                                 new TournamentSpriteText
                                 {
-                                    Text = Beatmap.Metadata.Author.Username,
+                                    Text = Beatmap?.Metadata.Author.Username ?? "unknown",
                                     Padding = new MarginPadding { Right = 20 },
                                     Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 14)
                                 },
@@ -109,7 +112,7 @@ namespace osu.Game.Tournament.Components
                                 },
                                 new TournamentSpriteText
                                 {
-                                    Text = Beatmap.DifficultyName,
+                                    Text = Beatmap?.DifficultyName ?? "unknown",
                                     Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 14)
                                 },
                             }
@@ -138,50 +141,48 @@ namespace osu.Game.Tournament.Components
             }
         }
 
-        private void matchChanged(ValueChangedEvent<TournamentMatch> match)
+        private void matchChanged(ValueChangedEvent<TournamentMatch?> match)
         {
             if (match.OldValue != null)
                 match.OldValue.PicksBans.CollectionChanged -= picksBansOnCollectionChanged;
-            match.NewValue.PicksBans.CollectionChanged += picksBansOnCollectionChanged;
-            updateState();
+            if (match.NewValue != null)
+                match.NewValue.PicksBans.CollectionChanged += picksBansOnCollectionChanged;
+
+            Scheduler.AddOnce(updateState);
         }
 
         private void picksBansOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-            => updateState();
+            => Scheduler.AddOnce(updateState);
 
         private BeatmapChoice? choice;
 
         private void updateState()
         {
-            var found = currentMatch.Value.PicksBans.Where(p => p.BeatmapID == Beatmap.OnlineID).ToList();
-            var foundProtected = found.FirstOrDefault(s => s.Type == ChoiceType.Protected);
+            if (currentMatch.Value == null)
+            {
+                return;
+            }
+
+            var found = currentMatch.Value.PicksBans.Where(p => p.BeatmapID == Beatmap?.OnlineID).ToList();
+            var foundProtected = isMappool ? found.FirstOrDefault(s => s.Type == ChoiceType.Protected) : null;
             var lastFound = found.LastOrDefault();
 
-            bool doFlash = lastFound != choice;
-            choice = lastFound;
+            bool shouldFlash = lastFound != choice;
 
-            if (padLock != null)
+            if (foundProtected != null && isMappool)
             {
-                if (foundProtected != null)
-                {
-                    padLock.Team = foundProtected.Team;
-                    padLock.FadeIn();
-
-                    if (currentMatch.Value.PicksBans.Any(p => p.Type == ChoiceType.Pick))
-                    {
-                        padLock.FadeTo(0.5f);
-                    }
-                }
-                else
-                {
-                    padLock.FadeOut();
-                }
+                padLock.Team = foundProtected.Team;
+                padLock.Show();
+            }
+            else
+            {
+                padLock.Hide();
             }
 
             if (lastFound != null)
             {
-                if (doFlash)
-                    flash?.FadeOutFromOne(500).Loop(0, 10);
+                if (shouldFlash)
+                    flash.FadeOutFromOne(500).Loop(0, 10);
 
                 BorderThickness = 6;
 
@@ -211,6 +212,18 @@ namespace osu.Game.Tournament.Components
                 BorderThickness = 0;
                 Alpha = 1;
             }
+
+            choice = lastFound;
+        }
+
+        private partial class NoUnloadBeatmapSetCover : UpdateableOnlineBeatmapSetCover
+        {
+            // As covers are displayed on stream, we want them to load as soon as possible.
+            protected override double LoadDelay => 0;
+
+            // Use DelayedLoadWrapper to avoid content unloading when switching away to another screen.
+            protected override DelayedLoadWrapper CreateDelayedLoadWrapper(Func<Drawable> createContentFunc, double timeBeforeLoad)
+                => new DelayedLoadWrapper(createContentFunc(), timeBeforeLoad);
         }
 
         private partial class PadLock : Container
@@ -223,21 +236,21 @@ namespace osu.Game.Tournament.Components
                 set => lockIcon.Colour = value == TeamColour.Red ? osuColour.TeamColourRed : osuColour.TeamColourBlue;
             }
 
-            private readonly SpriteIcon background;
-            private readonly SpriteIcon lockIcon;
+            private Sprite background = null!;
+            private SpriteIcon lockIcon = null!;
 
-            public PadLock()
+            [BackgroundDependencyLoader]
+            private void load(TextureStore textures)
             {
                 Children = new Drawable[]
                 {
-                    background = new SpriteIcon
+                    background = new Sprite
                     {
-                        Origin = Anchor.Centre,
+                        RelativeSizeAxes = Axes.Both,
+                        FillMode = FillMode.Fit,
+                        Texture = textures.Get("Icons/BeatmapDetails/mod-icon"),
                         Anchor = Anchor.Centre,
-                        Size = new Vector2(45),
-                        Icon = OsuIcon.ModBg,
-                        Shadow = true,
-                        Colour = Color4.LightGray
+                        Origin = Anchor.Centre,
                     },
                     lockIcon = new SpriteIcon
                     {

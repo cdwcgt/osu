@@ -13,7 +13,9 @@ using osu.Framework.Graphics.Shapes;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
+using osu.Game.Overlays;
 using osu.Game.Tournament.Components;
+using osu.Game.Tournament.Screens.Editors.Components;
 using osuTK;
 
 namespace osu.Game.Tournament.Screens.Editors
@@ -23,6 +25,9 @@ namespace osu.Game.Tournament.Screens.Editors
         where TModel : class, new()
     {
         protected abstract BindableList<TModel> Storage { get; }
+
+        [Resolved]
+        private IDialogOverlay? dialogOverlay { get; set; }
 
         private FillFlowContainer<TDrawable> flow = null!;
 
@@ -77,9 +82,12 @@ namespace osu.Game.Tournament.Screens.Editors
                         new TourneyButton
                         {
                             RelativeSizeAxes = Axes.X,
-                            BackgroundColour = colours.Pink3,
+                            BackgroundColour = colours.DangerousButtonColour,
                             Text = "Clear all",
-                            Action = Storage.Clear
+                            Action = () =>
+                            {
+                                dialogOverlay?.Push(new TournamentClearAllDialog(() => Storage.Clear()));
+                            }
                         },
                     }
                 }
