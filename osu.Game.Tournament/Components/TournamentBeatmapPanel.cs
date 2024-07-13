@@ -66,12 +66,6 @@ namespace osu.Game.Tournament.Components
                     Colour = OsuColour.Gray(0.5f),
                     OnlineInfo = (Beatmap as IBeatmapSetOnlineInfo),
                 },
-                padLock = new PadLock
-                {
-                    Origin = Anchor.Centre,
-                    Anchor = Anchor.Centre,
-                    Alpha = 0f,
-                },
                 new FillFlowContainer
                 {
                     AutoSizeAxes = Axes.Both,
@@ -118,6 +112,12 @@ namespace osu.Game.Tournament.Components
                             }
                         }
                     },
+                },
+                padLock = new PadLock
+                {
+                    Origin = Anchor.Centre,
+                    Anchor = Anchor.Centre,
+                    Alpha = 0f,
                 },
                 flash = new Box
                 {
@@ -173,6 +173,11 @@ namespace osu.Game.Tournament.Components
             {
                 padLock.Team = foundProtected.Team;
                 padLock.Show();
+
+                if (currentMatch.Value.PicksBans.Any(p => p.Type == ChoiceType.Pick))
+                {
+                    padLock.FadeTo(0.5f);
+                }
             }
             else
             {
@@ -242,6 +247,8 @@ namespace osu.Game.Tournament.Components
             [BackgroundDependencyLoader]
             private void load(TextureStore textures)
             {
+                Size = new Vector2(40);
+
                 Children = new Drawable[]
                 {
                     background = new Sprite
@@ -256,7 +263,7 @@ namespace osu.Game.Tournament.Components
                     {
                         Origin = Anchor.Centre,
                         Anchor = Anchor.Centre,
-                        Size = new Vector2(15),
+                        Size = new Vector2(22),
                         Icon = FontAwesome.Solid.ShieldAlt,
                         Shadow = true,
                     }
