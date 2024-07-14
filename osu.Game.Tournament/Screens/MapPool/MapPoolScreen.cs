@@ -170,17 +170,27 @@ namespace osu.Game.Tournament.Screens.MapPool
             if (CurrentMatch.Value?.Round.Value == null)
                 return;
 
+            // just for now
+            int totalProtectsRequired = 2;
+
             int totalBansRequired = CurrentMatch.Value.Round.Value.BanCount.Value * 2;
 
             TeamColour lastPickColour = CurrentMatch.Value.PicksBans.LastOrDefault()?.Team ?? TeamColour.Red;
 
             TeamColour nextColour;
 
-            //bool hasAllProtected = CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Protected) >= 2;
+            bool hasAllProtected = CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Protected) >= totalProtectsRequired;
 
             bool hasAllBans = CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Ban) >= totalBansRequired;
 
-            if (!hasAllBans)
+            if (!hasAllProtected)
+            {
+                // Protect phase: ?.
+                nextColour = CurrentMatch.Value.PicksBans.Count % 2 == 1
+                    ? getOppositeTeamColour(lastPickColour)
+                    : lastPickColour;
+            }
+            else if (!hasAllBans)
             {
                 // Ban phase: switch teams every second ban.
                 nextColour = CurrentMatch.Value.PicksBans.Count % 2 == 1
@@ -189,13 +199,12 @@ namespace osu.Game.Tournament.Screens.MapPool
             }
             else
             {
-                // Pick phase : switch teams every pick, except for the first pick which generally goes to the team that placed the last ban.
-                nextColour = pickType == ChoiceType.Pick
-                    ? getOppositeTeamColour(lastPickColour)
-                    : lastPickColour;
+                // Pick phase : switch teams every pick, except for the first pick which generally goes to the team that placed the last ban (not for MCNC).
+                nextColour = getOppositeTeamColour(lastPickColour);
             }
 
-            ChoiceType nextMode = !hasAllBans ? ChoiceType.Ban : ChoiceType.Pick;
+            ChoiceType nextMode = !hasAllProtected ? ChoiceType.Protected
+                : !hasAllBans ? ChoiceType.Ban : ChoiceType.Pick;
 
             setMode(nextColour, nextMode);
 
@@ -213,7 +222,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                     addForBeatmap(map.Beatmap.OnlineID);
                 else
                 {
-                    var existing = CurrentMatch.Value?.PicksBans.FirstOrDefault(p => p.BeatmapID == map.Beatmap?.OnlineID);
+                    var existing = CurrentMatch.Value?.PicksBans.LastOrDefault(p => p.BeatmapID == map.Beatmap?.OnlineID);
 
                     if (existing != null)
                     {
