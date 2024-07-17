@@ -95,42 +95,40 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     Y = -147,
                     Anchor = Anchor.BottomCentre,
                     Origin = Anchor.TopCentre,
-                },
-                new ControlPanel
-                {
-                    Children = new Drawable[]
-                    {
-                        warmupButton = new TourneyButton
-                        {
-                            RelativeSizeAxes = Axes.X,
-                            Text = "Toggle warmup",
-                            Action = () => warmup.Toggle()
-                        },
-                        new TourneyButton
-                        {
-                            RelativeSizeAxes = Axes.X,
-                            Text = "Toggle chat",
-                            Action = () => { State.Value = State.Value == TourneyState.Idle ? TourneyState.Playing : TourneyState.Idle; }
-                        },
-                        new SettingsSlider<int>
-                        {
-                            LabelText = "Chroma width",
-                            Current = LadderInfo.ChromaKeyWidth,
-                            KeyboardStep = 1,
-                        },
-                        new SettingsSlider<int>
-                        {
-                            LabelText = "Players per team",
-                            Current = LadderInfo.PlayersPerTeam,
-                            KeyboardStep = 1,
-                        },
-                        new ControlPanel.Spacer(),
-                        new MatchRoundNameTextBox
-                        {
-                            RelativeSizeAxes = Axes.X,
-                        },
-                    }
                 }
+            });
+
+            ControlPanel.AddRange(new Drawable[]
+            {
+                warmupButton = new TourneyButton
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Text = "Toggle warmup",
+                    Action = () => warmup.Toggle()
+                },
+                new TourneyButton
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Text = "Toggle chat",
+                    Action = () => { State.Value = State.Value == TourneyState.Idle ? TourneyState.Playing : TourneyState.Idle; }
+                },
+                new SettingsSlider<int>
+                {
+                    LabelText = "Chroma width",
+                    Current = LadderInfo.ChromaKeyWidth,
+                    KeyboardStep = 1,
+                },
+                new SettingsSlider<int>
+                {
+                    LabelText = "Players per team",
+                    Current = LadderInfo.PlayersPerTeam,
+                    KeyboardStep = 1,
+                },
+                new ControlPanel.Spacer(),
+                new MatchRoundNameTextBox
+                {
+                    RelativeSizeAxes = Axes.X,
+                },
             });
 
             LadderInfo.ChromaKeyWidth.BindValueChanged(width => chroma.Width = width.NewValue, true);

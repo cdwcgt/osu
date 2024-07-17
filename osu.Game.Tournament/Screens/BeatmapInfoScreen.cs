@@ -14,6 +14,7 @@ namespace osu.Game.Tournament.Screens
     public abstract partial class BeatmapInfoScreen : TournamentMatchScreen
     {
         protected readonly SongBar SongBar;
+        protected ControlPanel ControlPanel = null!;
 
         protected virtual SongBar CreateSongBar() => new SongBar()
         {
@@ -24,7 +25,44 @@ namespace osu.Game.Tournament.Screens
 
         protected BeatmapInfoScreen()
         {
-            AddInternal(SongBar = CreateSongBar());
+            AddRangeInternal(
+            [
+                SongBar = CreateSongBar(),
+                ControlPanel = new ControlPanel
+                {
+                    Children = new Drawable[]
+                    {
+                        new TournamentSpriteText
+                        {
+                            Text = "Set Mods"
+                        },
+                        new TourneyButton
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Text = "Set NM",
+                            Action = () => setMods(0)
+                        },
+                        new TourneyButton
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Text = "Set HR",
+                            Action = () => setMods(LegacyMods.HardRock)
+                        },
+                        new TourneyButton
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Text = "Set HD",
+                            Action = () => setMods(LegacyMods.Hidden)
+                        },
+                        new TourneyButton
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Text = "Set DT",
+                            Action = () => setMods(LegacyMods.DoubleTime)
+                        },
+                    }
+                }
+            ]);
         }
 
         [BackgroundDependencyLoader]
@@ -33,6 +71,8 @@ namespace osu.Game.Tournament.Screens
             ipc.Beatmap.BindValueChanged(beatmapChanged, true);
             ipc.Mods.BindValueChanged(modsChanged, true);
         }
+
+        private void setMods(LegacyMods mods) => SongBar.Mods = mods;
 
         private void modsChanged(ValueChangedEvent<LegacyMods> mods)
         {
