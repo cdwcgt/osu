@@ -190,8 +190,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         {
             base.LoadComplete();
 
-            leftArrow.MoveToX(-25, 3000, Easing.Out).Then().MoveToX(0, 3000, Easing.Out).Loop();
-            rightArrow.MoveToX(25, 3000, Easing.Out).Then().MoveToX(0, 3000, Easing.Out).Loop();
+            leftArrow.MoveToX(-25, 1500, Easing.Out).Then().MoveToX(0, 1500, Easing.In).Loop();
+            rightArrow.MoveToX(25, 1500, Easing.Out).Then().MoveToX(0, 1500, Easing.In).Loop();
         }
 
         private void matchChanged(ValueChangedEvent<TournamentMatch?> match)
