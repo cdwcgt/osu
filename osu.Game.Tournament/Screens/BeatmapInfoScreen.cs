@@ -14,9 +14,12 @@ namespace osu.Game.Tournament.Screens
     public abstract partial class BeatmapInfoScreen : TournamentMatchScreen
     {
         protected readonly SongBar SongBar;
-        protected ControlPanel ControlPanel = null!;
+        protected ControlPanel ControlPanel;
 
-        protected virtual SongBar CreateSongBar() => new SongBar()
+        protected Bindable<LegacyMods> Mods = new Bindable<LegacyMods>();
+        protected BindableBool ManualModsSelect = new BindableBool();
+
+        protected virtual SongBar CreateSongBar() => new SongBar
         {
             Anchor = Anchor.BottomRight,
             Origin = Anchor.BottomRight,
@@ -39,8 +42,14 @@ namespace osu.Game.Tournament.Screens
                         new TourneyButton
                         {
                             RelativeSizeAxes = Axes.X,
-                            Text = "Set NM",
-                            Action = () => setMods(0)
+                            Text = "Reset",
+                            Action = reset
+                        },
+                        new TourneyButton
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Text = "Set FM",
+                            Action = () => setMods(LegacyMods.None)
                         },
                         new TourneyButton
                         {
@@ -63,16 +72,35 @@ namespace osu.Game.Tournament.Screens
                     }
                 }
             ]);
+
+            Mods.BindValueChanged(modsChanged);
         }
+
+        [Resolved]
+        private MatchIPCInfo ipc { get; set; } = null!;
 
         [BackgroundDependencyLoader]
-        private void load(MatchIPCInfo ipc)
+        private void load()
         {
             ipc.Beatmap.BindValueChanged(beatmapChanged, true);
-            ipc.Mods.BindValueChanged(modsChanged, true);
+            ipc.Mods.BindValueChanged(m =>
+            {
+                ManualModsSelect.Value = false;
+                Mods.Value = m.NewValue;
+            });
         }
 
-        private void setMods(LegacyMods mods) => SongBar.Mods = mods;
+        private void setMods(LegacyMods mods)
+        {
+            ManualModsSelect.Value = true;
+            Mods.Value = mods;
+        }
+
+        private void reset()
+        {
+            ManualModsSelect.Value = false;
+            Mods.Value = ipc.Mods.Value;
+        }
 
         private void modsChanged(ValueChangedEvent<LegacyMods> mods)
         {

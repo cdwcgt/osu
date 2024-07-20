@@ -1,14 +1,17 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Threading;
+using osu.Game.Beatmaps.Legacy;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Overlays.Settings;
+using osu.Game.Rulesets;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
@@ -34,6 +37,14 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private TournamentMatchChatDisplay chat { get; set; } = null!;
 
         private Drawable chroma = null!;
+
+        [Resolved]
+        private IRulesetStore rulesets { get; set; } = null!;
+
+        [Resolved]
+        private LadderInfo ladderInfo { get; set; } = null!;
+
+        private ScheduledDelegate? updateSlotsDelegate;
 
         protected override SongBar CreateSongBar() => new GameplaySongBar
         {
@@ -95,6 +106,13 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     Y = -147,
                     Anchor = Anchor.BottomCentre,
                     Origin = Anchor.TopCentre,
+                },
+                slotContainer = new Container
+                {
+                    Anchor = Anchor.BottomLeft,
+                    Origin = Anchor.BottomLeft,
+                    AutoSizeAxes = Axes.Both,
+                    Padding = new MarginPadding { Left = 10f, Bottom = 7f },
                 }
             });
 
@@ -138,6 +156,28 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 warmupButton.Alpha = !w.NewValue ? 0.5f : 1;
                 header.ShowScores = !w.NewValue;
             }, true);
+
+            Mods.BindValueChanged(_ => updateSlots());
+
+            ManualModsSelect.BindValueChanged(_ => updateSlots());
+        }
+
+        private void updateSlots()
+        {
+            updateSlotsDelegate?.Cancel();
+
+            Scheduler.AddDelayed(() =>
+            {
+                slotContainer.Clear();
+
+                if (!ManualModsSelect.Value)
+                    return;
+
+                var ruleset = rulesets.GetRuleset(ladderInfo.Ruleset.Value?.OnlineID ?? 0);
+                string modAcronym = ruleset?.CreateInstance().ConvertFromLegacyMods(Mods.Value).FirstOrDefault()?.Acronym ?? "FM";
+
+                slotContainer.Child = new GameplaySlot(modAcronym);
+            }, 10);
         }
 
         protected override void LoadComplete()
@@ -166,6 +206,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         private TourneyState lastState;
         private MatchHeader header = null!;
+        private Container slotContainer = null!;
 
         private void contract()
         {
