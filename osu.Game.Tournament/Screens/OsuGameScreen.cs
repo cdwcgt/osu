@@ -93,6 +93,7 @@ namespace osu.Game.Tournament.Screens
         public IBindable<UserStatistics?> Statistics => api.Statistics;
         public Language Language => api.Language;
         public string AccessToken => api.AccessToken;
+        public Guid SessionIdentifier => api.SessionIdentifier;
         public bool IsLoggedIn => api.IsLoggedIn;
         public string ProvidedUsername => api.ProvidedUsername;
         public string APIEndpointUrl => api.APIEndpointUrl;
