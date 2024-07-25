@@ -118,9 +118,14 @@ namespace osu.Game.Screens.OnlinePlay.DailyChallenge
             RefetchScores();
         }
 
+        private IndexPlaylistScoresRequest? request;
+
         public void RefetchScores()
         {
-            var request = new IndexPlaylistScoresRequest(room.RoomID.Value!.Value, playlistItem.ID);
+            if (request?.CompletionState == APIRequestCompletionState.Waiting)
+                return;
+
+            request = new IndexPlaylistScoresRequest(room.RoomID.Value!.Value, playlistItem.ID);
 
             request.Success += req => Schedule(() =>
             {
@@ -138,9 +143,9 @@ namespace osu.Game.Screens.OnlinePlay.DailyChallenge
                 }
                 else
                 {
-                    LoadComponentsAsync(best.Select(s => new LeaderboardScoreV2(s, sheared: false)
+                    LoadComponentsAsync(best.Select((s, index) => new LeaderboardScoreV2(s, sheared: false)
                     {
-                        Rank = s.Position,
+                        Rank = index + 1,
                         IsPersonalBest = s.UserID == api.LocalUser.Value.Id,
                         Action = () => PresentScore?.Invoke(s.OnlineID),
                     }), loaded =>
