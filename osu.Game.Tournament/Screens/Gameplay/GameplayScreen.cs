@@ -6,6 +6,8 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Graphics.Sprites;
+using osu.Framework.Graphics.Textures;
 using osu.Framework.Threading;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Overlays.Settings;
@@ -15,6 +17,7 @@ using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Gameplay.Components;
 using osu.Game.Tournament.Screens.MapPool;
 using osu.Game.Tournament.Screens.TeamWin;
+using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Screens.Gameplay
@@ -26,9 +29,13 @@ namespace osu.Game.Tournament.Screens.Gameplay
         public readonly Bindable<TourneyState> State = new Bindable<TourneyState>();
         private OsuButton warmupButton = null!;
         private MatchIPCInfo ipc = null!;
+        private Sprite slotSprite = null!;
 
         [Resolved]
         private TournamentSceneManager? sceneManager { get; set; }
+
+        [Resolved]
+        private TextureStore textures { get; set; } = null!;
 
         [Resolved]
         private TournamentMatchChatDisplay chat { get; set; } = null!;
@@ -95,6 +102,21 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     Y = -147,
                     Anchor = Anchor.BottomCentre,
                     Origin = Anchor.TopCentre,
+                },
+                new Container
+                {
+                    Anchor = Anchor.BottomLeft,
+                    Origin = Anchor.BottomLeft,
+                    Size = new Vector2(100, 50),
+                    Padding = new MarginPadding { Left = 10f, Bottom = 7f },
+                    Child = slotSprite = new Sprite
+                    {
+                        Alpha = 0,
+                        Anchor = Anchor.BottomLeft,
+                        Origin = Anchor.BottomLeft,
+                        FillMode = FillMode.Fit,
+                        RelativeSizeAxes = Axes.Both
+                    }
                 }
             });
 
@@ -146,6 +168,19 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
             State.BindTo(ipc.State);
             State.BindValueChanged(_ => updateState(), true);
+        }
+
+        protected override void SetModAcronym(string acronym)
+        {
+            var texture = textures.Get($"Slots/{acronym}S");
+
+            if (texture == null)
+                slotSprite.FadeOut(500, Easing.Out);
+            else
+            {
+                slotSprite.Texture = texture;
+                slotSprite.FadeInFromZero(500, Easing.Out);
+            }
         }
 
         protected override void CurrentMatchChanged(ValueChangedEvent<TournamentMatch?> match)

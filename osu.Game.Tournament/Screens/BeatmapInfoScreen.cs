@@ -39,26 +39,32 @@ namespace osu.Game.Tournament.Screens
                         new TourneyButton
                         {
                             RelativeSizeAxes = Axes.X,
-                            Text = "Set NM",
-                            Action = () => setMods(0)
+                            Text = "Reset",
+                            Action = () => setMods(0, string.Empty)
+                        },
+                        new TourneyButton
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Text = "Set FM",
+                            Action = () => setMods(0, "FM")
                         },
                         new TourneyButton
                         {
                             RelativeSizeAxes = Axes.X,
                             Text = "Set HR",
-                            Action = () => setMods(LegacyMods.HardRock)
+                            Action = () => setMods(LegacyMods.HardRock, "HR")
                         },
                         new TourneyButton
                         {
                             RelativeSizeAxes = Axes.X,
                             Text = "Set HD",
-                            Action = () => setMods(LegacyMods.Hidden)
+                            Action = () => setMods(LegacyMods.Hidden, "HD")
                         },
                         new TourneyButton
                         {
                             RelativeSizeAxes = Axes.X,
                             Text = "Set DT",
-                            Action = () => setMods(LegacyMods.DoubleTime)
+                            Action = () => setMods(LegacyMods.DoubleTime, "DT")
                         },
                     }
                 }
@@ -72,7 +78,13 @@ namespace osu.Game.Tournament.Screens
             ipc.Mods.BindValueChanged(modsChanged, true);
         }
 
-        private void setMods(LegacyMods mods) => SongBar.Mods = mods;
+        private void setMods(LegacyMods mods, string acronym)
+        {
+            SongBar.Mods = mods;
+            SetModAcronym(acronym);
+        }
+
+        protected virtual void SetModAcronym(string acronym) { }
 
         private void modsChanged(ValueChangedEvent<LegacyMods> mods)
         {

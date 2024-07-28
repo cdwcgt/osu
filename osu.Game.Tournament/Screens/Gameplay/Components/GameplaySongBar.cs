@@ -13,7 +13,6 @@ using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Game.Extensions;
-using osu.Game.Rulesets;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osuTK;
@@ -32,10 +31,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private readonly Bindable<ColourInfo> arrowColor = new Bindable<ColourInfo>(Color4.White);
         private SpriteIcon leftArrow = null!;
         private SpriteIcon rightArrow = null!;
-
-        [Resolved]
-        private IBindable<RulesetInfo> ruleset { get; set; } = null!;
-
         private bool expanded;
 
         public override bool Expanded
@@ -74,6 +69,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 {
                     new Container
                     {
+                        Name = "Left arrow",
                         AutoSizeAxes = Axes.Both,
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.CentreLeft,
@@ -164,6 +160,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     },
                     new Container
                     {
+                        Name = "Right arrow",
                         AutoSizeAxes = Axes.Both,
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.CentreLeft,
