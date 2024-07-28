@@ -33,7 +33,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private void updateColor()
         {
             var color = invertTextColor ? black : Colour4.White;
-            Score1Text.Colour = Score2Text.Colour = color;
+            Score1Text.Colour = Score2Text.Colour = ScoreDiffText.Colour = color;
         }
     }
 }

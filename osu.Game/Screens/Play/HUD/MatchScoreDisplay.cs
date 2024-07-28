@@ -28,7 +28,7 @@ namespace osu.Game.Screens.Play.HUD
         private Drawable score1Bar = null!;
         private Drawable score2Bar = null!;
 
-        private MatchScoreDiffCounter scoreDiffText = null!;
+        protected MatchScoreDiffCounter ScoreDiffText = null!;
 
         [BackgroundDependencyLoader]
         private void load(OsuColour colours)
@@ -98,7 +98,7 @@ namespace osu.Game.Screens.Play.HUD
                         },
                     }
                 },
-                scoreDiffText = new MatchScoreDiffCounter
+                ScoreDiffText = new MatchScoreDiffCounter
                 {
                     Anchor = Anchor.TopCentre,
                     Margin = new MarginPadding
@@ -150,9 +150,9 @@ namespace osu.Game.Screens.Play.HUD
             losingBar.ResizeWidthTo(0, 400, Easing.OutQuint);
             winningBar.ResizeWidthTo(Math.Min(0.4f, MathF.Pow(diff / 1500000f, 0.5f) / 2), 400, Easing.OutQuint);
 
-            scoreDiffText.Alpha = diff != 0 ? 1 : 0;
-            scoreDiffText.Current.Value = -diff;
-            scoreDiffText.Origin = Team1Score.Value > Team2Score.Value ? Anchor.TopLeft : Anchor.TopRight;
+            ScoreDiffText.Alpha = diff != 0 ? 1 : 0;
+            ScoreDiffText.Current.Value = -diff;
+            ScoreDiffText.Origin = Team1Score.Value > Team2Score.Value ? Anchor.TopLeft : Anchor.TopRight;
         }
 
         protected override void UpdateAfterChildren()
@@ -168,7 +168,7 @@ namespace osu.Game.Screens.Play.HUD
 
             public MatchScoreCounter()
             {
-                Margin = new MarginPadding { Top = bar_height, Horizontal = 10 };
+                Margin = new MarginPadding { Top = bar_height - 3, Horizontal = 10 };
             }
 
             public bool Winning
@@ -189,7 +189,7 @@ namespace osu.Game.Screens.Play.HUD
                     : OsuFont.Torus.With(weight: FontWeight.Regular, size: font_size * 0.8f, fixedWidth: true);
         }
 
-        private partial class MatchScoreDiffCounter : CommaSeparatedScoreCounter
+        protected partial class MatchScoreDiffCounter : CommaSeparatedScoreCounter
         {
             protected override OsuSpriteText CreateSpriteText() => base.CreateSpriteText().With(s =>
             {
