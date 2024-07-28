@@ -14,7 +14,7 @@ namespace osu.Game.Tournament.Screens
     public abstract partial class BeatmapInfoScreen : TournamentMatchScreen
     {
         protected readonly SongBar SongBar;
-        protected ControlPanel ControlPanel = null!;
+        protected ControlPanel ControlPanel;
 
         protected virtual SongBar CreateSongBar() => new SongBar()
         {
@@ -40,13 +40,13 @@ namespace osu.Game.Tournament.Screens
                         {
                             RelativeSizeAxes = Axes.X,
                             Text = "Reset",
-                            Action = () => setMods(0, string.Empty)
+                            Action = () => setMods(LegacyMods.None, string.Empty)
                         },
                         new TourneyButton
                         {
                             RelativeSizeAxes = Axes.X,
                             Text = "Set FM",
-                            Action = () => setMods(0, "FM")
+                            Action = () => setMods(LegacyMods.None, "FM")
                         },
                         new TourneyButton
                         {

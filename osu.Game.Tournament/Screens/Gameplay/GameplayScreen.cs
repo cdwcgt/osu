@@ -108,7 +108,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     Anchor = Anchor.BottomLeft,
                     Origin = Anchor.BottomLeft,
                     Size = new Vector2(100, 50),
-                    Padding = new MarginPadding { Left = 10f, Bottom = 7f },
+                    Margin = new MarginPadding { Left = 10f, Bottom = 7f },
                     Child = slotSprite = new Sprite
                     {
                         Alpha = 0,
@@ -168,11 +168,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
             State.BindTo(ipc.State);
             State.BindValueChanged(_ => updateState(), true);
+            LadderInfo.InvertScoreColour.BindValueChanged(v => scoreDisplay.InvertTextColor = v.NewValue, true);
         }
 
         protected override void SetModAcronym(string acronym)
         {
-            var texture = textures.Get($"Slots/{acronym}S");
+            var texture = textures.Get($"Slots/{acronym}");
 
             if (texture == null)
                 slotSprite.FadeOut(500, Easing.Out);

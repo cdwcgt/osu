@@ -46,8 +46,10 @@ namespace osu.Game.Tournament.Components
             {
                 team.FullName.BindValueChanged(name => teamText.Text.Text = name.NewValue, true);
                 team.Seed.BindValueChanged(seed => teamIdText.Text.Text = seed.NewValue, true);
-                team.InverseTextColor.BindValueChanged(inverse => teamIdText.Text.Colour = inverse.NewValue ? Colour4.Black : Colour4.White, true);
                 team.Color.BindValueChanged(color => teamIdText.BackgroundColor = color.NewValue, true);
+                team.IdTextColor.BindValueChanged(color => teamIdText.Text.Colour = color.NewValue, true);
+                team.NameBackgroundColor.BindValueChanged(color => teamText.BackgroundColor = color.NewValue, true);
+                team.NameTextColor.BindValueChanged(color => teamText.Text.Colour = color.NewValue, true);
             }
 
             this.team = team;

@@ -55,8 +55,10 @@ namespace osu.Game.Tournament.Models
             MaxValue = 256
         };
 
-        public BindableColour4 Color = new BindableColour4();
-        public BindableBool InverseTextColor = new BindableBool(false);
+        public BindableColour4 Color = new BindableColour4(TournamentGame.ELEMENT_BACKGROUND_COLOUR);
+        public BindableColour4 IdTextColor = new BindableColour4(TournamentGame.ELEMENT_FOREGROUND_COLOUR);
+        public BindableColour4 NameBackgroundColor = new BindableColour4(TournamentGame.ELEMENT_BACKGROUND_COLOUR);
+        public BindableColour4 NameTextColor = new BindableColour4(TournamentGame.ELEMENT_FOREGROUND_COLOUR);
 
         [JsonProperty]
         public BindableList<TournamentUser> Players { get; } = new BindableList<TournamentUser>();

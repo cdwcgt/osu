@@ -12,6 +12,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Localisation;
 using osu.Game.Graphics;
+using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Overlays;
@@ -148,15 +149,53 @@ namespace osu.Game.Tournament.Screens.Editors
                                 Margin = new MarginPadding { Right = 25 },
                                 Children = new Drawable[]
                                 {
+                                    new OsuSpriteText
+                                    {
+                                        Text = "Team Seed Background Color"
+                                    },
                                     new OsuHexColourPicker
                                     {
                                         Current = team.Color,
                                         Padding = new MarginPadding { Vertical = 20, Horizontal = 10 }
                                     },
-                                    new LabelledSwitchButton
+                                    new OsuSpriteText
                                     {
-                                        Label = "Inverse team name color",
-                                        Current = team.InverseTextColor
+                                        Text = "Team Seed Text Color"
+                                    },
+                                    new OsuHexColourPicker
+                                    {
+                                        Current = team.IdTextColor,
+                                        Padding = new MarginPadding { Vertical = 20, Horizontal = 10 }
+                                    },
+                                }
+                            },
+                            new FillFlowContainer
+                            {
+                                Width = 0.2f,
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+                                Direction = FillDirection.Vertical,
+                                Spacing = new Vector2(5),
+                                Margin = new MarginPadding { Right = 25 },
+                                Children = new Drawable[]
+                                {
+                                    new OsuSpriteText
+                                    {
+                                        Text = "Team Name Background Color"
+                                    },
+                                    new OsuHexColourPicker
+                                    {
+                                        Current = team.NameBackgroundColor,
+                                        Padding = new MarginPadding { Vertical = 20, Horizontal = 10 }
+                                    },
+                                    new OsuSpriteText
+                                    {
+                                        Text = "Team Name Text Color"
+                                    },
+                                    new OsuHexColourPicker
+                                    {
+                                        Current = team.NameTextColor,
+                                        Padding = new MarginPadding { Vertical = 20, Horizontal = 10 }
                                     },
                                 }
                             },
