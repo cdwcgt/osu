@@ -331,22 +331,6 @@ namespace osu.Game.Tournament.Screens.MapPool
                     {
                         totalRows++;
                         flowCount = 1;
-
-                        if (g[b.Mods] % 3 == 1)
-                        {
-                            mapFlows.Add(currentFlow = new FillFlowContainer<TournamentBeatmapPanel>
-                            {
-                                Spacing = new Vector2(10, 5),
-                                Direction = FillDirection.Full,
-                                RelativeSizeAxes = Axes.X,
-                                AutoSizeAxes = Axes.Y,
-                                Padding = new MarginPadding
-                                {
-                                    // remove horizontal padding to increase flow width to 3 panels
-                                    Horizontal = 100
-                                }
-                            });
-                        }
                     }
 
                     currentFlow.Add(new TournamentBeatmapPanel(b, g[b.Mods] > 1 ? ++currentModCount : null, isMappool: true)
