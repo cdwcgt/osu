@@ -46,5 +46,7 @@ namespace osu.Game.Tournament.Models
         public Bindable<bool> DisplayTeamSeeds = new BindableBool();
 
         public Bindable<bool> InvertScoreColour = new BindableBool();
+
+        public Bindable<bool> UseAlternateChatSource = new BindableBool();
     }
 }

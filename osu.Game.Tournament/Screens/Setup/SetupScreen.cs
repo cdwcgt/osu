@@ -151,6 +151,11 @@ namespace osu.Game.Tournament.Screens.Setup
                     Label = "Invert score colour",
                     Current = LadderInfo.InvertScoreColour,
                 },
+                new LabelledSwitchButton
+                {
+                    Label = "Use alternate chat source",
+                    Current = LadderInfo.UseAlternateChatSource,
+                },
             };
         }
 
