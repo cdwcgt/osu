@@ -57,6 +57,8 @@ namespace osu.Game.Screens.Edit.Compose.Components
 
         public SelectionRotationHandler RotationHandler { get; private set; }
 
+        public SelectionScaleHandler ScaleHandler { get; private set; }
+
         protected SelectionHandler()
         {
             selectedBlueprints = new List<SelectionBlueprint<T>>();
@@ -69,6 +71,7 @@ namespace osu.Game.Screens.Edit.Compose.Components
         {
             var dependencies = new DependencyContainer(base.CreateChildDependencies(parent));
             dependencies.CacheAs(RotationHandler = CreateRotationHandler());
+            dependencies.CacheAs(ScaleHandler = CreateScaleHandler());
             return dependencies;
         }
 
@@ -78,13 +81,11 @@ namespace osu.Game.Screens.Edit.Compose.Components
             AddRangeInternal(new Drawable[]
             {
                 RotationHandler,
+                ScaleHandler,
                 SelectionBox = CreateSelectionBox(),
             });
 
-            SelectedItems.CollectionChanged += (_, _) =>
-            {
-                Scheduler.AddOnce(updateVisibility);
-            };
+            SelectedItems.BindCollectionChanged((_, _) => Scheduler.AddOnce(updateVisibility), true);
         }
 
         public SelectionBox CreateSelectionBox()
@@ -93,7 +94,6 @@ namespace osu.Game.Screens.Edit.Compose.Components
                 OperationStarted = OnOperationBegan,
                 OperationEnded = OnOperationEnded,
 
-                OnScale = HandleScale,
                 OnFlip = HandleFlip,
                 OnReverse = HandleReverse,
             };
@@ -156,6 +156,11 @@ namespace osu.Game.Screens.Edit.Compose.Components
         /// <param name="anchor">The point of reference where the scale is originating from.</param>
         /// <returns>Whether any items could be scaled.</returns>
         public virtual bool HandleScale(Vector2 scale, Anchor anchor) => false;
+
+        /// <summary>
+        /// Creates the handler to use for scale operations.
+        /// </summary>
+        public virtual SelectionScaleHandler CreateScaleHandler() => new SelectionScaleHandler();
 
         /// <summary>
         /// Handles the selected items being flipped.
@@ -258,7 +263,7 @@ namespace osu.Game.Screens.Edit.Compose.Components
         /// <returns>Whether a selection was performed.</returns>
         internal virtual bool MouseDownSelectionRequested(SelectionBlueprint<T> blueprint, MouseButtonEvent e)
         {
-            if (e.ShiftPressed && e.Button == MouseButton.Right)
+            if (e.Button == MouseButton.Middle || (e.ShiftPressed && e.Button == MouseButton.Right))
             {
                 handleQuickDeletion(blueprint);
                 return true;
@@ -305,7 +310,7 @@ namespace osu.Game.Screens.Edit.Compose.Components
         /// <summary>
         /// Given a selection target and a function of truth, retrieve the correct ternary state for display.
         /// </summary>
-        protected static TernaryState GetStateFromSelection<TObject>(IEnumerable<TObject> selection, Func<TObject, bool> func)
+        public static TernaryState GetStateFromSelection<TObject>(IEnumerable<TObject> selection, Func<TObject, bool> func)
         {
             if (selection.Any(func))
                 return selection.All(func) ? TernaryState.True : TernaryState.Indeterminate;
