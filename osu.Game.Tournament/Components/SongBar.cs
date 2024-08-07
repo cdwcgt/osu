@@ -318,8 +318,8 @@ namespace osu.Game.Tournament.Components
                 case 2:
                     stats = new (string heading, string content)[]
                     {
-                        ("圆圈大小", $"{cs:0.#}{hardRockExtra}"),
-                        ("缩圈速度", $"{ar:0.#}"),
+                        ("水果大小", $"{cs:0.#}{hardRockExtra}"),
+                        ("下落速度", $"{ar:0.#}"),
                     };
                     break;
             }
