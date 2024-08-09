@@ -1,16 +1,16 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Graphics;
 using osu.Framework.Localisation;
 
-namespace osu.Game.Overlays.Settings.Sections.Input
+namespace osu.Game.Overlays.Settings.Sections
 {
-    public partial class MfSettingsEnteranceButton : SettingsSubsection
+    public partial class MfSettingsEntranceButton : SettingsSubsection
     {
         protected override LocalisableString Header => "Super secret settings";
 
-        public MfSettingsEnteranceButton(MfSettingsPanel mfpanel)
+        public MfSettingsEntranceButton(MfSettingsPanel mfpanel)
         {
             Children = new Drawable[]
             {
