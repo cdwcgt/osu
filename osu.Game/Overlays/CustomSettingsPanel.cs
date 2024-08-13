@@ -4,18 +4,18 @@
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Game.Overlays.Settings;
-using osu.Game.Overlays.Settings.Sections.Mf;
+using osu.Game.Overlays.Settings.Sections.Custom;
 
 namespace osu.Game.Overlays
 {
-    public partial class MfSettingsPanel : SettingsSubPanel
+    public partial class CustomSettingsPanel : SettingsSubPanel
     {
         protected override Drawable CreateHeader() => new SettingsHeader("Custom osu! settings", "some extra cusom settings");
 
         [BackgroundDependencyLoader]
         private void load()
         {
-            AddSection(new MfMainSection());
+            AddSection(new CustomMainSection());
         }
     }
 }

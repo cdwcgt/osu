@@ -9,14 +9,14 @@ using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 
-namespace osu.Game.Overlays.Settings.Sections.Mf
+namespace osu.Game.Overlays.Settings.Sections.Custom
 {
     public partial class DanceSettings : SettingsSubsection
     {
         protected override LocalisableString Header => "osu! cursor dance settings";
 
         [BackgroundDependencyLoader]
-        private void load(MConfigManager config)
+        private void load(CustomConfigManager config)
         {
             Children = new Drawable[]
             {

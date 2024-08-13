@@ -25,7 +25,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
 
         public FlowerMover()
         {
-            var config = MConfigManager.Instance;
+            var config = CustomConfigManager.Instance;
             mult = config.Get<float>(MSetting.JumpMult);
             nextMult = config.Get<float>(MSetting.JumpMult);
             offsetMult = config.Get<float>(MSetting.AngleOffset);

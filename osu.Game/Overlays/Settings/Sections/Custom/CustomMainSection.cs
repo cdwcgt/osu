@@ -5,9 +5,9 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Localisation;
 
-namespace osu.Game.Overlays.Settings.Sections.Mf
+namespace osu.Game.Overlays.Settings.Sections.Custom
 {
-    public partial class MfMainSection : SettingsSection
+    public partial class CustomMainSection : SettingsSection
     {
         public override Drawable CreateIcon() => new SpriteIcon
         {
@@ -16,7 +16,7 @@ namespace osu.Game.Overlays.Settings.Sections.Mf
 
         public override LocalisableString Header => "Main";
 
-        public MfMainSection()
+        public CustomMainSection()
         {
             Add(new DanceSettings());
         }

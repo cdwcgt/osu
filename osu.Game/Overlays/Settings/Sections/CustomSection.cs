@@ -7,7 +7,7 @@ using osu.Framework.Localisation;
 
 namespace osu.Game.Overlays.Settings.Sections
 {
-    public partial class MfSection : SettingsSection
+    public partial class CustomSection : SettingsSection
     {
         public override LocalisableString Header => "Custom";
 
@@ -16,11 +16,11 @@ namespace osu.Game.Overlays.Settings.Sections
             Icon = FontAwesome.Solid.Bars
         };
 
-        public MfSection(MfSettingsPanel mfpanel)
+        public CustomSection(CustomSettingsPanel mfpanel)
         {
             Children = new Drawable[]
             {
-                new MfSettingsEntranceButton(mfpanel),
+                new CustomSettingsEntranceButton(mfpanel),
             };
         }
     }

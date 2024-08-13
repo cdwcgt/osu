@@ -40,7 +40,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
 
         public MomentumMover()
         {
-            var config = MConfigManager.Instance;
+            var config = CustomConfigManager.Instance;
             jumpMult = config.Get<float>(MSetting.JumpMult);
             offsetMult = config.Get<float>(MSetting.AngleOffset);
             skipStacks = config.Get<bool>(MSetting.SkipStackAngles);

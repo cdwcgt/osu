@@ -22,7 +22,7 @@ namespace osu.Game.Rulesets.Osu.UI
         }
 
         [BackgroundDependencyLoader]
-        private void load(MConfigManager mConfig)
+        private void load(CustomConfigManager customConfig)
         {
             var config = (OsuRulesetConfigManager)Config;
 

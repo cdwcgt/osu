@@ -110,7 +110,7 @@ namespace osu.Game
 
         public virtual Version AssemblyVersion => Assembly.GetEntryAssembly()?.GetName().Version ?? new Version();
 
-        protected MConfigManager MConfig;
+        protected CustomConfigManager CustomConfig;
 
         /// <summary>
         /// MD5 representation of the game executable.
@@ -275,7 +275,7 @@ namespace osu.Game
 
             dependencies.CacheAs(LocalConfig);
             dependencies.CacheAs<IGameplaySettings>(LocalConfig);
-            dependencies.Cache(MConfig);
+            dependencies.Cache(CustomConfig);
 
             InitialiseFonts();
 
@@ -487,7 +487,7 @@ namespace osu.Game
 
             host.ExceptionThrown += onExceptionThrown;
 
-            MConfig ??= new MConfigManager(Storage);
+            CustomConfig ??= new CustomConfigManager(Storage);
         }
 
         /// <summary>

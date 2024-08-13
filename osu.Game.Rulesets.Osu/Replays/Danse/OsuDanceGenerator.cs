@@ -63,7 +63,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
         public OsuDanceGenerator(IBeatmap beatmap, IReadOnlyList<Mod> mods)
             : base(beatmap, mods)
         {
-            var config = MConfigManager.Instance;
+            var config = CustomConfigManager.Instance;
             mover = GetMover(config.Get<OsuDanceMover>(MSetting.DanceMover));
             spinnerMover = config.Get<OsuDanceSpinnerMover>(MSetting.DanceSpinnerMover);
             borderBounce = config.Get<bool>(MSetting.BorderBounce);

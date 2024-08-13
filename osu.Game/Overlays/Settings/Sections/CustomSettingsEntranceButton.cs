@@ -6,11 +6,11 @@ using osu.Framework.Localisation;
 
 namespace osu.Game.Overlays.Settings.Sections
 {
-    public partial class MfSettingsEntranceButton : SettingsSubsection
+    public partial class CustomSettingsEntranceButton : SettingsSubsection
     {
         protected override LocalisableString Header => "Super secret settings";
 
-        public MfSettingsEntranceButton(MfSettingsPanel mfpanel)
+        public CustomSettingsEntranceButton(CustomSettingsPanel mfpanel)
         {
             Children = new Drawable[]
             {

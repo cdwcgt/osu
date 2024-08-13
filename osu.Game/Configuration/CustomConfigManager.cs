@@ -8,12 +8,12 @@ using osu.Framework.Platform;
 
 namespace osu.Game.Configuration
 {
-    public class MConfigManager : IniConfigManager<MSetting>
+    public class CustomConfigManager : IniConfigManager<MSetting>
     {
-        protected override string Filename => "mf.ini";
-        public static MConfigManager Instance { get; private set; }
+        protected override string Filename => "custom.ini";
+        public static CustomConfigManager Instance { get; private set; }
 
-        public MConfigManager(Storage storage)
+        public CustomConfigManager(Storage storage)
             : base(storage)
         {
             Instance = this;
