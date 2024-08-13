@@ -36,6 +36,7 @@ namespace osu.Game.Screens.MapGuess
             HUDOverlay.ShowHud.Value = false;
             HUDOverlay.ShowHud.Disabled = true;
             HUDOverlay.PlayfieldSkinLayer.Hide();
+            BreakOverlay.Hide();
             DrawableRuleset.Overlays.Hide();
             DrawableRuleset.Playfield.DisplayJudgements.Value = false;
 
