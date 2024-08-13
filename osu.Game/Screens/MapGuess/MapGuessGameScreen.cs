@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
-using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.UserInterface;
@@ -220,7 +219,7 @@ namespace osu.Game.Screens.MapGuess
             newAnswer = false;
             currentTryCount++;
 
-            bool correct = beatmapDropdown.Current.Value.Equals(beatmap.BeatmapSetInfo);
+            bool correct = string.Equals(beatmapDropdown.Current.Value, beatmap.BeatmapSetInfo.Metadata.Title, StringComparison.OrdinalIgnoreCase);
 
             if (correct)
             {
@@ -250,8 +249,7 @@ namespace osu.Game.Screens.MapGuess
             state = MapGuessGameState.Answer;
             skipButton.Enabled.Value = false;
             restartMusic();
-            beatmapDropdown.SearchTerm.Value = beatmap.BeatmapSetInfo.Metadata.Title;
-            beatmapDropdown.Current.Value = beatmap.BeatmapSetInfo;
+            beatmapDropdown.Current.Value = beatmap.BeatmapSetInfo.Metadata.Title;
             Scheduler.AddDelayed(updateBeatmap, config.PreviewLength.Value);
         }
 
@@ -378,11 +376,10 @@ namespace osu.Game.Screens.MapGuess
             return text;
         }
 
-        private partial class BeatmapDropdown : OsuDropdown<BeatmapSetInfo>
+        private partial class BeatmapDropdown : OsuDropdown<string>
         {
             private IEnumerable<BeatmapSetInfo> allItems = [];
 
-            public Bindable<string> SearchTerm => Header.SearchTerm;
             public new Framework.Graphics.UserInterface.Menu Menu => base.Menu;
 
             public new IEnumerable<BeatmapSetInfo> Items
@@ -408,8 +405,7 @@ namespace osu.Game.Screens.MapGuess
                 if (string.IsNullOrWhiteSpace(searchTerm))
                     return;
 
-                base.Items = allItems.Where(s => s.Metadata.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
-                                                 || s.Metadata.TitleUnicode.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).Take(5).ToArray();
+                base.Items = allItems.Select(b => b.Metadata.Title).Distinct().Where(s => s.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).Take(5).ToArray();
             }
         }
     }
