@@ -228,6 +228,9 @@ namespace osu.Game.Screens.Play
 
             mouseWheelDisabled = config.GetBindable<bool>(OsuSetting.MouseDisableWheel);
 
+            if (Configuration.AllowFailAnimation)
+                Configuration.AllowFailAnimation = !config.Get<bool>(OsuSetting.NoFailAnimation);
+
             if (game != null)
                 gameActive.BindTo(game.IsActive);
 

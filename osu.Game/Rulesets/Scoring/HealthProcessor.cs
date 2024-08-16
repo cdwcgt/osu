@@ -40,7 +40,10 @@ namespace osu.Game.Rulesets.Scoring
                 return;
 
             if (Failed?.Invoke() != false)
+            {
                 HasFailed = true;
+                Health.Value = 0;
+            }
         }
 
         protected override void ApplyResultInternal(JudgementResult result)

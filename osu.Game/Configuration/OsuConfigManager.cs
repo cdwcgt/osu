@@ -153,6 +153,7 @@ namespace osu.Game.Configuration
 
             SetDefault(OsuSetting.IncreaseFirstObjectVisibility, true);
             SetDefault(OsuSetting.GameplayDisableWinKey, true);
+            SetDefault(OsuSetting.NoFailAnimation, false);
 
             // Update
             SetDefault(OsuSetting.ReleaseStream, ReleaseStream.Lazer);
@@ -406,6 +407,7 @@ namespace osu.Game.Configuration
         HitLighting,
         MenuBackgroundSource,
         GameplayDisableWinKey,
+        NoFailAnimation,
         SeasonalBackgroundMode,
         EditorWaveformOpacity,
         EditorShowHitMarkers,
