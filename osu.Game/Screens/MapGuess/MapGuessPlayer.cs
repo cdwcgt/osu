@@ -14,15 +14,14 @@ namespace osu.Game.Screens.MapGuess
         private readonly MapGuessConfig config;
         private readonly double startTime;
 
-        public BindableBool Paused { get; private set; } = new BindableBool();
+        public BindableBool Paused { get; } = new BindableBool();
 
         public MapGuessPlayer(Score score, double startTime, MapGuessConfig config)
             : base(score, new PlayerConfiguration
             {
                 AllowUserInteraction = false,
                 AllowFailAnimation = false,
-                ShowResults = false,
-                AutomaticallySkipIntro = true
+                ShowResults = false
             })
         {
             this.startTime = startTime;
@@ -53,12 +52,10 @@ namespace osu.Game.Screens.MapGuess
                 ApplyToBackground(b =>
                 {
                     b.IgnoreUserSettings.Value = true;
-
-                    if (!showBackground)
-                        b.Hide();
                     b.DimWhenUserSettingsIgnored.Value = showBackground ? (config.ShowHitobjects.Value ? 0.7f : 0) : 1;
-                    b.BlurAmount.Value = config.BackgroundBlur.Value * BackgroundScreenBeatmap.USER_BLUR_FACTOR;
                 });
+                ToggleBackground(showBackground);
+                SetBackgroundBlur(config.BackgroundBlur.Value);
             });
         }
 
@@ -83,13 +80,22 @@ namespace osu.Game.Screens.MapGuess
             this.FadeIn(200, Easing.In);
         }
 
-        public void ShowBackground(bool blur)
+        public void ToggleBackground(bool show)
         {
             ApplyToBackground(b =>
             {
-                b.Show();
-                b.DimWhenUserSettingsIgnored.Value = config.ShowHitobjects.Value ? 0.7f : 0;
-                b.BlurAmount.Value = blur ? 0.2f * BackgroundScreenBeatmap.USER_BLUR_FACTOR : 0;
+                if (show)
+                    b.Show();
+                else
+                    b.Hide();
+            });
+        }
+
+        public void SetBackgroundBlur(float blur)
+        {
+            ApplyToBackground(b =>
+            {
+                b.BlurAmount.Value = blur * BackgroundScreenBeatmap.USER_BLUR_FACTOR;
             });
         }
     }

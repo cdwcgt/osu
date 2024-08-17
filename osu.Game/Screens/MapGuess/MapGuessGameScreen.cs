@@ -225,6 +225,7 @@ namespace osu.Game.Screens.MapGuess
 
             if (correct)
             {
+                shakeContainer.FlashColour(Colour4.Green, 1000, Easing.Out);
                 showAnswer(true);
                 return;
             }
@@ -252,7 +253,7 @@ namespace osu.Game.Screens.MapGuess
             skipButton.Enabled.Value = false;
             restartMusic();
             beatmapDropdown.Current.Value = beatmap.BeatmapSetInfo;
-            Scheduler.AddDelayed(updateBeatmap, config.PreviewLength.Value);
+            Scheduler.AddDelayed(updateBeatmap, Math.Min(config.ShowAnswerLength.Value, config.PreviewLength.Value));
         }
 
         private void restartMusic() => player?.Reset();
@@ -272,7 +273,7 @@ namespace osu.Game.Screens.MapGuess
 
                 case Hints.ArtistRedacted:
                     string artist = beatmap.Metadata.Artist;
-                    hintText.Text = $"Artist: {artist[0]}{hideChar(artist[1..])}";
+                    hintText.Text = $"Artist: {hideChar(artist)}";
                     break;
 
                 case Hints.Artist:
@@ -284,11 +285,16 @@ namespace osu.Game.Screens.MapGuess
                     break;
 
                 case Hints.BlurredBackground:
-                    player?.ShowBackground(true);
+                    player?.ToggleBackground(true);
+                    player?.SetBackgroundBlur(Math.Max(config.BackgroundBlur.Value, 0.3f));
+                    break;
+
+                case Hints.DecreaseBackgroundBlur:
+                    player?.SetBackgroundBlur(0.4f);
                     break;
 
                 case Hints.UnblurBackground:
-                    player?.ShowBackground(false);
+                    player?.SetBackgroundBlur(0);
                     break;
             }
 
@@ -347,6 +353,7 @@ namespace osu.Game.Screens.MapGuess
             Artist,
             TitleRedacted,
             BlurredBackground,
+            DecreaseBackgroundBlur,
             UnblurBackground
         }
 
@@ -358,22 +365,31 @@ namespace osu.Game.Screens.MapGuess
                     return !config.Music.Value;
 
                 case Hints.BlurredBackground:
-                    return !config.ShowBackground.Value || (config.ShowBackground.Value && config.BackgroundBlur.Value > 0); ;
+                    return !config.ShowBackground.Value || (config.ShowBackground.Value && config.BackgroundBlur.Value > 0);
+
+                case Hints.DecreaseBackgroundBlur:
+                    return config.BackgroundBlur.Value > 0.4f;
             }
 
             return true;
         }
 
-        private static string hideChar(string original, bool hideAll = false)
+        private static string hideChar(string original)
         {
             string text = string.Empty;
+            char lastChar = original[0];
 
-            foreach (char t in original)
+            for (int i = 0; i < original.Length; i++)
             {
-                if (hideAll ? char.IsWhiteSpace(t) : (!char.IsAsciiLetter(t) || char.IsUpper(t)))
+                char t = original[i];
+                char nextChar = original[Math.Min(i + 1, original.Length - 1)];
+
+                if (!char.IsAsciiLetter(t) || i == 0 || (char.IsWhiteSpace(lastChar) && !char.IsWhiteSpace(nextChar)))
                     text += t;
                 else
                     text += '?';
+
+                lastChar = t;
             }
 
             return text;
@@ -381,7 +397,7 @@ namespace osu.Game.Screens.MapGuess
 
         private partial class BeatmapDropdown : OsuDropdown<BeatmapSetInfo>
         {
-            private IEnumerable<BeatmapSetInfo> allItems = [];
+            private List<BeatmapSetInfo> allItems = [];
 
             public new Framework.Graphics.UserInterface.Menu Menu => base.Menu;
             public Bindable<string> SearchTerm => Header.SearchTerm;
@@ -391,7 +407,7 @@ namespace osu.Game.Screens.MapGuess
                 get => allItems;
                 set
                 {
-                    allItems = value;
+                    allItems = value.DistinctBy(b => getDisplayTitle(b.Metadata)).ToList();
                     updateItems();
                 }
             }
@@ -409,14 +425,11 @@ namespace osu.Game.Screens.MapGuess
                 if (string.IsNullOrWhiteSpace(searchTerm))
                     return;
 
-                base.Items = allItems.DistinctBy(b => getDisplayTitle(b.Metadata)).Where(s => s.Metadata.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
-                                                                                              || s.Metadata.TitleUnicode.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).Take(5).ToArray();
+                base.Items = allItems.Where(s => s.Metadata.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+                                                 || s.Metadata.TitleUnicode.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).Take(5).ToArray();
             }
 
-            protected override LocalisableString GenerateItemText(BeatmapSetInfo item)
-            {
-                return getDisplayTitle(item.Metadata);
-            }
+            protected override LocalisableString GenerateItemText(BeatmapSetInfo item) => getDisplayTitle(item.Metadata);
 
             private static string getDisplayTitle(IBeatmapMetadataInfo metadata)
             {

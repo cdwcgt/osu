@@ -62,6 +62,11 @@ namespace osu.Game.Screens.MapGuess
                                     LabelText = "Auto Skip",
                                     Current = config.AutoSkip
                                 },
+                                new SettingsSlider<int>
+                                {
+                                    LabelText = "Answer show time",
+                                    Current = config.ShowAnswerLength
+                                },
                             ]
                         }
                     },
