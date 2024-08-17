@@ -30,23 +30,19 @@ namespace osu.Game.Screens.Play
 
         private readonly Func<IBeatmap, IReadOnlyList<Mod>, Score> createScore;
 
-        private readonly bool replayIsFailedScore;
-
-        protected override UserActivity InitialActivity => new UserActivity.WatchingReplay(Score.ScoreInfo);
+        private double lastFrameTime;
 
         // Disallow replays from failing. (see https://github.com/ppy/osu/issues/6108)
         protected override bool CheckModsAllowFailure()
         {
-            if (!replayIsFailedScore && !GameplayState.Mods.OfType<ModAutoplay>().Any())
-                return false;
-
-            return base.CheckModsAllowFailure();
+            return false;
         }
+
+        protected override UserActivity InitialActivity => new UserActivity.WatchingReplay(Score.ScoreInfo);
 
         public ReplayPlayer(Score score, PlayerConfiguration configuration = null)
             : this((_, _) => score, configuration)
         {
-            replayIsFailedScore = score.ScoreInfo.Rank == ScoreRank.F;
         }
 
         public ReplayPlayer(Func<IBeatmap, IReadOnlyList<Mod>, Score> createScore, PlayerConfiguration configuration = null)
@@ -71,6 +67,8 @@ namespace osu.Game.Screens.Play
                 playbackSettings.UserPlaybackRate.BindTo(master.UserPlaybackRate);
 
             HUDOverlay.PlayerSettingsOverlay.AddAtStart(playbackSettings);
+
+            lastFrameTime = GameplayState.Score.Replay.Frames.LastOrDefault()?.Time ?? 0;
         }
 
         protected override void PrepareReplay()
@@ -149,6 +147,18 @@ namespace osu.Game.Screens.Play
 
         public void OnReleased(KeyBindingReleaseEvent<GlobalAction> e)
         {
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+
+            // prevent replay (autoplay) from getting stuck on the last hitobect by checking if the game was completed
+            if (lastFrameTime <= GameplayClockContainer.CurrentTime && !ScoreProcessor.HasCompleted.Value)
+            {
+                GameplayClockContainer.Stop();
+                GameplayClockContainer.Seek(lastFrameTime);
+            }
         }
     }
 }
