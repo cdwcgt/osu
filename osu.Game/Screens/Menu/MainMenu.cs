@@ -151,7 +151,7 @@ namespace osu.Game.Screens.Menu
                             OnPlaylists = () => this.Push(new Playlists()),
                             OnDailyChallenge = room =>
                             {
-                                this.Push(new DailyChallenge(room));
+                                this.Push(new DailyChallengeIntro(room));
                             },
                             OnReplayVs = () => this.Push(new ReplayVsSelectScreen()),
                             OnExit = () =>
