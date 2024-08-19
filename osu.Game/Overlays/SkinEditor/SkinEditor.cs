@@ -421,6 +421,9 @@ namespace osu.Game.Overlays.SkinEditor
             if (targetContainer != null)
                 changeHandler = new SkinEditorChangeHandler(targetContainer);
             hasBegunMutating = true;
+
+            // Reload sidebar components.
+            selectedTarget.TriggerChange();
         }
 
         /// <summary>
@@ -539,6 +542,8 @@ namespace osu.Game.Overlays.SkinEditor
         protected void Undo() => changeHandler?.RestoreState(-1);
 
         protected void Redo() => changeHandler?.RestoreState(1);
+
+        void IEditorChangeHandler.RestoreState(int direction) => changeHandler?.RestoreState(direction);
 
         public void Save(bool userTriggered = true) => save(currentSkin.Value, userTriggered);
 
@@ -667,7 +672,7 @@ namespace osu.Game.Overlays.SkinEditor
                 {
                     SpriteName = { Value = file.Name },
                     Origin = Anchor.Centre,
-                    Position = skinnableTarget.ToLocalSpace(GetContainingInputManager().CurrentState.Mouse.Position),
+                    Position = skinnableTarget.ToLocalSpace(GetContainingInputManager()!.CurrentState.Mouse.Position),
                 };
 
                 SelectedComponents.Clear();
