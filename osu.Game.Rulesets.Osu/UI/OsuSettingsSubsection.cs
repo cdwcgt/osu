@@ -4,16 +4,23 @@
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Localisation;
+using osu.Framework.Screens;
 using osu.Game.Localisation;
+using osu.Game.Overlays;
 using osu.Game.Overlays.Settings;
 using osu.Game.Rulesets.Osu.Configuration;
+using osu.Game.Rulesets.Osu.PPPCustom;
 using osu.Game.Rulesets.UI;
+using osu.Game.Screens;
 
 namespace osu.Game.Rulesets.Osu.UI
 {
     public partial class OsuSettingsSubsection : RulesetSettingsSubsection
     {
         protected override LocalisableString Header => "osu!";
+
+        [Resolved]
+        private INotificationOverlay? notificationOverlay { get; set; }
 
         public OsuSettingsSubsection(Ruleset ruleset)
             : base(ruleset)
@@ -53,6 +60,15 @@ namespace osu.Game.Rulesets.Osu.UI
                     LabelText = RulesetSettingsStrings.PlayfieldBorderStyle,
                     Current = config.GetBindable<PlayfieldBorderStyle>(OsuRulesetSetting.PlayfieldBorderStyle),
                 },
+                new SettingsButton()
+                {
+                    Text = "Test",
+                    Action = () =>
+                    {
+                        var notification = new PPPCalculateNotification();
+                        notificationOverlay?.Post(notification);
+                    }
+                }
             };
         }
     }
