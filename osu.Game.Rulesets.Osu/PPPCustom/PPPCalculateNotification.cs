@@ -27,6 +27,9 @@ namespace osu.Game.Rulesets.Osu.PPPCustom
         private IPerformFromScreenRunner performer { get; set; } = null!;
 
         [Resolved]
+        private BeatmapDifficultyCache difficultyCache { get; set; } = null!;
+
+        [Resolved]
         private IAPIProvider api { get; set; } = null!;
 
         private readonly List<PerformanceWithScore> performances = new List<PerformanceWithScore>();
@@ -62,7 +65,6 @@ namespace osu.Game.Rulesets.Osu.PPPCustom
             State = ProgressNotificationState.Active;
 
             var osuRuleset = new OsuRuleset();
-            var performanceCalculator = osuRuleset.CreatePerformanceCalculator();
             totalScores = scores.Count();
 
             var tasks = scores.Select(async score =>
@@ -70,12 +72,14 @@ namespace osu.Game.Rulesets.Osu.PPPCustom
                 if (score.BeatmapInfo == null)
                     return;
 
-                var difficultyAttributes = await Task.Run(() =>
-                                                         osuRuleset.CreateDifficultyCalculator(beatmaps.GetWorkingBeatmap(score.BeatmapInfo)).Calculate(score.Mods), CancellationToken)
-                                                     .ConfigureAwait(false);
+                var attributes = await difficultyCache.GetDifficultyAsync(score.BeatmapInfo!, score.Ruleset, score.Mods, CancellationToken).ConfigureAwait(false);
+                var performanceCalculator = osuRuleset.CreatePerformanceCalculator();
+
+                if (attributes?.Attributes == null)
+                    return;
 
                 var performanceAttributes = (OsuPerformanceAttributes)await performanceCalculator
-                                                                            .CalculateAsync(score, difficultyAttributes, CancellationToken)
+                                                                            .CalculateAsync(score, attributes.Value.Attributes, CancellationToken)
                                                                             .ConfigureAwait(false);
 
                 lock (performances) // Ensure thread-safety when modifying shared list
@@ -97,7 +101,6 @@ namespace osu.Game.Rulesets.Osu.PPPCustom
                 {
                     screen.Push(new PerformanceScreen(performances));
                 });
-
                 return false;
             };
             State = ProgressNotificationState.Completed;
