@@ -107,7 +107,7 @@ namespace osu.Game.Tests.Visual.Gameplay
             KeyCounter counter = null!;
 
             loadPlayer(() => new ManiaRuleset());
-            AddStep("get key counter", () => counter = this.ChildrenOfType<KeyCounter>().Single(k => k.Trigger is KeyCounterActionTrigger<ManiaAction> actionTrigger && actionTrigger.Action == ManiaAction.Special1));
+            AddStep("get key counter", () => counter = this.ChildrenOfType<KeyCounter>().Single(k => k.Trigger is KeyCounterActionTrigger<ManiaAction> actionTrigger && actionTrigger.Action == ManiaAction.Key4));
             checkKey(() => counter, 0, false);
 
             AddStep("press space", () => InputManager.PressKey(Key.Space));
@@ -174,7 +174,7 @@ namespace osu.Game.Tests.Visual.Gameplay
             KeyCounter counter = null!;
 
             loadPlayer(() => new ManiaRuleset());
-            AddStep("get key counter", () => counter = this.ChildrenOfType<KeyCounter>().Single(k => k.Trigger is KeyCounterActionTrigger<ManiaAction> actionTrigger && actionTrigger.Action == ManiaAction.Special1));
+            AddStep("get key counter", () => counter = this.ChildrenOfType<KeyCounter>().Single(k => k.Trigger is KeyCounterActionTrigger<ManiaAction> actionTrigger && actionTrigger.Action == ManiaAction.Key4));
 
             AddStep("press space", () => InputManager.PressKey(Key.Space));
             AddStep("pause", () => Player.Pause());
@@ -237,7 +237,7 @@ namespace osu.Game.Tests.Visual.Gameplay
             KeyCounter counter = null!;
 
             loadPlayer(() => new ManiaRuleset());
-            AddStep("get key counter", () => counter = this.ChildrenOfType<KeyCounter>().Single(k => k.Trigger is KeyCounterActionTrigger<ManiaAction> actionTrigger && actionTrigger.Action == ManiaAction.Special1));
+            AddStep("get key counter", () => counter = this.ChildrenOfType<KeyCounter>().Single(k => k.Trigger is KeyCounterActionTrigger<ManiaAction> actionTrigger && actionTrigger.Action == ManiaAction.Key4));
 
             AddStep("press space", () => InputManager.PressKey(Key.Space));
             checkKey(() => counter, 1, true);
@@ -286,7 +286,7 @@ namespace osu.Game.Tests.Visual.Gameplay
             AddStep("set ruleset", () => currentRuleset = createRuleset());
             AddStep("load player", LoadPlayer);
             AddUntilStep("player loaded", () => Player.IsLoaded && Player.Alpha == 1);
-            AddUntilStep("wait for hud", () => Player.HUDOverlay.ChildrenOfType<SkinComponentsContainer>().All(s => s.ComponentsLoaded));
+            AddUntilStep("wait for hud", () => Player.HUDOverlay.ChildrenOfType<SkinnableContainer>().All(s => s.ComponentsLoaded));
 
             AddStep("seek to gameplay", () => Player.GameplayClockContainer.Seek(0));
             AddUntilStep("wait for seek to finish", () => Player.DrawableRuleset.FrameStableClock.CurrentTime, () => Is.EqualTo(0).Within(500));
