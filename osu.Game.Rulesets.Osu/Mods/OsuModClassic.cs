@@ -37,6 +37,8 @@ namespace osu.Game.Rulesets.Osu.Mods
         [SettingSource("Classic health", "More closely resembles the original HP drain mechanics.")]
         public Bindable<bool> ClassicHealth { get; } = new Bindable<bool>(true);
 
+        public override double ScoreMultiplier => 1;
+
         private bool usingHiddenFading;
 
         public void ApplyToHitObject(HitObject hitObject)
