@@ -349,6 +349,7 @@ namespace osu.Game.Rulesets.Scoring
                     return 200;
 
                 case HitResult.Great:
+                case HitResult.GreatWithoutCombo:
                 case HitResult.Perfect: // Perfect doesn't actually give more score / accuracy directly.
                     return 300;
 

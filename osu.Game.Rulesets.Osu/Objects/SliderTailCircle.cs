@@ -24,7 +24,9 @@ namespace osu.Game.Rulesets.Osu.Objects
 
         public class LegacyTailJudgement : OsuJudgement
         {
-            public override HitResult MaxResult => HitResult.SmallTickHit;
+            public override HitResult MaxResult => HitResult.SliderTailHit;
+
+            public override HitResult MinResult => HitResult.SmallTickMiss;
         }
 
         public class TailJudgement : SliderEndJudgement

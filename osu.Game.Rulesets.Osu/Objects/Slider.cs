@@ -294,9 +294,14 @@ namespace osu.Game.Rulesets.Osu.Objects
 
         public override Judgement CreateJudgement() => ClassicSliderBehaviour
             // Final combo is provided by the slider itself - see logic in `DrawableSlider.CheckForResult()`
-            ? new OsuJudgement()
+            ? new SliderJudgement()
             // Final combo is provided by the tail circle - see `SliderTailCircle`
             : new OsuIgnoreJudgement();
+
+        public class SliderJudgement : OsuJudgement
+        {
+            public override HitResult MaxResult => HitResult.GreatWithoutCombo;
+        }
 
         protected override HitWindows CreateHitWindows() => HitWindows.Empty;
     }

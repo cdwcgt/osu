@@ -81,7 +81,7 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
                 // so we use the most suitable LargeTick judgement here instead.
                 ClassicHitResult = base.ResultFor(timeOffset);
 
-                return base.ResultFor(timeOffset).IsHit() ? HitResult.LargeTickHit : HitResult.LargeTickMiss;
+                return base.ResultFor(timeOffset).IsHit() ? HitResult.SliderTailHit : HitResult.LargeTickMiss;
             }
 
             return base.ResultFor(timeOffset);

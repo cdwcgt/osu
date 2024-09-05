@@ -303,7 +303,6 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
                     int totalTicks = hitObject.NestedHitObjects.Count;
                     int hitTicks = hitObject.NestedHitObjects.Count(h => h.IsHit);
                     var sliderHeadResult = ((DrawableSliderHead)hitObject.NestedHitObjects.FirstOrDefault(h => h is DrawableSliderHead))!.ClassicHitResult;
-                    var sliderTailResult = (hitObject.NestedHitObjects.FirstOrDefault(h => h is DrawableSliderTail))!.Result;
 
                     if (hitTicks == totalTicks)
                         r.Type = sliderHeadResult;
@@ -320,15 +319,13 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
                         }
                     }
 
-                    if (!sliderTailResult.IsHit)
+                    r.Type = r.Type switch
                     {
-                        r.Type = r.Type switch
-                        {
-                            HitResult.Ok => HitResult.OkWithoutCombo,
-                            HitResult.Meh => HitResult.MehWithoutCombo,
-                            _ => r.Type
-                        };
-                    }
+                        HitResult.Great => HitResult.GreatWithoutCombo,
+                        HitResult.Ok => HitResult.OkWithoutCombo,
+                        HitResult.Meh => HitResult.MehWithoutCombo,
+                        _ => r.Type
+                    };
                 });
             }
             else

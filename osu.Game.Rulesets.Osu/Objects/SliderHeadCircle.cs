@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Game.Rulesets.Judgements;
-using osu.Game.Rulesets.Osu.Judgements;
 
 namespace osu.Game.Rulesets.Osu.Objects
 {
@@ -14,6 +13,6 @@ namespace osu.Game.Rulesets.Osu.Objects
         /// </summary>
         public bool ClassicSliderBehaviour;
 
-        public override Judgement CreateJudgement() => ClassicSliderBehaviour ? new SliderTickJudgement() : base.CreateJudgement();
+        public override Judgement CreateJudgement() => ClassicSliderBehaviour ? new SliderRepeat.SliderRepeatJudgement() : base.CreateJudgement();
     }
 }

@@ -32,12 +32,13 @@ namespace osu.Game.Rulesets.UI
 
         public T? Get(HitResult result, Action<T>? setupAction)
         {
-            if (result == HitResult.OkWithoutCombo)
-                result = HitResult.Ok;
-            else if (result == HitResult.MehWithoutCombo)
+            result = result switch
             {
-                result = HitResult.Meh;
-            }
+                HitResult.OkWithoutCombo => HitResult.Ok,
+                HitResult.MehWithoutCombo => HitResult.Meh,
+                HitResult.GreatWithoutCombo => HitResult.Great,
+                _ => result
+            };
 
             if (!poolDictionary.TryGetValue(result, out var pool))
                 return null;
