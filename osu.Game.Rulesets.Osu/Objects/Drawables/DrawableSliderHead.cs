@@ -67,6 +67,8 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
             DrawableSlider.SliderInputManager.PostProcessHeadJudgement(this);
         }
 
+        public HitResult ClassicHitResult = HitResult.Miss;
+
         protected override HitResult ResultFor(double timeOffset)
         {
             Debug.Assert(HitObject != null);
@@ -77,6 +79,8 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
                 // We can't award a full Great because the true Great judgement is awarded on the Slider itself,
                 // reduced based on number of ticks hit,
                 // so we use the most suitable LargeTick judgement here instead.
+                ClassicHitResult = base.ResultFor(timeOffset);
+
                 return base.ResultFor(timeOffset).IsHit() ? HitResult.LargeTickHit : HitResult.LargeTickMiss;
             }
 

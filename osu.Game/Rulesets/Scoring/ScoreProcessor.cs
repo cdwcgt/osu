@@ -325,18 +325,24 @@ namespace osu.Game.Rulesets.Scoring
                     return 0;
 
                 case HitResult.SmallTickHit:
-                    return 10;
-
-                case HitResult.LargeTickHit:
                     return 30;
 
+                case HitResult.LargeTickHit:
+                    return 10;
+
                 case HitResult.SliderTailHit:
-                    return 150;
+                    return 30;
 
                 case HitResult.Meh:
                     return 50;
 
+                case HitResult.MehWithoutCombo:
+                    return 50;
+
                 case HitResult.Ok:
+                    return 100;
+
+                case HitResult.OkWithoutCombo:
                     return 100;
 
                 case HitResult.Good:
@@ -347,10 +353,10 @@ namespace osu.Game.Rulesets.Scoring
                     return 300;
 
                 case HitResult.SmallBonus:
-                    return 10;
+                    return 100;
 
                 case HitResult.LargeBonus:
-                    return 50;
+                    return 500;
             }
         }
 

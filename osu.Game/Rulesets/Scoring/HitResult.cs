@@ -40,10 +40,20 @@ namespace osu.Game.Rulesets.Scoring
         [Order(4)]
         Meh,
 
+        [Description(@"MehWithoutCombo")]
+        [EnumMember(Value = "MehWithoutCombo")]
+        [Order(100)]
+        MehWithoutCombo,
+
         [Description(@"OK")]
         [EnumMember(Value = "ok")]
         [Order(3)]
         Ok,
+
+        [Description(@"OkWithoutCombo")]
+        [EnumMember(Value = "OkWithoutCombo")]
+        [Order(200)]
+        OkWithoutCombo,
 
         [Description(@"Good")]
         [EnumMember(Value = "good")]
@@ -155,8 +165,7 @@ namespace osu.Game.Rulesets.Scoring
         /// For these scores, we pad the hit statistics with `LegacyComboIncrease` to meet the correct max combo for the score.
         /// </remarks>
         [EnumMember(Value = "legacy_combo_increase")]
-        [Order(99)]
-        [Obsolete("Do not use.")]
+        [Order(998)]
         LegacyComboIncrease = 99
     }
 
@@ -215,6 +224,15 @@ namespace osu.Game.Rulesets.Scoring
 
                 // ComboBreak is a special type that only affects combo. It cannot be considered as basic, tick, bonus, or accuracy-affecting.
                 case HitResult.ComboBreak:
+                    return false;
+
+                case HitResult.None:
+                case HitResult.IgnoreMiss:
+                case HitResult.Miss:
+                case HitResult.LargeTickHit:
+                case HitResult.SmallTickHit:
+                case HitResult.SmallTickMiss:
+                case HitResult.LargeTickMiss:
                     return false;
 
                 default:
@@ -338,6 +356,12 @@ namespace osu.Game.Rulesets.Scoring
                     return true;
 
                 case HitResult.SliderTailHit:
+                    return true;
+
+                case HitResult.MehWithoutCombo:
+                    return true;
+
+                case HitResult.OkWithoutCombo:
                     return true;
 
                 default:
