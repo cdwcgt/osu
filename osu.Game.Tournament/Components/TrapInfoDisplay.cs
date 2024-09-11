@@ -15,16 +15,20 @@ namespace osu.Game.Tournament.Components
 {
     public partial class TrapInfoDisplay : CompositeDrawable
     {
-        private readonly TrapInfo thisTrap = null!;
+        private readonly TrapInfo trap = null!;
 
         public TrapInfoDisplay(TrapType trap = TrapType.Unknown, TeamColour team = TeamColour.Neutral, int mapID = 0)
-        {
-            thisTrap = new TrapInfo
+            : this(new TrapInfo
             (
                 colour: team,
                 type: trap,
                 mapID: mapID
-            );
+            ))
+        {
+        }
+
+        public TrapInfoDisplay(TrapInfo trap)
+        {
             Anchor = Anchor.CentreLeft;
             Origin = Anchor.CentreLeft;
             Height = 100;
@@ -45,9 +49,9 @@ namespace osu.Game.Tournament.Components
                     {
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.CentreLeft,
-                        Icon = thisTrap.Icon,
+                        Icon = this.trap.Icon,
                         Size = new Vector2(56),
-                        Colour = thisTrap.IconColor,
+                        Colour = this.trap.IconColor,
                         Alpha = 1,
                     },
                     new Box
@@ -72,14 +76,14 @@ namespace osu.Game.Tournament.Components
                             {
                                 Anchor = Anchor.CentreLeft,
                                 Origin = Anchor.CentreLeft,
-                                Text = thisTrap.Name,
+                                Text = this.trap.Name,
                                 Font = OsuFont.GetFont(typeface: Typeface.HarmonyOSSans, size: 49, weight: FontWeight.Bold),
                             },
                             new TournamentSpriteText
                             {
                                 Anchor = Anchor.CentreLeft,
                                 Origin = Anchor.CentreLeft,
-                                Text = thisTrap.Description,
+                                Text = this.trap.Description,
                                 Font = OsuFont.GetFont(typeface: Typeface.HarmonyOSSans, size: 30, weight: FontWeight.Regular),
                             },
                         }

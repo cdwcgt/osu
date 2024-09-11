@@ -38,7 +38,7 @@ namespace osu.Game.Tournament.Screens.Board
 
         private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
 
-        private TeamColour pickColour;
+        private TeamColour pickTeam;
         private ChoiceType pickType;
 
         private bool havePendingSwap = false;
@@ -405,12 +405,17 @@ namespace osu.Game.Tournament.Screens.Board
             {
                 match.OldValue.PendingMsgs.CollectionChanged -= msgOnCollectionChanged;
             }
+
             if (match.NewValue != null)
             {
                 match.NewValue.PendingMsgs.CollectionChanged += msgOnCollectionChanged;
 
-                if (match.NewValue.Team1 != null) team1List?.ReloadWithTeam(match.NewValue.Team1.Value);
-                if (match.NewValue.Team2 != null && team2List != null)
+                if (!IsLoaded)
+                    return;
+
+                if (match.NewValue.Team1.Value != null) team1List.ReloadWithTeam(match.NewValue.Team1.Value);
+
+                if (match.NewValue.Team2.Value != null)
                 {
                     team2List.ReloadWithTeam(match.NewValue.Team2.Value);
                     danmakuBox.ResizeHeightTo(Height = sideListHeight - team2List.GetHeight() - 5, 500, Easing.OutCubic);
@@ -446,6 +451,7 @@ namespace osu.Game.Tournament.Screens.Board
             foreach (var item in msg)
             {
                 BotCommand command = new BotCommand().ParseFromText(item.Content);
+
                 switch (command.Command)
                 {
                     case Commands.Panic:
@@ -465,36 +471,34 @@ namespace osu.Game.Tournament.Screens.Board
                         break;
 
                     case Commands.MarkWin:
-                        pickColour = command.Team;
+                        pickTeam = command.Team;
                         pickType = command.Team == TeamColour.Red ? ChoiceType.RedWin : ChoiceType.BlueWin;
                         addForBeatmap(command.MapMod);
                         updateBottomDisplay(bottomOnly: false);
                         break;
 
                     case Commands.Ban:
-                        pickColour = command.Team;
+                        pickTeam = command.Team;
                         pickType = ChoiceType.Ban;
                         addForBeatmap(command.MapMod);
                         updateBottomDisplay();
                         break;
 
                     case Commands.Protect:
-                        pickColour = command.Team;
+                        pickTeam = command.Team;
                         pickType = ChoiceType.Protect;
                         addForBeatmap(command.MapMod);
                         updateBottomDisplay();
                         break;
 
                     case Commands.Pick:
-                        pickColour = command.Team;
+                        pickTeam = command.Team;
                         pickType = ChoiceType.Pick;
                         addForBeatmap(command.MapMod);
 
-                        if (CurrentMatch.Value.Round.Value != null)
-                        {
-                            var map = CurrentMatch.Value.Round.Value.Beatmaps.FirstOrDefault(b => b.Mods + b.ModIndex == command.MapMod);
-                            if (map != null && map.Beatmap != null && CurrentMatch.Value.Traps.All(p => p.BeatmapID != map.Beatmap.OnlineID)) updateBottomDisplay();
-                        }
+                        var map = CurrentMatch.Value.Round.Value?.Beatmaps.FirstOrDefault(b => b.Mods + b.ModIndex == command.MapMod);
+                        if (map?.Beatmap != null && CurrentMatch.Value.Traps.All(p => p.BeatmapID != map.Beatmap.OnlineID))
+                            updateBottomDisplay();
 
                         break;
 
@@ -502,24 +506,25 @@ namespace osu.Game.Tournament.Screens.Board
                         break;
                 }
             }
+
             msg.Clear();
         }
 
         private void setMode(TeamColour colour, ChoiceType choiceType)
         {
-            pickColour = colour;
+            pickTeam = colour;
             pickType = choiceType;
 
-            buttonRedBan.Colour = setColour(pickColour == TeamColour.Red && pickType == ChoiceType.Ban);
-            buttonBlueBan.Colour = setColour(pickColour == TeamColour.Blue && pickType == ChoiceType.Ban);
-            buttonRedPick.Colour = setColour(pickColour == TeamColour.Red && pickType == ChoiceType.Pick);
-            buttonBluePick.Colour = setColour(pickColour == TeamColour.Blue && pickType == ChoiceType.Pick);
-            buttonRedProtect.Colour = setColour(pickColour == TeamColour.Red && pickType == ChoiceType.Protect);
-            buttonBlueProtect.Colour = setColour(pickColour == TeamColour.Blue && pickType == ChoiceType.Protect);
-            buttonRedWin.Colour = setColour(pickColour == TeamColour.Red && pickType == ChoiceType.RedWin);
-            buttonBlueWin.Colour = setColour(pickColour == TeamColour.Blue && pickType == ChoiceType.BlueWin);
-            buttonRedTrap.Colour = setColour(pickColour == TeamColour.Red && pickType == ChoiceType.Trap);
-            buttonBlueTrap.Colour = setColour(pickColour == TeamColour.Blue && pickType == ChoiceType.Trap);
+            buttonRedBan.Colour = setColour(pickTeam == TeamColour.Red && pickType == ChoiceType.Ban);
+            buttonBlueBan.Colour = setColour(pickTeam == TeamColour.Blue && pickType == ChoiceType.Ban);
+            buttonRedPick.Colour = setColour(pickTeam == TeamColour.Red && pickType == ChoiceType.Pick);
+            buttonBluePick.Colour = setColour(pickTeam == TeamColour.Blue && pickType == ChoiceType.Pick);
+            buttonRedProtect.Colour = setColour(pickTeam == TeamColour.Red && pickType == ChoiceType.Protect);
+            buttonBlueProtect.Colour = setColour(pickTeam == TeamColour.Blue && pickType == ChoiceType.Protect);
+            buttonRedWin.Colour = setColour(pickTeam == TeamColour.Red && pickType == ChoiceType.RedWin);
+            buttonBlueWin.Colour = setColour(pickTeam == TeamColour.Blue && pickType == ChoiceType.BlueWin);
+            buttonRedTrap.Colour = setColour(pickTeam == TeamColour.Red && pickType == ChoiceType.Trap);
+            buttonBlueTrap.Colour = setColour(pickTeam == TeamColour.Blue && pickType == ChoiceType.Trap);
             buttonTrapSwap.Colour = setColour(pickType == ChoiceType.Swap);
 
             buttonTrapSwap.Text = CurrentMatch.Value?.PendingSwaps.Any() ?? false ? @$"Free Swap (Target)" : @$"Free Swap";
@@ -540,7 +545,7 @@ namespace osu.Game.Tournament.Screens.Board
 
             havePendingSwap = CurrentMatch.Value.PendingSwaps.Any();
 
-            var color = pickColour;
+            var color = pickTeam;
             Steps state = Steps.Default;
 
             if (DetectEX() && !havePendingSwap)
@@ -559,7 +564,7 @@ namespace osu.Game.Tournament.Screens.Board
                 if (LadderInfo.UseRefereeCommands.Value && LadderInfo.NeedRefereeResponse.Value)
                 {
                     state = refWin && teamWinner == refWinner && teamWinner != TeamColour.None ? Steps.FinalWin : Steps.Halt;
-                    color = refWin && teamWinner == refWinner ? teamWinner : pickColour;
+                    color = refWin && teamWinner == refWinner ? teamWinner : pickTeam;
 
                     // Special cases for a draw
                     if (teamWinner == TeamColour.Neutral && refEX)
@@ -775,10 +780,7 @@ namespace osu.Game.Tournament.Screens.Board
 
         private void addForBeatmap(string modId)
         {
-            if (CurrentMatch.Value?.Round.Value == null)
-                return;
-
-            var map = CurrentMatch.Value.Round.Value.Beatmaps.FirstOrDefault(b => b.Mods + b.ModIndex == modId);
+            var map = CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(b => b.Mods + b.ModIndex == modId);
 
             if (map != null)
                 addForBeatmap(map.ID);
@@ -798,72 +800,73 @@ namespace osu.Game.Tournament.Screens.Board
                 // don't attempt to add if the beatmap isn't in our pool
                 return;
 
-            if (CurrentMatch.Value.PicksBans.Any(p => p.BeatmapID == beatmapId && ((p.Type == ChoiceType.Ban || p.Type == ChoiceType.RedWin || p.Type == ChoiceType.BlueWin) && !isPickWin && pickType != ChoiceType.Swap)))
+            if (!isPickWin && CurrentMatch.Value.PicksBans.Any(p => p.BeatmapID == beatmapId
+                                                                    && (p.Type == ChoiceType.Ban || p.Type == ChoiceType.RedWin || p.Type == ChoiceType.BlueWin)
+                                                                    && pickType != ChoiceType.Swap))
                 // don't attempt to add if already banned / winned and it's not a win type.
                 return;
 
-            if (CurrentMatch.Value.Protects.Any(p => p.BeatmapID == beatmapId && pickType == ChoiceType.Ban))
+            if (pickType == ChoiceType.Ban && CurrentMatch.Value.Protects.Any(p => p.BeatmapID == beatmapId))
                 // don't attempt to ban a protected map
                 return;
 
             // Remove the latest win state for Reverse Trap
-            if (CurrentMatch.Value.PicksBans.Any(p => p.BeatmapID == beatmapId && (p.Type == ChoiceType.RedWin || p.Type == ChoiceType.BlueWin) && pickType == ChoiceType.Pick))
+            if (pickType == ChoiceType.Pick && CurrentMatch.Value.PicksBans.Any(p => p.BeatmapID == beatmapId
+                                                                                     && (p.Type == ChoiceType.RedWin || p.Type == ChoiceType.BlueWin)))
             {
                 var latestWin = CurrentMatch.Value.PicksBans.LastOrDefault(p => p.BeatmapID == beatmapId && (p.Type == ChoiceType.RedWin || p.Type == ChoiceType.BlueWin));
                 if (latestWin != null) CurrentMatch.Value.PicksBans.Remove(latestWin);
             }
 
+            var matchTrap = CurrentMatch.Value.Traps.Where(p => p.BeatmapID == beatmapId);
+
             // Show the trap description
-            if (CurrentMatch.Value.Traps.Any(p => p.BeatmapID == beatmapId))
+            if (matchTrap.Any())
             {
-                // One and another for both teams
-                var matchTrap = CurrentMatch.Value.Traps.FirstOrDefault(p => p.BeatmapID == beatmapId);
-                var anotherTrap = CurrentMatch.Value.Traps.LastOrDefault(p => p.BeatmapID == beatmapId);
-                var PBTrap = CurrentMatch.Value.PicksBans.FirstOrDefault(p => p.BeatmapID == beatmapId && p.Type == ChoiceType.Trap);
-
-                if (pickType == ChoiceType.Pick && matchTrap != null && anotherTrap != null)
+                if (pickType == ChoiceType.Pick)
                 {
-                    bool isSameTeam = matchTrap.Team == anotherTrap.Team;
-                    var triggeredTrap = matchTrap.Team != pickColour ? matchTrap : anotherTrap;
-                    if (!isSameTeam)
+                    hasTrap = true;
+                    bool trapActive = true;
+                    var triggeredTrap = matchTrap.FirstOrDefault(t => t.Team != pickTeam);
+
+                    if (triggeredTrap == null)
                     {
-                        informationDisplayContainer.Child = new TrapInfoDisplay(
-                            trap: triggeredTrap.Mode, team: triggeredTrap.Team, mapID: triggeredTrap.BeatmapID);
-                        CurrentMatch.Value.Traps.Remove(matchTrap);
-                        CurrentMatch.Value.Traps.Remove(anotherTrap);
-                    }
-                    else
-                    {
-                        informationDisplayContainer.Child = matchTrap.Team != pickColour
-                        ? new TrapInfoDisplay(trap: matchTrap.Mode, team: matchTrap.Team, mapID: matchTrap.BeatmapID)
-                        : new TrapInfoDisplay(trap: TrapType.Unused, team: matchTrap.Team, mapID: matchTrap.BeatmapID);
-                        CurrentMatch.Value.Traps.Remove(matchTrap);
-                        if (PBTrap != null) CurrentMatch.Value.PicksBans.Remove(PBTrap);
+                        triggeredTrap = matchTrap.First();
+                        trapActive = false;
                     }
 
-                    if (matchTrap.Mode == TrapType.Reverse)
+                    informationDisplayContainer.Child = triggeredTrap.Team != pickTeam
+                        ? new TrapInfoDisplay(triggeredTrap)
+                        : new TrapInfoDisplay(TrapType.Unused, triggeredTrap.Team, triggeredTrap.BeatmapID);
+                    CurrentMatch.Value.Traps.Remove(triggeredTrap);
+
+                    if (triggeredTrap.Mode == TrapType.Reverse && trapActive)
                     {
                         // Add Win status first
                         hasReversed = true;
                         CurrentMatch.Value.PicksBans.Add(new BeatmapChoice
                         {
                             BeatmapID = beatmapId,
-                            Team = matchTrap.Team == TeamColour.Red ? TeamColour.Red : TeamColour.Blue,
-                            Type = matchTrap.Team == TeamColour.Red ? ChoiceType.RedWin : ChoiceType.BlueWin,
+                            Team = triggeredTrap.Team == TeamColour.Red ? TeamColour.Red : TeamColour.Blue,
+                            Type = triggeredTrap.Team == TeamColour.Red ? ChoiceType.RedWin : ChoiceType.BlueWin,
                             Token = true,
                         });
                     }
-                    hasTrap = true;
                 }
                 else
                 {
                     hasTrap = false;
                 }
             }
+            else
+            {
+                hasTrap = false;
+            }
 
             if (pickType == ChoiceType.Pick)
             {
                 var introMap = CurrentMatch.Value.Round.Value.Beatmaps.FirstOrDefault(b => b.Beatmap?.OnlineID == beatmapId);
+
                 if (introMap != null)
                 {
                     AddInternal(new TournamentIntro(introMap)
@@ -909,18 +912,18 @@ namespace osu.Game.Tournament.Screens.Board
             {
                 CurrentMatch.Value.Traps.Add(new TrapInfo
                 {
-                    Team = pickColour,
+                    Team = pickTeam,
                     Mode = new TrapInfo().GetReversedType(trapTypeDropdown.Current.Value),
                     BeatmapID = beatmapId,
                 });
             }
 
             // Not to add a same map reference of the same type twice!
-            if (pickType == ChoiceType.Protect && !CurrentMatch.Value.Protects.Any(p => p.BeatmapID == beatmapId))
+            if (pickType == ChoiceType.Protect && CurrentMatch.Value.Protects.All(p => p.BeatmapID != beatmapId))
             {
                 CurrentMatch.Value.Protects.Add(new BeatmapChoice
                 {
-                    Team = pickColour,
+                    Team = pickTeam,
                     Type = pickType,
                     BeatmapID = beatmapId,
                     Token = true,
@@ -931,7 +934,7 @@ namespace osu.Game.Tournament.Screens.Board
             {
                 CurrentMatch.Value.PicksBans.Add(new BeatmapChoice
                 {
-                    Team = pickColour,
+                    Team = pickTeam,
                     Type = pickType,
                     BeatmapID = beatmapId,
                     Token = true,
@@ -980,7 +983,6 @@ namespace osu.Game.Tournament.Screens.Board
 
                 target.BoardX = middleX;
                 target.BoardY = middleY;
-
 
                 // TODO: A better way to reload maps
                 DetectWin();
@@ -1063,6 +1065,7 @@ namespace osu.Game.Tournament.Screens.Board
             // Reject null matches
             if (CurrentMatch.Value == null) return mapLine;
 
+            // Vertical Lines
             if (startX == endX)
             {
                 for (int i = startY; i <= endY; i++)
@@ -1071,6 +1074,7 @@ namespace osu.Game.Tournament.Screens.Board
                     if (map != null) mapLine.Add(map);
                 }
             }
+            // Horizontal line
             else if (startY == endY)
             {
                 for (int i = startX; i <= endX; i++)
@@ -1079,16 +1083,19 @@ namespace osu.Game.Tournament.Screens.Board
                     if (map != null) mapLine.Add(map);
                 }
             }
+            // Diagonal line
             else
             {
                 int stepX = endX > startX ? 1 : -1;
                 int stepY = endY > startY ? 1 : -1;
+
                 for (int i = 0; i <= 3; i++)
                 {
                     var map = getBoardMap(startX + i * stepX, startY + i * stepY);
                     if (map != null) mapLine.Add(map);
                 }
             }
+
             return mapLine;
         }
 
@@ -1104,38 +1111,28 @@ namespace osu.Game.Tournament.Screens.Board
         /// <returns>the winner team's colour, or <see cref="TeamColour.Neutral"/> if there isn't one</returns>
         private TeamColour isWin(int startY, int startX, int endY, int endX)
         {
-            List<RoundBeatmap> mapLine = new List<RoundBeatmap>();
-            const TeamColour colourfalse = TeamColour.Neutral;
-            TeamColour thisColour = TeamColour.Neutral;
-
             // Currently limited to 4x4 use only
-            if ((endX - startX) % 3 != 0 || (endY - startY) % 3 != 0) return colourfalse;
+            if ((endX - startX) % 3 != 0 || (endY - startY) % 3 != 0) return TeamColour.Neutral;
 
             // Reject null matches
-            if (CurrentMatch.Value == null) return colourfalse;
+            if (CurrentMatch.Value == null) return TeamColour.Neutral;
 
-            mapLine = getMapLine(startY, startX, endY, endX);
+            var mapLine = getMapLine(startY, startX, endY, endX);
 
-            foreach (RoundBeatmap b in mapLine)
+            var result = mapLine.Select(m => CurrentMatch.Value.PicksBans.FirstOrDefault(p => p.BeatmapID == m.Beatmap?.OnlineID))
+                                .GroupBy(p => p?.Type);
+
+            if (result.Count(r => r.Key == ChoiceType.BlueWin) == mapLine.Count)
             {
-                // Get the coloured map
-                var pickedMap = CurrentMatch.Value.PicksBans.FirstOrDefault(p => (p.BeatmapID == b.Beatmap?.OnlineID &&
-                        (p.Type == ChoiceType.RedWin || p.Type == ChoiceType.BlueWin)));
-
-                // Have banned maps: Cannot win
-                if (CurrentMatch.Value.PicksBans.Any(p => (p.BeatmapID == b.Beatmap?.OnlineID && p.Type == ChoiceType.Ban))) return colourfalse;
-                if (pickedMap != null)
-                {
-                    // Set the default colour
-                    if (thisColour == TeamColour.Neutral) { thisColour = pickedMap.Team; }
-                    // Different mark colour: Cannot win
-                    else { if (thisColour != pickedMap.Team) return colourfalse; }
-                }
-                else return colourfalse;
+                return TeamColour.Blue;
             }
 
-            // Finally: Can win
-            return thisColour;
+            if (result.Count(r => r.Key == ChoiceType.RedWin) == mapLine.Count)
+            {
+                return TeamColour.Red;
+            }
+
+            return TeamColour.Neutral;
         }
 
         /// <summary>
