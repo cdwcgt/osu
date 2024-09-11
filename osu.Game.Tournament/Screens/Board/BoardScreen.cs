@@ -863,7 +863,7 @@ namespace osu.Game.Tournament.Screens.Board
                 hasTrap = false;
             }
 
-            if (pickType == ChoiceType.Pick)
+            if (pickType == ChoiceType.Pick && hasReversed)
             {
                 var introMap = CurrentMatch.Value.Round.Value.Beatmaps.FirstOrDefault(b => b.Beatmap?.OnlineID == beatmapId);
 
@@ -910,12 +910,7 @@ namespace osu.Game.Tournament.Screens.Board
             // Trap action specific
             if (pickType == ChoiceType.Trap)
             {
-                CurrentMatch.Value.Traps.Add(new TrapInfo
-                {
-                    Team = pickTeam,
-                    Mode = new TrapInfo().GetReversedType(trapTypeDropdown.Current.Value),
-                    BeatmapID = beatmapId,
-                });
+                CurrentMatch.Value.Traps.Add(new TrapInfo(pickTeam, TrapInfo.GetReversedType(trapTypeDropdown.Current.Value), beatmapId));
             }
 
             // Not to add a same map reference of the same type twice!
@@ -1041,13 +1036,11 @@ namespace osu.Game.Tournament.Screens.Board
 
                 return winner == TeamColour.Neutral;
             }
-            else
-            {
-                CurrentMatch.Value.Team1Score.Value = winner == TeamColour.Red ? 6 : 0;
-                CurrentMatch.Value.Team2Score.Value = winner == TeamColour.Blue ? 6 : 0;
 
-                return true;
-            }
+            CurrentMatch.Value.Team1Score.Value = winner == TeamColour.Red ? 6 : 0;
+            CurrentMatch.Value.Team2Score.Value = winner == TeamColour.Blue ? 6 : 0;
+
+            return true;
         }
 
         /// <summary>
@@ -1122,12 +1115,12 @@ namespace osu.Game.Tournament.Screens.Board
             var result = mapLine.Select(m => CurrentMatch.Value.PicksBans.FirstOrDefault(p => p.BeatmapID == m.Beatmap?.OnlineID))
                                 .GroupBy(p => p?.Type);
 
-            if (result.Count(r => r.Key == ChoiceType.BlueWin) == mapLine.Count)
+            if (result.FirstOrDefault(g => g.Key == ChoiceType.BlueWin)?.Count() == mapLine.Count)
             {
                 return TeamColour.Blue;
             }
 
-            if (result.Count(r => r.Key == ChoiceType.RedWin) == mapLine.Count)
+            if (result.FirstOrDefault(g => g.Key == ChoiceType.RedWin)?.Count() == mapLine.Count)
             {
                 return TeamColour.Red;
             }

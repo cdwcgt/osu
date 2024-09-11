@@ -15,8 +15,6 @@ namespace osu.Game.Tournament.Components
 {
     public partial class TrapInfoDisplay : CompositeDrawable
     {
-        private readonly TrapInfo trap = null!;
-
         public TrapInfoDisplay(TrapType trap = TrapType.Unknown, TeamColour team = TeamColour.Neutral, int mapID = 0)
             : this(new TrapInfo
             (
@@ -49,9 +47,9 @@ namespace osu.Game.Tournament.Components
                     {
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.CentreLeft,
-                        Icon = this.trap.Icon,
+                        Icon = trap.Icon,
                         Size = new Vector2(56),
-                        Colour = this.trap.IconColor,
+                        Colour = trap.IconColor,
                         Alpha = 1,
                     },
                     new Box
@@ -76,14 +74,14 @@ namespace osu.Game.Tournament.Components
                             {
                                 Anchor = Anchor.CentreLeft,
                                 Origin = Anchor.CentreLeft,
-                                Text = this.trap.Name,
+                                Text = trap.Name,
                                 Font = OsuFont.GetFont(typeface: Typeface.HarmonyOSSans, size: 49, weight: FontWeight.Bold),
                             },
                             new TournamentSpriteText
                             {
                                 Anchor = Anchor.CentreLeft,
                                 Origin = Anchor.CentreLeft,
-                                Text = this.trap.Description,
+                                Text = trap.Description,
                                 Font = OsuFont.GetFont(typeface: Typeface.HarmonyOSSans, size: 30, weight: FontWeight.Regular),
                             },
                         }

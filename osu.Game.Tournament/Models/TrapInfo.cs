@@ -32,8 +32,8 @@ namespace osu.Game.Tournament.Models
             Colour = Color4.White,
         };
 
-        private LocalisableString name = string.Empty;
-        private LocalisableString description = string.Empty;
+        private LocalisableString name;
+        private LocalisableString description;
 
         /// <summary>
         /// A constructor to set up an instance of <see cref="TrapInfo"/>.
@@ -74,7 +74,7 @@ namespace osu.Game.Tournament.Models
                     name = @"Unknown Trap";
                     description = @"We don't know this one.";
                     break;
-            };
+            }
         }
 
         public LocalisableString Name => name;
@@ -88,7 +88,7 @@ namespace osu.Game.Tournament.Models
         /// </summary>
         /// <param name="typeString">A <see cref="LocalisableString"/>, the string to handle</param>
         /// <returns>A <see cref="TrapType"/>, representing the trap type</returns>
-        public TrapType GetReversedType(LocalisableString typeString)
+        public static TrapType GetReversedType(LocalisableString typeString)
         {
             switch (typeString.ToString())
             {
