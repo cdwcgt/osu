@@ -1101,7 +1101,9 @@ namespace osu.Game.Tournament.Screens.Board
         /// <param name="startY">The start point of the line, Y value.</param>
         /// <param name="endX">The end point of the line, X value.</param>
         /// <param name="endY">The end point of the line, Y value.</param>
-        /// <returns>the winner team's colour, or <see cref="TeamColour.Neutral"/> if there isn't one</returns>
+        /// <returns>the winner team's colour, or <see cref="TeamColour.Neutral"/> if there isn't one
+        /// <see cref="TeamColour.None"/> mean this is impossiable to get anyone to win
+        /// </returns>
         private TeamColour isWin(int startY, int startX, int endY, int endX)
         {
             // Currently limited to 4x4 use only
@@ -1113,6 +1115,7 @@ namespace osu.Game.Tournament.Screens.Board
             var mapLine = getMapLine(startY, startX, endY, endX);
 
             var result = mapLine.Select(m => CurrentMatch.Value.PicksBans.FirstOrDefault(p => p.BeatmapID == m.Beatmap?.OnlineID))
+                                .Where(p => p?.Type is ChoiceType.Ban or ChoiceType.BlueWin or ChoiceType.RedWin)
                                 .GroupBy(p => p?.Type);
 
             if (result.FirstOrDefault(g => g.Key == ChoiceType.BlueWin)?.Count() == mapLine.Count)
@@ -1125,8 +1128,25 @@ namespace osu.Game.Tournament.Screens.Board
                 return TeamColour.Red;
             }
 
+            if (result.Count() > 1)
+            {
+                return TeamColour.None;
+            }
+
             return TeamColour.Neutral;
         }
+
+        /// <summary>
+        /// Detects if either team could use the given line to win.
+        ///
+        /// <br></br>The given line should be either a straight line or a diagonal line.
+        /// </summary>
+        /// <param name="startX">The start point of the line, X value.</param>
+        /// <param name="startY">The start point of the line, Y value.</param>
+        /// <param name="endX">The end point of the line, X value.</param>
+        /// <param name="endY">The end point of the line, Y value.</param>
+        /// <returns>true if can, otherwise false</returns>
+        private bool canWin(int startY, int startX, int endY, int endX) => isWin(startY, startX, endY, endX) != TeamColour.None;
 
         /// <summary>
         /// Detects if the board satisfies the conditions to enter the EX stage.
@@ -1143,58 +1163,8 @@ namespace osu.Game.Tournament.Screens.Board
             bool isColumnAvailable = canWin(1, 1, 4, 1) || canWin(1, 2, 4, 2) || canWin(1, 3, 4, 3) || canWin(1, 4, 4, 4);
             bool isDiagonalAvailable = canWin(1, 1, 4, 4) || canWin(1, 4, 4, 1);
 
-            useEX = !isDiagonalAvailable && !isRowAvailable && !isColumnAvailable;
-            return useEX;
-        }
-
-        /// <summary>
-        /// Detects if either team could use the given line to win.
-        ///
-        /// <br></br>The given line should be either a straight line or a diagonal line.
-        /// </summary>
-        /// <param name="startX">The start point of the line, X value.</param>
-        /// <param name="startY">The start point of the line, Y value.</param>
-        /// <param name="endX">The end point of the line, X value.</param>
-        /// <param name="endY">The end point of the line, Y value.</param>
-        /// <returns>true if can, otherwise false</returns>
-        private bool canWin(int startY, int startX, int endY, int endX)
-        {
-            List<RoundBeatmap> mapLine = new List<RoundBeatmap>();
-            TeamColour thisColour = TeamColour.Neutral;
-
-            // Currently limited to 4x4 use only
-            if ((endX - startX) % 3 != 0 || (endY - startY) % 3 != 0) return false;
-
-            // Reject null matches
-            if (CurrentMatch.Value == null) return false;
-
-            mapLine = getMapLine(startX, startY, endX, endY);
-
-            foreach (RoundBeatmap b in mapLine)
-            {
-                // Get the coloured map
-                var pickedMap = CurrentMatch.Value.PicksBans.FirstOrDefault(p =>
-                    (p.BeatmapID == b.Beatmap?.OnlineID &&
-                     (p.Type == ChoiceType.RedWin
-                      || p.Type == ChoiceType.BlueWin)));
-
-                // Have banned maps: Cannot win
-                if (CurrentMatch.Value.PicksBans.Any(p => (p.BeatmapID == b.Beatmap?.OnlineID && p.Type == ChoiceType.Ban))) return false;
-
-                if (pickedMap != null)
-                {
-                    // Set the default colour
-                    if (thisColour == TeamColour.Neutral) { thisColour = pickedMap.Team; }
-                    // Different mark colour: Cannot win
-                    else
-                    {
-                        if (thisColour != pickedMap.Team) return false;
-                    }
-                }
-            }
-
-            // Finally: Can win
-            return true;
+            //useEX = !isDiagonalAvailable && !isRowAvailable && !isColumnAvailable;
+            return useEX = !isDiagonalAvailable && !isRowAvailable && !isColumnAvailable;
         }
 
         /// <summary>
