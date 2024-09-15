@@ -10,6 +10,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Localisation;
+using osu.Framework.Screens;
 using osu.Game.Beatmaps;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
@@ -19,6 +20,7 @@ using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Overlays;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
+using osu.Game.Screens.Play.HUD;
 
 namespace osu.Game.Screens.MapGuess
 {
@@ -27,6 +29,8 @@ namespace osu.Game.Screens.MapGuess
         public override bool DisallowExternalBeatmapRulesetChanges => true;
 
         public override bool? AllowGlobalTrackControl => false;
+
+        public override bool AllowBackButton => false;
 
         public override bool HideOverlaysOnEnter => true;
 
@@ -168,6 +172,16 @@ namespace osu.Game.Screens.MapGuess
                             },
                         },
                     }
+                },
+                new HoldForMenuButton
+                {
+                    Action = this.Exit,
+                    Padding = new MarginPadding
+                    {
+                        Bottom = 90
+                    },
+                    Anchor = Anchor.BottomRight,
+                    Origin = Anchor.BottomRight,
                 }
             ];
         }
