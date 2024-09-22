@@ -1,6 +1,9 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Collections.Generic;
+using Newtonsoft.Json;
+using osu.Game.Beatmaps;
 using osu.Game.Rulesets.Difficulty;
 
 namespace osu.Game.Rulesets.Osu.Difficulty
@@ -81,13 +84,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             yield return (ATTRIB_ID_SPEED, SpeedDifficulty);
             yield return (ATTRIB_ID_OVERALL_DIFFICULTY, OverallDifficulty);
             yield return (ATTRIB_ID_APPROACH_RATE, ApproachRate);
-            yield return (ATTRIB_ID_DIFFICULTY, StarRating);
-
-            if (ShouldSerializeFlashlightDifficulty())
-                yield return (ATTRIB_ID_FLASHLIGHT, FlashlightDifficulty);
-
-            yield return (ATTRIB_ID_SLIDER_FACTOR, SliderFactor);
-            yield return (ATTRIB_ID_SPEED_NOTE_COUNT, SpeedNoteCount);
         }
 
         public override void FromDatabaseAttributes(IReadOnlyDictionary<int, double> values, IBeatmapOnlineInfo onlineInfo)
@@ -99,25 +95,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             OverallDifficulty = values[ATTRIB_ID_OVERALL_DIFFICULTY];
             ApproachRate = values[ATTRIB_ID_APPROACH_RATE];
             StarRating = values[ATTRIB_ID_DIFFICULTY];
-            FlashlightDifficulty = values.GetValueOrDefault(ATTRIB_ID_FLASHLIGHT);
-            SliderFactor = values[ATTRIB_ID_SLIDER_FACTOR];
-            SpeedNoteCount = values[ATTRIB_ID_SPEED_NOTE_COUNT];
 
             DrainRate = onlineInfo.DrainRate;
             HitCircleCount = onlineInfo.CircleCount;
             SliderCount = onlineInfo.SliderCount;
             SpinnerCount = onlineInfo.SpinnerCount;
         }
-
-        #region Newtonsoft.Json implicit ShouldSerialize() methods
-
-        // The properties in this region are used implicitly by Newtonsoft.Json to not serialise certain fields in some cases.
-        // They rely on being named exactly the same as the corresponding fields (casing included) and as such should NOT be renamed
-        // unless the fields are also renamed.
-
-        [UsedImplicitly]
-        public bool ShouldSerializeFlashlightDifficulty() => Mods.Any(m => m is ModFlashlight);
-
-        #endregion
     }
 }

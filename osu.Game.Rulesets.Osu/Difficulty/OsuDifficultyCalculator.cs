@@ -76,13 +76,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             {
                 StarRating = starRating,
                 Mods = mods,
-                AimStrain = aimRating,
-                JumpAimStrain = jumpAimRating,
-                FlowAimStrain = flowAimRating,
-                PrecisionStrain = precisionRating,
-                SpeedStrain = speedRating,
-                StaminaStrain = staminaRating,
-                AccuracyStrain = accuracyRating,
+                AimDifficulty = aimRating,
+                JumpAimDifficulty = jumpAimRating,
+                FlowAimDifficulty = flowAimRating,
+                PrecisionDifficulty = precisionRating,
+                SpeedDifficulty = speedRating,
+                StaminaDifficulty = staminaRating,
+                AccuracyDifficulty = accuracyRating,
                 ApproachRate = preempt > 1200 ? (1800 - preempt) / 120 : (1200 - preempt) / 150 + 5,
                 OverallDifficulty = (80 - hitWindows.WindowFor(HitResult.Great) / clockRate) / 6,
                 MaxCombo = maxCombo,
@@ -129,9 +129,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 new Stamina(mods),
                 new RhythmComplexity(mods)
             };
-
-            if (mods.Any(h => h is OsuModFlashlight))
-                skills.Add(new Flashlight(mods));
 
             return skills.ToArray();
         }

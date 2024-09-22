@@ -5,9 +5,9 @@ using osu.Game.Rulesets.Difficulty.Preprocessing;
 
 namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
 {
-    public static class RhythmEvaluator
+    public static class FlashlightEvaluator
     {
-        public static double EvaluateDifficultyOf(DifficultyHitObject current)
+        public static double EvaluateDifficultyOf(DifficultyHitObject current, bool hidden)
         {
             return 0;
         }
