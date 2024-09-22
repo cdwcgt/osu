@@ -92,7 +92,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         {
             int relevant300Count = count300 - (objectCount - accuracyObjectCount);
             if (relevant300Count <= 0)
-                return double.NaN;
+                return 200 - od * 10;
 
             // Probability of landing a 300 where the player has a 20% chance of getting at least the given amount of 300s.
             double probability = Beta.InvCDF(relevant300Count, 1 + accuracyObjectCount - relevant300Count, 0.2);
@@ -108,7 +108,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
         private static double calculateAimWeight(double normalizedHitError, int combo, int maxCombo, int objectCount, Mod[] visualMods)
         {
-            double accuracyWeight = double.IsNaN(normalizedHitError) ? 0 : Math.Pow(0.995, normalizedHitError) * 1.04;
+            double accuracyWeight = Math.Pow(0.995, normalizedHitError) * 1.04;
             double comboWeight = Math.Pow(combo, 0.8) / Math.Pow(maxCombo, 0.8);
             double flashlightLengthWeight = visualMods.Any(m => m is OsuModFlashlight) ? 1 + comboWeight * Math.Atan(objectCount / 2000.0) : 1;
 
@@ -117,7 +117,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
         private static double calculateSpeedWeight(double normalizedHitError, int combo, int maxCombo)
         {
-            double accuracyWeight = double.IsNaN(normalizedHitError) ? 0 : Math.Pow(0.985, normalizedHitError) * 1.12;
+            double accuracyWeight = Math.Pow(0.985, normalizedHitError) * 1.12;
             double comboWeight = Math.Pow(combo, 0.4) / Math.Pow(maxCombo, 0.4);
 
             return accuracyWeight * (enable_csr ? 1 : comboWeight);
@@ -136,6 +136,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             return lengthWeight * modWeight;
         }
 
-        private static double calculateAccuracyValue(double normalizedHitError) => double.IsNaN(normalizedHitError) ? 0 : 560 * Math.Pow(0.85, normalizedHitError);
+        private static double calculateAccuracyValue(double normalizedHitError) => 560 * Math.Pow(0.85, normalizedHitError);
     }
 }
