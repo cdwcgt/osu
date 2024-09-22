@@ -36,6 +36,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             int countMiss = score.Statistics.GetValueOrDefault(HitResult.Miss);
             int totalHits = countGreat + countOk + countMeh + countMiss;
 
+            double effectiveMissCount = countMiss;
+
             double multiplier = 1.12; // This is being adjusted to keep the final pp value scaled around what it used to be when changing things
 
             // Custom multipliers for NoFail and SpunOut.
@@ -46,8 +48,15 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 multiplier *= 1.0 - Math.Pow((double)osuAttributes.SpinnerCount / totalHits, 0.85);
 
             int accuracyHitObjectsCount = osuAttributes.HitCircleCount;
+
             if (score.Mods.OfType<OsuModClassic>().All(m => !m.NoSliderHeadAccuracy.Value))
+            {
                 accuracyHitObjectsCount += osuAttributes.SliderCount;
+            }
+            else if (enable_csr)
+            {
+                effectiveMissCount = Math.Max(countMiss, calculateEffectiveMissCount(osuAttributes, scoreMaxCombo, countMiss, totalHits - countGreat));
+            }
 
             double normalisedHitError = calculateNormalisedHitError(osuAttributes.OverallDifficulty, totalHits, accuracyHitObjectsCount, countGreat);
 
@@ -104,7 +113,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             return hitWindow / zValue; // Hit errors are normally distributed along the x-axis.
         }
 
-        private static double calculateMissWeight(int misses, double difficultStrainCount) => enable_csr ? 0.96 / ((misses / (4 * Math.Pow(Math.Log(difficultStrainCount), 0.94))) + 1) : Math.Pow(0.97, misses);
+        private static double calculateMissWeight(double misses, double difficultStrainCount) => enable_csr ? 0.96 / ((misses / (4 * Math.Pow(Math.Log(difficultStrainCount), 0.94))) + 1) : Math.Pow(0.97, misses);
 
         private static double calculateAimWeight(double normalizedHitError, int combo, int maxCombo, int objectCount, Mod[] visualMods)
         {
@@ -137,5 +146,23 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         }
 
         private static double calculateAccuracyValue(double normalizedHitError) => 560 * Math.Pow(0.85, normalizedHitError);
+
+        private static double calculateEffectiveMissCount(OsuDifficultyAttributes attributes, int scoreMaxCombo, int countMiss, int countMistakes)
+        {
+            // Guess the number of misses + slider breaks from combo
+            double comboBasedMissCount = 0.0;
+
+            if (attributes.SliderCount > 0)
+            {
+                double fullComboThreshold = attributes.MaxCombo - 0.1 * attributes.SliderCount;
+                if (scoreMaxCombo < fullComboThreshold)
+                    comboBasedMissCount = fullComboThreshold / Math.Max(1.0, scoreMaxCombo);
+            }
+
+            // Clamp miss count to maximum amount of possible breaks
+            comboBasedMissCount = Math.Min(comboBasedMissCount, countMistakes);
+
+            return Math.Max(countMiss, comboBasedMissCount);
+        }
     }
 }
