@@ -13,6 +13,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Bindings;
@@ -25,6 +26,7 @@ using osu.Game.Collections;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
+using osu.Game.Graphics.Cursor;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Input.Bindings;
 using osu.Game.Overlays;
@@ -35,8 +37,10 @@ using osu.Game.Screens.Backgrounds;
 using osu.Game.Screens.Edit;
 using osu.Game.Screens.Menu;
 using osu.Game.Screens.Play;
+using osu.Game.Screens.Select.Details;
 using osu.Game.Screens.Select.Options;
 using osu.Game.Skinning;
+using osu.Game.Utils;
 using osuTK;
 using osuTK.Graphics;
 using osuTK.Input;
@@ -45,7 +49,7 @@ namespace osu.Game.Screens.Select
 {
     public abstract partial class SongSelect : ScreenWithBeatmapBackground, IKeyBindingHandler<GlobalAction>
     {
-        public static readonly float WEDGE_HEIGHT = 245;
+        public static readonly float WEDGE_HEIGHT = 200;
 
         protected const float BACKGROUND_BLUR = 20;
         private const float left_area_padding = 20;
@@ -58,19 +62,19 @@ namespace osu.Game.Screens.Select
         /// </summary>
         protected virtual bool ControlGlobalMusic => true;
 
-        protected virtual bool ShowFooter => true;
+        protected virtual bool ShowSongSelectFooter => true;
 
         public override bool? ApplyModTrackAdjustments => true;
 
         /// <summary>
-        /// Can be null if <see cref="ShowFooter"/> is false.
+        /// Can be null if <see cref="ShowSongSelectFooter"/> is false.
         /// </summary>
         protected BeatmapOptionsOverlay BeatmapOptions { get; private set; } = null!;
 
         /// <summary>
-        /// Can be null if <see cref="ShowFooter"/> is false.
+        /// Can be null if <see cref="ShowSongSelectFooter"/> is false.
         /// </summary>
-        protected Footer? Footer { get; private set; }
+        protected Footer? SongSelectFooter { get; private set; }
 
         /// <summary>
         /// Contains any panel which is triggered by a footer button.
@@ -89,12 +93,15 @@ namespace osu.Game.Screens.Select
         /// Creates any "action" menu items for the provided beatmap (ie. "Select", "Play", "Edit").
         /// These will always be placed at the top of the context menu, with common items added below them.
         /// </summary>
-        /// <param name="beatmap">The beatmap to create items for.</param>
+        /// <param name="getBeatmap">The beatmap to create items for.</param>
         /// <returns>The menu items.</returns>
-        public virtual MenuItem[] CreateForwardNavigationMenuItemsForBeatmap(BeatmapInfo beatmap) => new MenuItem[]
+        public virtual MenuItem[] CreateForwardNavigationMenuItemsForBeatmap(Func<BeatmapInfo> getBeatmap) => new MenuItem[]
         {
-            new OsuMenuItem(@"Select", MenuItemType.Highlighted, () => FinaliseSelection(beatmap))
+            new OsuMenuItem(@"Select", MenuItemType.Highlighted, () => FinaliseSelection(getBeatmap()))
         };
+
+        [Resolved]
+        private OsuGameBase game { get; set; } = null!;
 
         [Resolved]
         private Bindable<IReadOnlyList<Mod>> selectedMods { get; set; } = null!;
@@ -120,6 +127,8 @@ namespace osu.Game.Screens.Select
         private Sample sampleChangeDifficulty = null!;
         private Sample sampleChangeBeatmap = null!;
 
+        private bool pendingFilterApplication;
+
         private Container carouselContainer = null!;
 
         protected BeatmapDetailArea BeatmapDetails { get; private set; } = null!;
@@ -131,6 +140,9 @@ namespace osu.Game.Screens.Select
         private double audioFeedbackLastPlaybackTime;
 
         private IDisposable? modSelectOverlayRegistration;
+        private ModSpeedHotkeyHandler modSpeedHotkeyHandler = null!;
+
+        private AdvancedStats advancedStats = null!;
 
         [Resolved]
         private MusicController music { get; set; } = null!;
@@ -151,20 +163,6 @@ namespace osu.Game.Screens.Select
 
                 ApplyToBackground(applyBlurToBackground);
             });
-
-            LoadComponentAsync(Carousel = new BeatmapCarousel
-            {
-                AllowSelection = false, // delay any selection until our bindables are ready to make a good choice.
-                Anchor = Anchor.CentreRight,
-                Origin = Anchor.CentreRight,
-                RelativeSizeAxes = Axes.Both,
-                BleedTop = FilterControl.HEIGHT,
-                BleedBottom = Footer.HEIGHT,
-                SelectionChanged = updateSelectedBeatmap,
-                BeatmapSetsChanged = carouselBeatmapsLoaded,
-                FilterApplied = updateVisibleBeatmapCount,
-                GetRecommendedBeatmap = s => recommender?.GetRecommendedBeatmap(s),
-            }, c => carouselContainer.Child = c);
 
             // initial value transfer is required for FilterControl (it uses our re-cached bindables in its async load for the initial filter).
             transferRulesetValue();
@@ -206,7 +204,7 @@ namespace osu.Game.Screens.Select
                                         Padding = new MarginPadding
                                         {
                                             Top = FilterControl.HEIGHT,
-                                            Bottom = Footer.HEIGHT
+                                            Bottom = Select.Footer.HEIGHT
                                         },
                                         Child = new LoadingSpinner(true) { State = { Value = Visibility.Visible } }
                                     }
@@ -217,7 +215,6 @@ namespace osu.Game.Screens.Select
                         {
                             RelativeSizeAxes = Axes.X,
                             Height = FilterControl.HEIGHT,
-                            FilterChanged = ApplyFilterToCarousel,
                         },
                         new GridContainer // used for max width implementation
                         {
@@ -235,7 +232,7 @@ namespace osu.Game.Screens.Select
                                         Origin = Anchor.BottomLeft,
                                         Anchor = Anchor.BottomLeft,
                                         RelativeSizeAxes = Axes.Both,
-                                        Padding = new MarginPadding { Top = left_area_padding },
+                                        Padding = new MarginPadding { Top = 5 },
                                         Children = new Drawable[]
                                         {
                                             new LeftSideInteractionContainer(() => Carousel.ScrollToSelected())
@@ -254,11 +251,47 @@ namespace osu.Game.Screens.Select
                                             },
                                             new Container
                                             {
+                                                RelativeSizeAxes = Axes.X,
+                                                Height = 90,
+                                                Padding = new MarginPadding(10)
+                                                {
+                                                    Left = left_area_padding,
+                                                    Right = left_area_padding * 2 + 5,
+                                                },
+                                                Y = WEDGE_HEIGHT,
+                                                Children = new Drawable[]
+                                                {
+                                                    new Container
+                                                    {
+                                                        RelativeSizeAxes = Axes.Both,
+                                                        Masking = true,
+                                                        CornerRadius = 10,
+                                                        Children = new Drawable[]
+                                                        {
+                                                            new Box
+                                                            {
+                                                                RelativeSizeAxes = Axes.Both,
+                                                                Colour = Colour4.Black.Opacity(0.3f),
+                                                            },
+                                                            advancedStats = new AdvancedStats(2)
+                                                            {
+                                                                RelativeSizeAxes = Axes.X,
+                                                                AutoSizeAxes = Axes.Y,
+                                                                Anchor = Anchor.Centre,
+                                                                Origin = Anchor.Centre,
+                                                                Padding = new MarginPadding(10),
+                                                            },
+                                                        }
+                                                    },
+                                                }
+                                            },
+                                            new Container
+                                            {
                                                 RelativeSizeAxes = Axes.Both,
                                                 Padding = new MarginPadding
                                                 {
-                                                    Bottom = Footer.HEIGHT,
-                                                    Top = WEDGE_HEIGHT,
+                                                    Bottom = Select.Footer.HEIGHT,
+                                                    Top = WEDGE_HEIGHT + 70,
                                                     Left = left_area_padding,
                                                     Right = left_area_padding * 2,
                                                 },
@@ -275,13 +308,44 @@ namespace osu.Game.Screens.Select
                         }
                     }
                 },
-                new SkinComponentsContainer(new SkinComponentsContainerLookup(SkinComponentsContainerLookup.TargetArea.SongSelect))
+                new SkinnableContainer(new GlobalSkinnableContainerLookup(GlobalSkinnableContainers.SongSelect))
                 {
                     RelativeSizeAxes = Axes.Both,
                 },
+                modSpeedHotkeyHandler = new ModSpeedHotkeyHandler(),
             });
 
-            if (ShowFooter)
+            // Important to load this after the filter control is loaded (so we have initial filter criteria prepared).
+            LoadComponentAsync(Carousel = new BeatmapCarousel(FilterControl.CreateCriteria())
+            {
+                AllowSelection = false, // delay any selection until our bindables are ready to make a good choice.
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight,
+                RelativeSizeAxes = Axes.Both,
+                BleedTop = FilterControl.HEIGHT,
+                BleedBottom = Select.Footer.HEIGHT,
+                SelectionChanged = updateSelectedBeatmap,
+                BeatmapSetsChanged = carouselBeatmapsLoaded,
+                FilterApplied = () => Scheduler.AddOnce(updateVisibleBeatmapCount),
+                GetRecommendedBeatmap = s => recommender?.GetRecommendedBeatmap(s),
+            }, c => carouselContainer.Child = c);
+
+            FilterControl.FilterChanged = criteria =>
+            {
+                // If a filter operation is applied when we're in a state that doesn't allow selection,
+                // we might end up in an unexpected state. This is because currently carousel panels are in charge
+                // of updating the global selection (which is very hard to deal with).
+                //
+                // For now let's just avoid filtering when selection isn't allowed locally.
+                // This should be nuked from existence when we get around to fixing the complexity of song select <-> beatmap carousel.
+                // The debounce part of BeatmapCarousel's filtering should probably also be removed and handled locally.
+                if (Carousel.AllowSelection)
+                    Carousel.Filter(criteria);
+                else
+                    pendingFilterApplication = true;
+            };
+
+            if (ShowSongSelectFooter)
             {
                 AddRangeInternal(new Drawable[]
                 {
@@ -290,13 +354,13 @@ namespace osu.Game.Screens.Select
                         Anchor = Anchor.BottomLeft,
                         Origin = Anchor.BottomLeft,
                         RelativeSizeAxes = Axes.Both,
-                        Padding = new MarginPadding { Bottom = Footer.HEIGHT },
+                        Padding = new MarginPadding { Bottom = Select.Footer.HEIGHT },
                         Children = new Drawable[]
                         {
                             BeatmapOptions = new BeatmapOptionsOverlay(),
                         }
                     },
-                    Footer = new Footer()
+                    SongSelectFooter = new Footer()
                 });
             }
 
@@ -304,10 +368,10 @@ namespace osu.Game.Screens.Select
             // therein it will be registered at the `OsuGame` level to properly function as a blocking overlay.
             LoadComponent(ModSelect = CreateModSelectOverlay());
 
-            if (Footer != null)
+            if (SongSelectFooter != null)
             {
-                foreach (var (button, overlay) in CreateFooterButtons())
-                    Footer.AddButton(button, overlay);
+                foreach (var (button, overlay) in CreateSongSelectFooterButtons())
+                    SongSelectFooter.AddButton(button, overlay);
 
                 BeatmapOptions.AddButton(@"Manage", @"collections", FontAwesome.Solid.Book, colours.Green, () => manageCollectionsDialog?.Show());
                 BeatmapOptions.AddButton(@"Delete", @"all difficulties", FontAwesome.Solid.Trash, colours.Pink, () => DeleteBeatmap(Beatmap.Value.BeatmapSetInfo));
@@ -341,7 +405,7 @@ namespace osu.Game.Screens.Select
         /// Creates the buttons to be displayed in the footer.
         /// </summary>
         /// <returns>A set of <see cref="FooterButton"/> and an optional <see cref="OverlayContainer"/> which the button opens when pressed.</returns>
-        protected virtual IEnumerable<(FooterButton, OverlayContainer?)> CreateFooterButtons() => new (FooterButton, OverlayContainer?)[]
+        protected virtual IEnumerable<(FooterButton, OverlayContainer?)> CreateSongSelectFooterButtons() => new (FooterButton, OverlayContainer?)[]
         {
             (new FooterButtonMods { Current = Mods }, ModSelect),
             (new FooterButtonRandom
@@ -353,14 +417,6 @@ namespace osu.Game.Screens.Select
         };
 
         protected virtual ModSelectOverlay CreateModSelectOverlay() => new SoloModSelectOverlay();
-
-        protected virtual void ApplyFilterToCarousel(FilterCriteria criteria)
-        {
-            // if not the current screen, we want to get carousel in a good presentation state before displaying (resume or enter).
-            bool shouldDebounce = this.IsCurrentScreen();
-
-            Carousel.Filter(criteria, shouldDebounce);
-        }
 
         private DependencyContainer dependencies = null!;
 
@@ -385,8 +441,10 @@ namespace osu.Game.Screens.Select
             if (!AllowEditing)
                 throw new InvalidOperationException($"Attempted to edit when {nameof(AllowEditing)} is disabled");
 
-            Beatmap.Value = beatmaps.GetWorkingBeatmap(beatmapInfo ?? beatmapInfoNoDebounce);
-            this.Push(new EditorLoader());
+            // Forced refetch is important here to guarantee correct invalidation across all difficulties.
+            Beatmap.Value = beatmaps.GetWorkingBeatmap(beatmapInfo ?? beatmapInfoNoDebounce, true);
+
+            FinaliseSelection(customStartAction: () => this.Push(new EditorLoader()));
         }
 
         /// <summary>
@@ -457,6 +515,13 @@ namespace osu.Game.Screens.Select
         {
             var beatmap = e?.NewValue ?? Beatmap.Value;
             if (beatmap is DummyWorkingBeatmap || !this.IsCurrentScreen()) return;
+
+            if (beatmap.BeatmapSetInfo.Protected && e != null)
+            {
+                Logger.Log($"Denying working beatmap switch to protected beatmap {beatmap}");
+                Beatmap.Value = e.OldValue;
+                return;
+            }
 
             Logger.Log($"Song select working beatmap updated to {beatmap}");
 
@@ -545,12 +610,17 @@ namespace osu.Game.Screens.Select
                 beatmapInfoPrevious = beatmap;
             }
 
+            // we can't run this in the debounced run due to the selected mods bindable not being debounced,
+            // since mods could be updated to the new ruleset instances while the decoupled bindable is held behind,
+            // therefore resulting in performing difficulty calculation with invalid states.
+            advancedStats.Ruleset.Value = ruleset;
+
             void run()
             {
                 // clear pending task immediately to track any potential nested debounce operation.
                 selectionChangedDebounce = null;
 
-                Logger.Log($"Song select updating selection with beatmap:{beatmap?.ID.ToString() ?? "null"} ruleset:{ruleset?.ShortName ?? "null"}");
+                Logger.Log($"Song select updating selection with beatmap: {beatmap} {beatmap?.ID.ToString() ?? "null"} ruleset:{ruleset?.ShortName ?? "null"}");
 
                 if (transferRulesetValue())
                 {
@@ -602,7 +672,10 @@ namespace osu.Game.Screens.Select
         {
             base.LogoArriving(logo, resuming);
 
-            Vector2 position = new Vector2(0.95f, 0.96f);
+            logo.RelativePositionAxes = Axes.None;
+            logo.ChangeAnchor(Anchor.BottomRight);
+
+            Vector2 position = new Vector2(-76, -36);
 
             if (logo.Alpha > 0.8f)
             {
@@ -620,7 +693,8 @@ namespace osu.Game.Screens.Select
 
             logo.Action = () =>
             {
-                FinaliseSelection();
+                if (this.IsCurrentScreen())
+                    FinaliseSelection();
                 return false;
             };
         }
@@ -641,6 +715,12 @@ namespace osu.Game.Screens.Select
             ModSelect.SelectedMods.BindTo(selectedMods);
 
             Carousel.AllowSelection = true;
+
+            if (pendingFilterApplication)
+            {
+                Carousel.Filter(FilterControl.CreateCriteria());
+                pendingFilterApplication = false;
+            }
 
             BeatmapDetails.Refresh();
 
@@ -795,7 +875,9 @@ namespace osu.Game.Screens.Select
 
             BeatmapDetails.Beatmap = beatmap;
 
-            ModSelect.Beatmap = beatmap;
+            ModSelect.Beatmap.Value = beatmap;
+
+            advancedStats.BeatmapInfo = beatmap.BeatmapInfo;
 
             bool beatmapSelected = beatmap is not DummyWorkingBeatmap;
 
@@ -843,7 +925,7 @@ namespace osu.Game.Screens.Select
         private void carouselBeatmapsLoaded()
         {
             bindBindables();
-            updateVisibleBeatmapCount();
+            Scheduler.AddOnce(updateVisibleBeatmapCount);
 
             Carousel.AllowSelection = true;
 
@@ -877,7 +959,8 @@ namespace osu.Game.Screens.Select
         {
             // Intentionally not localised until we have proper support for this (see https://github.com/ppy/osu-framework/pull/4918
             // but also in this case we want support for formatting a number within a string).
-            FilterControl.InformationalText = Carousel.CountDisplayed != 1 ? $"{Carousel.CountDisplayed:#,0} matches" : $"{Carousel.CountDisplayed:#,0} match";
+            int carouselCountDisplayed = Carousel.CountDisplayed;
+            FilterControl.InformationalText = carouselCountDisplayed != 1 ? $"{carouselCountDisplayed:#,0} matches" : $"{carouselCountDisplayed:#,0} match";
         }
 
         private bool boundLocalBindables;
@@ -925,7 +1008,8 @@ namespace osu.Game.Screens.Select
 
             // if we have a pending filter operation, we want to run it now.
             // it could change selection (ie. if the ruleset has been changed).
-            Carousel.FlushPendingFilterOperations();
+            if (IsLoaded)
+                Carousel.FlushPendingFilterOperations();
 
             return true;
         }
@@ -954,10 +1038,19 @@ namespace osu.Game.Screens.Select
 
         public virtual bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
         {
+            if (!this.IsCurrentScreen()) return false;
+
+            switch (e.Action)
+            {
+                case GlobalAction.IncreaseModSpeed:
+                    return modSpeedHotkeyHandler.ChangeSpeed(0.05, ModUtils.FlattenMods(game.AvailableMods.Value.SelectMany(kv => kv.Value)));
+
+                case GlobalAction.DecreaseModSpeed:
+                    return modSpeedHotkeyHandler.ChangeSpeed(-0.05, ModUtils.FlattenMods(game.AvailableMods.Value.SelectMany(kv => kv.Value)));
+            }
+
             if (e.Repeat)
                 return false;
-
-            if (!this.IsCurrentScreen()) return false;
 
             switch (e.Action)
             {
@@ -1006,7 +1099,7 @@ namespace osu.Game.Screens.Select
                 Anchor = Anchor.Centre;
                 Origin = Anchor.Centre;
                 Width = panel_overflow; // avoid horizontal masking so the panels don't clip when screen stack is pushed.
-                InternalChild = Content = new Container
+                InternalChild = Content = new OsuContextMenuContainer
                 {
                     RelativeSizeAxes = Axes.Both,
                     Anchor = Anchor.Centre,

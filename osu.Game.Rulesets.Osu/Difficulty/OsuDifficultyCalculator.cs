@@ -119,7 +119,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
         protected override Skill[] CreateSkills(IBeatmap beatmap, Mod[] mods, double clockRate)
         {
-            return new Skill[]
+            var skills = new List<Skill>
             {
                 new Aim(mods),
                 new RawAim(mods),
@@ -129,6 +129,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 new Stamina(mods),
                 new RhythmComplexity(mods)
             };
+
+            if (mods.Any(h => h is OsuModFlashlight))
+                skills.Add(new Flashlight(mods));
+
+            return skills.ToArray();
         }
 
         protected override Mod[] DifficultyAdjustmentMods => new Mod[]

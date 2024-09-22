@@ -4,11 +4,9 @@
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
 using osu.Framework.Graphics.UserInterface;
-using osu.Framework.Input.Events;
 using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Overlays;
@@ -48,12 +46,12 @@ namespace osu.Game.Screens.Edit.Components.Menus
                     Padding = new MarginPadding(8),
                     Children = new Drawable[]
                     {
-                        new Sprite
+                        new SpriteIcon
                         {
                             Size = new Vector2(26),
                             Anchor = Anchor.CentreLeft,
                             Origin = Anchor.CentreLeft,
-                            Texture = textures.Get("Icons/Hexacons/editor"),
+                            Icon = OsuIcon.EditCircle,
                         },
                         text = new TextFlowContainer
                         {
@@ -73,7 +71,10 @@ namespace osu.Game.Screens.Edit.Components.Menus
             });
         }
 
-        protected override Framework.Graphics.UserInterface.Menu CreateSubMenu() => new SubMenu();
+        protected override Framework.Graphics.UserInterface.Menu CreateSubMenu() => new SubMenu
+        {
+            MaxHeight = MaxHeight,
+        };
 
         protected override DrawableMenuItem CreateDrawableMenuItem(MenuItem item) => new DrawableEditorBarMenuItem(item);
 
@@ -145,13 +146,16 @@ namespace osu.Game.Screens.Edit.Components.Menus
                 BackgroundColour = colourProvider.Background2;
             }
 
-            protected override Framework.Graphics.UserInterface.Menu CreateSubMenu() => new SubMenu();
+            protected override Framework.Graphics.UserInterface.Menu CreateSubMenu() => new SubMenu
+            {
+                MaxHeight = MaxHeight,
+            };
 
             protected override DrawableMenuItem CreateDrawableMenuItem(MenuItem item)
             {
                 switch (item)
                 {
-                    case EditorMenuItemSpacer spacer:
+                    case OsuMenuItemSpacer spacer:
                         return new DrawableSpacer(spacer);
 
                     case StatefulMenuItem stateful:
@@ -194,29 +198,6 @@ namespace osu.Game.Screens.Edit.Components.Menus
 
                     Foreground.Padding = new MarginPadding { Vertical = 2 };
                 }
-            }
-
-            private partial class DrawableSpacer : DrawableOsuMenuItem
-            {
-                public DrawableSpacer(MenuItem item)
-                    : base(item)
-                {
-                    Scale = new Vector2(1, 0.6f);
-
-                    AddInternal(new Box
-                    {
-                        Anchor = Anchor.Centre,
-                        Origin = Anchor.Centre,
-                        Colour = BackgroundColourHover,
-                        RelativeSizeAxes = Axes.X,
-                        Height = 2f,
-                        Width = 0.8f,
-                    });
-                }
-
-                protected override bool OnHover(HoverEvent e) => true;
-
-                protected override bool OnClick(ClickEvent e) => true;
             }
         }
     }

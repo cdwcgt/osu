@@ -13,7 +13,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     /// </summary>
     public class Speed : OsuStrainSkill
     {
-        protected virtual double SkillMultiplier => 2600;
+        protected virtual double SkillMultiplier => 2.6;
         protected virtual double StrainDecayBase => 0.1;
 
         private double currentStrain;
@@ -36,7 +36,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             double tapValue = 30 / Math.Pow(ms - 20, 2) + 2 / ms;
             double streamValue = 12.5 / Math.Pow(ms - 20, 2) + 0.25 / ms + 0.005;
 
-            currentStrain += ((1 - osuCurrent.Flow) * tapValue + osuCurrent.Flow * streamValue) * SkillMultiplier;
+            currentStrain += ((1 - osuCurrent.Flow) * tapValue + osuCurrent.Flow * streamValue) * 1000 * SkillMultiplier;
 
             return currentStrain;
         }

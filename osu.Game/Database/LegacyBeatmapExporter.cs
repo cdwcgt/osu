@@ -8,6 +8,7 @@ using System.Text;
 using osu.Framework.Platform;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Formats;
+using osu.Game.Beatmaps.Timing;
 using osu.Game.IO;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Types;
@@ -59,8 +60,12 @@ namespace osu.Game.Database
 
             // Convert beatmap elements to be compatible with legacy format
             // So we truncate time and position values to integers, and convert paths with multiple segments to bezier curves
+
             foreach (var controlPoint in playableBeatmap.ControlPointInfo.AllControlPoints)
                 controlPoint.Time = Math.Floor(controlPoint.Time);
+
+            for (int i = 0; i < playableBeatmap.Breaks.Count; i++)
+                playableBeatmap.Breaks[i] = new BreakPeriod(Math.Floor(playableBeatmap.Breaks[i].StartTime), Math.Floor(playableBeatmap.Breaks[i].EndTime));
 
             foreach (var hitObject in playableBeatmap.HitObjects)
             {
@@ -78,14 +83,15 @@ namespace osu.Game.Database
                 // wherein the last control point of an otherwise-single-segment slider path has a different type than previous,
                 // which would lead to sliders being mangled when exported back to stable.
                 // normally, that would be handled by the `BezierConverter.ConvertToModernBezier()` call below,
-                // which outputs a slider path containing only Bezier control points,
+                // which outputs a slider path containing only BEZIER control points,
                 // but a non-inherited last control point is (rightly) not considered to be starting a new segment,
                 // therefore it would fail to clear the `CountSegments() <= 1` check.
-                // by clearing explicitly we both fix the issue and avoid unnecessary conversions to Bezier.
+                // by clearing explicitly we both fix the issue and avoid unnecessary conversions to BEZIER.
                 if (hasPath.Path.ControlPoints.Count > 1)
                     hasPath.Path.ControlPoints[^1].Type = null;
 
-                if (BezierConverter.CountSegments(hasPath.Path.ControlPoints) <= 1) continue;
+                if (BezierConverter.CountSegments(hasPath.Path.ControlPoints) <= 1
+                    && hasPath.Path.ControlPoints[0].Type!.Value.Degree == null) continue;
 
                 var newControlPoints = BezierConverter.ConvertToModernBezier(hasPath.Path.ControlPoints);
 

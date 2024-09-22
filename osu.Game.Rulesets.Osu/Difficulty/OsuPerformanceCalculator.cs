@@ -49,13 +49,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             double speedWeight = calculateSpeedWeight(missWeight, normalisedHitError, scoreMaxCombo, osuAttributes.MaxCombo);
             double accuracyWeight = calculateAccuracyWeight(osuAttributes.HitCircleCount, visualMods);
 
-            double aimValue = calculateSkillValue(osuAttributes.AimStrain) * aimWeight;
-            double jumpAimValue = calculateSkillValue(osuAttributes.JumpAimStrain) * aimWeight;
-            double flowAimValue = calculateSkillValue(osuAttributes.FlowAimStrain) * aimWeight;
-            double precisionValue = calculateSkillValue(osuAttributes.PrecisionStrain) * aimWeight;
-            double speedValue = calculateSkillValue(osuAttributes.SpeedStrain) * speedWeight;
-            double staminaValue = calculateSkillValue(osuAttributes.StaminaStrain) * speedWeight;
-            double accuracyValue = calculateAccuracyValue(normalisedHitError) * osuAttributes.AccuracyStrain * accuracyWeight;
+            double aimValue = calculateSkillValue(osuAttributes.AimDifficulty) * aimWeight;
+            double jumpAimValue = calculateSkillValue(osuAttributes.JumpAimDifficulty) * aimWeight;
+            double flowAimValue = calculateSkillValue(osuAttributes.FlowAimDifficulty) * aimWeight;
+            double precisionValue = calculateSkillValue(osuAttributes.PrecisionDifficulty) * aimWeight;
+            double speedValue = calculateSkillValue(osuAttributes.SpeedDifficulty) * speedWeight;
+            double staminaValue = calculateSkillValue(osuAttributes.StaminaDifficulty) * speedWeight;
+            double accuracyValue = calculateAccuracyValue(normalisedHitError) * osuAttributes.AccuracyDifficulty * accuracyWeight;
 
             double totalValue = Math.Pow(
                 Math.Pow(aimValue, 1.1) +

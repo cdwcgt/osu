@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using osu.Framework;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -46,11 +47,12 @@ namespace osu.Game.Overlays.SkinEditor
 
         protected override bool StartHidden => true;
 
-        private Drawable targetScreen = null!;
+        private Drawable? targetScreen;
 
         private OsuTextFlowContainer headerText = null!;
 
         private Bindable<Skin> currentSkin = null!;
+        private Bindable<string> clipboardContent = null!;
 
         [Resolved]
         private OsuGame? game { get; set; }
@@ -65,15 +67,12 @@ namespace osu.Game.Overlays.SkinEditor
         private RealmAccess realm { get; set; } = null!;
 
         [Resolved]
-        private EditorClipboard clipboard { get; set; } = null!;
-
-        [Resolved]
         private SkinEditorOverlay? skinEditorOverlay { get; set; }
 
         [Cached]
         private readonly OverlayColourProvider colourProvider = new OverlayColourProvider(OverlayColourScheme.Blue);
 
-        private readonly Bindable<SkinComponentsContainerLookup?> selectedTarget = new Bindable<SkinComponentsContainerLookup?>();
+        private readonly Bindable<GlobalSkinnableContainerLookup?> selectedTarget = new Bindable<GlobalSkinnableContainerLookup?>();
 
         private bool hasBegunMutating;
 
@@ -112,7 +111,7 @@ namespace osu.Game.Overlays.SkinEditor
         }
 
         [BackgroundDependencyLoader]
-        private void load()
+        private void load(EditorClipboard clipboard)
         {
             RelativeSizeAxes = Axes.Both;
 
@@ -150,21 +149,23 @@ namespace osu.Game.Overlays.SkinEditor
                                         {
                                             new MenuItem(CommonStrings.MenuBarFile)
                                             {
-                                                Items = new[]
+                                                Items = new OsuMenuItem[]
                                                 {
                                                     new EditorMenuItem(Web.CommonStrings.ButtonsSave, MenuItemType.Standard, () => Save()),
+                                                    new EditorMenuItem(CommonStrings.Export, MenuItemType.Standard, () => skins.ExportCurrentSkin()) { Action = { Disabled = !RuntimeInfo.IsDesktop } },
+                                                    new OsuMenuItemSpacer(),
                                                     new EditorMenuItem(CommonStrings.RevertToDefault, MenuItemType.Destructive, () => dialogOverlay?.Push(new RevertConfirmDialog(revert))),
-                                                    new EditorMenuItemSpacer(),
+                                                    new OsuMenuItemSpacer(),
                                                     new EditorMenuItem(CommonStrings.Exit, MenuItemType.Standard, () => skinEditorOverlay?.Hide()),
                                                 },
                                             },
                                             new MenuItem(CommonStrings.MenuBarEdit)
                                             {
-                                                Items = new[]
+                                                Items = new OsuMenuItem[]
                                                 {
                                                     undoMenuItem = new EditorMenuItem(CommonStrings.Undo, MenuItemType.Standard, Undo),
                                                     redoMenuItem = new EditorMenuItem(CommonStrings.Redo, MenuItemType.Standard, Redo),
-                                                    new EditorMenuItemSpacer(),
+                                                    new OsuMenuItemSpacer(),
                                                     cutMenuItem = new EditorMenuItem(CommonStrings.Cut, MenuItemType.Standard, Cut),
                                                     copyMenuItem = new EditorMenuItem(CommonStrings.Copy, MenuItemType.Standard, Copy),
                                                     pasteMenuItem = new EditorMenuItem(CommonStrings.Paste, MenuItemType.Standard, Paste),
@@ -221,6 +222,8 @@ namespace osu.Game.Overlays.SkinEditor
                     }
                 }
             };
+
+            clipboardContent = clipboard.Content.GetBoundCopy();
         }
 
         protected override void LoadComplete()
@@ -240,7 +243,7 @@ namespace osu.Game.Overlays.SkinEditor
                 canCopy.Value = canCut.Value = SelectedComponents.Any();
             }, true);
 
-            clipboard.Content.BindValueChanged(content => canPaste.Value = !string.IsNullOrEmpty(content.NewValue), true);
+            clipboardContent.BindValueChanged(content => canPaste.Value = !string.IsNullOrEmpty(content.NewValue), true);
 
             Show();
 
@@ -252,8 +255,11 @@ namespace osu.Game.Overlays.SkinEditor
             // schedule ensures this only happens when the skin editor is visible.
             // also avoid some weird endless recursion / bindable feedback loop (something to do with tracking skins across three different bindable types).
             // probably something which will be factored out in a future database refactor so not too concerning for now.
-            currentSkin.BindValueChanged(_ =>
+            currentSkin.BindValueChanged(val =>
             {
+                if (val.OldValue != null && hasBegunMutating)
+                    save(val.OldValue);
+
                 hasBegunMutating = false;
                 Scheduler.AddOnce(skinChanged);
             }, true);
@@ -324,7 +330,7 @@ namespace osu.Game.Overlays.SkinEditor
             }
         }
 
-        private void targetChanged(ValueChangedEvent<SkinComponentsContainerLookup?> target)
+        private void targetChanged(ValueChangedEvent<GlobalSkinnableContainerLookup?> target)
         {
             foreach (var toolbox in componentsSidebar.OfType<SkinComponentToolbox>())
                 toolbox.Expire();
@@ -354,7 +360,7 @@ namespace osu.Game.Overlays.SkinEditor
                 {
                     Children = new Drawable[]
                     {
-                        new SettingsDropdown<SkinComponentsContainerLookup?>
+                        new SettingsDropdown<GlobalSkinnableContainerLookup?>
                         {
                             Items = availableTargets.Select(t => t.Lookup).Distinct(),
                             Current = selectedTarget,
@@ -406,8 +412,18 @@ namespace osu.Game.Overlays.SkinEditor
                 cp.Colour = colours.Yellow;
             });
 
+            changeHandler?.Dispose();
+
             skins.EnsureMutableSkin();
+
+            var targetContainer = getTarget(selectedTarget.Value);
+
+            if (targetContainer != null)
+                changeHandler = new SkinEditorChangeHandler(targetContainer);
             hasBegunMutating = true;
+
+            // Reload sidebar components.
+            selectedTarget.TriggerChange();
         }
 
         /// <summary>
@@ -444,6 +460,7 @@ namespace osu.Game.Overlays.SkinEditor
             }
 
             SelectedComponents.Add(component);
+            SkinSelectionHandler.ApplyClosestAnchorOrigin(drawableComponent);
             return true;
         }
 
@@ -455,18 +472,18 @@ namespace osu.Game.Overlays.SkinEditor
                 settingsSidebar.Add(new SkinSettingsToolbox(component));
         }
 
-        private IEnumerable<SkinComponentsContainer> availableTargets => targetScreen.ChildrenOfType<SkinComponentsContainer>();
+        private IEnumerable<SkinnableContainer> availableTargets => targetScreen.ChildrenOfType<SkinnableContainer>();
 
-        private SkinComponentsContainer? getFirstTarget() => availableTargets.FirstOrDefault();
+        private SkinnableContainer? getFirstTarget() => availableTargets.FirstOrDefault();
 
-        private SkinComponentsContainer? getTarget(SkinComponentsContainerLookup? target)
+        private SkinnableContainer? getTarget(GlobalSkinnableContainerLookup? target)
         {
             return availableTargets.FirstOrDefault(c => c.Lookup.Equals(target));
         }
 
         private void revert()
         {
-            SkinComponentsContainer[] targetContainers = availableTargets.ToArray();
+            SkinnableContainer[] targetContainers = availableTargets.ToArray();
 
             foreach (var t in targetContainers)
             {
@@ -485,7 +502,7 @@ namespace osu.Game.Overlays.SkinEditor
 
         protected void Copy()
         {
-            clipboard.Content.Value = JsonConvert.SerializeObject(SelectedComponents.Cast<Drawable>().Select(s => s.CreateSerialisedInfo()).ToArray());
+            clipboardContent.Value = JsonConvert.SerializeObject(SelectedComponents.Cast<Drawable>().Select(s => s.CreateSerialisedInfo()).ToArray());
         }
 
         protected void Clone()
@@ -500,9 +517,12 @@ namespace osu.Game.Overlays.SkinEditor
 
         protected void Paste()
         {
+            if (!canPaste.Value)
+                return;
+
             changeHandler?.BeginChange();
 
-            var drawableInfo = JsonConvert.DeserializeObject<SerialisedDrawableInfo[]>(clipboard.Content.Value);
+            var drawableInfo = JsonConvert.DeserializeObject<SerialisedDrawableInfo[]>(clipboardContent.Value);
 
             if (drawableInfo == null)
                 return;
@@ -523,19 +543,29 @@ namespace osu.Game.Overlays.SkinEditor
 
         protected void Redo() => changeHandler?.RestoreState(1);
 
-        public void Save(bool userTriggered = true)
+        void IEditorChangeHandler.RestoreState(int direction) => changeHandler?.RestoreState(direction);
+
+        public void Save(bool userTriggered = true) => save(currentSkin.Value, userTriggered);
+
+        private void save(Skin skin, bool userTriggered = true)
         {
             if (!hasBegunMutating)
                 return;
 
-            SkinComponentsContainer[] targetContainers = availableTargets.ToArray();
+            if (targetScreen?.IsLoaded != true)
+                return;
+
+            SkinnableContainer[] targetContainers = availableTargets.ToArray();
+
+            if (!targetContainers.All(c => c.ComponentsLoaded))
+                return;
 
             foreach (var t in targetContainers)
-                currentSkin.Value.UpdateDrawableTarget(t);
+                skin.UpdateDrawableTarget(t);
 
             // In the case the save was user triggered, always show the save message to make them feel confident.
-            if (skins.Save(skins.CurrentSkin.Value) || userTriggered)
-                onScreenDisplay?.Display(new SkinEditorToast(ToastStrings.SkinSaved, currentSkin.Value.SkinInfo.ToString() ?? "Unknown"));
+            if (skins.Save(skin) || userTriggered)
+                onScreenDisplay?.Display(new SkinEditorToast(ToastStrings.SkinSaved, skin.SkinInfo.ToString() ?? "Unknown"));
         }
 
         protected override bool OnHover(HoverEvent e) => true;
@@ -570,7 +600,7 @@ namespace osu.Game.Overlays.SkinEditor
 
         public void BringSelectionToFront()
         {
-            if (getTarget(selectedTarget.Value) is not SkinComponentsContainer target)
+            if (getTarget(selectedTarget.Value) is not SkinnableContainer target)
                 return;
 
             changeHandler?.BeginChange();
@@ -594,7 +624,7 @@ namespace osu.Game.Overlays.SkinEditor
 
         public void SendSelectionToBack()
         {
-            if (getTarget(selectedTarget.Value) is not SkinComponentsContainer target)
+            if (getTarget(selectedTarget.Value) is not SkinnableContainer target)
                 return;
 
             changeHandler?.BeginChange();
@@ -642,13 +672,11 @@ namespace osu.Game.Overlays.SkinEditor
                 {
                     SpriteName = { Value = file.Name },
                     Origin = Anchor.Centre,
-                    Position = skinnableTarget.ToLocalSpace(GetContainingInputManager().CurrentState.Mouse.Position),
+                    Position = skinnableTarget.ToLocalSpace(GetContainingInputManager()!.CurrentState.Mouse.Position),
                 };
 
                 SelectedComponents.Clear();
                 placeComponent(sprite, false);
-
-                SkinSelectionHandler.ApplyClosestAnchor(sprite);
             });
 
             return Task.CompletedTask;
