@@ -8,13 +8,15 @@ using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Difficulty.Skills;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
+using osu.Game.Rulesets.Osu.Mods;
 using osu.Game.Rulesets.Osu.Objects;
 
 namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 {
     public class RhythmComplexity : Skill
     {
-        private int circleCount;
+        private bool isSliderAcc;
+        private int accuracyObjectCount;
         private int noteIndex;
         private bool isPreviousOffbeat;
         private readonly List<int> previousDoubles = new List<int>();
@@ -22,16 +24,17 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         public RhythmComplexity(Mod[] mods) : base(mods)
         {
+            isSliderAcc = mods.OfType<OsuModClassic>().All(m => !m.NoSliderHeadAccuracy.Value);
         }
 
         public override void Process(DifficultyHitObject current)
         {
             var osuCurrent = (OsuDifficultyHitObject)current;
 
-            if (current.BaseObject is HitCircle)
+            if (current.BaseObject is HitCircle || (isSliderAcc && current.BaseObject is Slider))
             {
                 difficultyTotal += calculateRhythmBonus(osuCurrent);
-                circleCount++;
+                accuracyObjectCount++;
             }
             else
                 isPreviousOffbeat = false;
@@ -41,8 +44,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         public override double DifficultyValue()
         {
-            double lengthRequirement = Math.Tanh(circleCount / 50.0);
-            return 1 + difficultyTotal / circleCount * lengthRequirement;
+            if (accuracyObjectCount == 0)
+                return 1;
+
+            double lengthRequirement = Math.Tanh(accuracyObjectCount / 50.0);
+            return 1 + difficultyTotal / accuracyObjectCount * lengthRequirement;
         }
 
         private double calculateRhythmBonus(OsuDifficultyHitObject current)
