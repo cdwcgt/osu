@@ -43,11 +43,15 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (score.Mods.Any(m => m is OsuModSpunOut) && totalHits > 0)
                 multiplier *= 1.0 - Math.Pow((double)osuAttributes.SpinnerCount / totalHits, 0.85);
 
-            double normalisedHitError = calculateNormalisedHitError(osuAttributes.OverallDifficulty, totalHits, osuAttributes.HitCircleCount, countGreat);
+            int accuracyHitObjectsCount = osuAttributes.HitCircleCount;
+            if (score.Mods.OfType<OsuModClassic>().All(m => !m.NoSliderHeadAccuracy.Value))
+                accuracyHitObjectsCount += osuAttributes.SliderCount;
+
+            double normalisedHitError = calculateNormalisedHitError(osuAttributes.OverallDifficulty, totalHits, accuracyHitObjectsCount, countGreat);
             double missWeight = calculateMissWeight(countMiss);
             double aimWeight = calculateAimWeight(missWeight, normalisedHitError, scoreMaxCombo, osuAttributes.MaxCombo, totalHits, visualMods);
             double speedWeight = calculateSpeedWeight(missWeight, normalisedHitError, scoreMaxCombo, osuAttributes.MaxCombo);
-            double accuracyWeight = calculateAccuracyWeight(osuAttributes.HitCircleCount, visualMods);
+            double accuracyWeight = calculateAccuracyWeight(accuracyHitObjectsCount, visualMods);
 
             double aimValue = calculateSkillValue(osuAttributes.AimDifficulty) * aimWeight;
             double jumpAimValue = calculateSkillValue(osuAttributes.JumpAimDifficulty) * aimWeight;
@@ -81,14 +85,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
         private static double calculateSkillValue(double skillDiff) => Math.Pow(skillDiff, 3) * 3.9;
 
-        private static double calculateNormalisedHitError(double od, int objectCount, int circleCount, int count300)
+        private static double calculateNormalisedHitError(double od, int objectCount, int accuracyObjectCount, int count300)
         {
-            int circle300Count = count300 - (objectCount - circleCount);
-            if (circle300Count <= 0)
+            int relevant300Count = count300 - (objectCount - accuracyObjectCount);
+            if (relevant300Count <= 0)
                 return double.NaN;
 
             // Probability of landing a 300 where the player has a 20% chance of getting at least the given amount of 300s.
-            double probability = Beta.InvCDF(circle300Count, 1 + circleCount - circle300Count, 0.2);
+            double probability = Beta.InvCDF(relevant300Count, 1 + accuracyObjectCount - relevant300Count, 0.2);
 
             probability += (1 - probability) / 2; // Add the left tail of the normal distribution.
             double zValue = Normal.InvCDF(0, 1, probability); // The value on the x-axis for the given probability.
@@ -116,9 +120,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             return accuracyWeight * comboWeight * missWeight;
         }
 
-        private static double calculateAccuracyWeight(int circleCount, Mod[] visualMods)
+        private static double calculateAccuracyWeight(int accuracyObjectCount, Mod[] visualMods)
         {
-            double lengthWeight = Math.Tanh((circleCount + 400) / 1050.0) * 1.2;
+            double lengthWeight = Math.Tanh((accuracyObjectCount + 400) / 1050.0) * 1.2;
 
             double modWeight = 1;
             if (visualMods.Any(m => m is OsuModHidden))

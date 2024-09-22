@@ -87,6 +87,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 OverallDifficulty = (80 - hitWindows.WindowFor(HitResult.Great) / clockRate) / 6,
                 MaxCombo = maxCombo,
                 HitCircleCount = hitCirclesCount,
+                SliderCount = sliderCount,
                 SpinnerCount = spinnerCount,
             };
 
