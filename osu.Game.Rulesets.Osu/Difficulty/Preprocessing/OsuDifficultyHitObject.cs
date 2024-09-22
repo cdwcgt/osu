@@ -20,7 +20,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
         /// </summary>
         public const int NORMALISED_RADIUS = 52; // Change radius to 50 to make 100 the diameter. Easier for mental maths.
 
-        private const int min_delta_time = 25;
+        private const int min_delta_time = 50; // The DeltaTime cap shouldn't ever be on 50ms
 
         protected new OsuHitObject BaseObject => (OsuHitObject)base.BaseObject;
 
@@ -106,25 +106,22 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
 
             setDistances(clockRate);
 
-            // Capped to 25ms to prevent difficulty calculation breaking from simultaneous objects.
-            StrainTime = Math.Max(DeltaTime, min_delta_time);
-
             Preempt = ((OsuHitObject)hitObject).TimePreempt / clockRate;
 
             // Every strain interval is hard capped at the equivalent of 375 BPM streaming speed as a safety measure
-            StrainTime = Math.Max(50, DeltaTime);
+            StrainTime = Math.Max(min_delta_time, DeltaTime);
 
             if (lastLastObject == null)
-                LastTwoStrainTime = 100;
+                LastTwoStrainTime = min_delta_time * 2; // this is very wrong, use double.PositiveInfinity here
             else
-                LastTwoStrainTime = Math.Max(100, (hitObject.StartTime - lastLastObject.StartTime) / clockRate);
+                LastTwoStrainTime = Math.Max(min_delta_time * 2, (hitObject.StartTime - lastLastObject.StartTime) / clockRate);
 
             if (lastObject is HitCircle)
                 GapTime = StrainTime;
             else if (lastObject is Slider lastSlider)
-                GapTime = Math.Max(50, (hitObject.StartTime - lastSlider.EndTime) / clockRate);
+                GapTime = Math.Max(min_delta_time, (hitObject.StartTime - lastSlider.EndTime) / clockRate);
             else if (lastObject is Spinner lastSpinner)
-                GapTime = Math.Max(50, (hitObject.StartTime - lastSpinner.EndTime) / clockRate);
+                GapTime = Math.Max(min_delta_time, (hitObject.StartTime - lastSpinner.EndTime) / clockRate);
 
             setFlowValues();
         }
