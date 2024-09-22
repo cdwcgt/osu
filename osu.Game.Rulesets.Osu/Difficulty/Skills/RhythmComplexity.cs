@@ -16,11 +16,16 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     public class RhythmComplexity : Skill
     {
         private bool isSliderAcc;
+
+        private int hitCircleCount;
         private int accuracyObjectCount;
+
         private int noteIndex;
         private bool isPreviousOffbeat;
         private readonly List<int> previousDoubles = new List<int>();
+
         private double difficultyTotal;
+        private double difficultyTotalSliderAcc;
 
         public RhythmComplexity(Mod[] mods) : base(mods)
         {
@@ -31,9 +36,20 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         {
             var osuCurrent = (OsuDifficultyHitObject)current;
 
-            if (current.BaseObject is HitCircle || (isSliderAcc && current.BaseObject is Slider))
+            if (current.BaseObject is HitCircle)
             {
-                difficultyTotal += calculateRhythmBonus(osuCurrent);
+                double rhythmBonus = calculateRhythmBonus(osuCurrent);
+
+                difficultyTotal += rhythmBonus;
+                difficultyTotalSliderAcc += rhythmBonus;
+
+                hitCircleCount++;
+                accuracyObjectCount++;
+            }
+            else if (isSliderAcc && current.BaseObject is Slider)
+            {
+                difficultyTotalSliderAcc += calculateRhythmBonus(osuCurrent);
+
                 accuracyObjectCount++;
             }
             else
@@ -44,11 +60,16 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         public override double DifficultyValue()
         {
-            if (accuracyObjectCount == 0)
+            return Math.Max(calculateDifficultyValueFor(difficultyTotal, hitCircleCount), calculateDifficultyValueFor(difficultyTotalSliderAcc, accuracyObjectCount));
+        }
+
+        private double calculateDifficultyValueFor(double difficulty, int objectCount)
+        {
+            if (objectCount == 0)
                 return 1;
 
-            double lengthRequirement = Math.Tanh(accuracyObjectCount / 50.0);
-            return 1 + difficultyTotal / accuracyObjectCount * lengthRequirement;
+            double lengthRequirement = Math.Tanh(objectCount / 50.0);
+            return 1 + difficulty / objectCount * lengthRequirement;
         }
 
         private double calculateRhythmBonus(OsuDifficultyHitObject current)
