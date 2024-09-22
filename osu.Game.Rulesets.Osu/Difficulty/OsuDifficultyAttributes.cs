@@ -15,12 +15,15 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         /// </summary>
         [JsonProperty("aim_difficulty")]
         public double AimDifficulty { get; set; }
+        public double AimDifficultyStrainsCount { get; set; }
 
         [JsonProperty("jump_aim_difficulty")]
         public double JumpAimDifficulty { get; set; }
+        public double JumpAimDifficultyStrainsCount { get; set; }
 
         [JsonProperty("flow_aim_difficulty")]
         public double FlowAimDifficulty { get; set; }
+        public double FlowAimDifficultyStrainsCount { get; set; }
 
         [JsonProperty("precision_difficulty")]
         public double PrecisionDifficulty { get; set; }
@@ -30,9 +33,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         /// </summary>
         [JsonProperty("speed_difficulty")]
         public double SpeedDifficulty { get; set; }
+        public double SpeedDifficultyStrainsCount { get; set; }
 
         [JsonProperty("stamina_difficulty")]
         public double StaminaDifficulty { get; set; }
+        public double StaminaDifficultyStrainsCount { get; set; }
 
         [JsonProperty("accuracy_difficulty")]
         public double AccuracyDifficulty { get; set; }

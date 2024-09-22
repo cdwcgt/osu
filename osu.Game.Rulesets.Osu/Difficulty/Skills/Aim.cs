@@ -47,6 +47,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             double readingMultiplier = calculateReadingMultiplier(osuCurrent, Mods.Any(m => m is OsuModHidden), Mods.Any(m => m is OsuModFlashlight));
 
             currentStrain += aimValue * readingMultiplier * skillMultiplier;
+            ObjectStrains.Add(currentStrain);
 
             return currentStrain;
         }

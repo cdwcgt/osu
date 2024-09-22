@@ -37,6 +37,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             double streamValue = 12.5 / Math.Pow(ms - 20, 2) + 0.25 / ms + 0.005;
 
             currentStrain += ((1 - osuCurrent.Flow) * tapValue + osuCurrent.Flow * streamValue) * 1000 * SkillMultiplier;
+            ObjectStrains.Add(currentStrain);
 
             return currentStrain;
         }

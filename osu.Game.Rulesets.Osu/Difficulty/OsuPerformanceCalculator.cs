@@ -20,6 +20,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         {
         }
 
+        private const bool enable_csr = true;
+
         protected override PerformanceAttributes CreatePerformanceAttributes(ScoreInfo score, DifficultyAttributes attributes)
         {
             Mod[] mods = score.Mods;
@@ -48,17 +50,18 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 accuracyHitObjectsCount += osuAttributes.SliderCount;
 
             double normalisedHitError = calculateNormalisedHitError(osuAttributes.OverallDifficulty, totalHits, accuracyHitObjectsCount, countGreat);
-            double missWeight = calculateMissWeight(countMiss);
-            double aimWeight = calculateAimWeight(missWeight, normalisedHitError, scoreMaxCombo, osuAttributes.MaxCombo, totalHits, visualMods);
-            double speedWeight = calculateSpeedWeight(missWeight, normalisedHitError, scoreMaxCombo, osuAttributes.MaxCombo);
+
+            double aimWeight = calculateAimWeight(normalisedHitError, scoreMaxCombo, osuAttributes.MaxCombo, totalHits, visualMods);
+            double speedWeight = calculateSpeedWeight(normalisedHitError, scoreMaxCombo, osuAttributes.MaxCombo);
             double accuracyWeight = calculateAccuracyWeight(accuracyHitObjectsCount, visualMods);
 
-            double aimValue = calculateSkillValue(osuAttributes.AimDifficulty) * aimWeight;
-            double jumpAimValue = calculateSkillValue(osuAttributes.JumpAimDifficulty) * aimWeight;
-            double flowAimValue = calculateSkillValue(osuAttributes.FlowAimDifficulty) * aimWeight;
-            double precisionValue = calculateSkillValue(osuAttributes.PrecisionDifficulty) * aimWeight;
-            double speedValue = calculateSkillValue(osuAttributes.SpeedDifficulty) * speedWeight;
-            double staminaValue = calculateSkillValue(osuAttributes.StaminaDifficulty) * speedWeight;
+            double aimValue = aimWeight * calculateSkillValue(osuAttributes.AimDifficulty) * calculateMissWeight(countMiss, osuAttributes.AimDifficultyStrainsCount);
+            double jumpAimValue = aimWeight * calculateSkillValue(osuAttributes.JumpAimDifficulty) * calculateMissWeight(countMiss, osuAttributes.JumpAimDifficultyStrainsCount);
+            double flowAimValue = aimWeight * calculateSkillValue(osuAttributes.FlowAimDifficulty) * calculateMissWeight(countMiss, osuAttributes.FlowAimDifficultyStrainsCount);
+            double precisionValue = aimWeight * calculateSkillValue(osuAttributes.PrecisionDifficulty) * calculateMissWeight(countMiss, osuAttributes.AimDifficultyStrainsCount);
+            double speedValue = speedWeight * calculateSkillValue(osuAttributes.SpeedDifficulty) * calculateMissWeight(countMiss, osuAttributes.SpeedDifficultyStrainsCount);
+            double staminaValue = speedWeight * calculateSkillValue(osuAttributes.StaminaDifficulty) * calculateMissWeight(countMiss, osuAttributes.StaminaDifficultyStrainsCount);
+
             double accuracyValue = calculateAccuracyValue(normalisedHitError) * osuAttributes.AccuracyDifficulty * accuracyWeight;
 
             double totalValue = Math.Pow(
@@ -101,23 +104,23 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             return hitWindow / zValue; // Hit errors are normally distributed along the x-axis.
         }
 
-        private static double calculateMissWeight(int misses) => Math.Pow(0.97, misses);
+        private static double calculateMissWeight(int misses, double difficultStrainCount) => enable_csr ? 0.96 / ((misses / (4 * Math.Pow(Math.Log(difficultStrainCount), 0.94))) + 1) : Math.Pow(0.97, misses);
 
-        private static double calculateAimWeight(double missWeight, double normalizedHitError, int combo, int maxCombo, int objectCount, Mod[] visualMods)
+        private static double calculateAimWeight(double normalizedHitError, int combo, int maxCombo, int objectCount, Mod[] visualMods)
         {
             double accuracyWeight = double.IsNaN(normalizedHitError) ? 0 : Math.Pow(0.995, normalizedHitError) * 1.04;
             double comboWeight = Math.Pow(combo, 0.8) / Math.Pow(maxCombo, 0.8);
-            double flashlightLengthWeight = visualMods.Any(m => m is OsuModFlashlight) ? 1 + Math.Atan(objectCount / 2000.0) : 1;
+            double flashlightLengthWeight = visualMods.Any(m => m is OsuModFlashlight) ? 1 + comboWeight * Math.Atan(objectCount / 2000.0) : 1;
 
-            return accuracyWeight * comboWeight * missWeight * flashlightLengthWeight;
+            return accuracyWeight * (enable_csr ? 1 : comboWeight) * flashlightLengthWeight;
         }
 
-        private static double calculateSpeedWeight(double missWeight, double normalizedHitError, int combo, int maxCombo)
+        private static double calculateSpeedWeight(double normalizedHitError, int combo, int maxCombo)
         {
             double accuracyWeight = double.IsNaN(normalizedHitError) ? 0 : Math.Pow(0.985, normalizedHitError) * 1.12;
             double comboWeight = Math.Pow(combo, 0.4) / Math.Pow(maxCombo, 0.4);
 
-            return accuracyWeight * comboWeight * missWeight;
+            return accuracyWeight * (enable_csr ? 1 : comboWeight);
         }
 
         private static double calculateAccuracyWeight(int accuracyObjectCount, Mod[] visualMods)
