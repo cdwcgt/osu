@@ -85,6 +85,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
         /// </summary>
         public double HitWindowGreat { get; private set; }
 
+        // Placeholders
+        public double TravelTime { get; }
+        public double MinimumJumpDistance { get; }
+        public double MinimumJumpTime { get; }
+
+
         private readonly OsuHitObject? lastLastObject;
         private readonly OsuHitObject lastObject;
         private readonly OsuDifficultyHitObject lastLastDifficultyObject;
