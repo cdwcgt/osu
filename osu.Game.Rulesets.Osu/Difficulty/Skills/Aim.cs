@@ -88,8 +88,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 }
             }
 
-
-
             double angleWeight = calculateJumpAngleWeight(current.Angle, current.StrainTime, previousObject?.StrainTime ?? 0, previousObject?.JumpDistance ?? 0);
             double patternWeight = calculateJumpPatternWeight(current, previousTwoObjects);
 
