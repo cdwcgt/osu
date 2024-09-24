@@ -72,6 +72,20 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             double accuracyValue = calculateAccuracyValue(normalisedHitError) * osuAttributes.AccuracyDifficulty * accuracyWeight;
 
+            if (OsuDifficultyCalculator.ENABLE_LENGTH_BONUS)
+            {
+                double lengthBonus = 0.95 + 0.4 * Math.Min(1.0, totalHits / 2000.0) +
+                                 (totalHits > 2000 ? Math.Log10(totalHits / 2000.0) * 0.5 : 0.0);
+
+                aimValue *= lengthBonus;
+                jumpAimValue *= lengthBonus;
+                flowAimValue *= lengthBonus;
+                precisionValue *= lengthBonus;
+
+                speedValue *= lengthBonus;
+                // staminaValue *= lengthBonus; // Stamina balance isn't suited for length bonus
+            }
+
             double totalValue = Math.Pow(
                 Math.Pow(aimValue, 1.1) +
                 Math.Pow(Math.Max(speedValue, staminaValue), 1.1) +

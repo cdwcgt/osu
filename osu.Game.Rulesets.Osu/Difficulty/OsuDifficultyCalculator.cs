@@ -37,6 +37,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
         // Balance category
         public const bool ENABLE_CSR = true; // Combo Scaling Removal
+        public const bool ENABLE_LENGTH_BONUS = true;
 
         public OsuDifficultyCalculator(IRulesetInfo ruleset, IWorkingBeatmap beatmap)
             : base(ruleset, beatmap)
