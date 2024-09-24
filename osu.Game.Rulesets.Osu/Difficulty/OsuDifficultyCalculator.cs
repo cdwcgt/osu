@@ -26,6 +26,18 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
         public override int Version => 20231104;
 
+        // CONFIG
+        // default pp+ is all values are set to false
+
+        // Fix category
+        public const bool ENABLE_FIRST_SPEED_NOTE_FIX = true;
+        public const bool ENABLE_LAZER_SUPPORT = true; // Slideracc and no misscount estimation on lazer scores if Effective Miss Count enabled
+        public const bool ENABLE_EFFECTIVE_MISS_COUNT = true; // warning - always set this to true when using CSR
+        public const bool DISABLE_300BPM_SPEED_LIMIT = true;
+
+        // Balance category
+        public const bool ENABLE_CSR = true; // Combo Scaling Removal
+
         public OsuDifficultyCalculator(IRulesetInfo ruleset, IWorkingBeatmap beatmap)
             : base(ruleset, beatmap)
         {

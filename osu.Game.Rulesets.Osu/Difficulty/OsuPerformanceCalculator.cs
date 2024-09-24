@@ -20,8 +20,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         {
         }
 
-        private const bool enable_csr = true;
-
         protected override PerformanceAttributes CreatePerformanceAttributes(ScoreInfo score, DifficultyAttributes attributes)
         {
             Mod[] mods = score.Mods;
@@ -49,11 +47,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             int accuracyHitObjectsCount = osuAttributes.HitCircleCount;
 
-            if (score.Mods.OfType<OsuModClassic>().All(m => !m.NoSliderHeadAccuracy.Value))
+            if (OsuDifficultyCalculator.ENABLE_LAZER_SUPPORT && score.Mods.OfType<OsuModClassic>().All(m => !m.NoSliderHeadAccuracy.Value))
             {
                 accuracyHitObjectsCount += osuAttributes.SliderCount;
             }
-            else if (enable_csr)
+            else if (OsuDifficultyCalculator.ENABLE_EFFECTIVE_MISS_COUNT)
             {
                 effectiveMissCount = Math.Max(countMiss, calculateEffectiveMissCount(osuAttributes, scoreMaxCombo, countMiss, totalHits - countGreat));
             }
@@ -64,12 +62,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             double speedWeight = calculateSpeedWeight(normalisedHitError, scoreMaxCombo, osuAttributes.MaxCombo);
             double accuracyWeight = calculateAccuracyWeight(accuracyHitObjectsCount, visualMods);
 
-            double aimValue = aimWeight * calculateSkillValue(osuAttributes.AimDifficulty) * calculateMissWeight(countMiss, osuAttributes.AimDifficultyStrainsCount);
-            double jumpAimValue = aimWeight * calculateSkillValue(osuAttributes.JumpAimDifficulty) * calculateMissWeight(countMiss, osuAttributes.JumpAimDifficultyStrainsCount);
-            double flowAimValue = aimWeight * calculateSkillValue(osuAttributes.FlowAimDifficulty) * calculateMissWeight(countMiss, osuAttributes.FlowAimDifficultyStrainsCount);
-            double precisionValue = aimWeight * calculateSkillValue(osuAttributes.PrecisionDifficulty) * calculateMissWeight(countMiss, osuAttributes.AimDifficultyStrainsCount);
-            double speedValue = speedWeight * calculateSkillValue(osuAttributes.SpeedDifficulty) * calculateMissWeight(countMiss, osuAttributes.SpeedDifficultyStrainsCount);
-            double staminaValue = speedWeight * calculateSkillValue(osuAttributes.StaminaDifficulty) * calculateMissWeight(countMiss, osuAttributes.StaminaDifficultyStrainsCount);
+            double aimValue = aimWeight * CalculateSkillValue(osuAttributes.AimDifficulty) * calculateMissWeight(effectiveMissCount, osuAttributes.AimDifficultyStrainsCount);
+            double jumpAimValue = aimWeight * CalculateSkillValue(osuAttributes.JumpAimDifficulty) * calculateMissWeight(effectiveMissCount, osuAttributes.JumpAimDifficultyStrainsCount);
+            double flowAimValue = aimWeight * CalculateSkillValue(osuAttributes.FlowAimDifficulty) * calculateMissWeight(effectiveMissCount, osuAttributes.FlowAimDifficultyStrainsCount);
+            double precisionValue = aimWeight * CalculateSkillValue(osuAttributes.PrecisionDifficulty) * calculateMissWeight(effectiveMissCount, osuAttributes.AimDifficultyStrainsCount);
+
+            double speedValue = speedWeight * CalculateSkillValue(osuAttributes.SpeedDifficulty) * calculateMissWeight(effectiveMissCount, osuAttributes.SpeedDifficultyStrainsCount);
+            double staminaValue = speedWeight * CalculateSkillValue(osuAttributes.StaminaDifficulty) * calculateMissWeight(effectiveMissCount, osuAttributes.StaminaDifficultyStrainsCount);
 
             double accuracyValue = calculateAccuracyValue(normalisedHitError) * osuAttributes.AccuracyDifficulty * accuracyWeight;
 
@@ -95,7 +94,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             return result;
         }
 
-        private static double calculateSkillValue(double skillDiff) => Math.Pow(skillDiff, 3) * 3.9;
+        public static double CalculateSkillValue(double skillDiff) => Math.Pow(skillDiff, 3) * 3.9;
 
         private static double calculateNormalisedHitError(double od, int objectCount, int accuracyObjectCount, int count300)
         {
@@ -113,7 +112,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             return hitWindow / zValue; // Hit errors are normally distributed along the x-axis.
         }
 
-        private static double calculateMissWeight(double misses, double difficultStrainCount) => enable_csr ? 0.96 / ((misses / (4 * Math.Pow(Math.Log(difficultStrainCount), 0.94))) + 1) : Math.Pow(0.97, misses);
+        private static double calculateMissWeight(double misses, double difficultStrainCount) => OsuDifficultyCalculator.ENABLE_CSR ? 0.96 / ((misses / (4 * Math.Pow(Math.Log(difficultStrainCount), 0.94))) + 1) : Math.Pow(0.97, misses);
 
         private static double calculateAimWeight(double normalizedHitError, int combo, int maxCombo, int objectCount, Mod[] visualMods)
         {
@@ -121,7 +120,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             double comboWeight = Math.Pow(combo, 0.8) / Math.Pow(maxCombo, 0.8);
             double flashlightLengthWeight = visualMods.Any(m => m is OsuModFlashlight) ? 1 + comboWeight * Math.Atan(objectCount / 2000.0) : 1;
 
-            return accuracyWeight * (enable_csr ? 1 : comboWeight) * flashlightLengthWeight;
+            return accuracyWeight * (OsuDifficultyCalculator.ENABLE_CSR ? 1 : comboWeight) * flashlightLengthWeight;
         }
 
         private static double calculateSpeedWeight(double normalizedHitError, int combo, int maxCombo)
@@ -129,7 +128,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             double accuracyWeight = Math.Pow(0.985, normalizedHitError) * 1.12;
             double comboWeight = Math.Pow(combo, 0.4) / Math.Pow(maxCombo, 0.4);
 
-            return accuracyWeight * (enable_csr ? 1 : comboWeight);
+            return accuracyWeight * (OsuDifficultyCalculator.ENABLE_CSR ? 1 : comboWeight);
         }
 
         private static double calculateAccuracyWeight(int accuracyObjectCount, Mod[] visualMods)

@@ -20,7 +20,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
         /// </summary>
         public const int NORMALISED_RADIUS = 52; // Change radius to 50 to make 100 the diameter. Easier for mental maths.
 
-        private const int min_delta_time = 50; // The DeltaTime cap shouldn't ever be on 50ms
+        private int minDeltaTime => OsuDifficultyCalculator.DISABLE_300BPM_SPEED_LIMIT ? 25 : 50;
 
         protected new OsuHitObject BaseObject => (OsuHitObject)base.BaseObject;
 
@@ -109,19 +109,19 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
             Preempt = ((OsuHitObject)hitObject).TimePreempt / clockRate;
 
             // Every strain interval is hard capped at the equivalent of 375 BPM streaming speed as a safety measure
-            StrainTime = Math.Max(min_delta_time, DeltaTime);
+            StrainTime = Math.Max(minDeltaTime, DeltaTime);
 
             if (lastLastObject == null)
-                LastTwoStrainTime = min_delta_time * 2; // this is very wrong, use double.PositiveInfinity here
+                LastTwoStrainTime = OsuDifficultyCalculator.ENABLE_FIRST_SPEED_NOTE_FIX ? double.PositiveInfinity : 100;
             else
-                LastTwoStrainTime = Math.Max(min_delta_time * 2, (hitObject.StartTime - lastLastObject.StartTime) / clockRate);
+                LastTwoStrainTime = Math.Max(minDeltaTime * 2, (hitObject.StartTime - lastLastObject.StartTime) / clockRate);
 
             if (lastObject is HitCircle)
                 GapTime = StrainTime;
             else if (lastObject is Slider lastSlider)
-                GapTime = Math.Max(min_delta_time, (hitObject.StartTime - lastSlider.EndTime) / clockRate);
+                GapTime = Math.Max(minDeltaTime, (hitObject.StartTime - lastSlider.EndTime) / clockRate);
             else if (lastObject is Spinner lastSpinner)
-                GapTime = Math.Max(min_delta_time, (hitObject.StartTime - lastSpinner.EndTime) / clockRate);
+                GapTime = Math.Max(minDeltaTime, (hitObject.StartTime - lastSpinner.EndTime) / clockRate);
 
             setFlowValues();
         }

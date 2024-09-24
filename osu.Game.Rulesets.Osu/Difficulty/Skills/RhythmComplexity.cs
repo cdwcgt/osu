@@ -29,7 +29,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         public RhythmComplexity(Mod[] mods) : base(mods)
         {
-            isSliderAcc = mods.OfType<OsuModClassic>().All(m => !m.NoSliderHeadAccuracy.Value);
+            isSliderAcc = OsuDifficultyCalculator.ENABLE_LAZER_SUPPORT && mods.OfType<OsuModClassic>().All(m => !m.NoSliderHeadAccuracy.Value);
         }
 
         public override void Process(DifficultyHitObject current)
