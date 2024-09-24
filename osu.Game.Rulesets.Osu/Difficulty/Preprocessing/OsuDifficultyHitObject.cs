@@ -108,7 +108,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
 
             Preempt = ((OsuHitObject)hitObject).TimePreempt / clockRate;
 
-            // Every strain interval is hard capped at the equivalent of 375 BPM streaming speed as a safety measure
             StrainTime = Math.Max(minDeltaTime, DeltaTime);
 
             if (lastLastObject == null)
@@ -122,6 +121,17 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
                 GapTime = Math.Max(minDeltaTime, (hitObject.StartTime - lastSlider.EndTime) / clockRate);
             else if (lastObject is Spinner lastSpinner)
                 GapTime = Math.Max(minDeltaTime, (hitObject.StartTime - lastSpinner.EndTime) / clockRate);
+
+            // WARNING - this is a very stupid bandaid, but without it speed is very broken because of flawed curve
+            if (OsuDifficultyCalculator.DISABLE_300BPM_SPEED_LIMIT)
+            {
+                static double rescaleLowStrainTime(double strainTime, double minStrainTime, double targetMinStrainTime, double lowStrainTimeThreshold)
+                    => strainTime < lowStrainTimeThreshold ? double.Lerp(targetMinStrainTime, lowStrainTimeThreshold, (strainTime - minStrainTime) / minStrainTime) : strainTime;
+
+                StrainTime = rescaleLowStrainTime(StrainTime, 25, 30, 50);
+                LastTwoStrainTime = rescaleLowStrainTime(LastTwoStrainTime, 50, 60, 100);
+                GapTime = rescaleLowStrainTime(GapTime, 25, 30, 50);
+            }
 
             setFlowValues();
         }
