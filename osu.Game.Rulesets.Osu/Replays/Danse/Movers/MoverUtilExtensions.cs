@@ -40,9 +40,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
 
         public static bool IsStream(params DanceHitObject[] hitObjects)
         {
-            var config = MConfigManager.Instance;
-            float max = config.Get<float>(MSetting.StreamMaximum);
-            float min = config.Get<float>(MSetting.StreamMinimum);
+            var config = CustomConfigManager.Instance;
+            float max = config.Get<float>(CustomSetting.StreamMaximum);
+            float min = config.Get<float>(CustomSetting.StreamMinimum);
 
             var h = hitObjects[0];
             bool isStream = false;

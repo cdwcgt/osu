@@ -54,6 +54,7 @@ using osu.Game.Overlays.BeatmapListing;
 using osu.Game.Overlays.Mods;
 using osu.Game.Overlays.Music;
 using osu.Game.Overlays.Notifications;
+using osu.Game.Overlays.OSD;
 using osu.Game.Overlays.SkinEditor;
 using osu.Game.Overlays.Toolbar;
 using osu.Game.Overlays.Volume;
@@ -63,7 +64,6 @@ using osu.Game.Screens;
 using osu.Game.Screens.Edit;
 using osu.Game.Screens.Footer;
 using osu.Game.Screens.Menu;
-using osu.Game.Screens.OnlinePlay;
 using osu.Game.Screens.OnlinePlay.DailyChallenge;
 using osu.Game.Screens.OnlinePlay.Multiplayer;
 using osu.Game.Screens.Play;
@@ -142,6 +142,8 @@ namespace osu.Game
         protected Container ScreenOffsetContainer { get; private set; }
 
         private Container overlayOffsetContainer;
+
+        private OnScreenDisplay onScreenDisplay;
 
         [Resolved]
         private FrameworkConfigManager frameworkConfig { get; set; }
@@ -498,6 +500,12 @@ namespace osu.Game
             }
         });
 
+        public void CopyUrlToClipboard(string url) => waitForReady(() => onScreenDisplay, _ =>
+        {
+            dependencies.Get<Clipboard>().SetText(url);
+            onScreenDisplay.Display(new CopyUrlToast());
+        });
+
         public void OpenUrlExternally(string url, bool forceBypassExternalUrlWarning = false) => waitForReady(() => externalLinkOpener, _ =>
         {
             bool isTrustedDomain;
@@ -643,10 +651,10 @@ namespace osu.Game
             Live<BeatmapSetInfo> databasedSet = null;
 
             if (beatmap.OnlineID > 0)
-                databasedSet = BeatmapManager.QueryBeatmapSet(s => s.OnlineID == beatmap.OnlineID);
+                databasedSet = BeatmapManager.QueryBeatmapSet(s => s.OnlineID == beatmap.OnlineID && !s.DeletePending);
 
             if (beatmap is BeatmapSetInfo localBeatmap)
-                databasedSet ??= BeatmapManager.QueryBeatmapSet(s => s.Hash == localBeatmap.Hash);
+                databasedSet ??= BeatmapManager.QueryBeatmapSet(s => s.Hash == localBeatmap.Hash && !s.DeletePending);
 
             if (databasedSet == null)
             {
@@ -757,11 +765,13 @@ namespace osu.Game
             // As a special case, if the beatmap and ruleset already match, allow immediately displaying the score from song select.
             // This is guaranteed to not crash, and feels better from a user's perspective (ie. if they are clicking a score in the
             // song select leaderboard).
-            // Similar exemptions are made here for online flows where there are good chances that beatmap and ruleset match
-            // (playlists / multiplayer / daily challenge).
+            // Similar exemptions are made here for daily challenge where it is guaranteed that beatmap and ruleset match.
+            // `OnlinePlayScreen` is excluded because when resuming back to it,
+            // `RoomSubScreen` changes the global beatmap to the next playlist item on resume,
+            // which may not match the score, and thus crash.
             IEnumerable<Type> validScreens =
                 Beatmap.Value.BeatmapInfo.Equals(databasedBeatmap) && Ruleset.Value.Equals(databasedScore.ScoreInfo.Ruleset)
-                    ? new[] { typeof(SongSelect), typeof(OnlinePlayScreen), typeof(DailyChallenge) }
+                    ? new[] { typeof(SongSelect), typeof(DailyChallenge) }
                     : Array.Empty<Type>();
 
             PerformFromScreen(screen =>
@@ -1077,7 +1087,7 @@ namespace osu.Game
 
             loadComponentSingleFile(volume = new VolumeOverlay(), leftFloatingOverlayContent.Add, true);
 
-            var onScreenDisplay = new OnScreenDisplay();
+            onScreenDisplay = new OnScreenDisplay();
 
             onScreenDisplay.BeginTracking(this, frameworkConfig);
             onScreenDisplay.BeginTracking(this, LocalConfig);
@@ -1131,6 +1141,7 @@ namespace osu.Game
             loadComponentSingleFile(new MedalOverlay(), topMostOverlayContent.Add);
 
             loadComponentSingleFile(new BackgroundDataStoreProcessor(), Add);
+            loadComponentSingleFile(new DetachedBeatmapStore(), Add, true);
 
             Add(difficultyRecommender);
             Add(externalLinkOpener = new ExternalLinkOpener());

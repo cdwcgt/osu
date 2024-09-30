@@ -40,25 +40,25 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
 
         public MomentumMover()
         {
-            var config = MConfigManager.Instance;
-            jumpMult = config.Get<float>(MSetting.JumpMult);
-            offsetMult = config.Get<float>(MSetting.AngleOffset);
-            skipStacks = config.Get<bool>(MSetting.SkipStackAngles);
-            restrictInvert = config.Get<bool>(MSetting.RestrictInvert);
-            restrictAngle = config.Get<float>(MSetting.RestrictAngle);
-            restrictArea = config.Get<float>(MSetting.RestrictArea);
-            streamRestrict = config.Get<bool>(MSetting.StreamRestrict);
-            streamMult = config.Get<float>(MSetting.StreamMult);
-            durationTrigger = config.Get<float>(MSetting.DurationTrigger);
-            durationMult = config.Get<float>(MSetting.DurationMult);
+            var config = CustomConfigManager.Instance;
+            jumpMult = config.Get<float>(CustomSetting.JumpMult);
+            offsetMult = config.Get<float>(CustomSetting.AngleOffset);
+            skipStacks = config.Get<bool>(CustomSetting.SkipStackAngles);
+            restrictInvert = config.Get<bool>(CustomSetting.RestrictInvert);
+            restrictAngle = config.Get<float>(CustomSetting.RestrictAngle);
+            restrictArea = config.Get<float>(CustomSetting.RestrictArea);
+            streamRestrict = config.Get<bool>(CustomSetting.StreamRestrict);
+            streamMult = config.Get<float>(CustomSetting.StreamMult);
+            durationTrigger = config.Get<float>(CustomSetting.DurationTrigger);
+            durationMult = config.Get<float>(CustomSetting.DurationMult);
 
-            streamArea = config.Get<float>(MSetting.StreamArea);
-            equalPosBounce = config.Get<float>(MSetting.EqualPosBounce);
-            restrictAngleAdd = config.Get<float>(MSetting.RestrictAngleAdd);
-            restrictAngleSub = config.Get<float>(MSetting.RestrictAngleSub);
-            sliderPredict = config.Get<bool>(MSetting.SliderPredict);
-            interpolateAngles = config.Get<bool>(MSetting.InterpolateAngles);
-            invertAngleInterpolation = config.Get<bool>(MSetting.InvertAngleInterpolation);
+            streamArea = config.Get<float>(CustomSetting.StreamArea);
+            equalPosBounce = config.Get<float>(CustomSetting.EqualPosBounce);
+            restrictAngleAdd = config.Get<float>(CustomSetting.RestrictAngleAdd);
+            restrictAngleSub = config.Get<float>(CustomSetting.RestrictAngleSub);
+            sliderPredict = config.Get<bool>(CustomSetting.SliderPredict);
+            interpolateAngles = config.Get<bool>(CustomSetting.InterpolateAngles);
+            invertAngleInterpolation = config.Get<bool>(CustomSetting.InvertAngleInterpolation);
         }
 
         private bool isSame(DanceHitObject o1, DanceHitObject o2) => isSame(o1, o2, skipStacks);

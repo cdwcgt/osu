@@ -110,7 +110,7 @@ namespace osu.Game
 
         public virtual Version AssemblyVersion => Assembly.GetEntryAssembly()?.GetName().Version ?? new Version();
 
-        protected MConfigManager MConfig;
+        protected CustomConfigManager CustomConfig;
 
         /// <summary>
         /// MD5 representation of the game executable.
@@ -256,7 +256,7 @@ namespace osu.Game
         [BackgroundDependencyLoader]
         private void load(ReadableKeyCombinationProvider keyCombinationProvider, FrameworkConfigManager frameworkConfig)
         {
-            VersionHash = "bfcb262534bda7f69fce32a7000def09";
+            VersionHash = "2d5e9db45786279c6156397b11e8a2b2";
 
             Resources.AddStore(new DllResourceStore(OsuResources.ResourceAssembly));
             Resources.AddStore(new DllResourceStore(osu.Game.Resources.Custom.CustomResources.ResourceAssembly));
@@ -276,7 +276,7 @@ namespace osu.Game
 
             dependencies.CacheAs(LocalConfig);
             dependencies.CacheAs<IGameplaySettings>(LocalConfig);
-            dependencies.Cache(MConfig);
+            dependencies.Cache(CustomConfig);
 
             InitialiseFonts();
 
@@ -489,7 +489,7 @@ namespace osu.Game
 
             host.ExceptionThrown += onExceptionThrown;
 
-            MConfig ??= new MConfigManager(Storage);
+            CustomConfig ??= new CustomConfigManager(Storage);
         }
 
         /// <summary>
@@ -511,6 +511,12 @@ namespace osu.Game
         /// <returns>Whether a restart operation was queued.</returns>
         public virtual bool RestartAppWhenExited() => false;
 
+        /// <summary>
+        /// Perform migration of user data to a specified path.
+        /// </summary>
+        /// <param name="path">The path to migrate to.</param>
+        /// <returns>Whether migration succeeded to completion. If <c>false</c>, some files were left behind.</returns>
+        /// <exception cref="TimeoutException"></exception>
         public bool Migrate(string path)
         {
             Logger.Log($@"Migrating osu! data from ""{Storage.GetFullPath(string.Empty)}"" to ""{path}""...");
@@ -538,10 +544,10 @@ namespace osu.Game
                 if (!readyToRun.Wait(30000) || !success)
                     throw new TimeoutException("Attempting to block for migration took too long.");
 
-                bool? cleanupSucceded = (Storage as OsuStorage)?.Migrate(Host.GetStorage(path));
+                bool? cleanupSucceeded = (Storage as OsuStorage)?.Migrate(Host.GetStorage(path));
 
                 Logger.Log(@"Migration complete!");
-                return cleanupSucceded != false;
+                return cleanupSucceeded != false;
             }
             finally
             {
@@ -682,7 +688,7 @@ namespace osu.Game
             if (Interlocked.Decrement(ref allowableExceptions) < 0)
             {
                 Logger.Log("Too many unhandled exceptions, crashing out.");
-                RulesetStore.TryDisableCustomRulesetsCausing(ex);
+                RulesetStore?.TryDisableCustomRulesetsCausing(ex);
                 return false;
             }
 

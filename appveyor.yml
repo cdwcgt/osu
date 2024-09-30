@@ -1,5 +1,5 @@
 image: Visual Studio 2022
-version: 2024.727.{build}
+version: 2024.906.{build}
 pull_requests:
   do_not_increment_build_number: true
 skip_tags: true
@@ -9,27 +9,27 @@ cache:
 dotnet_csproj:
   patch: true
   file: '**\*.csproj'
-  version: 2024.727.0
-  file_version: 2024.727.0
+  version: 2024.906.2
+  file_version: 2024.906.2
 build_script:
 - cmd: >-
     dotnet build osu.Desktop -c Release -r win-x64
 
     dotnet build osu.Desktop -c Release -r linux-x64
 
-    dotnet build osu.Desktop -c Release -r linux-arm
+    dotnet build osu.Desktop -c Release -r linux-arm64
 test: off
 artifacts:
 - path: ./osu.Desktop/bin/Release/net8.0/win-x64
   name: osu-windows
 - path: ./osu.Desktop/bin/Release/net8.0/linux-x64
   name: osu-linux-x64
-- path: ./osu.Desktop/bin/Release/net8.0/linux-arm
-  name: osu-linux-arm
+- path: ./osu.Desktop/bin/Release/net8.0/linux-arm64
+  name: osu-linux-arm64
 deploy:
 - provider: GitHub
-  tag: 2024.727.0
+  tag: 2024.906.2
   auth_token:
     secure: EEbZ2OGaIPcjhGpQGzfE80TbrG14UiTPGNnQjMIKD5wzrYPQ4Kyhb3qLzMNahL1I
   repository: PercyDan54/osu
-  artifact: osu-windows, osu-linux-x64, osu-linux-arm
+  artifact: osu-windows, osu-linux-x64, osu-linux-arm64

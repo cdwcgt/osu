@@ -11,6 +11,7 @@ using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
 using osu.Framework.Localisation;
+using osu.Framework.Utils;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
@@ -161,7 +162,7 @@ namespace osu.Game.Rulesets.UI
                             Origin = Anchor.Centre,
                             Anchor = Anchor.Centre,
                             Alpha = 0,
-                            Font = OsuFont.Numeric.With(null, 22f),
+                            Font = OsuFont.Numeric.With(size: 22f, weight: FontWeight.Black),
                             UseFullGlyphHeight = false,
                             Text = mod.Acronym
                         },
@@ -237,7 +238,7 @@ namespace osu.Game.Rulesets.UI
 
         private void updateColour()
         {
-            modAcronym.Colour = modIcon.Colour = OsuColour.Gray(84);
+            modAcronym.Colour = modIcon.Colour = Interpolation.ValueAt<Colour4>(0.1f, Colour4.Black, backgroundColour, 0, 1);
 
             extendedText.Colour = background.Colour = Selected.Value ? backgroundColour.Lighten(0.2f) : backgroundColour;
             extendedBackground.Colour = Selected.Value ? backgroundColour.Darken(2.4f) : backgroundColour.Darken(2.8f);
