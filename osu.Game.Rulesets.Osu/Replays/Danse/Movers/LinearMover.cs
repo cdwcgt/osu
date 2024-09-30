@@ -13,7 +13,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
 {
     public class LinearMover : Mover
     {
-        protected readonly bool WaitForPreempt = CustomConfigManager.Instance.Get<bool>(MSetting.WaitForPreempt);
+        protected readonly bool WaitForPreempt = CustomConfigManager.Instance.Get<bool>(CustomSetting.WaitForPreempt);
         protected new double StartTime;
 
         protected double GetReactionTime(double timeInstant) => ApplyModsToRate(timeInstant, 100);

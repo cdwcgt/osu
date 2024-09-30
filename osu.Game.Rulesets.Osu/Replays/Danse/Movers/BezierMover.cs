@@ -21,8 +21,8 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse.Movers
         public BezierMover()
         {
             var config = CustomConfigManager.Instance;
-            aggressiveness = config.Get<float>(MSetting.BezierAggressiveness);
-            sliderAggressiveness = config.Get<float>(MSetting.BezierSliderAggressiveness);
+            aggressiveness = config.Get<float>(CustomSetting.BezierAggressiveness);
+            sliderAggressiveness = config.Get<float>(CustomSetting.BezierSliderAggressiveness);
             previousSpeed = -1;
         }
 

@@ -8,7 +8,7 @@ using osu.Framework.Platform;
 
 namespace osu.Game.Configuration
 {
-    public class CustomConfigManager : IniConfigManager<MSetting>
+    public class CustomConfigManager : IniConfigManager<CustomSetting>
     {
         protected override string Filename => "custom.ini";
         public static CustomConfigManager Instance { get; private set; }
@@ -24,48 +24,48 @@ namespace osu.Game.Configuration
             base.InitialiseDefaults();
 
             //Dance settings
-            SetDefault(MSetting.DanceMover, OsuDanceMover.Momentum);
-            SetDefault(MSetting.DanceSpinnerMover, OsuDanceSpinnerMover.Circle);
-            SetDefault(MSetting.ReplayFramerate, 120.0, 15, 1000, 1);
-            SetDefault(MSetting.SpinnerChangeFramerate, false);
-            SetDefault(MSetting.SpinnerRadiusStart, 50, 5f, 350f, 1f);
-            SetDefault(MSetting.SpinnerRadiusEnd, 50, 5f, 350f, 1f);
-            SetDefault(MSetting.AngleOffset, 0.45f, 0f, 2f, 0.01f);
-            SetDefault(MSetting.JumpMult, 0.6f, 0f, 2f, 0.01f);
-            SetDefault(MSetting.NextJumpMult, 0.25f, 0f, 2f, 0.01f);
-            SetDefault(MSetting.SkipStackAngles, false);
-            SetDefault(MSetting.SliderDance, true);
-            SetDefault(MSetting.BorderBounce, true);
+            SetDefault(CustomSetting.DanceMover, OsuDanceMover.Momentum);
+            SetDefault(CustomSetting.DanceSpinnerMover, OsuDanceSpinnerMover.Circle);
+            SetDefault(CustomSetting.ReplayFramerate, 120.0, 15, 1000, 1);
+            SetDefault(CustomSetting.SpinnerChangeFramerate, false);
+            SetDefault(CustomSetting.SpinnerRadiusStart, 50, 5f, 350f, 1f);
+            SetDefault(CustomSetting.SpinnerRadiusEnd, 50, 5f, 350f, 1f);
+            SetDefault(CustomSetting.AngleOffset, 0.45f, 0f, 2f, 0.01f);
+            SetDefault(CustomSetting.JumpMult, 0.6f, 0f, 2f, 0.01f);
+            SetDefault(CustomSetting.NextJumpMult, 0.25f, 0f, 2f, 0.01f);
+            SetDefault(CustomSetting.SkipStackAngles, false);
+            SetDefault(CustomSetting.SliderDance, true);
+            SetDefault(CustomSetting.BorderBounce, true);
             //Linear mover settings
-            SetDefault(MSetting.WaitForPreempt, true);
+            SetDefault(CustomSetting.WaitForPreempt, true);
 
             //Momentum mover settings
-            SetDefault(MSetting.DurationTrigger, 500f, 0f, 5000f, 1f);
-            SetDefault(MSetting.DurationMult, 2f, 0f, 50f, 0.1f);
-            SetDefault(MSetting.StreamMult, 0.7f, 0f, 50f, 0.1f);
-            SetDefault(MSetting.RestrictAngle, 90f, 1f, 180f);
-            SetDefault(MSetting.RestrictArea, 40f, 1f, 180f);
-            SetDefault(MSetting.StreamRestrict, false);
-            SetDefault(MSetting.RestrictInvert, true);
+            SetDefault(CustomSetting.DurationTrigger, 500f, 0f, 5000f, 1f);
+            SetDefault(CustomSetting.DurationMult, 2f, 0f, 50f, 0.1f);
+            SetDefault(CustomSetting.StreamMult, 0.7f, 0f, 50f, 0.1f);
+            SetDefault(CustomSetting.RestrictAngle, 90f, 1f, 180f);
+            SetDefault(CustomSetting.RestrictArea, 40f, 1f, 180f);
+            SetDefault(CustomSetting.StreamRestrict, false);
+            SetDefault(CustomSetting.RestrictInvert, true);
 
             //Momentum extra
-            SetDefault(MSetting.EqualPosBounce, 0f, 0, 100f, 0.1f);
-            SetDefault(MSetting.RestrictAngleAdd, 90f, 0, 100f);
-            SetDefault(MSetting.RestrictAngleSub, 90f, 0, 100f);
-            SetDefault(MSetting.StreamArea, 40f, 0, 100);
-            SetDefault(MSetting.StreamMaximum, 10000f, 0, 50000f);
-            SetDefault(MSetting.StreamMinimum, 50f, 0, 1000f);
-            SetDefault(MSetting.InterpolateAngles, true);
-            SetDefault(MSetting.InvertAngleInterpolation, false);
-            SetDefault(MSetting.SliderPredict, false);
+            SetDefault(CustomSetting.EqualPosBounce, 0f, 0, 100f, 0.1f);
+            SetDefault(CustomSetting.RestrictAngleAdd, 90f, 0, 100f);
+            SetDefault(CustomSetting.RestrictAngleSub, 90f, 0, 100f);
+            SetDefault(CustomSetting.StreamArea, 40f, 0, 100);
+            SetDefault(CustomSetting.StreamMaximum, 10000f, 0, 50000f);
+            SetDefault(CustomSetting.StreamMinimum, 50f, 0, 1000f);
+            SetDefault(CustomSetting.InterpolateAngles, true);
+            SetDefault(CustomSetting.InvertAngleInterpolation, false);
+            SetDefault(CustomSetting.SliderPredict, false);
 
             //Bezier mover settings
-            SetDefault(MSetting.BezierAggressiveness, 60f, 1f, 180f);
-            SetDefault(MSetting.BezierSliderAggressiveness, 3f, 1f, 20f);
+            SetDefault(CustomSetting.BezierAggressiveness, 60f, 1f, 180f);
+            SetDefault(CustomSetting.BezierSliderAggressiveness, 3f, 1f, 20f);
         }
     }
 
-    public enum MSetting
+    public enum CustomSetting
     {
         //Dance settings
         DanceMover,

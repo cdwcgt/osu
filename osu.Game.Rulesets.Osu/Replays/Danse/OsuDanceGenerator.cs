@@ -64,14 +64,14 @@ namespace osu.Game.Rulesets.Osu.Replays.Danse
             : base(beatmap, mods)
         {
             var config = CustomConfigManager.Instance;
-            mover = GetMover(config.Get<OsuDanceMover>(MSetting.DanceMover));
-            spinnerMover = config.Get<OsuDanceSpinnerMover>(MSetting.DanceSpinnerMover);
-            borderBounce = config.Get<bool>(MSetting.BorderBounce);
-            frameDelay = normalFrameDelay = ApplyModsToRate(0, 1000.0 / config.Get<double>(MSetting.ReplayFramerate));
-            spinRadiusStart = config.Get<float>(MSetting.SpinnerRadiusStart);
-            spinRadiusEnd = config.Get<float>(MSetting.SpinnerRadiusEnd);
-            sliderDance = config.Get<bool>(MSetting.SliderDance);
-            spinnerChangeFramerate = config.Get<bool>(MSetting.SpinnerChangeFramerate);
+            mover = GetMover(config.Get<OsuDanceMover>(CustomSetting.DanceMover));
+            spinnerMover = config.Get<OsuDanceSpinnerMover>(CustomSetting.DanceSpinnerMover);
+            borderBounce = config.Get<bool>(CustomSetting.BorderBounce);
+            frameDelay = normalFrameDelay = ApplyModsToRate(0, 1000.0 / config.Get<double>(CustomSetting.ReplayFramerate));
+            spinRadiusStart = config.Get<float>(CustomSetting.SpinnerRadiusStart);
+            spinRadiusEnd = config.Get<float>(CustomSetting.SpinnerRadiusEnd);
+            sliderDance = config.Get<bool>(CustomSetting.SliderDance);
+            spinnerChangeFramerate = config.Get<bool>(CustomSetting.SpinnerChangeFramerate);
             mover.TimeAffectingMods = mods.OfType<IApplicableToRate>().ToList();
             preProcessObjects();
         }

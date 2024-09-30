@@ -23,69 +23,69 @@ namespace osu.Game.Overlays.Settings.Sections.Custom
                 new SettingsEnumDropdown<OsuDanceMover>
                 {
                     LabelText = "Dance Mover",
-                    Current = config.GetBindable<OsuDanceMover>(MSetting.DanceMover)
+                    Current = config.GetBindable<OsuDanceMover>(CustomSetting.DanceMover)
                 },
                 new SettingsEnumDropdown<OsuDanceSpinnerMover>
                 {
                     LabelText = "Dance Spinner Mover",
-                    Current = config.GetBindable<OsuDanceSpinnerMover>(MSetting.DanceSpinnerMover)
+                    Current = config.GetBindable<OsuDanceSpinnerMover>(CustomSetting.DanceSpinnerMover)
                 },
                 new SettingsSlider<double, FramerateSlider>
                 {
                     LabelText = "Replay Framerate",
-                    Current = config.GetBindable<double>(MSetting.ReplayFramerate),
+                    Current = config.GetBindable<double>(CustomSetting.ReplayFramerate),
                     KeyboardStep = 10
                 },
                 new SettingsCheckbox
                 {
                     LabelText = "Change replay framerate for spinners",
                     TooltipText = "Makes spinner movements smoother, but may not be played back on Stable",
-                    Current = config.GetBindable<bool>(MSetting.SpinnerChangeFramerate)
+                    Current = config.GetBindable<bool>(CustomSetting.SpinnerChangeFramerate)
                 },
                 new SettingsSlider<float>
                 {
                     LabelText = "Spinner start radius",
-                    Current = config.GetBindable<float>(MSetting.SpinnerRadiusStart),
+                    Current = config.GetBindable<float>(CustomSetting.SpinnerRadiusStart),
                     KeyboardStep = 5f,
                 },
                 new SettingsSlider<float>
                 {
                     LabelText = "Spinner end radius",
-                    Current = config.GetBindable<float>(MSetting.SpinnerRadiusEnd),
+                    Current = config.GetBindable<float>(CustomSetting.SpinnerRadiusEnd),
                     KeyboardStep = 5f,
                 },
                 new SettingsSlider<float, AngleSlider>
                 {
                     LabelText = "Angle offset",
-                    Current = config.GetBindable<float>(MSetting.AngleOffset),
+                    Current = config.GetBindable<float>(CustomSetting.AngleOffset),
                     KeyboardStep = 1f / 18f
                 },
                 new SettingsSlider<float, MultiplierSlider>
                 {
                     LabelText = "Jump multiplier",
-                    Current = config.GetBindable<float>(MSetting.JumpMult),
+                    Current = config.GetBindable<float>(CustomSetting.JumpMult),
                     KeyboardStep = 0.01f
                 },
                 new SettingsSlider<float, MultiplierSlider>
                 {
                     LabelText = "Next jump multiplier",
-                    Current = config.GetBindable<float>(MSetting.NextJumpMult),
+                    Current = config.GetBindable<float>(CustomSetting.NextJumpMult),
                     KeyboardStep = 0.01f
                 },
                 new SettingsCheckbox
                 {
                     LabelText = "Slider dance",
-                    Current = config.GetBindable<bool>(MSetting.SliderDance)
+                    Current = config.GetBindable<bool>(CustomSetting.SliderDance)
                 },
                 new SettingsCheckbox
                 {
                     LabelText = "Skip stack angles",
-                    Current = config.GetBindable<bool>(MSetting.SkipStackAngles)
+                    Current = config.GetBindable<bool>(CustomSetting.SkipStackAngles)
                 },
                 new SettingsCheckbox
                 {
                     LabelText = "Bounce on edges",
-                    Current = config.GetBindable<bool>(MSetting.BorderBounce)
+                    Current = config.GetBindable<bool>(CustomSetting.BorderBounce)
                 },
                 new OsuSpriteText
                 {
@@ -96,7 +96,7 @@ namespace osu.Game.Overlays.Settings.Sections.Custom
                 new SettingsCheckbox
                 {
                     LabelText = "Wait for preempt",
-                    Current = config.GetBindable<bool>(MSetting.WaitForPreempt)
+                    Current = config.GetBindable<bool>(CustomSetting.WaitForPreempt)
                 },
                 new OsuSpriteText
                 {
@@ -107,84 +107,84 @@ namespace osu.Game.Overlays.Settings.Sections.Custom
                 new SettingsSlider<float>
                 {
                     LabelText = "Restrict angle",
-                    Current = config.GetBindable<float>(MSetting.RestrictAngle),
+                    Current = config.GetBindable<float>(CustomSetting.RestrictAngle),
                     KeyboardStep = 1
                 },
                 new SettingsSlider<float>
                 {
                     LabelText = "Restrict angle add",
-                    Current = config.GetBindable<float>(MSetting.RestrictAngleAdd),
+                    Current = config.GetBindable<float>(CustomSetting.RestrictAngleAdd),
                     KeyboardStep = 100f
                 },
                 new SettingsSlider<float>
                 {
                     LabelText = "Restrict angle sub",
-                    Current = config.GetBindable<float>(MSetting.RestrictAngleSub),
+                    Current = config.GetBindable<float>(CustomSetting.RestrictAngleSub),
                     KeyboardStep = 100f
                 },
                 new SettingsSlider<float, MultiplierSlider>
                 {
                     LabelText = "Stream multiplier",
-                    Current = config.GetBindable<float>(MSetting.StreamMult),
+                    Current = config.GetBindable<float>(CustomSetting.StreamMult),
                     KeyboardStep = 0.1f
                 },
                 new SettingsSlider<float, MultiplierSlider>
                 {
                     LabelText = "Duration multiplier",
-                    Current = config.GetBindable<float>(MSetting.DurationMult),
+                    Current = config.GetBindable<float>(CustomSetting.DurationMult),
                     KeyboardStep = 0.05f
                 },
                 new SettingsSlider<float>
                 {
                     LabelText = "Duration multiplier trigger",
-                    Current = config.GetBindable<float>(MSetting.DurationTrigger),
+                    Current = config.GetBindable<float>(CustomSetting.DurationTrigger),
                     KeyboardStep = 100f
                 },
                 new SettingsSlider<float>
                 {
                     LabelText = "Stream area",
-                    Current = config.GetBindable<float>(MSetting.StreamArea),
+                    Current = config.GetBindable<float>(CustomSetting.StreamArea),
                     KeyboardStep = 100f
                 },
                 new SettingsSlider<float>
                 {
                     LabelText = "Minimum stream distance",
-                    Current = config.GetBindable<float>(MSetting.StreamMinimum)
+                    Current = config.GetBindable<float>(CustomSetting.StreamMinimum)
                 },
                 new SettingsSlider<float>
                 {
                     LabelText = "Maximum stream distance",
-                    Current = config.GetBindable<float>(MSetting.StreamMaximum)
+                    Current = config.GetBindable<float>(CustomSetting.StreamMaximum)
                 },
                 new SettingsSlider<float>
                 {
                     LabelText = "Bounce on equal pos",
-                    Current = config.GetBindable<float>(MSetting.EqualPosBounce)
+                    Current = config.GetBindable<float>(CustomSetting.EqualPosBounce)
                 },
                 new SettingsCheckbox
                 {
                     LabelText = "Restrict invert",
-                    Current = config.GetBindable<bool>(MSetting.RestrictInvert)
+                    Current = config.GetBindable<bool>(CustomSetting.RestrictInvert)
                 },
                 new SettingsCheckbox
                 {
                     LabelText = "Stream restrict",
-                    Current = config.GetBindable<bool>(MSetting.StreamRestrict)
+                    Current = config.GetBindable<bool>(CustomSetting.StreamRestrict)
                 },
                 new SettingsCheckbox
                 {
                     LabelText = "Slider predict",
-                    Current = config.GetBindable<bool>(MSetting.SliderPredict)
+                    Current = config.GetBindable<bool>(CustomSetting.SliderPredict)
                 },
                 new SettingsCheckbox
                 {
                     LabelText = "Interpolate angles",
-                    Current = config.GetBindable<bool>(MSetting.InterpolateAngles)
+                    Current = config.GetBindable<bool>(CustomSetting.InterpolateAngles)
                 },
                 new SettingsCheckbox
                 {
                     LabelText = "Invert angle interpolation",
-                    Current = config.GetBindable<bool>(MSetting.InvertAngleInterpolation)
+                    Current = config.GetBindable<bool>(CustomSetting.InvertAngleInterpolation)
                 },
                 new OsuSpriteText
                 {
@@ -195,13 +195,13 @@ namespace osu.Game.Overlays.Settings.Sections.Custom
                 new SettingsSlider<float>
                 {
                     LabelText = "Aggressiveness",
-                    Current = config.GetBindable<float>(MSetting.BezierAggressiveness),
+                    Current = config.GetBindable<float>(CustomSetting.BezierAggressiveness),
                     KeyboardStep = 0.1f
                 },
                 new SettingsSlider<float>
                 {
                     LabelText = "Slider aggressiveness",
-                    Current = config.GetBindable<float>(MSetting.BezierSliderAggressiveness),
+                    Current = config.GetBindable<float>(CustomSetting.BezierSliderAggressiveness),
                     KeyboardStep = 0.5f
                 },
             };
