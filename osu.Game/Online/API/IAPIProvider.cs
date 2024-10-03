@@ -137,7 +137,7 @@ namespace osu.Game.Online.API
         /// <summary>
         /// Schedule a callback to run on the update thread.
         /// </summary>
-        internal void Schedule(Action action);
+        void Schedule(Action action);
 
         /// <summary>
         /// Constructs a new <see cref="IHubClientConnector"/>. May be null if not supported.

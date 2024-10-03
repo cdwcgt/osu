@@ -85,6 +85,8 @@ namespace osu.Game.Tournament.Screens
             this.api = api;
         }
 
+        public void Schedule(Action action) => api.Schedule(action);
+
         public IBindable<APIUser> LocalUser => api.LocalUser;
         public IBindableList<APIUser> Friends => api.Friends;
 
