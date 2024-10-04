@@ -103,9 +103,18 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             mapContentContainer.Add(mapDetail);
             List<BeatmapChoice> choices = new List<BeatmapChoice>();
 
-            for (int i = 0; i < 4; i++) choices.Add(new BeatmapChoice());
+            for (int i = 0; i < 4; i++)
+            {
+                choices.Add(new BeatmapChoice
+                {
+                    Team = TeamColour.Red
+                });
+            }
 
-            mapDetail.UpdateBeatmap(choices);
+            Scheduler.Add(() =>
+            {
+                mapDetail.UpdateBeatmap(choices);
+            });
         }
 
         private static Drawable createHeaderSection(string text)
@@ -186,10 +195,13 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             [BackgroundDependencyLoader]
             private void load()
             {
+                AutoSizeAxes = Axes.Both;
+                Margin = new MarginPadding(16);
+
                 InternalChild = new FillFlowContainer
                 {
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.TopCentre,
                     AutoSizeAxes = Axes.Both,
                     Direction = FillDirection.Vertical,
                     Children = new Drawable[]
@@ -197,6 +209,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                         createHeaderSection("禁图"),
                         mapContent = new FillFlowContainer
                         {
+                            Spacing = new Vector2(20),
                             Direction = FillDirection.Horizontal,
                             AutoSizeAxes = Axes.Both,
                         }
@@ -220,13 +233,23 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     if (roundBeatmap == null)
                         return mapBox;
 
-                    mapBox.Colour = map.Team == TeamColour.Red
+                    mapBox.CenterLine.Colour = map.Team == TeamColour.Red
                         ? new Color4(212, 48, 48, 255)
                         : new Color4(42, 130, 228, 255);
 
                     Color4 backgroundColor = map.Type == ChoiceType.Ban ? Color4.Gray : roundBeatmap.BackgroundColor;
                     Color4 textColor = map.Type == ChoiceType.Ban ? new Color4(229, 229, 229, 255) : roundBeatmap.TextColor;
-                    var mapBoxContent = createMapBoxContent(roundBeatmap.Mods, textColor, textColor);
+                    var mapBoxContent = createMapBoxContent(roundBeatmap.Mods, backgroundColor, textColor);
+
+                    if (map.Team == TeamColour.Red)
+                    {
+                        mapBox.BottomMapContainer.Add(mapBoxContent);
+                    }
+                    else
+                    {
+                        mapBox.TopMapContainer.Add(mapBoxContent);
+                    }
+
                     return mapBox;
                 });
             }
