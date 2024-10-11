@@ -226,7 +226,7 @@ namespace osu.Game.Tournament.Components
                             new Container
                             {
                                 RelativeSizeAxes = Axes.Y,
-                                Width = 30,
+                                Width = 20,
                                 Alpha = id.HasValue ? 1 : 0,
                                 Children = new Drawable[]
                                 {
