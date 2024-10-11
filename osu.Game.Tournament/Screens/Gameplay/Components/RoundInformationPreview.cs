@@ -3,9 +3,12 @@
 
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
+using System.Runtime.InteropServices.JavaScript;
 using System.Xml.Schema;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
@@ -20,7 +23,11 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 {
     public partial class RoundInformationPreview : CompositeDrawable
     {
+        [Resolved]
+        private LadderInfo ladderInfo { get; set; } = null!;
+
         private readonly FillFlowContainer mapContentContainer;
+        private readonly TournamentSpriteText mapCountText;
         private static readonly Color4 boarder_color = new Color4(56, 56, 56, 255);
 
         public RoundInformationPreview()
@@ -94,70 +101,128 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                             Origin = Anchor.TopCentre,
                             AutoSizeAxes = Axes.Both,
                             Direction = FillDirection.Horizontal
+                        },
+                        mapCountText = new TournamentSpriteText
+                        {
+                            Anchor = Anchor.BottomCentre,
+                            Origin = Anchor.BottomCentre,
+                            Font = OsuFont.Torus.With(size: 12),
+                            Colour = new Color4(79, 78, 78, 255),
+                            Margin = new MarginPadding(5)
                         }
                     }
                 }
             };
+        }
 
-            var mapDetail = new MapDetailContent();
-            mapContentContainer.Add(mapDetail);
-            List<BeatmapChoice> choices = new List<BeatmapChoice>();
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+            ladderInfo.CurrentMatch.BindValueChanged(matchChanged, true);
+        }
 
-            for (int i = 0; i < 4; i++)
+        private void matchChanged(ValueChangedEvent<TournamentMatch?> match)
+        {
+            if (match.OldValue != null)
+                match.OldValue.PicksBans.CollectionChanged -= picksBansOnCollectionChanged;
+            if (match.NewValue != null)
+                match.NewValue.PicksBans.CollectionChanged += picksBansOnCollectionChanged;
+
+            Scheduler.AddOnce(updateState);
+        }
+
+        private void picksBansOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+            => Scheduler.AddOnce(updateState);
+
+        private void updateState()
+        {
+            mapContentContainer.Clear();
+            mapCountText.Text = string.Empty;
+
+            if (ladderInfo.CurrentMatch.Value?.Round.Value == null)
+                return;
+
+            var banMapDetail = new MapDetailContent("禁图");
+            BeatmapChoice?[] banChoices = ladderInfo.CurrentMatch.Value.PicksBans.Where(b => b.Type == ChoiceType.Ban).ToArray();
+            var remainChoices = ladderInfo.CurrentMatch.Value.PicksBans.Except(banChoices);
+            banChoices = banChoices.Concat(Enumerable.Repeat((BeatmapChoice?)null, (ladderInfo.CurrentMatch.Value.Round.Value?.BanCount.Value ?? 2) * 2 - banChoices.Length)).ToArray();
+
+            var firstHalfPickDetail = new MapDetailContent("上半场");
+            var secondHalfPickDetail = new MapDetailContent("下半场");
+
+            int halfMapCount = (ladderInfo.CurrentMatch.Value.Round.Value?.BestOf.Value - 1) / 2 ?? 99;
+
+            var firstHalfPickChoice = remainChoices.Take(halfMapCount)
+                                                   // 往后面填充null
+                                                   .Concat(Enumerable.Repeat((BeatmapChoice?)null, halfMapCount - remainChoices.Take(halfMapCount).Count()));
+
+            var secondHalfPickChoice = remainChoices.Skip(halfMapCount).Take(halfMapCount)
+                                                    .Concat(Enumerable.Repeat((BeatmapChoice?)null, halfMapCount - remainChoices.Skip(halfMapCount).Take(halfMapCount).Count()));;
+
+            mapContentContainer.Add(banMapDetail);
+            mapContentContainer.Add(createDivideLine());
+            mapContentContainer.Add(firstHalfPickDetail);
+            mapContentContainer.Add(createDivideLine());
+            mapContentContainer.Add(secondHalfPickDetail);
+            mapContentContainer.Add(createDivideLine());
+            var TBMap = ladderInfo.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(map => map.Mods == "TB");
+
+            if (TBMap != null)
             {
-                choices.Add(new BeatmapChoice
-                {
-                    Team = TeamColour.Red
-                });
+                bool isTBSelected = remainChoices.Any(p => p?.BeatmapID == TBMap.ID);
+                mapContentContainer.Add(createTBMapBox(isTBSelected));
             }
+
+            int mapCount = ladderInfo.CurrentMatch.Value.Round.Value.Beatmaps.Count;
+            int remainMapCount = mapCount - ladderInfo.CurrentMatch.Value.PicksBans.Count;
+
+            mapCountText.Text = $"图池内谱面数量：{mapCount}  |  图池内剩余谱面：{remainMapCount}";
 
             Scheduler.Add(() =>
             {
-                mapDetail.UpdateBeatmap(choices);
+                banMapDetail.UpdateBeatmap(banChoices);
+                firstHalfPickDetail.UpdateBeatmap(firstHalfPickChoice);
+                secondHalfPickDetail.UpdateBeatmap(secondHalfPickChoice);
             });
         }
 
-        private static Drawable createHeaderSection(string text)
+        private Box createDivideLine() => new Box
         {
-            return new FillFlowContainer
+            Colour = new Color4(79, 79, 79, 255),
+            Height = 38.5f,
+            Width = 1f,
+            Margin = new MarginPadding
             {
-                RelativeSizeAxes = Axes.X,
-                Height = 20f,
-                Direction = FillDirection.Horizontal,
-                Children = new Drawable[]
-                {
-                    // 左边的线条
-                    new Box
-                    {
-                        RelativeSizeAxes = Axes.X,
-                        Height = 2,
-                        Colour = Color4.LightGray,
-                        Width = 0.4f
-                    },
-                    // 文字
-                    new Container
-                    {
-                        RelativeSizeAxes = Axes.X,
-                        Width = 0.2f,
-                        Child = new TournamentSpriteText
-                        {
-                            Text = text,
-                            Font = OsuFont.Torus.With(size: 20),
-                            Colour = Color4.Gray,
-                            Anchor = Anchor.Centre,
-                            Origin = Anchor.Centre,
-                        },
-                    },
-                    // 右边的线条
-                    new Box
-                    {
-                        RelativeSizeAxes = Axes.X,
-                        Height = 2,
-                        Colour = Color4.LightGray,
-                        Width = 0.4f
-                    }
-                }
+                Top = 37f
+            }
+        };
+
+        private MapBox createTBMapBox(bool isSelected)
+        {
+            MapBox mapbox = new MapBox();
+
+            mapbox.Margin = new MarginPadding
+            {
+                Vertical = 36f,
+                Horizontal = 16f
             };
+            mapbox.CenterLine.Colour = isSelected ? new Color4(197, 60, 100, 255) : Color4.Gray;
+            mapbox.TopMapContainer.Add(new TournamentSpriteText
+            {
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
+                Text = "决胜局",
+                Colour = Color4.Black
+            });
+
+            var TBMap = ladderInfo.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(map => map.Mods == "TB");
+
+            if (TBMap == null)
+                return mapbox;
+
+            mapbox.BottomMapContainer.Add(createMapBoxContent("TB", TBMap.BackgroundColor, TBMap.TextColor));
+
+            return mapbox;
         }
 
         private static Drawable createMapBoxContent(string mapName, Color4 backgroundColor, Color4 textColor)
@@ -187,10 +252,17 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private partial class MapDetailContent : CompositeDrawable
         {
-            private FillFlowContainer mapContent = null!;
+            private FillFlowContainer banMapContent = null!;
 
             [Resolved]
             private LadderInfo ladderInfo { get; set; } = null!;
+
+            private readonly string headerName;
+
+            public MapDetailContent(string headerName)
+            {
+                this.headerName = headerName;
+            }
 
             [BackgroundDependencyLoader]
             private void load()
@@ -206,8 +278,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     Direction = FillDirection.Vertical,
                     Children = new Drawable[]
                     {
-                        createHeaderSection("禁图"),
-                        mapContent = new FillFlowContainer
+                        createHeaderSection(headerName),
+                        banMapContent = new FillFlowContainer
                         {
                             Spacing = new Vector2(20),
                             Direction = FillDirection.Horizontal,
@@ -217,19 +289,21 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 };
             }
 
-            public void UpdateBeatmap(IEnumerable<BeatmapChoice> maps)
+            public void UpdateBeatmap(IEnumerable<BeatmapChoice?> maps)
             {
                 if (ladderInfo.CurrentMatch.Value?.Round.Value == null)
                     return;
 
-                mapContent.Clear();
+                banMapContent.Clear();
 
-                mapContent.ChildrenEnumerable = maps.Select(map =>
+                banMapContent.ChildrenEnumerable = maps.Select(map =>
                 {
                     var mapBox = new MapBox();
 
-                    //var roundBeatmap = ladderInfo.CurrentMatch.Value.Round.Value?.Beatmaps.FirstOrDefault(roundMap => roundMap.ID == map.BeatmapID);
-                    var roundBeatmap = ladderInfo.CurrentMatch.Value.Round.Value?.Beatmaps.FirstOrDefault();
+                    if (map == null)
+                        return mapBox;
+
+                    var roundBeatmap = ladderInfo.CurrentMatch.Value.Round.Value?.Beatmaps.FirstOrDefault(roundMap => roundMap.ID == map.BeatmapID);
                     if (roundBeatmap == null)
                         return mapBox;
 
@@ -252,6 +326,49 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
                     return mapBox;
                 });
+            }
+
+            private static Drawable createHeaderSection(string text)
+            {
+                return new FillFlowContainer
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Height = 20f,
+                    Direction = FillDirection.Horizontal,
+                    Children = new Drawable[]
+                    {
+                        // 左边的线条
+                        new Box
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Height = 2,
+                            Colour = Color4.LightGray,
+                            Width = 0.4f
+                        },
+                        // 文字
+                        new Container
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Width = 0.2f,
+                            Child = new TournamentSpriteText
+                            {
+                                Text = text,
+                                Font = OsuFont.Torus.With(size: 20),
+                                Colour = Color4.Gray,
+                                Anchor = Anchor.Centre,
+                                Origin = Anchor.Centre,
+                            },
+                        },
+                        // 右边的线条
+                        new Box
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Height = 2,
+                            Colour = Color4.LightGray,
+                            Width = 0.4f
+                        }
+                    }
+                };
             }
         }
 

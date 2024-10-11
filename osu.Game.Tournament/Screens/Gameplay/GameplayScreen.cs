@@ -44,7 +44,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         protected override SongBar CreateSongBar() => new GameplaySongBar
         {
-            Depth = float.MinValue
+            Depth = float.MinValue,
         };
 
         [BackgroundDependencyLoader]
@@ -117,6 +117,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
                         FillMode = FillMode.Fit,
                         RelativeSizeAxes = Axes.Both
                     }
+                },
+                roundPreview = new RoundInformationPreview
+                {
+                    Anchor = Anchor.BottomCentre,
+                    Origin = Anchor.BottomCentre,
+                    Margin = new MarginPadding(13)
                 }
             });
 
@@ -166,6 +172,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
         {
             base.LoadComplete();
 
+            SongBar.Hide();
+
             State.BindTo(ipc.State);
             State.BindValueChanged(_ => updateState(), true);
             LadderInfo.InvertScoreColour.BindValueChanged(v => scoreDisplay.InvertTextColor = v.NewValue, true);
@@ -202,6 +210,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         private TourneyState lastState;
         private MatchHeader header = null!;
+        private RoundInformationPreview roundPreview = null!;
 
         private void contract()
         {
