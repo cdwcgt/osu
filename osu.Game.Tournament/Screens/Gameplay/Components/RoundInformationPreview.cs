@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -243,7 +244,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                         Anchor = Anchor.Centre,
                         Origin = Anchor.Centre,
                         Colour = textColor,
-                        Font = OsuFont.Torus.With(size: 25),
+                        Font = OsuFont.Torus.With(size: 20),
                         Shadow = true,
                     }
                 }
@@ -303,7 +304,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     if (map == null)
                         return mapBox;
 
-                    var roundBeatmap = ladderInfo.CurrentMatch.Value.Round.Value?.Beatmaps.FirstOrDefault(roundMap => roundMap.ID == map.BeatmapID);
+                    var roundBeatmap = ladderInfo.CurrentMatch.Value.Round.Value.Beatmaps.FirstOrDefault(roundMap => roundMap.ID == map.BeatmapID);
                     if (roundBeatmap == null)
                         return mapBox;
 
@@ -313,7 +314,12 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
                     Color4 backgroundColor = map.Type == ChoiceType.Ban ? Color4.Gray : roundBeatmap.BackgroundColor;
                     Color4 textColor = map.Type == ChoiceType.Ban ? new Color4(229, 229, 229, 255) : roundBeatmap.TextColor;
-                    var mapBoxContent = createMapBoxContent(roundBeatmap.Mods, backgroundColor, textColor);
+
+                    var modArray = ladderInfo.CurrentMatch.Value.Round.Value.Beatmaps.Where(b => b.Mods == roundBeatmap.Mods).ToArray();
+
+                    int id = Array.FindIndex(modArray, b => b.ID == roundBeatmap.ID) + 1;
+
+                    var mapBoxContent = createMapBoxContent($"{roundBeatmap.Mods}{id}", backgroundColor, textColor);
 
                     if (map.Team == TeamColour.Red)
                     {
