@@ -60,6 +60,11 @@ namespace osu.Game.Tournament
         {
             base.LoadComplete();
             scheduleNextCheck();
+
+            Scheduler.AddDelayed(() =>
+            {
+                saveChangesButton.TriggerClick();
+            }, 300000, true);
         }
 
         private async Task checkForChanges()
