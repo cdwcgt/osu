@@ -2,20 +2,15 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
-using System.Runtime.InteropServices.JavaScript;
-using System.Xml.Schema;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
-using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Game.Graphics;
-using osu.Game.Overlays.Music;
 using osu.Game.Tournament.Models;
 using osuTK;
 using osuTK.Graphics;
