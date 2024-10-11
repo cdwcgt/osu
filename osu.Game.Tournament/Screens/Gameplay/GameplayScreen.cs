@@ -120,6 +120,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 },
                 roundPreview = new RoundInformationPreview
                 {
+                    Alpha = 0f,
                     Anchor = Anchor.BottomCentre,
                     Origin = Anchor.BottomCentre,
                     Margin = new MarginPadding(13)
@@ -157,6 +158,22 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 {
                     RelativeSizeAxes = Axes.X,
                 },
+                new TourneyButton
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Text = "Toggle map detail",
+                    Action = () =>
+                    {
+                        if (roundPreviewShow)
+                        {
+                            HideRoundPreview();
+                        }
+                        else
+                        {
+                            ShowRoundPreview();
+                        }
+                    }
+                }
             });
 
             LadderInfo.ChromaKeyWidth.BindValueChanged(width => chroma.Width = width.NewValue, true);
@@ -168,11 +185,43 @@ namespace osu.Game.Tournament.Screens.Gameplay
             }, true);
         }
 
+        private bool roundPreviewShow;
+
+        public void ShowRoundPreview()
+        {
+            if (roundPreviewShow)
+                return;
+
+            if (State.Value != TourneyState.Idle && State.Value != TourneyState.Ranking)
+                return;
+
+            SongBar.FadeOut(100);
+            chat.Contract();
+
+            using (roundPreview.BeginDelayedSequence(200))
+                roundPreview.FadeIn(200);
+
+            roundPreviewShow = true;
+        }
+
+        public void HideRoundPreview()
+        {
+            if (!roundPreviewShow)
+                return;
+
+            roundPreview.FadeOut(100);
+
+            using (SongBar.BeginDelayedSequence(200))
+                SongBar.FadeIn(200);
+
+            roundPreviewShow = false;
+
+            updateState();
+        }
+
         protected override void LoadComplete()
         {
             base.LoadComplete();
-
-            SongBar.Hide();
 
             State.BindTo(ipc.State);
             State.BindValueChanged(_ => updateState(), true);
@@ -284,6 +333,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
                         break;
 
                     default:
+                        if (roundPreviewShow)
+                        {
+                            HideRoundPreview();
+                        }
+
                         expand();
                         break;
                 }
@@ -296,6 +350,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         public override void Hide()
         {
+            if (roundPreviewShow)
+            {
+                HideRoundPreview();
+            }
+
             scheduledScreenChange?.Cancel();
             base.Hide();
         }
