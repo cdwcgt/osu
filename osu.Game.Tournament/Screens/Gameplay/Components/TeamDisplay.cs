@@ -12,7 +12,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 {
     public partial class TeamDisplay : DrawableTournamentTeam
     {
-        private readonly TeamScore score;
+        private readonly TeamMultCoin score;
 
         private readonly Bindable<string> teamName = new Bindable<string>("???");
 
@@ -33,7 +33,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             }
         }
 
-        public TeamDisplay(TournamentTeam? team, TeamColour colour, Bindable<int?> currentTeamScore, int pointsToWin)
+        public TeamDisplay(TournamentTeam? team, TeamColour colour, Bindable<double?> currentTeamScore, int pointsToWin)
             : base(team)
         {
             AutoSizeAxes = Axes.Both;
@@ -86,7 +86,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                                                 Origin = anchor,
                                                 Anchor = anchor,
                                             },
-                                            score = new TeamScore(currentTeamScore, colour, pointsToWin)
+                                            score = new TeamMultCoin(currentTeamScore, colour)
                                             {
                                                 Origin = anchor,
                                                 Anchor = anchor,

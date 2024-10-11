@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -173,6 +174,14 @@ namespace osu.Game.Tournament.Screens.Gameplay
                             ShowRoundPreview();
                         }
                     }
+                },
+                team1CoinText = new TourneyNumberBox
+                {
+                    LabelText = "Team1 Coin"
+                },
+                team2CoinText = new TourneyNumberBox
+                {
+                    LabelText = "Team2 Coin"
                 }
             });
 
@@ -183,17 +192,40 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 warmupButton.Alpha = !w.NewValue ? 0.5f : 1;
                 header.ShowScores = !w.NewValue;
             }, true);
+
+            CurrentMatch.BindValueChanged(m =>
+            {
+                team1CoinText.Current.UnbindBindings();
+                team2CoinText.Current.UnbindBindings();
+
+                if (m.NewValue == null)
+                    return;
+
+                Scheduler.AddOnce(() =>
+                {
+                    team1CoinText.Current.BindTo(m.NewValue.Team1Coin);
+                    team2CoinText.Current.BindTo(m.NewValue.Team2Coin);
+                });
+            }, true);
         }
 
         private bool roundPreviewShow;
 
-        public void ShowRoundPreview()
+        public bool ShowRoundPreview()
         {
+            if (!IsLoaded)
+                return false;
+
+            scheduledShowRoundPreview?.Cancel();
+
             if (roundPreviewShow)
-                return;
+                return false;
+
+            if (!IsPresent)
+                return false;
 
             if (State.Value != TourneyState.Idle && State.Value != TourneyState.Ranking)
-                return;
+                return false;
 
             SongBar.FadeOut(100);
             chat.Contract();
@@ -202,10 +234,13 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 roundPreview.FadeIn(200);
 
             roundPreviewShow = true;
+            return true;
         }
 
         public void HideRoundPreview()
         {
+            scheduledHideRoundPreview?.Cancel();
+
             if (!roundPreviewShow)
                 return;
 
@@ -254,17 +289,23 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         private ScheduledDelegate? scheduledScreenChange;
         private ScheduledDelegate? scheduledContract;
+        private ScheduledDelegate? scheduledShowRoundPreview;
+        private ScheduledDelegate? scheduledHideRoundPreview;
 
         private TournamentMatchScoreDisplay scoreDisplay = null!;
 
         private TourneyState lastState;
         private MatchHeader header = null!;
         private RoundInformationPreview roundPreview = null!;
+        private TourneyNumberBox team1CoinText = null!;
+        private TourneyNumberBox team2CoinText = null!;
 
         private void contract()
         {
             if (!IsLoaded)
                 return;
+
+            HideRoundPreview();
 
             scheduledContract?.Cancel();
 
@@ -301,9 +342,15 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     if (warmup.Value || CurrentMatch.Value == null) return;
 
                     if (ipc.Score1.Value > ipc.Score2.Value)
-                        CurrentMatch.Value.Team1Score.Value++;
+                    {
+                        CurrentMatch.Value.Team1Coin.Value += 100;
+                        CurrentMatch.Value.Team2Coin.Value += Math.Round((double)ipc.Score2.Value / ipc.Score1.Value * 100, 2);
+                    }
                     else
-                        CurrentMatch.Value.Team2Score.Value++;
+                    {
+                        CurrentMatch.Value.Team2Coin.Value += 100;
+                        CurrentMatch.Value.Team1Coin.Value += Math.Round((double)ipc.Score2.Value / ipc.Score1.Value * 100, 2);
+                    }
                 }
 
                 switch (State.Value)
@@ -333,11 +380,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                         break;
 
                     default:
-                        if (roundPreviewShow)
-                        {
-                            HideRoundPreview();
-                        }
-
+                        HideRoundPreview();
                         expand();
                         break;
                 }

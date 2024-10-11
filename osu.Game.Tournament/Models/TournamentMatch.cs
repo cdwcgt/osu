@@ -37,12 +37,16 @@ namespace osu.Game.Tournament.Models
 
         public readonly Bindable<int?> Team1Score = new Bindable<int?>();
 
+        public readonly Bindable<double?> Team1Coin = new Bindable<double?>();
+
         [JsonIgnore]
         public readonly Bindable<TournamentTeam?> Team2 = new Bindable<TournamentTeam?>();
 
         public string? Team2Acronym;
 
         public readonly Bindable<int?> Team2Score = new Bindable<int?>();
+
+        public readonly Bindable<double?> Team2Coin = new Bindable<double?>();
 
         public readonly Bindable<bool> Completed = new Bindable<bool>();
 
@@ -111,11 +115,13 @@ namespace osu.Game.Tournament.Models
             if (Team1.Value == null || Team2.Value == null)
                 return;
 
-            if (Team1Score.Value > 0 || Team2Score.Value > 0)
+            if (Team1Coin.Value > 0 || Team2Coin.Value > 0)
                 return;
 
             Team1Score.Value = 0;
             Team2Score.Value = 0;
+            Team1Coin.Value = 0;
+            Team2Coin.Value = 0;
         }
 
         public void Reset()

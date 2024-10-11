@@ -17,7 +17,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
         private readonly Bindable<TournamentTeam?> currentTeam = new Bindable<TournamentTeam?>();
-        private readonly Bindable<int?> currentTeamScore = new Bindable<int?>();
+        private readonly Bindable<double?> currentTeamScore = new Bindable<double?>();
 
         private TeamDisplay? teamDisplay;
 
@@ -68,7 +68,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             {
                 match.StartMatch();
 
-                currentTeamScore.BindTo(teamColour == TeamColour.Red ? match.Team1Score : match.Team2Score);
+                currentTeamScore.BindTo(teamColour == TeamColour.Red ? match.Team1Coin : match.Team2Coin);
                 currentTeam.BindTo(teamColour == TeamColour.Red ? match.Team1 : match.Team2);
             }
 

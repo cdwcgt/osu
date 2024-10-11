@@ -32,40 +32,40 @@ namespace osu.Game.Tournament.Screens
                 {
                     Children = new Drawable[]
                     {
-                        new TournamentSpriteText
-                        {
-                            Text = "Set Mods"
-                        },
-                        new TourneyButton
-                        {
-                            RelativeSizeAxes = Axes.X,
-                            Text = "Reset",
-                            Action = () => setMods(LegacyMods.None, string.Empty)
-                        },
-                        new TourneyButton
-                        {
-                            RelativeSizeAxes = Axes.X,
-                            Text = "Set FM",
-                            Action = () => setMods(LegacyMods.None, "FM")
-                        },
-                        new TourneyButton
-                        {
-                            RelativeSizeAxes = Axes.X,
-                            Text = "Set HR",
-                            Action = () => setMods(LegacyMods.HardRock, "HR")
-                        },
-                        new TourneyButton
-                        {
-                            RelativeSizeAxes = Axes.X,
-                            Text = "Set HD",
-                            Action = () => setMods(LegacyMods.Hidden, "HD")
-                        },
-                        new TourneyButton
-                        {
-                            RelativeSizeAxes = Axes.X,
-                            Text = "Set DT",
-                            Action = () => setMods(LegacyMods.DoubleTime, "DT")
-                        },
+                        //new TournamentSpriteText
+                        //{
+                        //    Text = "Set Mods"
+                        //},
+                        //new TourneyButton
+                        //{
+                        //    RelativeSizeAxes = Axes.X,
+                        //    Text = "Reset",
+                        //    Action = () => setMods(LegacyMods.None, string.Empty)
+                        //},
+                        //new TourneyButton
+                        //{
+                        //    RelativeSizeAxes = Axes.X,
+                        //    Text = "Set FM",
+                        //    Action = () => setMods(LegacyMods.None, "FM")
+                        //},
+                        //new TourneyButton
+                        //{
+                        //    RelativeSizeAxes = Axes.X,
+                        //    Text = "Set HR",
+                        //    Action = () => setMods(LegacyMods.HardRock, "HR")
+                        //},
+                        //new TourneyButton
+                        //{
+                        //    RelativeSizeAxes = Axes.X,
+                        //    Text = "Set HD",
+                        //    Action = () => setMods(LegacyMods.Hidden, "HD")
+                        //},
+                        //new TourneyButton
+                        //{
+                        //    RelativeSizeAxes = Axes.X,
+                        //    Text = "Set DT",
+                        //    Action = () => setMods(LegacyMods.DoubleTime, "DT")
+                        //},
                     }
                 }
             ]);
