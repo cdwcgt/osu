@@ -357,7 +357,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     else
                     {
                         CurrentMatch.Value.Team2Coin.Value += 100;
-                        CurrentMatch.Value.Team1Coin.Value += Math.Round((double)ipc.Score2.Value / ipc.Score1.Value * 100, 2);
+                        CurrentMatch.Value.Team1Coin.Value += Math.Round((double)ipc.Score1.Value / ipc.Score2.Value * 100, 2);
                     }
                 }
 
