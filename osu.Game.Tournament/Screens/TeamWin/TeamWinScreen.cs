@@ -17,6 +17,7 @@ namespace osu.Game.Tournament.Screens.TeamWin
         private Container mainContainer = null!;
 
         private readonly Bindable<bool> currentCompleted = new Bindable<bool>();
+        private Bindable<TeamColour?> winner = new Bindable<TeamColour?>();
 
         private TourneyVideo blueWinVideo = null!;
         private TourneyVideo redWinVideo = null!;
@@ -43,10 +44,27 @@ namespace osu.Game.Tournament.Screens.TeamWin
                 mainContainer = new Container
                 {
                     RelativeSizeAxes = Axes.Both,
+                },
+                new ControlPanel
+                {
+                    Children = new Drawable[]
+                    {
+                        new TourneyButton
+                        {
+                            Text = "Force red win",
+                            Action = () => winner.Value = TeamColour.Red
+                        },
+                        new TourneyButton
+                        {
+                            Text = "Force blue win",
+                            Action = () => winner.Value = TeamColour.Blue
+                        },
+                    }
                 }
             };
 
             currentCompleted.BindValueChanged(_ => update());
+            winner.BindValueChanged(_ => update());
         }
 
         protected override void CurrentMatchChanged(ValueChangedEvent<TournamentMatch?> match)
@@ -68,18 +86,20 @@ namespace osu.Game.Tournament.Screens.TeamWin
         {
             var match = CurrentMatch.Value;
 
-            if (match?.Winner == null)
+            if (winner.Value == null)
             {
                 mainContainer.Clear();
                 return;
             }
+
+            var winnerTeam = winner.Value == TeamColour.Red ? match.Team1.Value : match.Team2.Value;
 
             redWinVideo.Alpha = match.WinnerColour == TeamColour.Red ? 1 : 0;
             blueWinVideo.Alpha = match.WinnerColour == TeamColour.Blue ? 1 : 0;
 
             if (firstDisplay)
             {
-                if (match.WinnerColour == TeamColour.Red)
+                if (winner.Value == TeamColour.Red)
                     redWinVideo.Reset();
                 else
                     blueWinVideo.Reset();
@@ -88,7 +108,7 @@ namespace osu.Game.Tournament.Screens.TeamWin
 
             mainContainer.Children = new Drawable[]
             {
-                new DrawableTeamFlag(match.Winner)
+                new DrawableTeamFlag(winnerTeam)
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
@@ -114,7 +134,7 @@ namespace osu.Game.Tournament.Screens.TeamWin
                             Font = OsuFont.Torus.With(size: 100, weight: FontWeight.Bold),
                             Margin = new MarginPadding { Bottom = 50 },
                         },
-                        new DrawableTeamWithPlayers(match.Winner, match.WinnerColour)
+                        new DrawableTeamWithPlayers(winnerTeam, winner.Value.Value)
                     }
                 },
             };
