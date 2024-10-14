@@ -208,7 +208,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre,
                 Text = "决胜局",
-                Colour = Color4.Black
+                Colour = new Color4(82, 79, 79, 255)
             });
 
             var TBMap = ladderInfo.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(map => map.Mods == "TB");
@@ -331,42 +331,51 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             private static Drawable createHeaderSection(string text)
             {
-                return new FillFlowContainer
+                return new GridContainer
                 {
                     RelativeSizeAxes = Axes.X,
                     Height = 20f,
-                    Direction = FillDirection.Horizontal,
-                    Children = new Drawable[]
+                    ColumnDimensions = new Dimension[]
                     {
-                        // 左边的线条
-                        new Box
+                        new Dimension(GridSizeMode.Distributed),
+                        new Dimension(GridSizeMode.AutoSize),
+                        new Dimension(GridSizeMode.Distributed)
+                    },
+                    Content = new[]
+                    {
+                        new Drawable[]
                         {
-                            RelativeSizeAxes = Axes.X,
-                            Height = 2,
-                            Colour = Color4.LightGray,
-                            Width = 0.4f
-                        },
-                        // 文字
-                        new Container
-                        {
-                            RelativeSizeAxes = Axes.X,
-                            Width = 0.2f,
-                            Child = new TournamentSpriteText
+                            // 左边的线条
+                            new Box
                             {
-                                Text = text,
-                                Font = OsuFont.Torus.With(size: 20),
-                                Colour = Color4.Gray,
-                                Anchor = Anchor.Centre,
-                                Origin = Anchor.Centre,
+                                RelativeSizeAxes = Axes.X,
+                                Height = 1,
+                                Colour = new Color4(166, 166, 166, 255),
                             },
-                        },
-                        // 右边的线条
-                        new Box
-                        {
-                            RelativeSizeAxes = Axes.X,
-                            Height = 2,
-                            Colour = Color4.LightGray,
-                            Width = 0.4f
+                            // 文字
+                            new Container
+                            {
+                                AutoSizeAxes = Axes.X,
+                                RelativeSizeAxes = Axes.Y,
+                                Anchor = Anchor.TopLeft,
+                                Origin = Anchor.CentreLeft,
+                                Margin = new MarginPadding { Horizontal = 10f },
+                                Child = new TournamentSpriteText
+                                {
+                                    Text = text,
+                                    Font = OsuFont.Torus.With(size: 20),
+                                    Colour = Color4.Gray,
+                                    Anchor = Anchor.Centre,
+                                    Origin = Anchor.Centre,
+                                },
+                            },
+                            // 右边的线条
+                            new Box
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                Height = 1,
+                                Colour = new Color4(166, 166, 166, 255),
+                            }
                         }
                     }
                 };
