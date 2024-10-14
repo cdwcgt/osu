@@ -48,6 +48,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
             Depth = float.MinValue,
         };
 
+        private bool switchFromMappool;
+
         [BackgroundDependencyLoader]
         private void load(MatchIPCInfo ipc)
         {
@@ -207,6 +209,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     team2CoinText.Current.BindTo(m.NewValue.Team2Coin);
                 });
             }, true);
+
+            sceneManager?.CurrentScreen.BindValueChanged(s =>
+            {
+                if (s.OldValue == typeof(MapPoolScreen) && s.NewValue == typeof(GameplayScreen))
+                    switchFromMappool = true;
+            });
         }
 
         private bool roundPreviewShow;
@@ -399,12 +407,23 @@ namespace osu.Game.Tournament.Screens.Gameplay
             }
 
             scheduledScreenChange?.Cancel();
+            scheduledShowRoundPreview?.Cancel();
             base.Hide();
         }
 
         public override void Show()
         {
             updateState();
+
+            if (switchFromMappool)
+            {
+                scheduledShowRoundPreview = Scheduler.AddDelayed(() =>
+                {
+                    if (ShowRoundPreview())
+                        scheduledHideRoundPreview = Scheduler.AddDelayed(HideRoundPreview, 5000);
+                }, 5000);
+            }
+
             base.Show();
         }
 
