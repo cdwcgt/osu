@@ -4,6 +4,7 @@
 using System;
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
@@ -172,6 +173,9 @@ namespace osu.Game.Tournament
         private Drawable? currentScreen;
         private ScheduledDelegate? scheduledHide;
 
+        public IBindable<Type> CurrentScreen => currentScreenBindable;
+        private readonly Bindable<Type> currentScreenBindable = new Bindable<Type>();
+
         private Drawable? temporaryScreen;
 
         public void SetScreen(Drawable screen)
@@ -189,6 +193,8 @@ namespace osu.Game.Tournament
             var target = screens.FirstOrDefault(s => s.GetType() == screenType);
 
             if (target == null || currentScreen == target) return;
+
+            currentScreenBindable.Value = screenType;
 
             if (scheduledHide?.Completed == false)
             {
