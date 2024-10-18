@@ -12,6 +12,7 @@ using osu.Framework.Localisation;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osuTK;
 
@@ -21,14 +22,17 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
     {
         private readonly Bindable<double?> coin = new Bindable<double?>();
         private readonly TeamColour colour;
-        private RollingTextContainer counter = null!;
+        private RollingMultCoinContainer counter = null!;
         private readonly Anchor anchor;
+        private bool flip;
+        private Container animationContainer = null!;
+        private RollingSignNumberContainer diffContainer = null!;
 
         public TeamMultCoin(Bindable<double?> coin, TeamColour colour)
         {
             this.coin.BindTo(coin);
             this.colour = colour;
-            bool flip = colour == TeamColour.Blue;
+            flip = colour == TeamColour.Blue;
             anchor = flip ? Anchor.BottomRight : Anchor.BottomLeft;
         }
 
@@ -38,86 +42,126 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             Height = 23f;
             Width = 150f;
 
-            InternalChild = new Container
+            InternalChildren = new Drawable[]
             {
-                RelativeSizeAxes = Axes.Both,
-                Anchor = anchor,
-                Origin = anchor,
-                Children = new Drawable[]
+                new Container
                 {
-                    new Box
+                    RelativeSizeAxes = Axes.Both,
+                    Anchor = anchor,
+                    Origin = anchor,
+                    Children = new Drawable[]
                     {
-                        Colour = TournamentGame.GetTeamColour(colour),
-                        RelativeSizeAxes = Axes.Both,
-                    },
-                    new FillFlowContainer
-                    {
-                        RelativeSizeAxes = Axes.Both,
-                        Anchor = anchor,
-                        Origin = anchor,
-                        Padding = new MarginPadding
+                        animationContainer = new Container
                         {
-                            Horizontal = 2f
-                        },
-                        Children = new Drawable[]
-                        {
-                            new Container
+                            Alpha = 0,
+                            Width = 40f,
+                            Height = 20f,
+                            Anchor = flip ? Anchor.CentreLeft : Anchor.CentreRight,
+                            Origin = flip ? Anchor.CentreLeft : Anchor.CentreRight,
+                            Children = new Drawable[]
                             {
-                                AutoSizeAxes = Axes.Both,
-                                Margin = new MarginPadding { Vertical = 3.5f, Horizontal = 6.4f },
-                                Anchor = anchor,
-                                Origin = anchor,
-                                Child = new Sprite
+                                new Box
                                 {
-                                    Texture = store.Get("multcoin"),
-                                    Scale = new Vector2(0.04f),
+                                    Colour = TournamentGame.GetTeamColour(colour),
+                                    RelativeSizeAxes = Axes.Both,
+                                },
+                                diffContainer = new RollingSignNumberContainer
+                                {
+                                    Anchor = Anchor.Centre,
+                                    Origin = Anchor.Centre
+                                }
+                            }
+                        },
+                        new Box
+                        {
+                            Colour = TournamentGame.GetTeamColour(colour),
+                            RelativeSizeAxes = Axes.Both,
+                        },
+                        new FillFlowContainer
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Anchor = anchor,
+                            Origin = anchor,
+                            Padding = new MarginPadding
+                            {
+                                Horizontal = 2f
+                            },
+                            Children = new Drawable[]
+                            {
+                                new Container
+                                {
+                                    AutoSizeAxes = Axes.Both,
+                                    Margin = new MarginPadding { Vertical = 3.5f, Horizontal = 6.4f },
+                                    Anchor = anchor,
+                                    Origin = anchor,
+                                    Child = new Sprite
+                                    {
+                                        Texture = store.Get("multcoin"),
+                                        Scale = new Vector2(0.04f),
+                                        Anchor = anchor,
+                                        Origin = anchor,
+                                    },
+                                },
+                                counter = new RollingMultCoinContainer
+                                {
                                     Anchor = anchor,
                                     Origin = anchor,
                                 },
-                            },
-                            counter = new RollingTextContainer
-                            {
-                                Anchor = anchor,
-                                Origin = anchor,
-                            },
-                            new TournamentSpriteText
-                            {
-                                Margin = new MarginPadding { Bottom = 2f },
-                                Anchor = anchor,
-                                Origin = anchor,
-                                Font = OsuFont.Torus.With(size: 15),
-                                Text = "MultCoin"
+                                new TournamentSpriteText
+                                {
+                                    Margin = new MarginPadding { Bottom = 2f },
+                                    Anchor = anchor,
+                                    Origin = anchor,
+                                    Font = OsuFont.Torus.With(size: 15),
+                                    Text = "MultCoin"
+                                }
                             }
                         }
                     }
-                }
+                },
             };
 
             coin.BindValueChanged(d =>
             {
-                if (d.NewValue == null)
-                {
-                    counter.Current.Value = 0;
-                    return;
-                }
-
-                counter.Current.Value = d.NewValue.Value;
+                triggerAnimation(d.OldValue ?? 0, d.NewValue ?? 0);
             }, true);
         }
 
-        public partial class RollingTextContainer : RollingCounter<double>
+        private void triggerAnimation(double oldAmount, double newAmount)
+        {
+            FinishTransforms(true);
+            double diff = newAmount - oldAmount;
+            diffContainer.DisplayedCount = diff;
+            diffContainer.Current.Value = diff;
+            animationContainer.FadeIn(500);
+            animationContainer.MoveToX(flip ? -43 : 43, 500, Easing.OutElastic);
+
+            using (BeginDelayedSequence(1000))
+            {
+                counter.Current.Value = newAmount;
+                diffContainer.Current.Value = 0;
+            }
+
+            using (BeginDelayedSequence(2000))
+            {
+                animationContainer.MoveToX(0, 500, Easing.OutElastic);
+                animationContainer.FadeOut(500);
+            }
+        }
+
+        private partial class RollingMultCoinContainer : RollingCounter<double>
         {
             protected override double RollingDuration => 500;
 
             protected override IHasText CreateText()
             {
-                return new TextContainer();
+                return new MultCoinTextContainer();
             }
 
             protected override LocalisableString FormatCount(double count) => count.ToString("N1");
         }
 
-        protected partial class TextContainer : FillFlowContainer, IHasText
+        private partial class MultCoinTextContainer : FillFlowContainer, IHasText
         {
             public LocalisableString Text
             {
@@ -134,7 +178,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             private readonly SpriteText wholePart;
             private readonly SpriteText fractionPart;
 
-            public TextContainer()
+            public MultCoinTextContainer()
             {
                 AutoSizeAxes = Axes.X;
                 RelativeSizeAxes = Axes.Y;

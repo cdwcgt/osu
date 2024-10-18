@@ -5,9 +5,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Framework.Input.Events;
 using osu.Game.Tournament.Models;
-using osuTK.Input;
 
 namespace osu.Game.Tournament.Screens.Gameplay.Components
 {
@@ -77,23 +75,23 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             currentTeam.TriggerChange();
         }
 
-        protected override bool OnMouseDown(MouseDownEvent e)
-        {
-            switch (e.Button)
-            {
-                case MouseButton.Left:
-                    if (currentTeamScore.Value < currentMatch.Value?.PointsToWin)
-                        currentTeamScore.Value++;
-                    return true;
-
-                case MouseButton.Right:
-                    if (currentTeamScore.Value > 0)
-                        currentTeamScore.Value--;
-                    return true;
-            }
-
-            return base.OnMouseDown(e);
-        }
+        // protected override bool OnMouseDown(MouseDownEvent e)
+        // {
+        //     switch (e.Button)
+        //     {
+        //         case MouseButton.Left:
+        //             if (currentTeamScore.Value < currentMatch.Value?.PointsToWin)
+        //                 currentTeamScore.Value++;
+        //             return true;
+        //
+        //         case MouseButton.Right:
+        //             if (currentTeamScore.Value > 0)
+        //                 currentTeamScore.Value--;
+        //             return true;
+        //     }
+        //
+        //     return base.OnMouseDown(e);
+        // }
 
         private void teamChanged(ValueChangedEvent<TournamentTeam?> team)
         {

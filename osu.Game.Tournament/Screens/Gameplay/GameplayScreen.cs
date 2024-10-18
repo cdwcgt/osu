@@ -43,6 +43,9 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         private Drawable chroma = null!;
 
+        private Bindable<double?> team1Coin = new Bindable<double?>();
+        private Bindable<double?> team2Coin = new Bindable<double?>();
+
         protected override SongBar CreateSongBar() => new GameplaySongBar
         {
             Depth = float.MinValue,
@@ -184,6 +187,15 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 team2CoinText = new TourneyNumberBox
                 {
                     LabelText = "Team2 Coin"
+                },
+                new TourneyButton
+                {
+                    Text = "Apply coin",
+                    Action = () =>
+                    {
+                        team1Coin.Value = team1CoinText.Current.Value;
+                        team2Coin.Value = team2CoinText.Current.Value;
+                    }
                 }
             });
 
@@ -197,17 +209,27 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
             CurrentMatch.BindValueChanged(m =>
             {
-                team1CoinText.Current.UnbindBindings();
-                team2CoinText.Current.UnbindBindings();
+                team1Coin.UnbindBindings();
+                team2Coin.UnbindBindings();
 
                 if (m.NewValue == null)
                     return;
 
                 Scheduler.AddOnce(() =>
                 {
-                    team1CoinText.Current.BindTo(m.NewValue.Team1Coin);
-                    team2CoinText.Current.BindTo(m.NewValue.Team2Coin);
+                    team1Coin.BindTo(m.NewValue.Team1Coin);
+                    team2Coin.BindTo(m.NewValue.Team2Coin);
                 });
+            }, true);
+
+            team1Coin.BindValueChanged(c =>
+            {
+                team1CoinText.Current.Value = c.NewValue;
+            }, true);
+
+            team2Coin.BindValueChanged(c =>
+            {
+                team2CoinText.Current.Value = c.NewValue;
             }, true);
 
             sceneManager?.CurrentScreen.BindValueChanged(s =>

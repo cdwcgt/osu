@@ -1,6 +1,7 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -17,6 +18,10 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private readonly Bindable<string> teamName = new Bindable<string>("???");
 
         private bool showScore;
+        private readonly TeamCoinDIffDisplay coinDiff;
+
+        [Resolved]
+        private LadderInfo ladderInfo { get; set; } = null!;
 
         public bool ShowScore
         {
@@ -33,9 +38,10 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             }
         }
 
-        public TeamDisplay(TournamentTeam? team, TeamColour colour, Bindable<double?> currentTeamScore, int pointsToWin)
+        public TeamDisplay(TournamentTeam? team, TeamColour colour, Bindable<double?> currentTeamCoin, int pointsToWin)
             : base(team)
         {
+            this.coinDiff = coinDiff;
             AutoSizeAxes = Axes.Both;
 
             bool flip = colour == TeamColour.Red;
@@ -61,7 +67,23 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                         Spacing = new Vector2(5),
                         Children = new Drawable[]
                         {
-                            Flag,
+                            new FillFlowContainer
+                            {
+                                Direction = FillDirection.Vertical,
+                                Origin = anchor,
+                                Anchor = anchor,
+                                AutoSizeAxes = Axes.Both,
+                                Spacing = new Vector2(0, 3),
+                                Children = new Drawable[]
+                                {
+                                    Flag.With(f =>
+                                    {
+                                        f.Anchor = Anchor.TopCentre;
+                                        f.Origin = Anchor.TopCentre;
+                                    }),
+                                    coinDiff = new TeamCoinDIffDisplay(colour)
+                                }
+                            },
                             new FillFlowContainer
                             {
                                 AutoSizeAxes = Axes.Both,
@@ -86,7 +108,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                                                 Origin = anchor,
                                                 Anchor = anchor,
                                             },
-                                            score = new TeamMultCoin(currentTeamScore, colour)
+                                            score = new TeamMultCoin(currentTeamCoin, colour)
                                             {
                                                 Origin = anchor,
                                                 Anchor = anchor,
@@ -112,6 +134,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             base.LoadComplete();
 
             updateDisplay();
+
             FinishTransforms(true);
 
             if (Team != null)
@@ -121,6 +144,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private void updateDisplay()
         {
             score.FadeTo(ShowScore ? 1 : 0, 200);
+            coinDiff.FadeTo(ShowScore ? 1 : 0, 200);
         }
     }
 }
