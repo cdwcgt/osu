@@ -1,7 +1,6 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -374,12 +373,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     if (ipc.Score1.Value > ipc.Score2.Value)
                     {
                         CurrentMatch.Value.Team1Coin.Value += 100;
-                        CurrentMatch.Value.Team2Coin.Value += Math.Round((double)ipc.Score2.Value / ipc.Score1.Value * 100, 2);
+                        CurrentMatch.Value.Team2Coin.Value += (double)ipc.Score2.Value / ipc.Score1.Value * 100;
                     }
                     else
                     {
                         CurrentMatch.Value.Team2Coin.Value += 100;
-                        CurrentMatch.Value.Team1Coin.Value += Math.Round((double)ipc.Score1.Value / ipc.Score2.Value * 100, 2);
+                        CurrentMatch.Value.Team1Coin.Value += (double)ipc.Score1.Value / ipc.Score2.Value * 100;
                     }
                 }
 

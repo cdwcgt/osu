@@ -24,7 +24,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private readonly TeamColour colour;
         private RollingMultCoinContainer counter = null!;
         private readonly Anchor anchor;
-        private bool flip;
+        private readonly bool flip;
         private Container animationContainer = null!;
         private RollingSignNumberContainer diffContainer = null!;
 
@@ -65,7 +65,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                                     Colour = TournamentGame.GetTeamColour(colour),
                                     RelativeSizeAxes = Axes.Both,
                                 },
-                                diffContainer = new RollingSignNumberContainer
+                                diffContainer = new RollingMultDiffNumberContainer
                                 {
                                     Anchor = Anchor.Centre,
                                     Origin = Anchor.Centre
@@ -123,7 +123,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             coin.BindValueChanged(d =>
             {
-                triggerAnimation(d.OldValue ?? 0, d.NewValue ?? 0);
+                Scheduler.AddOnce(() => triggerAnimation(d.OldValue ?? 0, d.NewValue ?? 0));
             }, true);
         }
 
@@ -133,6 +133,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             double diff = newAmount - oldAmount;
             diffContainer.DisplayedCount = diff;
             diffContainer.Current.Value = diff;
+            counter.DisplayedCount = oldAmount;
+            counter.Current.Value = oldAmount;
             animationContainer.FadeIn(500);
             animationContainer.MoveToX(flip ? -43 : 43, 500, Easing.OutElastic);
 
@@ -142,23 +144,28 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 diffContainer.Current.Value = 0;
             }
 
-            using (BeginDelayedSequence(2000))
+            using (BeginDelayedSequence(4500))
             {
                 animationContainer.MoveToX(0, 500, Easing.OutElastic);
                 animationContainer.FadeOut(500);
             }
         }
 
+        private partial class RollingMultDiffNumberContainer : RollingSignNumberContainer
+        {
+            protected override double RollingDuration => 1000;
+        }
+
         private partial class RollingMultCoinContainer : RollingCounter<double>
         {
-            protected override double RollingDuration => 500;
+            protected override double RollingDuration => 1000;
 
             protected override IHasText CreateText()
             {
                 return new MultCoinTextContainer();
             }
 
-            protected override LocalisableString FormatCount(double count) => count.ToString("N1");
+            protected override LocalisableString FormatCount(double count) => count.ToString("N2");
         }
 
         private partial class MultCoinTextContainer : FillFlowContainer, IHasText

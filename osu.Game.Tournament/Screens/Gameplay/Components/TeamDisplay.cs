@@ -41,7 +41,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         public TeamDisplay(TournamentTeam? team, TeamColour colour, Bindable<double?> currentTeamCoin, int pointsToWin)
             : base(team)
         {
-            this.coinDiff = coinDiff;
             AutoSizeAxes = Axes.Both;
 
             bool flip = colour == TeamColour.Red;

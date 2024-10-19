@@ -64,11 +64,11 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             opponentTeamCoin.BindValueChanged(_ => updateDisplay(), true);
         }
 
-        private void updateDisplay()
+        private void updateDisplay() => Scheduler.AddOnce(() =>
         {
             FinishTransforms(true);
             using (BeginDelayedSequence(1000))
                 coinDiffContainer.Current.Value = (currentTeamCoin.Value ?? 0) - (opponentTeamCoin.Value ?? 0);
-        }
+        });
     }
 }

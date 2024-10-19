@@ -18,6 +18,8 @@ namespace osu.Game.Tournament.Components
 
         protected override IHasText CreateText() => new SignNumberContainer();
 
+        protected override LocalisableString FormatCount(double count) => count.ToString("N1");
+
         public partial class SignNumberContainer : CompositeDrawable, IHasText
         {
             private readonly OsuSpriteText text;
@@ -27,7 +29,7 @@ namespace osu.Game.Tournament.Components
                 get => text.Text;
                 set
                 {
-                    if (!int.TryParse(value.ToString().Replace(",", ""), out int result))
+                    if (!double.TryParse(value.ToString().Replace(",", ""), out double result))
                     {
                         text.Text = "+0";
                     }
