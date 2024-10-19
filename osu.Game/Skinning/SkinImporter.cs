@@ -3,9 +3,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using osu.Framework.Platform;
 using osu.Game.Beatmaps;
@@ -13,6 +17,7 @@ using osu.Game.Database;
 using osu.Game.Extensions;
 using osu.Game.IO;
 using osu.Game.IO.Archives;
+using osu.Game.Overlays.Notifications;
 using Realms;
 
 namespace osu.Game.Skinning
@@ -183,6 +188,41 @@ namespace osu.Game.Skinning
         }
 
         private Skin createInstance(SkinInfo item) => item.CreateInstance(skinResources);
+
+        public override async Task<Live<SkinInfo>?> ImportAsUpdate(ProgressNotification notification, ImportTask importTask, SkinInfo original)
+        {
+            Guid originalId = original.ID;
+
+            var imported = await Import(notification, new[] { importTask }).ConfigureAwait(false);
+
+            if (!imported.Any())
+                return null;
+
+            Debug.Assert(imported.Count() == 1);
+
+            var first = imported.First();
+
+            if (first.ID == originalId)
+            {
+                first.PerformWrite(s =>
+                {
+                    s.Name = original.Name;
+                    s.Creator = original.Creator;
+                });
+                return first;
+            }
+
+            first.PerformWrite(updated =>
+            {
+                var realm = updated.Realm;
+                original = realm!.Find<SkinInfo>(originalId)!;
+                original.DeletePending = true;
+
+                updated.Name = Regex.Replace(updated.Name, @"\s*\[.*?\]", "").PadRight(0);
+            });
+
+            return first;
+        }
 
         /// <summary>
         /// Save a skin, serialising any changes to skin layouts to relevant JSON structures.

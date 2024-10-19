@@ -95,7 +95,7 @@ namespace osu.Game.Database
         /// 42   2024-08-07    Update mania key bindings to reflect changes to ManiaAction
         /// 43   2024-10-14    Reset keybind for toggling FPS display to avoid conflict with "convert to stream" in the editor, if not already changed by user.
         /// </summary>
-        private const int schema_version = 43;
+        private const int schema_version = 42;
 
         /// <summary>
         /// Lock object which is held during <see cref="BlockAllOperations"/> sections, blocking realm retrieval during blocking periods.

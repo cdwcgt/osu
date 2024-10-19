@@ -34,6 +34,8 @@ using osu.Game.Screens.Edit.Components;
 using osu.Game.Screens.Edit.Components.Menus;
 using osu.Game.Skinning;
 using osu.Framework.Graphics.Cursor;
+using osu.Framework.Screens;
+using osu.Game.Screens;
 
 namespace osu.Game.Overlays.SkinEditor
 {
@@ -102,6 +104,9 @@ namespace osu.Game.Overlays.SkinEditor
         [Resolved]
         private IDialogOverlay? dialogOverlay { get; set; }
 
+        [Resolved]
+        private IPerformFromScreenRunner? performer { get; set; }
+
         public SkinEditor()
         {
         }
@@ -157,6 +162,7 @@ namespace osu.Game.Overlays.SkinEditor
                                                     {
                                                         new EditorMenuItem(Web.CommonStrings.ButtonsSave, MenuItemType.Standard, () => Save()),
                                                         new EditorMenuItem(CommonStrings.Export, MenuItemType.Standard, () => skins.ExportCurrentSkin()) { Action = { Disabled = !RuntimeInfo.IsDesktop } },
+                                                        new EditorMenuItem("Edit externally", MenuItemType.Standard, editExternally),
                                                         new OsuMenuItemSpacer(),
                                                         new EditorMenuItem(CommonStrings.RevertToDefault, MenuItemType.Destructive, () => dialogOverlay?.Push(new RevertConfirmDialog(revert))),
                                                         new OsuMenuItemSpacer(),
@@ -272,6 +278,16 @@ namespace osu.Game.Overlays.SkinEditor
             SelectedComponents.BindCollectionChanged((_, _) => Scheduler.AddOnce(populateSettings), true);
 
             selectedTarget.BindValueChanged(targetChanged, true);
+        }
+
+        private void editExternally()
+        {
+            skinEditorOverlay?.Hide();
+
+            performer?.PerformFromScreen(screen =>
+            {
+                screen.Push(new ExternalSkinEditScreen());
+            });
         }
 
         public bool OnPressed(KeyBindingPressEvent<PlatformAction> e)
