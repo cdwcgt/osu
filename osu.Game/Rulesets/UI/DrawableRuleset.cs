@@ -16,6 +16,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Cursor;
 using osu.Framework.Input;
 using osu.Framework.Input.Events;
+using osu.Framework.Input.States;
 using osu.Game.Beatmaps;
 using osu.Game.Configuration;
 using osu.Game.Graphics.Cursor;
@@ -596,6 +597,9 @@ namespace osu.Game.Rulesets.UI
         /// Invoked when the user requests to pause while the resume overlay is active.
         /// </summary>
         public abstract void CancelResume();
+
+        [CanBeNull]
+        public virtual Func<InputState, bool> OnKeyBindingPressInGameplayMenuOverlay => null;
     }
 
     public class BeatmapInvalidForRulesetException : ArgumentException

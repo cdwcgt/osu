@@ -8,7 +8,11 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Input;
+using osu.Framework.Input.Bindings;
+using osu.Framework.Input.States;
 using osu.Game.Beatmaps;
+using osu.Game.Database;
+using osu.Game.Input.Bindings;
 using osu.Game.Input.Handlers;
 using osu.Game.Replays;
 using osu.Game.Rulesets.Mods;
@@ -34,9 +38,25 @@ namespace osu.Game.Rulesets.Osu.UI
 
         protected new OsuRulesetConfigManager Config => (OsuRulesetConfigManager)base.Config;
 
+        public override Func<InputState, bool>? OnKeyBindingPressInGameplayMenuOverlay { get; }
+
         public DrawableOsuRuleset(Ruleset ruleset, IBeatmap beatmap, IReadOnlyList<Mod>? mods = null)
             : base(ruleset, beatmap, mods)
         {
+            OnKeyBindingPressInGameplayMenuOverlay = OnPressInGameplayMenu;
+        }
+
+        [Resolved]
+        private RealmAccess realm { get; set; } = null!;
+
+        private bool OnPressInGameplayMenu(InputState state)
+        {
+            var realmKeyBindings = realm.Realm.All<RealmKeyBinding>()
+                                        .Where(b => b.RulesetName == OsuRuleset.SHORT_NAME && b.Variant == 0).Detach()
+                                        .Where(key => key.GetAction<OsuAction>() == OsuAction.LeftButton || key.GetAction<OsuAction>() == OsuAction.RightButton);
+
+            return state.Keyboard.Keys.Any(pressed => realmKeyBindings
+                .Any(key => key.KeyCombination.Keys.Contains((InputKey)pressed)));
         }
 
         [BackgroundDependencyLoader]
