@@ -40,13 +40,18 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                         RelativeSizeAxes = Axes.Both,
                         Colour = TournamentGame.GetTeamColour(colour)
                     },
-                    coinDiffContainer = new RollingSignNumberContainer
+                    coinDiffContainer = new RollingMultDiffNumberContainer
                     {
                         Anchor = Anchor.Centre,
                         Origin = Anchor.Centre
                     }
                 }
             };
+        }
+
+        private partial class RollingMultDiffNumberContainer : RollingSignNumberContainer
+        {
+            protected override double RollingDuration => 1000;
         }
 
         [BackgroundDependencyLoader]
@@ -67,7 +72,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private void updateDisplay() => Scheduler.AddOnce(() =>
         {
             FinishTransforms(true);
-            using (BeginDelayedSequence(1000))
+            using (BeginDelayedSequence(2000))
                 coinDiffContainer.Current.Value = (currentTeamCoin.Value ?? 0) - (opponentTeamCoin.Value ?? 0);
         });
     }

@@ -54,7 +54,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                         animationContainer = new Container
                         {
                             Alpha = 0,
-                            Width = 40f,
+                            Width = 45f,
                             Height = 20f,
                             Anchor = flip ? Anchor.CentreLeft : Anchor.CentreRight,
                             Origin = flip ? Anchor.CentreLeft : Anchor.CentreRight,
@@ -136,15 +136,15 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             counter.DisplayedCount = oldAmount;
             counter.Current.Value = oldAmount;
             animationContainer.FadeIn(500);
-            animationContainer.MoveToX(flip ? -43 : 43, 500, Easing.OutElastic);
+            animationContainer.MoveToX(flip ? -48 : 48, 500, Easing.OutElastic);
 
-            using (BeginDelayedSequence(1000))
+            using (BeginDelayedSequence(2000))
             {
                 counter.Current.Value = newAmount;
                 diffContainer.Current.Value = 0;
             }
 
-            using (BeginDelayedSequence(4500))
+            using (BeginDelayedSequence(4000))
             {
                 animationContainer.MoveToX(0, 500, Easing.OutElastic);
                 animationContainer.FadeOut(500);
