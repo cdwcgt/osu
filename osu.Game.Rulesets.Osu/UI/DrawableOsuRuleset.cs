@@ -52,7 +52,8 @@ namespace osu.Game.Rulesets.Osu.UI
         private bool OnPressInGameplayMenu(InputState state)
         {
             var realmKeyBindings = realm.Realm.All<RealmKeyBinding>()
-                                        .Where(b => b.RulesetName == OsuRuleset.SHORT_NAME && b.Variant == 0).Detach()
+                                        .Where(b => b.RulesetName == OsuRuleset.SHORT_NAME && b.Variant == 0)
+                                        .Detach()
                                         .Where(key => key.GetAction<OsuAction>() == OsuAction.LeftButton || key.GetAction<OsuAction>() == OsuAction.RightButton);
 
             return state.Keyboard.Keys.Any(pressed => realmKeyBindings

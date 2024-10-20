@@ -378,6 +378,15 @@ namespace osu.Game.Tests.Visual.Gameplay
             AddUntilStep("loop is stopped", () => !getLoop().IsPlaying);
         }
 
+        [Test]
+        public void TestPressActionInPauseOverlay()
+        {
+            pauseViaPauseGameplayAction();
+            AddStep("move mouse to Continue", () => InputManager.MoveMouseTo(Player.ChildrenOfType<PauseOverlay>().First().Buttons[0]));
+            AddStep("press Z", () => InputManager.PressKey(Key.Z));
+            confirmResumed();
+        }
+
         private void pauseAndConfirm()
         {
             pauseViaBackAction();

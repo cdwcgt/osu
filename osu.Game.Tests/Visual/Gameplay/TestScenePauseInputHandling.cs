@@ -19,6 +19,7 @@ using osu.Game.Rulesets.Osu.UI;
 using osu.Game.Screens.Play.HUD;
 using osu.Game.Skinning;
 using osu.Game.Storyboards;
+using osuTK;
 using osuTK.Input;
 
 namespace osu.Game.Tests.Visual.Gameplay
@@ -90,6 +91,9 @@ namespace osu.Game.Tests.Visual.Gameplay
             checkKey(() => counter, 1, false);
 
             AddStep("pause", () => Player.Pause());
+
+            // prevent the pause interface is closed by pressing Z
+            AddStep("move mouse to outside", () => InputManager.MoveMouseTo(new Vector2(0)));
             AddStep("press Z", () => InputManager.PressKey(Key.Z));
             checkKey(() => counter, 1, false);
 
@@ -225,6 +229,8 @@ namespace osu.Game.Tests.Visual.Gameplay
 
             AddStep("pause", () => Player.Pause());
 
+            // prevent the pause interface is closed by pressing X
+            AddStep("move mouse to outside", () => InputManager.MoveMouseTo(new Vector2(0)));
             AddStep("release X", () => InputManager.ReleaseKey(Key.X));
             AddStep("press X", () => InputManager.PressKey(Key.X));
 

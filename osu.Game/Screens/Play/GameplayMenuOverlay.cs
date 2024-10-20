@@ -265,7 +265,7 @@ namespace osu.Game.Screens.Play
             protected override bool OnHover(HoverEvent e)
             {
                 isHovered = true;
-                return base.OnHover(e);
+                return true;
             }
 
             protected override void OnHoverLost(HoverLostEvent e)
