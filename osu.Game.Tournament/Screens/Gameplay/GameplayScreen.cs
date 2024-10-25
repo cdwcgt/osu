@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -360,6 +361,23 @@ namespace osu.Game.Tournament.Screens.Gameplay
             }
         }
 
+        private bool isTB
+        {
+            get
+            {
+                var lastPick = CurrentMatch.Value?.PicksBans.LastOrDefault();
+                var tbMap = CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(map => map.Mods == "TB");
+
+                if (lastPick == null || tbMap == null)
+                    return false;
+
+                return lastPick.Type == ChoiceType.Pick && lastPick.BeatmapID == tbMap.ID;
+            }
+        }
+
+        private const double winner_bonus = 110;
+        private const double extra_winner_bonus_tb = 40;
+
         private void updateState()
         {
             try
@@ -372,12 +390,13 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
                     if (ipc.Score1.Value > ipc.Score2.Value)
                     {
-                        CurrentMatch.Value.Team1Coin.Value += 100;
+                        // 黄金加成
+                        CurrentMatch.Value.Team1Coin.Value += winner_bonus + (isTB ? extra_winner_bonus_tb : 0);
                         CurrentMatch.Value.Team2Coin.Value += (double)ipc.Score2.Value / ipc.Score1.Value * 100;
                     }
                     else
                     {
-                        CurrentMatch.Value.Team2Coin.Value += 100;
+                        CurrentMatch.Value.Team2Coin.Value += winner_bonus + (isTB ? extra_winner_bonus_tb : 0);
                         CurrentMatch.Value.Team1Coin.Value += (double)ipc.Score1.Value / ipc.Score2.Value * 100;
                     }
                 }
