@@ -5,6 +5,8 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Sprites;
+using osu.Framework.Graphics.Textures;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osuTK;
@@ -16,7 +18,7 @@ namespace osu.Game.Tournament.Screens.TeamIntro
         private Container mainContainer = null!;
 
         [BackgroundDependencyLoader]
-        private void load()
+        private void load(TextureStore store)
         {
             RelativeSizeAxes = Axes.Both;
 
@@ -26,6 +28,12 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                 {
                     RelativeSizeAxes = Axes.Both,
                     Loop = true,
+                },
+                new Sprite
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Texture = store.Get("Videos/TeamRequest"),
+                    FillMode = FillMode.Fit,
                 },
                 mainContainer = new Container
                 {
