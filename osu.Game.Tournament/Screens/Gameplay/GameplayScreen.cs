@@ -207,31 +207,6 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 header.ShowScores = !w.NewValue;
             }, true);
 
-            CurrentMatch.BindValueChanged(m =>
-            {
-                team1Coin.UnbindBindings();
-                team2Coin.UnbindBindings();
-
-                if (m.NewValue == null)
-                    return;
-
-                Scheduler.AddOnce(() =>
-                {
-                    team1Coin.BindTo(m.NewValue.Team1Coin);
-                    team2Coin.BindTo(m.NewValue.Team2Coin);
-                });
-            }, true);
-
-            team1Coin.BindValueChanged(c =>
-            {
-                team1CoinText.Current.Value = c.NewValue;
-            }, true);
-
-            team2Coin.BindValueChanged(c =>
-            {
-                team2CoinText.Current.Value = c.NewValue;
-            }, true);
-
             sceneManager?.CurrentScreen.BindValueChanged(s =>
             {
                 if (s.OldValue == typeof(MapPoolScreen) && s.NewValue == typeof(GameplayScreen))
@@ -315,6 +290,22 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
             warmup.Value = match.NewValue.Team1Score.Value + match.NewValue.Team2Score.Value == 0;
             scheduledScreenChange?.Cancel();
+
+            team1Coin.UnbindAll();
+            team2Coin.UnbindAll();
+
+            team1Coin = match.NewValue.Team1Coin.GetBoundCopy();
+            team2Coin = match.NewValue.Team2Coin.GetBoundCopy();
+
+            team1Coin.BindValueChanged(c =>
+            {
+                team1CoinText.Current.Value = c.NewValue;
+            }, true);
+
+            team2Coin.BindValueChanged(c =>
+            {
+                team2CoinText.Current.Value = c.NewValue;
+            }, true);
         }
 
         private ScheduledDelegate? scheduledScreenChange;
