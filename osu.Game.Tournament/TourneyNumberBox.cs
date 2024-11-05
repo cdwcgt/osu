@@ -49,17 +49,16 @@ namespace osu.Game.Tournament
                         return;
                     }
 
-                    if (double.TryParse(e.NewValue, out double intVal))
+                    if (double.TryParse(e.NewValue, out double doubleVal))
                     {
                         if (e.NewValue.EndsWith('.'))
                             return;
 
-                        Current.Value = intVal;
+                        Current.Value = doubleVal;
+                        return;
                     }
-                    else
-                    {
-                        numberBox.NotifyInputError();
-                    }
+
+                    numberBox.NotifyInputError();
 
                     // trigger Current again to either restore the previous text box value, or to reformat the new value via .ToString().
                     Current.TriggerChange();
@@ -67,7 +66,7 @@ namespace osu.Game.Tournament
 
                 Current.BindValueChanged(e =>
                 {
-                    numberBox.Current.Value = e.NewValue?.ToString();
+                    numberBox.Current.Value = e.NewValue?.ToString("0.#####");
                 });
             }
         }
