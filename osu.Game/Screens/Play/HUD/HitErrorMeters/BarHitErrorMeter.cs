@@ -13,6 +13,7 @@ using osu.Framework.Graphics.Pooling;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Localisation;
+using osu.Framework.Utils;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
@@ -47,6 +48,15 @@ namespace osu.Game.Screens.Play.HUD.HitErrorMeters
         [SettingSource(typeof(BarHitErrorMeterStrings), nameof(BarHitErrorMeterStrings.LabelStyle), nameof(BarHitErrorMeterStrings.LabelStyleDescription))]
         public Bindable<LabelStyles> LabelStyle { get; } = new Bindable<LabelStyles>(LabelStyles.Icons);
 
+        [SettingSource("Max angle")]
+        public BindableInt MaxAngle { get; } = new BindableInt()
+        {
+            Value = 0,
+            MaxValue = 1800,
+            MinValue = 0,
+            Default = 0,
+        };
+
         private const int judgement_line_width = 14;
 
         private const int max_concurrent_judgements = 50;
@@ -71,6 +81,8 @@ namespace osu.Game.Screens.Play.HUD.HitErrorMeters
         private Container colourBars = null!;
         private Container arrowContainer = null!;
 
+        private Container rotateContainer = null;
+
         private (HitResult result, double length)[] hitWindows = null!;
 
         private Drawable[]? centreMarkerDrawables;
@@ -89,11 +101,13 @@ namespace osu.Game.Screens.Play.HUD.HitErrorMeters
 
             hitWindows = HitWindows.GetAllAvailableWindows().ToArray();
 
-            InternalChild = new Container
+            InternalChild = rotateContainer = new Container
             {
                 AutoSizeAxes = Axes.X,
                 Height = bar_height,
                 Margin = new MarginPadding(2),
+                Origin = Anchor.Centre,
+                Anchor = Anchor.Centre,
                 Children = new Drawable[]
                 {
                     judgementLinePool,
@@ -286,6 +300,11 @@ namespace osu.Game.Screens.Play.HUD.HitErrorMeters
                      .ScaleTo(0).ScaleTo(1, 1000, Easing.OutElasticHalf);
                 }
             }
+
+            MaxAngle.BindValueChanged(a =>
+            {
+                rotateContainer.RotateTo(calculateRotateAngle(floatingAverage), arrow_move_duration, Easing.OutQuint);
+            });
         }
 
         private void recreateLabels(LabelStyles style)
@@ -395,10 +414,10 @@ namespace osu.Game.Screens.Play.HUD.HitErrorMeters
             }
         }
 
+        private const int arrow_move_duration = 800;
+
         protected override void OnNewJudgement(JudgementResult judgement)
         {
-            const int arrow_move_duration = 800;
-
             if (!judgement.IsHit || judgement.HitObject.HitWindows?.WindowFor(HitResult.Miss) == 0)
                 return;
 
@@ -430,7 +449,11 @@ namespace osu.Game.Screens.Play.HUD.HitErrorMeters
             arrow.MoveToY(
                 getRelativeJudgementPosition(floatingAverage = floatingAverage * 0.9 + judgement.TimeOffset * 0.1)
                 , arrow_move_duration, Easing.OutQuint);
+
+            rotateContainer.RotateTo(calculateRotateAngle(floatingAverage), arrow_move_duration, Easing.OutQuint);
         }
+
+        private float calculateRotateAngle(double value) => -Math.Clamp((float)(value / maxHitWindow) / 2 * MaxAngle.Value, -MaxAngle.Value, MaxAngle.Value);
 
         private float getRelativeJudgementPosition(double value) => Math.Clamp((float)((value / maxHitWindow) + 1) / 2, 0, 1);
 
