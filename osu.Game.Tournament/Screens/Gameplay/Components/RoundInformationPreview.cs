@@ -139,21 +139,21 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 return;
 
             var banMapDetail = new MapDetailContent("禁图");
-            BeatmapChoice?[] banChoices = ladderInfo.CurrentMatch.Value.PicksBans.Where(b => b.Type == ChoiceType.Ban).ToArray();
-            var remainChoices = ladderInfo.CurrentMatch.Value.PicksBans.Except(banChoices);
-            banChoices = banChoices.Concat(Enumerable.Repeat((BeatmapChoice?)null, (ladderInfo.CurrentMatch.Value.Round.Value?.BanCount.Value ?? 2) * 2 - banChoices.Length)).ToArray();
+            BeatmapChoice[] banChoices = ladderInfo.CurrentMatch.Value.PicksBans.Where(b => b.Type == ChoiceType.Ban).ToArray();
+            BeatmapChoice[] remainChoices = ladderInfo.CurrentMatch.Value.PicksBans.Except(banChoices).ToArray();
+            banChoices = banChoices.Concat(Enumerable.Repeat((BeatmapChoice?)null, ladderInfo.CurrentMatch.Value.Round.Value!.BanCount.Value * 2 - banChoices.Length)).ToArray();
 
             var firstHalfPickDetail = new MapDetailContent("上半场");
             var secondHalfPickDetail = new MapDetailContent("下半场");
 
-            int halfMapCount = (ladderInfo.CurrentMatch.Value.Round.Value?.BestOf.Value - 1) / 2 ?? 99;
+            int halfMapCount = (ladderInfo.CurrentMatch.Value.Round.Value!.BestOf.Value - 1) / 2;
 
             var firstHalfPickChoice = remainChoices.Take(halfMapCount)
                                                    // 往后面填充null
                                                    .Concat(Enumerable.Repeat((BeatmapChoice?)null, halfMapCount - remainChoices.Take(halfMapCount).Count()));
 
             var secondHalfPickChoice = remainChoices.Skip(halfMapCount).Take(halfMapCount)
-                                                    .Concat(Enumerable.Repeat((BeatmapChoice?)null, halfMapCount - remainChoices.Skip(halfMapCount).Take(halfMapCount).Count()));;
+                                                    .Concat(Enumerable.Repeat((BeatmapChoice?)null, halfMapCount - remainChoices.Skip(halfMapCount).Take(halfMapCount).Count()));
 
             mapContentContainer.Add(banMapDetail);
             mapContentContainer.Add(createDivideLine());
@@ -161,7 +161,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             mapContentContainer.Add(createDivideLine());
             mapContentContainer.Add(secondHalfPickDetail);
             mapContentContainer.Add(createDivideLine());
-            var TBMap = ladderInfo.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(map => map.Mods == "TB");
+            var TBMap = ladderInfo.CurrentMatch.Value.Round.Value!.Beatmaps.FirstOrDefault(map => map.Mods == "TB");
 
             if (TBMap != null)
             {
@@ -169,7 +169,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 mapContentContainer.Add(createTBMapBox(isTBSelected));
             }
 
-            int mapCount = ladderInfo.CurrentMatch.Value.Round.Value.Beatmaps.Count;
+            int mapCount = ladderInfo.CurrentMatch.Value.Round.Value!.Beatmaps.Count;
             int remainMapCount = mapCount - ladderInfo.CurrentMatch.Value.PicksBans.Count;
 
             mapCountText.Text = $"图池内谱面数量：{mapCount}  |  图池内剩余谱面：{remainMapCount}";
