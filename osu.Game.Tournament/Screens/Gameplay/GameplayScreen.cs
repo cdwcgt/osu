@@ -10,6 +10,8 @@ using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
 using osu.Framework.Threading;
+using osu.Game.Graphics;
+using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Overlays.Settings;
 using osu.Game.Tournament.Components;
@@ -20,6 +22,7 @@ using osu.Game.Tournament.Screens.MapPool;
 using osu.Game.Tournament.Screens.TeamWin;
 using osuTK;
 using osuTK.Graphics;
+using FontWeight = osu.Game.Graphics.FontWeight;
 
 namespace osu.Game.Tournament.Screens.Gameplay
 {
@@ -68,6 +71,14 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 header = new MatchHeader
                 {
                     ShowLogo = false,
+                },
+                drawTextContainer = new Container
+                {
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.TopCentre,
+                    Margin = new MarginPadding { Top = 5f },
+                    Size = new Vector2(352, 100)
+                    //Alpha = 0,
                 },
                 new Container
                 {
@@ -196,7 +207,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                         team1Coin.Value = team1CoinText.Current.Value;
                         team2Coin.Value = team2CoinText.Current.Value;
                     }
-                }
+                },
             });
 
             LadderInfo.ChromaKeyWidth.BindValueChanged(width => chroma.Width = width.NewValue, true);
@@ -320,6 +331,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private RoundInformationPreview roundPreview = null!;
         private TourneyNumberBox team1CoinText = null!;
         private TourneyNumberBox team2CoinText = null!;
+        private Container drawTextContainer = null!;
 
         private void contract()
         {
@@ -366,8 +378,27 @@ namespace osu.Game.Tournament.Screens.Gameplay
             }
         }
 
-        private const double winner_bonus = 110;
-        private const double extra_winner_bonus_tb = 40;
+        public const double WINNER_BONUS = 110;
+        public const double EXTRA_WINNER_BONUS_TB = 40;
+
+        private void showDraw(TeamColour colour)
+        {
+            drawTextContainer.Clear();
+            drawTextContainer.Width = 352;
+            drawTextContainer.Add(new Sprite
+            {
+                RelativeSizeAxes = Axes.Both,
+                Texture = colour == TeamColour.Red ? textures.Get("RCB") : textures.Get("BCB")
+            });
+
+            drawTextContainer.FadeIn(100);
+            drawTextContainer.ResizeWidthTo(200, 150, Easing.Out);
+
+            using (BeginDelayedSequence(5000))
+            {
+                drawTextContainer.FadeOut(100);
+            }
+        }
 
         private void updateState()
         {
@@ -382,13 +413,15 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     if (ipc.Score1.Value > ipc.Score2.Value)
                     {
                         // 黄金加成
-                        CurrentMatch.Value.Team1Coin.Value += winner_bonus + (isTB ? extra_winner_bonus_tb : 0);
+                        CurrentMatch.Value.Team1Coin.Value += WINNER_BONUS + (isTB ? EXTRA_WINNER_BONUS_TB : 0);
                         CurrentMatch.Value.Team2Coin.Value += (double)ipc.Score2.Value / ipc.Score1.Value * 100;
+                        showDraw(TeamColour.Red);
                     }
                     else
                     {
-                        CurrentMatch.Value.Team2Coin.Value += winner_bonus + (isTB ? extra_winner_bonus_tb : 0);
+                        CurrentMatch.Value.Team2Coin.Value += WINNER_BONUS + (isTB ? EXTRA_WINNER_BONUS_TB : 0);
                         CurrentMatch.Value.Team1Coin.Value += (double)ipc.Score1.Value / ipc.Score2.Value * 100;
+                        showDraw(TeamColour.Blue);
                     }
                 }
 

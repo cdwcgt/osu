@@ -3,12 +3,18 @@
 
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Graphics.Sprites;
+using osu.Framework.Graphics.Textures;
+using osu.Framework.Threading;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
+using osu.Game.Utils;
 using osuTK;
+using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Screens.Gameplay.Components
 {
@@ -19,31 +25,55 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private readonly Bindable<double?> currentTeamCoin = new Bindable<double?>();
         private readonly Bindable<double?> opponentTeamCoin = new Bindable<double?>();
         private readonly RollingSignNumberContainer coinDiffContainer;
+        private readonly Box background;
+        private readonly Container iconContainer;
+
+        [Resolved]
+        private TextureStore store { get; set; } = null!;
 
         public TeamCoinDIffDisplay(TeamColour colour)
         {
             teamColour = colour;
 
-            AutoSizeAxes = Axes.Both;
+            RelativeSizeAxes = Axes.X;
+            AutoSizeAxes = Axes.Y;
 
-            InternalChild = new Container
+            InternalChild = new FillFlowContainer
             {
                 Anchor = Anchor.TopCentre,
                 Origin = Anchor.TopCentre,
-                CornerRadius = 10f,
-                Size = new Vector2(60, 20),
-                Masking = true,
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Vertical,
                 Children = new Drawable[]
                 {
-                    new Box
+                    new Container
                     {
-                        RelativeSizeAxes = Axes.Both,
-                        Colour = TournamentGame.GetTeamColour(colour)
+                        Anchor = Anchor.TopCentre,
+                        Origin = Anchor.TopCentre,
+                        CornerRadius = 10f,
+                        Size = new Vector2(60, 20),
+                        Masking = true,
+                        Children = new Drawable[]
+                        {
+                            background = new Box
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Colour = Color4Extensions.FromHex("919191")
+                            },
+                            coinDiffContainer = new RollingMultDiffNumberContainer
+                            {
+                                Anchor = Anchor.Centre,
+                                Origin = Anchor.Centre
+                            }
+                        }
                     },
-                    coinDiffContainer = new RollingMultDiffNumberContainer
+                    iconContainer = new Container
                     {
-                        Anchor = Anchor.Centre,
-                        Origin = Anchor.Centre
+                        Anchor = Anchor.TopCentre,
+                        Origin = Anchor.TopCentre,
+                        Height = 25f,
+                        AutoSizeAxes = Axes.Both,
                     }
                 }
             };
@@ -69,11 +99,94 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             opponentTeamCoin.BindValueChanged(_ => updateDisplay(), true);
         }
 
+        private ScheduledDelegate? blinkScheduledDelegate;
+        private ScheduledDelegate? changeIconScheduledDelegate;
+
         private void updateDisplay() => Scheduler.AddOnce(() =>
         {
-            FinishTransforms(true);
+            coinDiffContainer.FinishTransforms();
+
+            double diff = (currentTeamCoin.Value ?? 0) - (opponentTeamCoin.Value ?? 0);
+
             using (BeginDelayedSequence(2000))
-                coinDiffContainer.Current.Value = (currentTeamCoin.Value ?? 0) - (opponentTeamCoin.Value ?? 0);
+            {
+                coinDiffContainer.Current.Value = diff;
+                background.FadeColour(getColor(diff), 500, Easing.OutQuint);
+            }
+
+            changeIconScheduledDelegate?.Cancel();
+            changeIconScheduledDelegate = Scheduler.AddDelayed(() =>
+            {
+                if (diff >= 0)
+                {
+                    iconContainer.FadeOut(200, Easing.OutQuint);
+                }
+
+                iconContainer.Clear();
+                iconContainer.Child = getIconByDiff(diff);
+
+                blinkScheduledDelegate?.Cancel();
+
+                if (diff >= 0)
+                {
+                    return;
+                }
+
+                int blinkTime = getBlinkTime(diff);
+
+                blinkOnce(blinkTime);
+
+                blinkScheduledDelegate = Scheduler.AddDelayed(() =>
+                {
+                    blinkOnce(blinkTime);
+                }, blinkTime * 2, true);
+            }, 2500);
         });
+
+        private void blinkOnce(int timeInMs)
+        {
+            using (BeginDelayedSequence(0))
+            {
+                iconContainer.FadeOut(timeInMs, Easing.OutQuint);
+            }
+
+            using (BeginDelayedSequence(timeInMs))
+            {
+                iconContainer.FadeIn(timeInMs, Easing.OutQuint);
+            }
+        }
+
+        private int getBlinkTime(double diff)
+        {
+            return diff <= -90 ? 500 :
+                diff <= -45 ? 650 :
+                diff < 0 ? 800 : 0;
+        }
+
+        private Color4 getColor(double diff) => ColourUtils.SampleFromLinearGradient(new[]
+        {
+            (-90f, Color4Extensions.FromHex("383838")),
+            (-45f, Color4Extensions.FromHex("5E5E5E")),
+            (0f, Color4Extensions.FromHex("919191")),
+            (20f, Color4Extensions.FromHex("cc9f0c")),
+            (90f, Color4Extensions.FromHex("FFC300")),
+        }, (float)diff);
+
+        private Drawable getIconByDiff(double diff)
+        {
+            return diff <= -90 ? getIcon("MC") :
+                diff <= -45 ? getIcon("MB") :
+                diff < 0 ? getIcon("MA") : new Container();
+        }
+
+        private Drawable getIcon(string icon) => new Container
+        {
+            Size = new Vector2(60, 20),
+            Child = new Sprite
+            {
+                RelativeSizeAxes = Axes.Both,
+                Texture = store.Get(icon)
+            },
+        };
     }
 }

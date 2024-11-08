@@ -16,7 +16,12 @@ namespace osu.Game.Tournament.Components
     {
         protected override double RollingDuration => 500;
 
-        protected override IHasText CreateText() => new SignNumberContainer();
+        protected override IHasText CreateText() => new SignNumberContainer(CreateSpriteText);
+
+        protected override OsuSpriteText CreateSpriteText() => new OsuSpriteText
+        {
+            Font = OsuFont.Torus.With(size: 20),
+        };
 
         protected override LocalisableString FormatCount(double count) => count.ToString("N1");
 
@@ -40,16 +45,15 @@ namespace osu.Game.Tournament.Components
                 }
             }
 
-            public SignNumberContainer()
+            public SignNumberContainer(Func<OsuSpriteText> createSpriteText)
             {
-                RelativeSizeAxes = Axes.Both;
+                AutoSizeAxes = Axes.Both;
 
-                InternalChild = text = new OsuSpriteText
+                InternalChild = text = createSpriteText().With(t =>
                 {
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
-                    Font = OsuFont.Torus.With(size: 20),
-                };
+                    t.Anchor = Anchor.Centre;
+                    t.Origin = Anchor.Centre;
+                });
             }
         }
     }

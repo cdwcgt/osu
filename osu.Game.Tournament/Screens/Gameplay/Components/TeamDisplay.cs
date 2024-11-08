@@ -96,7 +96,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                                     {
                                         AutoSizeAxes = Axes.Both,
                                         Direction = FillDirection.Horizontal,
-                                        Spacing = new Vector2(5),
                                         Origin = anchor,
                                         Anchor = anchor,
                                         Children = new Drawable[]
