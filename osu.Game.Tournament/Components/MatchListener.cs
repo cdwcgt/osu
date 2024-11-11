@@ -83,7 +83,7 @@ namespace osu.Game.Tournament.Components
 
             req.Success += content =>
             {
-                var newEvent = content.Events.ExceptBy(events.Select(e => e.Id), e => e.Id);
+                var newEvent = content.Events.ExceptBy(events.Select(e => e.Id), e => e.Id).Where(e => e.Game?.Scores.Count != 0);
 
                 events.AddRange(newEvent);
 

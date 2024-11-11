@@ -134,6 +134,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                                 {
                                     Anchor = flip ? Anchor.CentreRight : Anchor.CentreLeft,
                                     Origin = Anchor = flip ? Anchor.CentreRight : Anchor.CentreLeft,
+                                    Margin = new MarginPadding { Horizontal = 2f },
                                     Text = "(未确定)",
                                     Font = OsuFont.Torus.With(size: 15),
                                     Colour = Color4Extensions.FromHex("EBBC23"),

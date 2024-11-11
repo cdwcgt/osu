@@ -56,7 +56,7 @@ namespace osu.Game.Tournament.Components
 
             ipc.State.BindValueChanged(s =>
             {
-                if (s.NewValue != TourneyState.Idle)
+                if (s.NewValue == TourneyState.Ranking)
                     return;
 
                 Score1.Value = 0;
@@ -76,7 +76,7 @@ namespace osu.Game.Tournament.Components
 
         private void updateScoreFromIPC()
         {
-            if (ConfirmedByApi.Value)
+            if (ConfirmedByApi.Value && listener.CurrentlyListening.Value)
                 return;
 
             Score1.Value = ipc.Score1.Value;
@@ -86,6 +86,9 @@ namespace osu.Game.Tournament.Components
         private void processNewMatchEvent(APIMatchEvent newEvent)
         {
             if (currentMatch.Value == null)
+                return;
+
+            if (ipc.State.Value != TourneyState.Playing && ipc.State.Value != TourneyState.Ranking)
                 return;
 
             APIMatchGame? matchResult = newEvent.Game;
@@ -103,8 +106,8 @@ namespace osu.Game.Tournament.Components
             int[] team2Player = currentMatch.Value.Team2.Value?.Players.Select(p => p.OnlineID).ToArray() ?? Array.Empty<int>();
 
             ConfirmedByApi.Value = true;
-            Score1.Value = matchResult.Scores.Where(s => team1Player.Any(t => t == s.UserID)).Select(s => s.TotalScore).Sum();
-            Score2.Value = matchResult.Scores.Where(s => team2Player.Any(t => t == s.UserID)).Select(s => s.TotalScore).Sum();
+            Score1.Value = matchResult.Scores.Where(s => team1Player.Any(t => t == s.UserID)).Select(s => s.Score).Sum();
+            Score2.Value = matchResult.Scores.Where(s => team2Player.Any(t => t == s.UserID)).Select(s => s.Score).Sum();
         }
     }
 }

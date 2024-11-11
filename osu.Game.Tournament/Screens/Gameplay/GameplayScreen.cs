@@ -1,9 +1,11 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
@@ -93,7 +95,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     Alpha = 0f,
                     Child = new TournamentSpriteText
                     {
-                        Text = "回合进行中获取的分数暂不作为参考，结束后将会自动获取分数。",
+                        Text = "回合进行中获取的分数在提现模式中无法参考，结束后将会自动获取分数。",
                         Font = OsuFont.Torus.With(size: 17f)
                     }
                 },
@@ -169,12 +171,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     Text = "Toggle warmup",
                     Action = () => warmup.Toggle()
                 },
-                new TourneyButton
-                {
-                    RelativeSizeAxes = Axes.X,
-                    Text = "Toggle chat",
-                    Action = () => { State.Value = State.Value == TourneyState.Idle ? TourneyState.Playing : TourneyState.Idle; }
-                },
+                //new TourneyButton
+                //{
+                //    RelativeSizeAxes = Axes.X,
+                //    Text = "Toggle chat",
+                //    Action = () => { State.Value = State.Value == TourneyState.Idle ? TourneyState.Playing : TourneyState.Idle; }
+                //},
                 new SettingsSlider<int>
                 {
                     LabelText = "Chroma width",
@@ -272,7 +274,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
             });
 
             ((GameplaySongBar)SongBar).WaitForResult.BindTo(waitForResult);
-            scoreDisplay.WaitForResult.BindTo(waitForResult);
+
+            warmup.BindValueChanged(w =>
+            {
+                warmupButton.BackgroundColour = w.NewValue ? Color4.Red : Color4Extensions.FromHex(@"44aadd");
+            });
         }
 
         private bool roundPreviewShow;
@@ -461,23 +467,39 @@ namespace osu.Game.Tournament.Screens.Gameplay
         {
             if (!waitForResult.Value || !roundInfo.ConfirmedByApi.Value) return;
 
+            if (CurrentMatch.Value == null)
+                return;
+
             scoreWarningContainer.FadeOut(100);
 
             if (roundInfo.Score1.Value > roundInfo.Score2.Value)
             {
                 // 黄金加成
                 CurrentMatch.Value.Team1Coin.Value += WINNER_BONUS + (isTB ? EXTRA_WINNER_BONUS_TB : 0);
-                CurrentMatch.Value.Team2Coin.Value += Math.Round((double)roundInfo.Score2.Value / roundInfo.Score1.Value * 100, 2, MidpointRounding.AwayFromZero);
+                double lossPoint = Math.Round((double)roundInfo.Score2.Value / roundInfo.Score1.Value * 100, 2, MidpointRounding.AwayFromZero);
+
+                if (!double.IsNaN(lossPoint))
+                {
+                    CurrentMatch.Value.Team2Coin.Value += lossPoint;
+                }
+
                 showDraw(TeamColour.Red);
             }
             else
             {
                 CurrentMatch.Value.Team2Coin.Value += WINNER_BONUS + (isTB ? EXTRA_WINNER_BONUS_TB : 0);
-                CurrentMatch.Value.Team1Coin.Value += Math.Round((double)roundInfo.Score1.Value / roundInfo.Score2.Value * 100, 2, MidpointRounding.AwayFromZero);
+                double lossPoint = Math.Round((double)roundInfo.Score1.Value / roundInfo.Score2.Value * 100, 2, MidpointRounding.AwayFromZero);
+
+                if (!double.IsNaN(lossPoint))
+                {
+                    CurrentMatch.Value.Team1Coin.Value += lossPoint;
+                }
+
                 showDraw(TeamColour.Blue);
             }
 
             waitForResult.Value = false;
+            scoreDisplay.WaitForResult.Value = false;
         }
 
         private void updateState()
@@ -524,6 +546,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     default:
                         HideRoundPreview();
                         expand();
+                        if (!warmup.Value)
+                            scoreDisplay.WaitForResult.Value = true;
                         break;
                 }
             }
