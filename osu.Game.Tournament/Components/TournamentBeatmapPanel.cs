@@ -370,7 +370,7 @@ namespace osu.Game.Tournament.Components
             [Resolved]
             private LargeTextureStore textures { get; set; } = null!;
 
-            protected override Drawable CreateDrawable(IBeatmapSetOnlineInfo model)
+            protected override Drawable? CreateDrawable(IBeatmapSetOnlineInfo? model)
             {
                 if (model == null)
                 {
