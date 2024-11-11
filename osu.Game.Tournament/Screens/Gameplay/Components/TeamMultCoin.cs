@@ -224,7 +224,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 return GameplayScreen.WINNER_BONUS + (isTB ? GameplayScreen.EXTRA_WINNER_BONUS_TB : 0);
             }
 
-            double diff = (double)ourScore.Value / oppoScore.Value * 100;
+            double diff = Math.Round((double)ourScore.Value / oppoScore.Value * 100, 2, MidpointRounding.AwayFromZero);
 
             return double.IsNaN(diff) ? 0 : diff;
         }

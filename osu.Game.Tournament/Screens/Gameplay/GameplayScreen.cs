@@ -467,13 +467,13 @@ namespace osu.Game.Tournament.Screens.Gameplay
             {
                 // 黄金加成
                 CurrentMatch.Value.Team1Coin.Value += WINNER_BONUS + (isTB ? EXTRA_WINNER_BONUS_TB : 0);
-                CurrentMatch.Value.Team2Coin.Value += (double)roundInfo.Score2.Value / roundInfo.Score1.Value * 100;
+                CurrentMatch.Value.Team2Coin.Value += Math.Round((double)roundInfo.Score2.Value / roundInfo.Score1.Value * 100, 2, MidpointRounding.AwayFromZero);
                 showDraw(TeamColour.Red);
             }
             else
             {
                 CurrentMatch.Value.Team2Coin.Value += WINNER_BONUS + (isTB ? EXTRA_WINNER_BONUS_TB : 0);
-                CurrentMatch.Value.Team1Coin.Value += (double)roundInfo.Score1.Value / roundInfo.Score2.Value * 100;
+                CurrentMatch.Value.Team1Coin.Value += Math.Round((double)roundInfo.Score1.Value / roundInfo.Score2.Value * 100, 2, MidpointRounding.AwayFromZero);
                 showDraw(TeamColour.Blue);
             }
 
