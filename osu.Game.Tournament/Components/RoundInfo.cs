@@ -71,7 +71,7 @@ namespace osu.Game.Tournament.Components
                     // if we are not listening a api, just trust ipc.
                     ConfirmedByApi.Value = true;
                 }
-            });
+            }, true);
         }
 
         private void updateScoreFromIPC()
