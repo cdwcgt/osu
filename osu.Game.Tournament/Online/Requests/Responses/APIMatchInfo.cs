@@ -18,9 +18,9 @@ namespace osu.Game.Tournament.Online.Requests.Responses
         public APIUser[] Users { get; set; } = null!;
 
         [JsonProperty("first_event_id")]
-        public int FirstEventID { get; set; }
+        public long FirstEventID { get; set; }
 
         [JsonProperty("last_event_id")]
-        public int LastEventID { get; set; }
+        public long LastEventID { get; set; }
     }
 }

@@ -2,58 +2,61 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
 namespace osu.Game.Tournament.Online.Requests.Responses
 {
     public class APIMatchEvent
     {
-        [JsonPropertyName("id")]
+        [JsonProperty("id")]
         public long Id { get; set; }
 
-        [JsonPropertyName("detail")]
+        [JsonProperty("detail")]
         public MatchEventDetail Detail { get; set; } = null!;
 
-        [JsonPropertyName("timestamp")]
+        [JsonProperty("timestamp")]
         public DateTime Timestamp { get; set; }
 
-        [JsonPropertyName("user_id")]
+        [JsonProperty("user_id")]
         public int? UserID { get; set; }
 
-        [JsonPropertyName("game")]
+        [JsonProperty("game")]
         public APIMatchGame? Game { get; set; }
     }
 
     public class MatchEventDetail
     {
-        [JsonPropertyName("type")]
+        [JsonProperty("type")]
         public MatchEventType Type { get; set; }
 
-        [JsonPropertyName("text")]
+        [JsonProperty("text")]
         public string? Text { get; set; }
     }
 
+    [JsonConverter(typeof(MatchEventTypeConverter))]
     public enum MatchEventType
     {
-        [JsonPropertyName("host-changed")]
+        [JsonProperty("host-changed")]
         HostChanged,
 
-        [JsonPropertyName("match-created")]
+        [JsonProperty("match-created")]
         MatchCreated,
 
-        [JsonPropertyName("match-disbanded")]
+        [JsonProperty("match-disbanded")]
         MatchDisbanded,
 
-        [JsonPropertyName("other")]
+        [JsonProperty("other")]
         Other,
 
-        [JsonPropertyName("player-joined")]
+        [JsonProperty("player-joined")]
         PlayerJoined,
 
-        [JsonPropertyName("player-kicked")]
+        [JsonProperty("player-kicked")]
         PlayerKicked,
 
-        [JsonPropertyName("player-left")]
-        PlayerLeft
+        [JsonProperty("player-left")]
+        PlayerLeft,
+
+        Unknown
     }
 }

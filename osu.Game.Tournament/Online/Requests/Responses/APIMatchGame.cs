@@ -3,32 +3,31 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
-using osu.Game.Online.API.Requests.Responses;
+using Newtonsoft.Json;
 
 namespace osu.Game.Tournament.Online.Requests.Responses
 {
     public class APIMatchGame
     {
-        [JsonPropertyName("id")]
+        [JsonProperty("id")]
         public int Id { get; set; }
 
-        [JsonPropertyName("beatmap_id")]
+        [JsonProperty("beatmap_id")]
         public int BeatmapId { get; set; }
 
-        [JsonPropertyName("start_time")]
+        [JsonProperty("start_time")]
         public DateTimeOffset StartTime { get; set; }
 
-        [JsonPropertyName("end_time")]
+        [JsonProperty("end_time")]
         public DateTimeOffset? EndTime { get; set; }
 
-        [JsonPropertyName("ruleset_id")]
+        [JsonProperty("ruleset_id")]
         public int RulesetId { get; set; }
 
-        [JsonPropertyName("mods")]
-        public List<string> Mods { get; set; }
+        [JsonProperty("mods")]
+        public List<string>? Mods { get; set; }
 
-        [JsonPropertyName("scores")]
-        public List<SoloScoreInfo> Scores { get; set; } = null!;
+        [JsonProperty("scores")]
+        public List<MatchScore> Scores { get; set; } = null!;
     }
 }
