@@ -4,9 +4,11 @@
 using System;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Graphics.Sprites;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
@@ -166,9 +168,24 @@ namespace osu.Game.Screens.Play.HUD
         {
             private OsuSpriteText displayedSpriteText = null!;
 
+            public Box Background { get; private set; } = null!;
+
             public MatchScoreCounter()
             {
                 Margin = new MarginPadding { Top = bar_height - 3, Horizontal = 10 };
+            }
+
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+
+                AddInternal(Background = new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Alpha = 0f,
+                    Depth = 1,
+                    Colour = Color4Extensions.FromHex("FFB405"),
+                });
             }
 
             public bool Winning
@@ -191,6 +208,48 @@ namespace osu.Game.Screens.Play.HUD
 
         protected partial class MatchScoreDiffCounter : CommaSeparatedScoreCounter
         {
+            public Box Background { get; }
+            public SpriteIcon WarningIcon { get; }
+
+            protected override Container<Drawable> Content { get; } = new Container
+            {
+                AutoSizeAxes = Axes.Both
+            };
+
+            public MatchScoreDiffCounter()
+            {
+                AutoSizeAxes = Axes.Both;
+                InternalChild = new Container
+                {
+                    AutoSizeAxes = Axes.Both,
+                    Children = new Drawable[]
+                    {
+                        Background = new Box
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Alpha = 0,
+                            Colour = Color4Extensions.FromHex("FFB405"),
+                        },
+                        new FillFlowContainer
+                        {
+                            AutoSizeAxes = Axes.Both,
+                            Direction = FillDirection.Horizontal,
+                            Padding = new MarginPadding { Horizontal = 2f },
+                            Children = new Drawable[]
+                            {
+                                Content,
+                                WarningIcon = new SpriteIcon
+                                {
+                                    Size = new Vector2(16),
+                                    Icon = FontAwesome.Solid.ExclamationTriangle,
+                                    Colour = Color4Extensions.FromHex("383838"),
+                                }
+                            }
+                        }
+                    }
+                };
+            }
+
             protected override OsuSpriteText CreateSpriteText() => base.CreateSpriteText().With(s =>
             {
                 s.Spacing = new Vector2(-2);

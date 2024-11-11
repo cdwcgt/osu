@@ -2,6 +2,8 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Game.Screens.Play.HUD;
 using osu.Game.Tournament.Components;
@@ -15,6 +17,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         [Resolved]
         private RoundInfo roundInfo { get; set; } = null!;
+
+        public readonly BindableBool WaitForResult = new BindableBool();
 
         public bool InvertTextColor
         {
@@ -31,12 +35,29 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         {
             Team1Score.BindTo(roundInfo.Score1);
             Team2Score.BindTo(roundInfo.Score2);
+
+            WaitForResult.BindValueChanged(_ => updateColor());
         }
 
         private void updateColor()
         {
-            var color = invertTextColor ? black : Colour4.White;
-            Score1Text.Colour = Score2Text.Colour = ScoreDiffText.Colour = color;
+            if (!WaitForResult.Value)
+            {
+                Score1Text.Background.FadeOut(50);
+                Score2Text.Background.FadeOut(50);
+                ScoreDiffText.Background.FadeOut(50);
+                ScoreDiffText.WarningIcon.FadeOut(50);
+                var color = invertTextColor ? black : Colour4.White;
+                Score1Text.Colour = Score2Text.Colour = ScoreDiffText.Colour = color;
+                return;
+            }
+
+            Score1Text.Background.FadeIn(50);
+            Score2Text.Background.FadeIn(50);
+            ScoreDiffText.Background.FadeIn(50);
+            ScoreDiffText.WarningIcon.FadeIn(50);
+
+            Score1Text.Colour = Score2Text.Colour = ScoreDiffText.Colour = Color4Extensions.FromHex("333333");
         }
     }
 }

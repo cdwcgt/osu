@@ -69,128 +69,138 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             InternalChildren = new Drawable[]
             {
-                new FillFlowContainer
+                new Container
                 {
                     Anchor = Anchor.BottomCentre,
                     Origin = Anchor.BottomCentre,
                     RelativeSizeAxes = Axes.Y,
                     AutoSizeAxes = Axes.X,
-                    Direction = FillDirection.Horizontal,
                     Children = new Drawable[]
                     {
-                        new Container
-                        {
-                            Name = "Left arrow",
-                            AutoSizeAxes = Axes.Both,
-                            Anchor = Anchor.CentreLeft,
-                            Origin = Anchor.CentreLeft,
-                            Child = leftArrow = new SpriteIcon
-                            {
-                                Anchor = Anchor.CentreRight,
-                                Origin = Anchor.CentreRight,
-                                Size = new Vector2(30),
-                                Icon = FontAwesome.Solid.ChevronRight,
-                                Shadow = true
-                            },
-                        },
                         new FillFlowContainer
                         {
-                            Anchor = Anchor.CentreLeft,
-                            Origin = Anchor.CentreLeft,
-                            AutoSizeAxes = Axes.X,
+                            Anchor = Anchor.BottomCentre,
+                            Origin = Anchor.BottomCentre,
                             RelativeSizeAxes = Axes.Y,
+                            AutoSizeAxes = Axes.X,
                             Direction = FillDirection.Horizontal,
-                            Masking = true,
-                            EdgeEffect = new EdgeEffectParameters
-                            {
-                                Colour = new Color4(0f, 0f, 0f, 0.25f),
-                                Type = EdgeEffectType.Shadow,
-                                Radius = 8,
-                                Offset = new Vector2(1, 1),
-                                Hollow = true
-                            },
                             Children = new Drawable[]
                             {
                                 new Container
                                 {
-                                    RelativeSizeAxes = Axes.Y,
-                                    Width = 240,
-                                    Name = "Left data",
-                                    Children = new Drawable[]
+                                    Name = "Left arrow",
+                                    AutoSizeAxes = Axes.Both,
+                                    Anchor = Anchor.CentreLeft,
+                                    Origin = Anchor.CentreLeft,
+                                    Child = leftArrow = new SpriteIcon
                                     {
-                                        new Box
-                                        {
-                                            RelativeSizeAxes = Axes.Both,
-                                            Colour = Colour4.Black,
-                                            Alpha = 0.55f,
-                                        },
-                                        leftData = new FillFlowContainer
-                                        {
-                                            RelativeSizeAxes = Axes.X,
-                                            AutoSizeAxes = Axes.Y,
-                                            Anchor = Anchor.Centre,
-                                            Origin = Anchor.Centre,
-                                            Direction = FillDirection.Vertical,
-                                        }
+                                        Anchor = Anchor.CentreRight,
+                                        Origin = Anchor.CentreRight,
+                                        Size = new Vector2(30),
+                                        Icon = FontAwesome.Solid.ChevronRight,
+                                        Shadow = true
                                     },
                                 },
-                                beatmapPanel = new Container
+                                new FillFlowContainer
                                 {
-                                    RelativeSizeAxes = Axes.Y,
+                                    Anchor = Anchor.CentreLeft,
+                                    Origin = Anchor.CentreLeft,
                                     AutoSizeAxes = Axes.X,
-                                    Child = new TournamentBeatmapPanel(beatmap)
+                                    RelativeSizeAxes = Axes.Y,
+                                    Direction = FillDirection.Horizontal,
+                                    Masking = true,
+                                    EdgeEffect = new EdgeEffectParameters
                                     {
-                                        Width = 500,
-                                        CenterText = true
+                                        Colour = new Color4(0f, 0f, 0f, 0.25f),
+                                        Type = EdgeEffectType.Shadow,
+                                        Radius = 8,
+                                        Offset = new Vector2(1, 1),
+                                        Hollow = true
                                     },
+                                    Children = new Drawable[]
+                                    {
+                                        new Container
+                                        {
+                                            RelativeSizeAxes = Axes.Y,
+                                            Width = 240,
+                                            Name = "Left data",
+                                            Children = new Drawable[]
+                                            {
+                                                new Box
+                                                {
+                                                    RelativeSizeAxes = Axes.Both,
+                                                    Colour = Colour4.Black,
+                                                    Alpha = 0.55f,
+                                                },
+                                                leftData = new FillFlowContainer
+                                                {
+                                                    RelativeSizeAxes = Axes.X,
+                                                    AutoSizeAxes = Axes.Y,
+                                                    Anchor = Anchor.Centre,
+                                                    Origin = Anchor.Centre,
+                                                    Direction = FillDirection.Vertical,
+                                                }
+                                            },
+                                        },
+                                        beatmapPanel = new Container
+                                        {
+                                            RelativeSizeAxes = Axes.Y,
+                                            AutoSizeAxes = Axes.X,
+                                            Child = new TournamentBeatmapPanel(beatmap)
+                                            {
+                                                Width = 500,
+                                                CenterText = true
+                                            },
+                                        },
+                                        new Container
+                                        {
+                                            RelativeSizeAxes = Axes.Y,
+                                            Width = 240,
+                                            Name = "Right data",
+                                            Children = new Drawable[]
+                                            {
+                                                new Box
+                                                {
+                                                    RelativeSizeAxes = Axes.Both,
+                                                    Colour = Colour4.Black,
+                                                    Alpha = 0.55f,
+                                                },
+                                                rightData = new FillFlowContainer
+                                                {
+                                                    RelativeSizeAxes = Axes.X,
+                                                    AutoSizeAxes = Axes.Y,
+                                                    Anchor = Anchor.Centre,
+                                                    Origin = Anchor.Centre,
+                                                    Direction = FillDirection.Vertical,
+                                                }
+                                            },
+                                        },
+                                    }
                                 },
                                 new Container
                                 {
-                                    RelativeSizeAxes = Axes.Y,
-                                    Width = 240,
-                                    Name = "Right data",
-                                    Children = new Drawable[]
+                                    Name = "Right arrow",
+                                    AutoSizeAxes = Axes.Both,
+                                    Anchor = Anchor.CentreLeft,
+                                    Origin = Anchor.CentreLeft,
+                                    Child = rightArrow = new SpriteIcon
                                     {
-                                        new Box
-                                        {
-                                            RelativeSizeAxes = Axes.Both,
-                                            Colour = Colour4.Black,
-                                            Alpha = 0.55f,
-                                        },
-                                        rightData = new FillFlowContainer
-                                        {
-                                            RelativeSizeAxes = Axes.X,
-                                            AutoSizeAxes = Axes.Y,
-                                            Anchor = Anchor.Centre,
-                                            Origin = Anchor.Centre,
-                                            Direction = FillDirection.Vertical,
-                                        }
+                                        Size = new Vector2(30),
+                                        Icon = FontAwesome.Solid.ChevronLeft,
+                                        Anchor = Anchor.CentreLeft,
+                                        Origin = Anchor.CentreLeft,
+                                        Shadow = true
                                     },
-                                },
+                                }
                             }
                         },
-                        new Container
+                        background = new Box
                         {
-                            Name = "Right arrow",
-                            AutoSizeAxes = Axes.Both,
-                            Anchor = Anchor.CentreLeft,
-                            Origin = Anchor.CentreLeft,
-                            Child = rightArrow = new SpriteIcon
-                            {
-                                Size = new Vector2(30),
-                                Icon = FontAwesome.Solid.ChevronLeft,
-                                Anchor = Anchor.CentreLeft,
-                                Origin = Anchor.CentreLeft,
-                                Shadow = true
-                            },
-                        }
+                            RelativeSizeAxes = Axes.Both,
+                            Alpha = 0f,
+                            Colour = Color4.Black
+                        },
                     }
-                },
-                background = new Box
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Alpha = 0f,
-                    Colour = Color4.Black
                 },
                 loading = new LoadingSpinner
                 {
@@ -209,7 +219,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             {
                 if (s.NewValue)
                 {
-                    background.FadeIn(300);
+                    background.FadeTo(0.4f, 300);
                     loading.Show();
                 }
                 else

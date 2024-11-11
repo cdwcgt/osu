@@ -272,6 +272,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
             });
 
             ((GameplaySongBar)SongBar).WaitForResult.BindTo(waitForResult);
+            scoreDisplay.WaitForResult.BindTo(waitForResult);
         }
 
         private bool roundPreviewShow;
