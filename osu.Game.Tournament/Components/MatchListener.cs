@@ -29,7 +29,7 @@ namespace osu.Game.Tournament.Components
 
         private readonly BindableBool currentlyListening = new BindableBool();
 
-        private int latestMatchEventID => events.Max(e => e.Id);
+        private long latestMatchEventID => events.Count != 0 ? events.Max(e => e.Id) : 0;
 
         private double waitTime;
 

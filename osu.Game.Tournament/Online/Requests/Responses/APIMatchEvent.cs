@@ -9,7 +9,7 @@ namespace osu.Game.Tournament.Online.Requests.Responses
     public class APIMatchEvent
     {
         [JsonPropertyName("id")]
-        public int Id { get; set; }
+        public long Id { get; set; }
 
         [JsonPropertyName("detail")]
         public MatchEventDetail Detail { get; set; } = null!;

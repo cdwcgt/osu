@@ -10,8 +10,8 @@ namespace osu.Game.Tournament.Online.Requests
     public class GetAPIMatchInfo : APIRequest<APIMatchInfo>
     {
         public int MatchID;
-        public int? BeforeEvent;
-        public int? AfterEvent;
+        public long? BeforeEvent;
+        public long? AfterEvent;
 
         public GetAPIMatchInfo(int matchID)
         {
