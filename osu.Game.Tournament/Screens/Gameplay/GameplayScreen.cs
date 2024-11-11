@@ -10,6 +10,7 @@ using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
 using osu.Framework.Threading;
+using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Overlays.Settings;
 using osu.Game.Tournament.Components;
@@ -82,6 +83,19 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     Margin = new MarginPadding { Top = 5f },
                     Size = new Vector2(352, 100)
                     //Alpha = 0,
+                },
+                scoreWarningContainer = new Container
+                {
+                    Anchor = Anchor.BottomCentre,
+                    Origin = Anchor.BottomCentre,
+                    Margin = new MarginPadding { Bottom = 5f },
+                    AutoSizeAxes = Axes.Both,
+                    Alpha = 0f,
+                    Child = new TournamentSpriteText
+                    {
+                        Text = "回合进行中获取的分数暂不作为参考，结束后将会自动获取分数。",
+                        Font = OsuFont.Torus.With(size: 17f)
+                    }
                 },
                 new Container
                 {
@@ -367,6 +381,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private Container drawTextContainer = null!;
         private SettingsNumberBox matchID = null!;
         private TourneyButton listeningButton = null!;
+        private Container scoreWarningContainer = null!;
 
         private void contract()
         {
@@ -379,6 +394,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
             SongBar.Expanded = false;
             scoreDisplay.FadeOut(100);
+            scoreWarningContainer.FadeOut(100);
             using (chat.BeginDelayedSequence(500))
                 chat.Expand();
         }
@@ -396,6 +412,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
             using (BeginDelayedSequence(300))
             {
                 scoreDisplay.FadeIn(100);
+                scoreWarningContainer.FadeIn(100);
             }
         }
 
@@ -429,7 +446,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
             drawTextContainer.FadeIn(100);
             drawTextContainer.ResizeWidthTo(200, 150, Easing.Out);
 
-            using (BeginDelayedSequence(5000))
+            using (BeginDelayedSequence(12000))
             {
                 drawTextContainer.FadeOut(100);
             }
@@ -440,6 +457,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private void getResult()
         {
             if (!waitForResult || !roundInfo.ConfirmedByApi.Value) return;
+
+            scoreWarningContainer.FadeOut(100);
 
             if (roundInfo.Score1.Value > roundInfo.Score2.Value)
             {
@@ -467,6 +486,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     if (warmup.Value || CurrentMatch.Value == null) return;
 
                     waitForResult = true;
+                    listener.FetchMatch();
                     getResult();
                 }
 
