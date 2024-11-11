@@ -18,6 +18,7 @@ using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
 using osuTK;
+using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Screens.Gameplay.Components
 {
@@ -50,6 +51,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         protected LadderInfo LadderInfo { get; private set; } = null!;
 
         private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
+        private readonly TournamentSpriteText warningText;
 
         private bool isTB
         {
@@ -115,16 +117,27 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                                 }
                             }
                         },
-                        new Container
+                        new FillFlowContainer
                         {
                             RelativeSizeAxes = Axes.Y,
                             AutoSizeAxes = Axes.X,
                             Anchor = anchor,
                             Origin = anchor,
-                            Child = diffCounter = new RollingMultDiffNumberContainer
+                            Children = new Drawable[]
                             {
-                                Anchor = flip ? Anchor.CentreRight : Anchor.CentreLeft,
-                                Origin = Anchor = flip ? Anchor.CentreRight : Anchor.CentreLeft,
+                                diffCounter = new RollingMultDiffNumberContainer
+                                {
+                                    Anchor = flip ? Anchor.CentreRight : Anchor.CentreLeft,
+                                    Origin = Anchor = flip ? Anchor.CentreRight : Anchor.CentreLeft,
+                                },
+                                warningText = new TournamentSpriteText
+                                {
+                                    Anchor = flip ? Anchor.CentreRight : Anchor.CentreLeft,
+                                    Origin = Anchor = flip ? Anchor.CentreRight : Anchor.CentreLeft,
+                                    Text = "(未确定)",
+                                    Font = OsuFont.Torus.With(size: 15),
+                                    Colour = Color4Extensions.FromHex("EBBC23"),
+                                }
                             }
                         }
                     }
@@ -192,6 +205,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             if (ipc.State.Value == TourneyState.Playing)
             {
                 diff = calculateDiffFromIpc();
+                warningText.FadeIn(100);
+                diffCounter.FadeColour(Color4Extensions.FromHex("EBBC23"), 100);
             }
 
             diffBar.ResizeWidthTo(calculateBarWidth(diff), 400, Easing.OutQuint);
@@ -218,6 +233,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         {
             double diff = newAmount - oldAmount;
 
+            warningText.FadeOut(100);
+            diffCounter.FadeColour(Color4.White, 100);
             multCoinBar.ResizeWidthTo(calculateBarWidth(oldAmount), 400, Easing.OutQuint);
             diffBar.ResizeWidthTo(calculateBarWidth(diff), 400, Easing.OutQuint);
             multCounter.DisplayedCount = oldAmount;
