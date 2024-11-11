@@ -102,6 +102,10 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private ScheduledDelegate? blinkScheduledDelegate;
         private ScheduledDelegate? changeIconScheduledDelegate;
 
+        private const double first_warning_coin = -22.5;
+        private const double second_warning_coin = -45;
+        private const double third_warning_coin = -90;
+
         private void updateDisplay() => Scheduler.AddOnce(() =>
         {
             coinDiffContainer.FinishTransforms();
@@ -117,7 +121,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             changeIconScheduledDelegate?.Cancel();
             changeIconScheduledDelegate = Scheduler.AddDelayed(() =>
             {
-                if (diff >= 0)
+                if (diff > first_warning_coin)
                 {
                     iconContainer.FadeOut(200, Easing.OutQuint);
                 }
@@ -127,7 +131,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
                 blinkScheduledDelegate?.Cancel();
 
-                if (diff >= 0)
+                if (diff > first_warning_coin)
                 {
                     return;
                 }
@@ -158,9 +162,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private int getBlinkTime(double diff)
         {
-            return diff <= -90 ? 500 :
-                diff <= -45 ? 650 :
-                diff < 0 ? 800 : 0;
+            return diff <= third_warning_coin ? 500 :
+                diff <= second_warning_coin ? 650 :
+                diff <= first_warning_coin ? 800 : 0;
         }
 
         private Color4 getColor(double diff) => ColourUtils.SampleFromLinearGradient(new[]
@@ -174,9 +178,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private Drawable getIconByDiff(double diff)
         {
-            return diff <= -90 ? getIcon("MC") :
-                diff <= -45 ? getIcon("MB") :
-                diff < 0 ? getIcon("MA") : new Container();
+            return diff <= third_warning_coin ? getIcon("MC") :
+                diff <= second_warning_coin ? getIcon("MB") :
+                diff <= first_warning_coin ? getIcon("MA") : new Container();
         }
 
         private Drawable getIcon(string icon) => new Container
