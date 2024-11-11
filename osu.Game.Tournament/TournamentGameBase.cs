@@ -80,12 +80,6 @@ namespace osu.Game.Tournament
             dependencies.CacheAs(new StableInfo(storage));
 
             beatmapCache = dependencies.Get<BeatmapLookupCache>();
-
-            dependencies.Cache(listener = new MatchListener());
-            Add(listener);
-
-            dependencies.Cache(roundInfo = new RoundInfo());
-            Add(roundInfo);
         }
 
         protected override void LoadComplete()
@@ -205,6 +199,12 @@ namespace osu.Game.Tournament
                 dependencies.Cache(ladder);
                 dependencies.CacheAs<MatchIPCInfo>(ipc = new FileBasedIPC());
                 Add(ipc);
+
+                dependencies.Cache(listener = new MatchListener());
+                Add(listener);
+
+                dependencies.Cache(roundInfo = new RoundInfo());
+                Add(roundInfo);
 
                 bracketLoadTaskCompletionSource.SetResult(true);
 
