@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Specialized;
 using System.Linq;
 using osu.Framework.Allocation;
@@ -33,6 +34,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private SpriteIcon rightArrow = null!;
         private bool expanded;
 
+        [Resolved]
+        private LadderInfo ladder { get; set; } = null!;
+
         public override bool Expanded
         {
             get => expanded;
@@ -44,7 +48,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         }
 
         [BackgroundDependencyLoader]
-        private void load(LadderInfo ladder)
+        private void load()
         {
             currentMatch.BindValueChanged(matchChanged);
             currentMatch.BindTo(ladder.CurrentMatch);
@@ -224,11 +228,37 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             this.MoveTo(expanded ? new Vector2(0, -25) : Vector2.Zero, 300, Easing.Out);
         }
 
+        private string? getBeatmapModPosition()
+        {
+            var roundBeatmap = ladder.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(roundMap => roundMap.ID == beatmap!.OnlineID);
+
+            if (roundBeatmap == null)
+                return null;
+
+            var modArray = ladder.CurrentMatch.Value!.Round.Value.Beatmaps.Where(b => b.Mods == roundBeatmap.Mods).ToArray();
+
+            int id = Array.FindIndex(modArray, b => b.ID == roundBeatmap?.ID) + 1;
+
+            return $"{roundBeatmap.Mods}{id}";
+        }
+
         protected override void PostUpdate()
         {
             updateState();
 
             GetBeatmapInformation(out double bpm, out double length, out string srExtra, out var stats);
+
+            (string, string)[] srAndModStats =
+            {
+                ("星级", $"{beatmap!.StarRating:0.00}{srExtra}")
+            };
+
+            string? modPosition = getBeatmapModPosition();
+
+            if (modPosition != null)
+            {
+                srAndModStats = srAndModStats.Append(("谱面位置", modPosition)).ToArray();
+            }
 
             leftData.Children = new Drawable[]
             {
@@ -251,7 +281,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     Origin = Anchor.Centre,
                     Anchor = Anchor.Centre,
                 },
-                new DiffPiece(("星级", $"{beatmap.StarRating:0.00}{srExtra}"))
+                new DiffPiece(srAndModStats)
                 {
                     Origin = Anchor.Centre,
                     Anchor = Anchor.Centre,
