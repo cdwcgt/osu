@@ -41,6 +41,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private readonly BindableLong oppoScore = new BindableLong();
 
         [Resolved]
+        private RoundInfo roundInfo { get; set; } = null!;
+
+        [Resolved]
         private MatchIPCInfo ipc { get; set; } = null!;
 
         [Resolved]
@@ -64,6 +67,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         public TeamMultCoin(Bindable<double?> coin, TeamColour colour)
         {
+            // avoid animation delay in mappool.
+            AlwaysPresent = true;
+
             this.coin.BindTo(coin);
             this.colour = colour;
             flip = colour == TeamColour.Blue;
@@ -150,13 +156,13 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         {
             if (colour == TeamColour.Red)
             {
-                ourScore.BindTo(ipc.Score1);
-                oppoScore.BindTo(ipc.Score2);
+                ourScore.BindTo(roundInfo.Score1);
+                oppoScore.BindTo(roundInfo.Score2);
             }
             else
             {
-                ourScore.BindTo(ipc.Score2);
-                oppoScore.BindTo(ipc.Score1);
+                ourScore.BindTo(roundInfo.Score2);
+                oppoScore.BindTo(roundInfo.Score1);
             }
         }
 
@@ -185,7 +191,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             if (ipc.State.Value == TourneyState.Playing)
             {
-                diff = calculateDiff();
+                diff = calculateDiffFromIpc();
             }
 
             diffBar.ResizeWidthTo(calculateBarWidth(diff), 400, Easing.OutQuint);
@@ -196,7 +202,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private static float calculateBarWidth(double coin) => (float)coin / 1000 * bar_width_when_1000coin;
 
-        private double calculateDiff()
+        private double calculateDiffFromIpc()
         {
             if (ourScore.Value > oppoScore.Value)
             {
@@ -210,7 +216,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private void triggerAnimation(double oldAmount, double newAmount)
         {
-            FinishTransforms(true);
             double diff = newAmount - oldAmount;
 
             multCoinBar.ResizeWidthTo(calculateBarWidth(oldAmount), 400, Easing.OutQuint);

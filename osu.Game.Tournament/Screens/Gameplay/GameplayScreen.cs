@@ -10,8 +10,6 @@ using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
 using osu.Framework.Threading;
-using osu.Game.Graphics;
-using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Overlays.Settings;
 using osu.Game.Tournament.Components;
@@ -22,7 +20,6 @@ using osu.Game.Tournament.Screens.MapPool;
 using osu.Game.Tournament.Screens.TeamWin;
 using osuTK;
 using osuTK.Graphics;
-using FontWeight = osu.Game.Graphics.FontWeight;
 
 namespace osu.Game.Tournament.Screens.Gameplay
 {
@@ -43,6 +40,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         [Resolved]
         private TournamentMatchChatDisplay chat { get; set; } = null!;
+
+        [Resolved]
+        private MatchListener listener { get; set; } = null!;
+
+        [Resolved]
+        private RoundInfo roundInfo { get; set; } = null!;
 
         private Drawable chroma = null!;
 
@@ -208,6 +211,14 @@ namespace osu.Game.Tournament.Screens.Gameplay
                         team2Coin.Value = team2CoinText.Current.Value;
                     }
                 },
+                matchID = new SettingsNumberBox
+                {
+                    LabelText = "Match ID",
+                },
+                listeningButton = new TourneyButton
+                {
+                    Text = "Start Listening",
+                }
             });
 
             LadderInfo.ChromaKeyWidth.BindValueChanged(width => chroma.Width = width.NewValue, true);
@@ -222,6 +233,28 @@ namespace osu.Game.Tournament.Screens.Gameplay
             {
                 if (s.OldValue == typeof(MapPoolScreen) && s.NewValue == typeof(GameplayScreen))
                     switchFromMappool = true;
+            });
+
+            listener.CurrentlyListening.BindValueChanged(s =>
+            {
+                if (s.NewValue)
+                {
+                    listeningButton.Text = "Stop Listening";
+                    listeningButton.Action = listener.StopListening;
+                }
+                else
+                {
+                    listeningButton.Text = "Start Listening";
+                    listeningButton.Action = () => listener.StartListening(matchID.Current.Value);
+                }
+            }, true);
+
+            roundInfo.ConfirmedByApi.BindValueChanged(c =>
+            {
+                if (c.NewValue)
+                {
+                    getResult();
+                }
             });
         }
 
@@ -332,6 +365,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private TourneyNumberBox team1CoinText = null!;
         private TourneyNumberBox team2CoinText = null!;
         private Container drawTextContainer = null!;
+        private SettingsNumberBox matchID = null!;
+        private TourneyButton listeningButton = null!;
 
         private void contract()
         {
@@ -400,6 +435,27 @@ namespace osu.Game.Tournament.Screens.Gameplay
             }
         }
 
+        private bool waitForResult;
+
+        private void getResult()
+        {
+            if (!waitForResult || !roundInfo.ConfirmedByApi.Value) return;
+
+            if (roundInfo.Score1.Value > roundInfo.Score2.Value)
+            {
+                // 黄金加成
+                CurrentMatch.Value.Team1Coin.Value += WINNER_BONUS + (isTB ? EXTRA_WINNER_BONUS_TB : 0);
+                CurrentMatch.Value.Team2Coin.Value += (double)roundInfo.Score2.Value / roundInfo.Score1.Value * 100;
+                showDraw(TeamColour.Red);
+            }
+            else
+            {
+                CurrentMatch.Value.Team2Coin.Value += WINNER_BONUS + (isTB ? EXTRA_WINNER_BONUS_TB : 0);
+                CurrentMatch.Value.Team1Coin.Value += (double)roundInfo.Score1.Value / roundInfo.Score2.Value * 100;
+                showDraw(TeamColour.Blue);
+            }
+        }
+
         private void updateState()
         {
             try
@@ -410,19 +466,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 {
                     if (warmup.Value || CurrentMatch.Value == null) return;
 
-                    if (ipc.Score1.Value > ipc.Score2.Value)
-                    {
-                        // 黄金加成
-                        CurrentMatch.Value.Team1Coin.Value += WINNER_BONUS + (isTB ? EXTRA_WINNER_BONUS_TB : 0);
-                        CurrentMatch.Value.Team2Coin.Value += (double)ipc.Score2.Value / ipc.Score1.Value * 100;
-                        showDraw(TeamColour.Red);
-                    }
-                    else
-                    {
-                        CurrentMatch.Value.Team2Coin.Value += WINNER_BONUS + (isTB ? EXTRA_WINNER_BONUS_TB : 0);
-                        CurrentMatch.Value.Team1Coin.Value += (double)ipc.Score1.Value / ipc.Score2.Value * 100;
-                        showDraw(TeamColour.Blue);
-                    }
+                    waitForResult = true;
+                    getResult();
                 }
 
                 switch (State.Value)

@@ -18,6 +18,7 @@ using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Online;
 using osu.Game.Online.API.Requests;
+using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IO;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
@@ -35,6 +36,8 @@ namespace osu.Game.Tournament
         private DependencyContainer dependencies = null!;
         private FileBasedIPC ipc = null!;
         private BeatmapLookupCache beatmapCache = null!;
+        private MatchListener listener = null!;
+        private RoundInfo roundInfo = null!;
 
         protected Task BracketLoadTask => bracketLoadTaskCompletionSource.Task;
 
@@ -77,6 +80,12 @@ namespace osu.Game.Tournament
             dependencies.CacheAs(new StableInfo(storage));
 
             beatmapCache = dependencies.Get<BeatmapLookupCache>();
+
+            dependencies.Cache(listener = new MatchListener());
+            Add(listener);
+
+            dependencies.Cache(roundInfo = new RoundInfo());
+            Add(roundInfo);
         }
 
         protected override void LoadComplete()

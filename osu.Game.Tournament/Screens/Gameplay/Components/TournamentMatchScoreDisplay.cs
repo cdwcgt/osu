@@ -4,7 +4,7 @@
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Game.Screens.Play.HUD;
-using osu.Game.Tournament.IPC;
+using osu.Game.Tournament.Components;
 
 namespace osu.Game.Tournament.Screens.Gameplay.Components
 {
@@ -12,6 +12,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
     {
         private bool invertTextColor;
         private readonly Colour4 black = Colour4.FromHex("1f1f1f");
+
+        [Resolved]
+        private RoundInfo roundInfo { get; set; } = null!;
 
         public bool InvertTextColor
         {
@@ -24,10 +27,10 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         }
 
         [BackgroundDependencyLoader]
-        private void load(MatchIPCInfo ipc)
+        private void load()
         {
-            Team1Score.BindTo(ipc.Score1);
-            Team2Score.BindTo(ipc.Score2);
+            Team1Score.BindTo(roundInfo.Score1);
+            Team2Score.BindTo(roundInfo.Score2);
         }
 
         private void updateColor()
