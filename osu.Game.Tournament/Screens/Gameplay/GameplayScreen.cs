@@ -270,6 +270,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     getResult();
                 }
             });
+
+            ((GameplaySongBar)SongBar).WaitForResult.BindTo(waitForResult);
         }
 
         private bool roundPreviewShow;
@@ -452,11 +454,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
             }
         }
 
-        private bool waitForResult;
+        private readonly BindableBool waitForResult = new BindableBool();
 
         private void getResult()
         {
-            if (!waitForResult || !roundInfo.ConfirmedByApi.Value) return;
+            if (!waitForResult.Value || !roundInfo.ConfirmedByApi.Value) return;
 
             scoreWarningContainer.FadeOut(100);
 
@@ -473,6 +475,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 CurrentMatch.Value.Team1Coin.Value += (double)roundInfo.Score1.Value / roundInfo.Score2.Value * 100;
                 showDraw(TeamColour.Blue);
             }
+
+            waitForResult.Value = false;
         }
 
         private void updateState()
@@ -485,7 +489,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 {
                     if (warmup.Value || CurrentMatch.Value == null) return;
 
-                    waitForResult = true;
+                    waitForResult.Value = true;
                     listener.FetchMatch();
                     getResult();
                 }
