@@ -168,7 +168,13 @@ namespace osu.Game.Screens.Play.HUD
         {
             private OsuSpriteText displayedSpriteText = null!;
 
-            public Box Background { get; private set; } = null!;
+            public Box Background { get; } = new Box
+            {
+                RelativeSizeAxes = Axes.Both,
+                Alpha = 0f,
+                Depth = 1,
+                Colour = Color4Extensions.FromHex("FFB405"),
+            };
 
             public MatchScoreCounter()
             {
@@ -179,13 +185,7 @@ namespace osu.Game.Screens.Play.HUD
             {
                 base.LoadComplete();
 
-                AddInternal(Background = new Box
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Alpha = 0f,
-                    Depth = 1,
-                    Colour = Color4Extensions.FromHex("FFB405"),
-                });
+                AddInternal(Background);
             }
 
             public bool Winning
