@@ -48,7 +48,10 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private MatchIPCInfo ipc { get; set; } = null!;
 
         [Resolved]
-        protected LadderInfo LadderInfo { get; private set; } = null!;
+        private LadderInfo ladderInfo { get; set; } = null!;
+
+        [Resolved]
+        private MatchListener listener { get; set; } = null!;
 
         private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
         private readonly TournamentSpriteText warningText;
@@ -70,9 +73,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         public TeamMultCoin(Bindable<double?> coin, TeamColour colour)
         {
-            // avoid animation delay in mappool.
-            AlwaysPresent = true;
-
             this.coin.BindTo(coin);
             this.colour = colour;
             flip = colour == TeamColour.Blue;
@@ -136,8 +136,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                                         diffCounterBackground = new Box
                                         {
                                             RelativeSizeAxes = Axes.Both,
-                                            //Alpha = 0,
-                                            Colour = Color4Extensions.FromHex("#00D415")
+                                            Alpha = 0,
                                         },
                                         diffCounter = new RollingMultDiffNumberContainer
                                         {
@@ -153,6 +152,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                                     Text = "(未确定)",
                                     Font = OsuFont.Torus.With(size: 15),
                                     Colour = Color4Extensions.FromHex("EBBC23"),
+                                    Alpha = 0,
                                 }
                             }
                         }
@@ -176,7 +176,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             coin.BindValueChanged(d =>
             {
-                Scheduler.AddOnce(() => triggerAnimation(d.OldValue ?? 0, d.NewValue ?? 0));
+                triggerAnimation(d.OldValue ?? 0, d.NewValue ?? 0);
             }, true);
         }
 
@@ -193,13 +193,23 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 ourScore.BindTo(roundInfo.Score2);
                 oppoScore.BindTo(roundInfo.Score1);
             }
+
+            ipc.State.BindValueChanged(s =>
+            {
+                // 如果没有从游玩转变到结算界面（即出现了问题，就重置）
+                if (s.NewValue == TourneyState.Ranking || s.OldValue == TourneyState.Playing)
+                    return;
+
+                triggerAnimation(coin.Value ?? 0, coin.Value ?? 0);
+                warningText.FadeOut(100);
+            });
         }
 
         protected override void LoadComplete()
         {
             base.LoadComplete();
 
-            currentMatch.BindTo(LadderInfo.CurrentMatch);
+            currentMatch.BindTo(ladderInfo.CurrentMatch);
         }
 
         protected override void Update()
@@ -218,11 +228,15 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             multCounter.Current.Value = multcoin;
             multCoinBar.ResizeWidthTo(calculateBarWidth(multcoin), 400, Easing.OutQuint);
 
-            if (ipc.State.Value == TourneyState.Playing)
+            if (!keepDiff)
             {
                 diff = calculateDiffFromIpc();
-                //warningText.FadeIn(100);
-                //diffCounter.FadeColour(Color4Extensions.FromHex("EBBC23"), 100);
+
+                if (listener.CurrentlyListening.Value)
+                {
+                    warningText.FadeIn(100);
+                    diffCounter.FadeColour(Color4Extensions.FromHex("EBBC23"), 100);
+                }
             }
 
             diffBar.ResizeWidthTo(calculateBarWidth(diff), 400, Easing.OutQuint);
@@ -230,7 +244,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             if (!keepDiff)
             {
                 diffCounter.Current.Value = diff;
-                //diffCounterBackground.FadeOut(100);
+                diffCounterBackground.FadeOut(100);
             }
         }
 
@@ -250,13 +264,24 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private void triggerAnimation(double oldAmount, double newAmount)
         {
+            if (!IsLoaded)
+                return;
+
             double diff = newAmount - oldAmount;
+            bool isWin = ourScore.Value > oppoScore.Value;
 
-            diffCounterBackground.Colour = Color4Extensions.FromHex(ourScore.Value > oppoScore.Value ? "#00D415" : "#D43030");
+            if (ipc.State.Value == TourneyState.Ranking)
+            {
+                diffCounterBackground.Colour = Color4Extensions.FromHex(isWin ? "#FFC300" : "#D43030");
+                diffCounter.FadeColour(isWin ? Color4Extensions.FromHex("454545") : Color4.White, 100);
+                diffCounterBackground.FadeIn(100);
+            }
 
-            diffCounterBackground.FadeIn(100);
-            warningText.FadeOut(100);
-            diffCounter.FadeColour(Color4.White, 100);
+            if (roundInfo.ConfirmedByApi.Value)
+            {
+                warningText.FadeOut(100);
+            }
+
             multCoinBar.ResizeWidthTo(calculateBarWidth(oldAmount), 400, Easing.OutQuint);
             diffBar.ResizeWidthTo(calculateBarWidth(diff), 400, Easing.OutQuint);
             multCounter.DisplayedCount = oldAmount;
@@ -286,7 +311,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             {
                 char sign = Math.Sign(count) == -1 ? '-' : '+';
 
-                return $"{sign}${Math.Abs(count):N1}";
+                return $"{sign}${Math.Abs(count):N2}";
             }
 
             protected override OsuSpriteText CreateSpriteText() => base.CreateSpriteText().With(t =>

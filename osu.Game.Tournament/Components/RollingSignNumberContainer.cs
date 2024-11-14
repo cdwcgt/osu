@@ -28,7 +28,7 @@ namespace osu.Game.Tournament.Components
         {
             char sign = Math.Sign(count) == -1 ? '-' : '+';
 
-            return $"{sign}{Math.Abs(count):N1}";
+            return $"{sign}{Math.Abs(count):N2}";
         }
     }
 }

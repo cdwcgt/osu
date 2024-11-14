@@ -42,6 +42,8 @@ namespace osu.Game.Tournament.Screens.MapPool
         [BackgroundDependencyLoader]
         private void load(MatchIPCInfo ipc)
         {
+            AlwaysPresent = true;
+
             InternalChildren = new Drawable[]
             {
                 new TourneyVideo("mappool")

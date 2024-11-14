@@ -13,7 +13,6 @@ using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osuTK;
-using osuTK.Graphics;
 
 namespace osu.Game.Screens.Play.HUD
 {
@@ -173,7 +172,7 @@ namespace osu.Game.Screens.Play.HUD
             {
                 RelativeSizeAxes = Axes.Both,
                 Alpha = 0f,
-                Colour = Color4Extensions.FromHex("#00D415"),
+                Colour = Color4Extensions.FromHex("#FFC300"),
             };
 
             public MatchScoreCounter()
@@ -240,7 +239,7 @@ namespace osu.Game.Screens.Play.HUD
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Alpha = 0,
-                                Colour = Color4Extensions.FromHex("#00D415"),
+                                Colour = Color4Extensions.FromHex("#FFC300"),
                             },
                         },
                         new FillFlowContainer
@@ -263,7 +262,7 @@ namespace osu.Game.Screens.Play.HUD
                                         Icon = FontAwesome.Solid.Check,
                                         Anchor = Anchor.CentreLeft,
                                         Origin = Anchor.CentreLeft,
-                                        Colour = Color4.White,
+                                        Colour = Color4Extensions.FromHex("383838"),
                                     }
                                 }
                             }

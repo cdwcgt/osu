@@ -470,6 +470,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
             if (CurrentMatch.Value == null)
                 return;
 
+            waitForResult.Value = false;
+
             scoreWarningContainer.FadeOut(100);
 
             if (roundInfo.Score1.Value > roundInfo.Score2.Value)
@@ -498,7 +500,6 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 showDraw(TeamColour.Blue);
             }
 
-            waitForResult.Value = false;
             scoreDisplay.ShowSuccess.Value = true;
         }
 

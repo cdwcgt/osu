@@ -3,6 +3,7 @@
 
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Game.Screens.Play.HUD;
 using osu.Game.Tournament.Components;
@@ -56,7 +57,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             ScoreDiffText.Background.FadeIn(50);
             ScoreDiffText.SuccessIcon.FadeIn(50);
 
-            Score1Text.DrawableCount.Colour = Score2Text.DrawableCount.Colour = ScoreDiffText.DrawableCount.Colour = Colour4.White;
+            Score1Text.DrawableCount.Colour = Score2Text.DrawableCount.Colour = ScoreDiffText.DrawableCount.Colour = Color4Extensions.FromHex("383838");
 
             // 不是哥们，太蠢了吧
             Scheduler.AddDelayed(() => ShowSuccess.Value = false, 10000);
