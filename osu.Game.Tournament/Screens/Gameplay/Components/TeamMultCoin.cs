@@ -136,9 +136,13 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                                         diffCounterBackground = new Box
                                         {
                                             RelativeSizeAxes = Axes.Both,
-                                            Alpha = 0,
+                                            //Alpha = 0,
+                                            Colour = Color4Extensions.FromHex("#00D415")
                                         },
-                                        diffCounter = new RollingMultDiffNumberContainer(),
+                                        diffCounter = new RollingMultDiffNumberContainer
+                                        {
+                                            Margin = new MarginPadding { Horizontal = 3f },
+                                        },
                                     }
                                 },
                                 warningText = new TournamentSpriteText
@@ -217,8 +221,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             if (ipc.State.Value == TourneyState.Playing)
             {
                 diff = calculateDiffFromIpc();
-                warningText.FadeIn(100);
-                diffCounter.FadeColour(Color4Extensions.FromHex("EBBC23"), 100);
+                //warningText.FadeIn(100);
+                //diffCounter.FadeColour(Color4Extensions.FromHex("EBBC23"), 100);
             }
 
             diffBar.ResizeWidthTo(calculateBarWidth(diff), 400, Easing.OutQuint);
@@ -226,7 +230,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             if (!keepDiff)
             {
                 diffCounter.Current.Value = diff;
-                diffCounterBackground.FadeOut(100);
+                //diffCounterBackground.FadeOut(100);
             }
         }
 
@@ -272,13 +276,25 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             multCounter.X = Math.Max(5, barContainer.DrawWidth - multCounter.DrawWidth) * (flip ? -1 : 1);
         }
 
-        private partial class RollingMultDiffNumberContainer : RollingSignNumberContainer
+        private partial class RollingMultDiffNumberContainer : RollingCounter<double>
         {
             protected override double RollingDuration => 1000;
 
+            protected override Easing RollingEasing => Easing.Out;
+
+            protected override LocalisableString FormatCount(double count)
+            {
+                char sign = Math.Sign(count) == -1 ? '-' : '+';
+
+                return $"{sign}${Math.Abs(count):N1}";
+            }
+
             protected override OsuSpriteText CreateSpriteText() => base.CreateSpriteText().With(t =>
             {
-                t.Font = t.Font.With(size: 15);
+                t.Font = OsuFont.Torus.With(size: 15);
+                t.Shadow = true;
+                t.ShadowColour = Color4.Black.Opacity(0.3f);
+                t.ShadowOffset = new Vector2(0, 0.05f);
             });
         }
 

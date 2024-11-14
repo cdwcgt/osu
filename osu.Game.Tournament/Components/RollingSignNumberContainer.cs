@@ -3,8 +3,6 @@
 
 using System;
 using osu.Framework.Graphics;
-using osu.Framework.Graphics.Containers;
-using osu.Framework.Graphics.Sprites;
 using osu.Framework.Localisation;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
@@ -12,49 +10,25 @@ using osu.Game.Graphics.UserInterface;
 
 namespace osu.Game.Tournament.Components
 {
-    public partial class RollingSignNumberContainer : CommaSeparatedScoreCounter
+    public partial class RollingSignNumberContainer : RollingCounter<double>
     {
         protected override double RollingDuration => 500;
 
-        protected override IHasText CreateText() => new SignNumberContainer(CreateSpriteText);
+        protected override Easing RollingEasing => Easing.Out;
+
+        protected override double GetProportionalDuration(double currentValue, double newValue) =>
+            currentValue > newValue ? currentValue - newValue : newValue - currentValue;
 
         protected override OsuSpriteText CreateSpriteText() => new OsuSpriteText
         {
             Font = OsuFont.Torus.With(size: 20),
         };
 
-        protected override LocalisableString FormatCount(double count) => count.ToString("N1");
-
-        public partial class SignNumberContainer : CompositeDrawable, IHasText
+        protected override LocalisableString FormatCount(double count)
         {
-            private readonly OsuSpriteText text;
+            char sign = Math.Sign(count) == -1 ? '-' : '+';
 
-            public LocalisableString Text
-            {
-                get => text.Text;
-                set
-                {
-                    if (!double.TryParse(value.ToString().Replace(",", ""), out double result))
-                    {
-                        text.Text = "+0";
-                    }
-
-                    char sign = Math.Sign(result) == -1 ? '-' : '+';
-
-                    text.Text = $"{sign}{Math.Abs(result)}";
-                }
-            }
-
-            public SignNumberContainer(Func<OsuSpriteText> createSpriteText)
-            {
-                AutoSizeAxes = Axes.Both;
-
-                InternalChild = text = createSpriteText().With(t =>
-                {
-                    t.Anchor = Anchor.Centre;
-                    t.Origin = Anchor.Centre;
-                });
-            }
+            return $"{sign}{Math.Abs(count):N1}";
         }
     }
 }
