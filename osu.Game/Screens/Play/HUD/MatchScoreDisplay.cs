@@ -13,6 +13,7 @@ using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osuTK;
+using osuTK.Graphics;
 
 namespace osu.Game.Screens.Play.HUD
 {
@@ -172,8 +173,7 @@ namespace osu.Game.Screens.Play.HUD
             {
                 RelativeSizeAxes = Axes.Both,
                 Alpha = 0f,
-                Depth = 1,
-                Colour = Color4Extensions.FromHex("FFB405"),
+                Colour = Color4Extensions.FromHex("#00D415"),
             };
 
             public MatchScoreCounter()
@@ -185,7 +185,13 @@ namespace osu.Game.Screens.Play.HUD
             {
                 base.LoadComplete();
 
-                AddInternal(Background);
+                AddInternal(new Container
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Depth = 1,
+                    Padding = new MarginPadding { Top = 6f },
+                    Child = Background
+                });
             }
 
             public bool Winning
@@ -209,11 +215,13 @@ namespace osu.Game.Screens.Play.HUD
         protected partial class MatchScoreDiffCounter : CommaSeparatedScoreCounter
         {
             public Box Background { get; }
-            public SpriteIcon WarningIcon { get; }
+            public SpriteIcon SuccessIcon { get; }
 
             protected override Container<Drawable> Content { get; } = new Container
             {
-                AutoSizeAxes = Axes.Both
+                AutoSizeAxes = Axes.Both,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft
             };
 
             public MatchScoreDiffCounter()
@@ -224,11 +232,16 @@ namespace osu.Game.Screens.Play.HUD
                     AutoSizeAxes = Axes.Both,
                     Children = new Drawable[]
                     {
-                        Background = new Box
+                        new Container
                         {
                             RelativeSizeAxes = Axes.Both,
-                            Alpha = 0,
-                            Colour = Color4Extensions.FromHex("FFB405"),
+                            Padding = new MarginPadding { Vertical = 3f },
+                            Child = Background = new Box
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Alpha = 0,
+                                Colour = Color4Extensions.FromHex("#00D415"),
+                            },
                         },
                         new FillFlowContainer
                         {
@@ -238,11 +251,20 @@ namespace osu.Game.Screens.Play.HUD
                             Children = new Drawable[]
                             {
                                 Content,
-                                WarningIcon = new SpriteIcon
+                                new Container
                                 {
-                                    Size = new Vector2(16),
-                                    Icon = FontAwesome.Solid.ExclamationTriangle,
-                                    Colour = Color4Extensions.FromHex("383838"),
+                                    AutoSizeAxes = Axes.Both,
+                                    Anchor = Anchor.CentreLeft,
+                                    Origin = Anchor.CentreLeft,
+                                    Padding = new MarginPadding { Horizontal = 4f },
+                                    Child = SuccessIcon = new SpriteIcon
+                                    {
+                                        Size = new Vector2(12),
+                                        Icon = FontAwesome.Solid.Check,
+                                        Anchor = Anchor.CentreLeft,
+                                        Origin = Anchor.CentreLeft,
+                                        Colour = Color4.White,
+                                    }
                                 }
                             }
                         }

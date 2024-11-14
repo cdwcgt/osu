@@ -33,7 +33,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private readonly RollingMultCoinContainer multCounter;
         private readonly FillFlowContainer barContainer;
 
-        private const float bar_width_when_1000coin = 230f;
+        private const float bar_width_when_1000_coin = 230f;
 
         // 当前队伍的分数
         private readonly BindableLong ourScore = new BindableLong();
@@ -52,6 +52,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
         private readonly TournamentSpriteText warningText;
+        private readonly Box diffCounterBackground;
 
         private bool isTB
         {
@@ -125,10 +126,20 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                             Origin = anchor,
                             Children = new Drawable[]
                             {
-                                diffCounter = new RollingMultDiffNumberContainer
+                                new Container
                                 {
                                     Anchor = flip ? Anchor.CentreRight : Anchor.CentreLeft,
                                     Origin = Anchor = flip ? Anchor.CentreRight : Anchor.CentreLeft,
+                                    AutoSizeAxes = Axes.Both,
+                                    Children = new Drawable[]
+                                    {
+                                        diffCounterBackground = new Box
+                                        {
+                                            RelativeSizeAxes = Axes.Both,
+                                            Alpha = 0,
+                                        },
+                                        diffCounter = new RollingMultDiffNumberContainer(),
+                                    }
                                 },
                                 warningText = new TournamentSpriteText
                                 {
@@ -213,10 +224,13 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             diffBar.ResizeWidthTo(calculateBarWidth(diff), 400, Easing.OutQuint);
 
             if (!keepDiff)
+            {
                 diffCounter.Current.Value = diff;
+                diffCounterBackground.FadeOut(100);
+            }
         }
 
-        private static float calculateBarWidth(double coin) => (float)coin / 1000 * bar_width_when_1000coin;
+        private static float calculateBarWidth(double coin) => (float)coin / 1000 * bar_width_when_1000_coin;
 
         private double calculateDiffFromIpc()
         {
@@ -234,6 +248,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         {
             double diff = newAmount - oldAmount;
 
+            diffCounterBackground.Colour = Color4Extensions.FromHex(ourScore.Value > oppoScore.Value ? "#00D415" : "#D43030");
+
+            diffCounterBackground.FadeIn(100);
             warningText.FadeOut(100);
             diffCounter.FadeColour(Color4.White, 100);
             multCoinBar.ResizeWidthTo(calculateBarWidth(oldAmount), 400, Easing.OutQuint);

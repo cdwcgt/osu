@@ -499,7 +499,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
             }
 
             waitForResult.Value = false;
-            scoreDisplay.WaitForResult.Value = false;
+            scoreDisplay.ShowSuccess.Value = true;
         }
 
         private void updateState()
@@ -546,8 +546,6 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     default:
                         HideRoundPreview();
                         expand();
-                        if (!warmup.Value)
-                            scoreDisplay.WaitForResult.Value = true;
                         break;
                 }
             }
