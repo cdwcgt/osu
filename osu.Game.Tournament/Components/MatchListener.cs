@@ -16,7 +16,7 @@ namespace osu.Game.Tournament.Components
         private int currentMatch;
 
         // we just need fetch when game finished.
-        private const int refresh_interval = 100000;
+        private const int refresh_interval = 10000;
 
         [Resolved]
         private IAPIProvider api { get; set; } = null!;
