@@ -206,6 +206,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
+                    Scale = new Vector2(0.5f),
                 },
             };
 
