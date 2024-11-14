@@ -1,7 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using osu.Framework.Allocation;
@@ -18,6 +18,7 @@ namespace osu.Game.Tournament.Components
         public BindableLong Score1 { get; } = new BindableLong();
         public BindableLong Score2 { get; } = new BindableLong();
 
+        // TODO: 使用事件而不是BindableBool
         public BindableBool ConfirmedByApi { get; } = new BindableBool();
 
         [Resolved]
@@ -58,6 +59,9 @@ namespace osu.Game.Tournament.Components
             {
                 if (s.NewValue == TourneyState.Ranking)
                     return;
+
+                // to reset the status.
+                ConfirmedByApi.Value = true;
 
                 Score1.Value = 0;
                 Score2.Value = 0;
@@ -102,12 +106,12 @@ namespace osu.Game.Tournament.Components
             if (matchResult.BeatmapId != currentBeatmapId)
                 return;
 
-            int[] team1Player = currentMatch.Value.Team1.Value?.Players.Select(p => p.OnlineID).ToArray() ?? Array.Empty<int>();
-            int[] team2Player = currentMatch.Value.Team2.Value?.Players.Select(p => p.OnlineID).ToArray() ?? Array.Empty<int>();
+            List<int> team1Player = currentMatch.Value.Team1.Value?.Players.Select(p => p.OnlineID).ToList() ?? new List<int>();
+            List<int> team2Player = currentMatch.Value.Team2.Value?.Players.Select(p => p.OnlineID).ToList() ?? new List<int>();
 
             ConfirmedByApi.Value = true;
-            Score1.Value = matchResult.Scores.Where(s => team1Player.Any(t => t == s.UserID)).Select(s => s.Score).Sum();
-            Score2.Value = matchResult.Scores.Where(s => team2Player.Any(t => t == s.UserID)).Select(s => s.Score).Sum();
+            Score1.Value = matchResult.Scores.Where(s => team1Player.Contains(s.UserID)).Select(s => s.Score).Sum();
+            Score2.Value = matchResult.Scores.Where(s => team2Player.Contains(s.UserID)).Select(s => s.Score).Sum();
         }
     }
 }
