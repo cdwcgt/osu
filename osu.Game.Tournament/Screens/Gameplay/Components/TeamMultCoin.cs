@@ -197,11 +197,11 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             ipc.State.BindValueChanged(s =>
             {
                 // 如果没有从游玩转变到结算界面（即出现了问题，就重置）
-                if (s.NewValue == TourneyState.Ranking || s.OldValue == TourneyState.Playing)
-                    return;
-
-                triggerAnimation(coin.Value ?? 0, coin.Value ?? 0);
-                warningText.FadeOut(100);
+                if (s.NewValue != TourneyState.Ranking && s.OldValue == TourneyState.Playing)
+                {
+                    triggerAnimation(coin.Value ?? 0, coin.Value ?? 0);
+                    warningText.FadeOut(100);
+                }
             });
         }
 
