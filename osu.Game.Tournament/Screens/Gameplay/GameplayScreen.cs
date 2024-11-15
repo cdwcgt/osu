@@ -509,7 +509,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
             {
                 scheduledScreenChange?.Cancel();
 
-                if (State.Value == TourneyState.Ranking)
+                if (State.Value == TourneyState.Ranking && lastState == TourneyState.Playing)
                 {
                     if (warmup.Value || CurrentMatch.Value == null) return;
 
