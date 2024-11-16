@@ -516,6 +516,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     waitForResult.Value = true;
                     listener.FetchMatch();
                     getResult();
+                    roundInfo.CanShowResult.Value = true;
                 }
 
                 switch (State.Value)

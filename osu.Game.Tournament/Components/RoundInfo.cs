@@ -34,6 +34,8 @@ namespace osu.Game.Tournament.Components
         [Resolved]
         private MatchIPCInfo ipc { get; set; } = null!;
 
+        public BindableBool CanShowResult { get; } = new BindableBool();
+
         [BackgroundDependencyLoader]
         private void load()
         {
@@ -52,8 +54,8 @@ namespace osu.Game.Tournament.Components
                 }
             });
 
-            ipc.Score1.BindValueChanged(_ => updateScoreFromIPC());
-            ipc.Score2.BindValueChanged(_ => updateScoreFromIPC());
+            ipc.Score1.BindValueChanged(_ => updateScore());
+            ipc.Score2.BindValueChanged(_ => updateScore());
 
             ipc.State.BindValueChanged(s =>
             {
@@ -75,17 +77,33 @@ namespace osu.Game.Tournament.Components
                     // if we are not listening a api, just trust ipc.
                     ConfirmedByApi.Value = true;
                 }
+
+                if (!s.NewValue)
+                {
+                    score1 = score2 = 0;
+                    CanShowResult.Value = false;
+                }
+
+                updateScore();
             }, true);
+
+            CanShowResult.BindValueChanged(_ => updateScore());
         }
 
-        private void updateScoreFromIPC()
+        private void updateScore()
         {
-            if (ConfirmedByApi.Value && listener.CurrentlyListening.Value)
-                return;
+            if (ConfirmedByApi.Value && listener.CurrentlyListening.Value && !CanShowResult.Value)
+            {
+                Score1.Value = score1;
+                Score2.Value = score2;
+            }
 
             Score1.Value = ipc.Score1.Value;
             Score2.Value = ipc.Score2.Value;
         }
+
+        private long score1;
+        private long score2;
 
         private void processNewMatchEvent(APIMatchEvent newEvent)
         {
@@ -110,8 +128,8 @@ namespace osu.Game.Tournament.Components
             List<int> team2Player = currentMatch.Value.Team2.Value?.Players.Select(p => p.OnlineID).ToList() ?? new List<int>();
 
             ConfirmedByApi.Value = true;
-            Score1.Value = matchResult.Scores.Where(s => team1Player.Contains(s.UserID)).Select(s => s.Score).Sum();
-            Score2.Value = matchResult.Scores.Where(s => team2Player.Contains(s.UserID)).Select(s => s.Score).Sum();
+            score1 = matchResult.Scores.Where(s => team1Player.Contains(s.UserID)).Select(s => s.Score).Sum();
+            score2 = matchResult.Scores.Where(s => team2Player.Contains(s.UserID)).Select(s => s.Score).Sum();
         }
     }
 }
