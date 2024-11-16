@@ -101,7 +101,7 @@ namespace osu.Game.Tournament.Components
                 return;
 
             // if we actually need to confirm this is a pick?
-            int currentBeatmapId = currentMatch.Value.PicksBans.Last(s => s.Type == ChoiceType.Pick).BeatmapID;
+            int currentBeatmapId = currentMatch.Value.PicksBans.LastOrDefault(s => s.Type == ChoiceType.Pick)?.BeatmapID ?? 0;
 
             if (matchResult.BeatmapId != currentBeatmapId)
                 return;
