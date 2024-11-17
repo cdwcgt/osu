@@ -421,7 +421,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
             using (BeginDelayedSequence(300))
             {
                 scoreDisplay.FadeIn(100);
-                scoreWarningContainer.FadeIn(100);
+                if (!warmup.Value)
+                    scoreWarningContainer.FadeIn(100);
             }
         }
 
