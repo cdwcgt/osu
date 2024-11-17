@@ -478,25 +478,13 @@ namespace osu.Game.Tournament.Screens.Gameplay
             {
                 // 黄金加成
                 CurrentMatch.Value.Team1Coin.Value += WINNER_BONUS + (isTB ? EXTRA_WINNER_BONUS_TB : 0);
-                double lossPoint = Math.Round((double)roundInfo.Score2.Value / roundInfo.Score1.Value * 100, 2, MidpointRounding.AwayFromZero);
-
-                if (!double.IsNaN(lossPoint))
-                {
-                    CurrentMatch.Value.Team2Coin.Value += lossPoint;
-                }
-
+                CurrentMatch.Value.Team2Coin.Value += Math.Round((double)roundInfo.Score2.Value / Math.Max(roundInfo.Score1.Value, 1) * 100, 2, MidpointRounding.AwayFromZero);
                 showDraw(TeamColour.Red);
             }
             else
             {
                 CurrentMatch.Value.Team2Coin.Value += WINNER_BONUS + (isTB ? EXTRA_WINNER_BONUS_TB : 0);
-                double lossPoint = Math.Round((double)roundInfo.Score1.Value / roundInfo.Score2.Value * 100, 2, MidpointRounding.AwayFromZero);
-
-                if (!double.IsNaN(lossPoint))
-                {
-                    CurrentMatch.Value.Team1Coin.Value += lossPoint;
-                }
-
+                CurrentMatch.Value.Team1Coin.Value += Math.Round((double)roundInfo.Score1.Value / Math.Max(roundInfo.Score2.Value, 1) * 100, 2, MidpointRounding.AwayFromZero);;
                 showDraw(TeamColour.Blue);
             }
 
