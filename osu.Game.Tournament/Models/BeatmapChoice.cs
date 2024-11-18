@@ -20,6 +20,8 @@ namespace osu.Game.Tournament.Models
         public ChoiceType Type;
 
         public int BeatmapID;
+
+        public bool CalculatedByApi;
     }
 
     [JsonConverter(typeof(StringEnumConverter))]

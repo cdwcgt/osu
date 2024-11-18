@@ -57,9 +57,9 @@ namespace osu.Game.Tournament.Components
             ipc.Score1.BindValueChanged(_ => updateScore());
             ipc.Score2.BindValueChanged(_ => updateScore());
 
-            ipc.State.BindValueChanged(s =>
+            listener.CurrentlyPlaying.BindValueChanged(p =>
             {
-                if (s.NewValue == TourneyState.Ranking)
+                if (!p.NewValue)
                     return;
 
                 // to reset the status.

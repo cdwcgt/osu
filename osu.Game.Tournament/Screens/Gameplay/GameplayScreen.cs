@@ -279,6 +279,14 @@ namespace osu.Game.Tournament.Screens.Gameplay
             {
                 warmupButton.BackgroundColour = w.NewValue ? Color4.Red : Color4Extensions.FromHex(@"44aadd");
             });
+
+            listener.CurrentlyPlaying.BindValueChanged(p =>
+            {
+                if (p.NewValue)
+                {
+                    MatchStarted();
+                }
+            });
         }
 
         private bool roundPreviewShow;
@@ -490,6 +498,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
             }
 
             scoreDisplay.ShowSuccess.Value = true;
+            var lastPick = CurrentMatch.Value.PicksBans.LastOrDefault(p => p.Type == ChoiceType.Pick);
+
+            if (lastPick != null)
+            {
+                lastPick.CalculatedByApi = true;
+            }
         }
 
         private void updateState()
@@ -500,12 +514,13 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
                 if (State.Value == TourneyState.Ranking && lastState == TourneyState.Playing)
                 {
-                    if (warmup.Value || CurrentMatch.Value == null) return;
+                    var lastPick = CurrentMatch.Value?.PicksBans.LastOrDefault(p => p.Type == ChoiceType.Pick);
+                    if (warmup.Value || CurrentMatch.Value == null || lastPick?.CalculatedByApi != true) return;
 
                     waitForResult.Value = true;
                     listener.FetchMatch();
-                    getResult();
                     roundInfo.CanShowResult.Value = true;
+                    getResult();
                 }
 
                 switch (State.Value)
@@ -535,8 +550,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                         break;
 
                     default:
-                        HideRoundPreview();
-                        expand();
+                        listener.FetchMatch();
                         break;
                 }
             }
@@ -544,6 +558,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
             {
                 lastState = State.Value;
             }
+        }
+
+        public void MatchStarted()
+        {
+            HideRoundPreview();
+            expand();
         }
 
         public override void Hide()

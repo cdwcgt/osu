@@ -29,6 +29,10 @@ namespace osu.Game.Tournament.Components
 
         private readonly BindableBool currentlyListening = new BindableBool();
 
+        public IBindable<bool> CurrentlyPlaying => currentlyPlaying;
+
+        private readonly BindableBool currentlyPlaying = new BindableBool();
+
         private long latestMatchEventID => events.Count != 0 ? events.Max(e => e.Id) : 0;
 
         private double waitTime;
@@ -83,6 +87,8 @@ namespace osu.Game.Tournament.Components
 
             req.Success += content =>
             {
+                currentlyPlaying.Value = content.Events.Any(e => e.Game?.Scores.Count == 0);
+
                 var newEvent = content.Events.ExceptBy(events.Select(e => e.Id), e => e.Id).Where(e => e.Game?.Scores.Count != 0);
 
                 events.AddRange(newEvent);
