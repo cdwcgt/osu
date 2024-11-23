@@ -282,10 +282,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
             listener.CurrentlyPlaying.BindValueChanged(p =>
             {
-                if (p.NewValue)
-                {
-                    MatchStarted();
-                }
+                updateState();
             });
         }
 
@@ -555,6 +552,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
                     default:
                         listener.FetchMatch();
+                        if (listener.CurrentlyPlaying.Value)
+                            MatchStarted();
                         break;
                 }
             }
