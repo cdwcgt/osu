@@ -87,7 +87,7 @@ namespace osu.Game.Tournament.Components
 
             req.Success += content =>
             {
-                currentlyPlaying.Value = content.Events.Any(e => e.Game?.Scores.Count == 0);
+                currentlyPlaying.Value = content.CurrentGameID != null;
 
                 var newEvent = content.Events.ExceptBy(events.Select(e => e.Id), e => e.Id).Where(e => e.Game?.Scores.Count != 0);
 

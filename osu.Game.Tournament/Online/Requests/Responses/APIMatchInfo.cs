@@ -22,5 +22,8 @@ namespace osu.Game.Tournament.Online.Requests.Responses
 
         [JsonProperty("last_event_id")]
         public long LastEventID { get; set; }
+
+        [JsonProperty("current_game_id")]
+        public long? CurrentGameID { get; set; }
     }
 }
