@@ -526,6 +526,10 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 switch (State.Value)
                 {
                     case TourneyState.Idle:
+                        // stable panic
+                        if (listener.CurrentlyPlaying.Value)
+                            return;
+
                         contract();
 
                         if (LadderInfo.AutoProgressScreens.Value)
