@@ -503,6 +503,17 @@ namespace osu.Game.Tournament.Screens.Gameplay
             }
         }
 
+        private void attemptGetResult()
+        {
+            var lastPick = CurrentMatch.Value?.PicksBans.LastOrDefault(p => p.Type == ChoiceType.Pick);
+            if (warmup.Value || CurrentMatch.Value == null || lastPick?.CalculatedByApi != true) return;
+
+            waitForResult.Value = true;
+            listener.FetchMatch();
+            roundInfo.CanShowResult.Value = true;
+            getResult();
+        }
+
         private void updateState()
         {
             try
@@ -511,22 +522,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
                 if (State.Value == TourneyState.Ranking && lastState == TourneyState.Playing)
                 {
-                    var lastPick = CurrentMatch.Value?.PicksBans.LastOrDefault(p => p.Type == ChoiceType.Pick);
-                    if (warmup.Value || CurrentMatch.Value == null || lastPick?.CalculatedByApi != true) return;
-
-                    waitForResult.Value = true;
-                    listener.FetchMatch();
-                    roundInfo.CanShowResult.Value = true;
-                    getResult();
+                    attemptGetResult();
                 }
 
                 switch (State.Value)
                 {
                     case TourneyState.Idle:
-                        // stable panic
-                        if (listener.CurrentlyPlaying.Value)
-                            return;
-
                         contract();
 
                         if (LadderInfo.AutoProgressScreens.Value)
