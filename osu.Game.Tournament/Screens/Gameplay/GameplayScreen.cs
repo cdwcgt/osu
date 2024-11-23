@@ -506,7 +506,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private void attemptGetResult()
         {
             var lastPick = CurrentMatch.Value?.PicksBans.LastOrDefault(p => p.Type == ChoiceType.Pick);
-            if (warmup.Value || CurrentMatch.Value == null || lastPick?.CalculatedByApi != true) return;
+            if (warmup.Value || CurrentMatch.Value == null || lastPick?.CalculatedByApi != false) return;
 
             waitForResult.Value = true;
             listener.FetchMatch();
