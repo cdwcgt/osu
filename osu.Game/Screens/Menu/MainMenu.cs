@@ -155,9 +155,9 @@ namespace osu.Game.Screens.Menu
                                     this.Push(new DailyChallengeIntro(room));
                             },
                             OnReplayVs = () => this.Push(new ReplayVsSelectScreen()),
-                            OnExit = () =>
+                            OnExit = e =>
                             {
-                                exitConfirmedViaHoldOrClick = true;
+                                exitConfirmedViaHoldOrClick = e is MouseEvent;
                                 this.Exit();
                             }
                         }
