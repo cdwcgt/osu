@@ -189,13 +189,21 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         private bool roundPreviewShow;
 
-        public void ShowRoundPreview()
+        public bool ShowRoundPreview()
         {
+            if (!IsLoaded)
+                return false;
+
+            scheduledShowRoundPreview?.Cancel();
+
             if (roundPreviewShow)
-                return;
+                return false;
+
+            if (!IsPresent)
+                return false;
 
             if (State.Value != TourneyState.Idle && State.Value != TourneyState.Ranking)
-                return;
+                return false;
 
             SongBar.FadeOut(100);
             chat.Contract();
@@ -204,6 +212,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 roundPreview.FadeIn(200);
 
             roundPreviewShow = true;
+            return true;
         }
 
         public void HideRoundPreview()
@@ -256,6 +265,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         private ScheduledDelegate? scheduledScreenChange;
         private ScheduledDelegate? scheduledContract;
+        private ScheduledDelegate? scheduledShowRoundPreview;
+        private ScheduledDelegate? scheduledHideRoundPreview;
 
         private TournamentMatchScoreDisplay scoreDisplay = null!;
 
