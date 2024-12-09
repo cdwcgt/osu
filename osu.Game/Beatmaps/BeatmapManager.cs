@@ -285,7 +285,8 @@ namespace osu.Game.Beatmaps
         /// </summary>
         /// <param name="query">The query.</param>
         /// <returns>The first result for the provided query, or null if no results were found.</returns>
-        public BeatmapInfo? QueryBeatmap(Expression<Func<BeatmapInfo, bool>> query) => Realm.Run(r => r.All<BeatmapInfo>().Filter($"{nameof(BeatmapInfo.BeatmapSet)}.{nameof(BeatmapSetInfo.DeletePending)} == false").FirstOrDefault(query)?.Detach());
+        public BeatmapInfo? QueryBeatmap(Expression<Func<BeatmapInfo, bool>> query) => Realm.Run(r =>
+            r.All<BeatmapInfo>().Filter($"{nameof(BeatmapInfo.BeatmapSet)}.{nameof(BeatmapSetInfo.DeletePending)} == false").FirstOrDefault(query)?.Detach());
 
         /// <summary>
         /// A default representation of a WorkingBeatmap to use when no beatmap is available.
@@ -310,6 +311,23 @@ namespace osu.Game.Beatmaps
             {
                 var items = r.All<BeatmapSetInfo>().Where(s => !s.DeletePending && !s.Protected);
                 DeleteVideos(items.ToList());
+            });
+        }
+
+        public void ResetAllOffsets()
+        {
+            const string reset_complete_message = "All offsets have been reset!";
+            Realm.Write(r =>
+            {
+                var items = r.All<BeatmapInfo>();
+
+                foreach (var beatmap in items)
+                {
+                    if (beatmap.UserSettings.Offset != 0)
+                        beatmap.UserSettings.Offset = 0;
+                }
+
+                PostNotification?.Invoke(new ProgressCompletionNotification { Text = reset_complete_message });
             });
         }
 
@@ -390,7 +408,7 @@ namespace osu.Game.Beatmaps
                     // user requested abort
                     return;
 
-                var video = b.Files.FirstOrDefault(f => OsuGameBase.VIDEO_EXTENSIONS.Any(ex => f.Filename.EndsWith(ex, StringComparison.OrdinalIgnoreCase)));
+                var video = b.Files.FirstOrDefault(f => SupportedExtensions.VIDEO_EXTENSIONS.Any(ex => f.Filename.EndsWith(ex, StringComparison.OrdinalIgnoreCase)));
 
                 if (video != null)
                 {
@@ -541,7 +559,11 @@ namespace osu.Game.Beatmaps
                 // If we seem to be missing files, now is a good time to re-fetch.
                 bool missingFiles = beatmapInfo.BeatmapSet?.Files.Count == 0;
 
-                if (refetch || beatmapInfo.IsManaged || missingFiles)
+                if (beatmapInfo.IsManaged)
+                {
+                    beatmapInfo = beatmapInfo.Detach();
+                }
+                else if (refetch || missingFiles)
                 {
                     Guid id = beatmapInfo.ID;
                     beatmapInfo = Realm.Run(r => r.Find<BeatmapInfo>(id)?.Detach()) ?? beatmapInfo;
