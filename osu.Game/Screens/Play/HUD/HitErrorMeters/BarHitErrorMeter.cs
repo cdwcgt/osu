@@ -60,7 +60,7 @@ namespace osu.Game.Screens.Play.HUD.HitErrorMeters
 
         [JsonIgnore]
         [SettingSource("Max angle", SettingControlType = typeof(SettingsNumberBox))]
-        public BindableInt MaxAngleMax { get; } = new BindableInt();
+        public Bindable<int?> MaxAngleNum { get; } = new Bindable<int?>();
 
         [SettingSource("Invert Rotate")]
         public BindableBool InvertRotate { get; } = new BindableBool();
@@ -108,6 +108,22 @@ namespace osu.Game.Screens.Play.HUD.HitErrorMeters
             const float chevron_size = 8;
 
             hitWindows = HitWindows.GetAllAvailableWindows().ToArray();
+
+            MaxAngleNum.BindValueChanged(s =>
+            {
+                if (s.NewValue == null)
+                {
+                    MaxAngle.Value = 0;
+                    return;
+                }
+
+                MaxAngle.Value = s.NewValue.Value;
+            });
+
+            MaxAngle.BindValueChanged(s =>
+            {
+                MaxAngleNum.Value = s.NewValue;
+            }, true);
 
             InternalChild = rotateContainer = new Container
             {
