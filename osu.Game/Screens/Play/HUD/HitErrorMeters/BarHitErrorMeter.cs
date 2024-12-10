@@ -3,6 +3,7 @@
 
 using System;
 using System.Linq;
+using Newtonsoft.Json;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
@@ -13,12 +14,12 @@ using osu.Framework.Graphics.Pooling;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Localisation;
-using osu.Framework.Utils;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Localisation.HUD;
+using osu.Game.Overlays.Settings;
 using osu.Game.Rulesets.Judgements;
 using osu.Game.Rulesets.Scoring;
 using osuTK;
@@ -49,13 +50,20 @@ namespace osu.Game.Screens.Play.HUD.HitErrorMeters
         public Bindable<LabelStyles> LabelStyle { get; } = new Bindable<LabelStyles>(LabelStyles.Icons);
 
         [SettingSource("Max angle")]
-        public BindableInt MaxAngle { get; } = new BindableInt()
+        public BindableInt MaxAngle { get; } = new BindableInt
         {
             Value = 0,
             MaxValue = 1800,
             MinValue = 0,
             Default = 0,
         };
+
+        [JsonIgnore]
+        [SettingSource("Max angle", SettingControlType = typeof(SettingsNumberBox))]
+        public BindableInt MaxAngleMax { get; } = new BindableInt();
+
+        [SettingSource("Invert Rotate")]
+        public BindableBool InvertRotate { get; } = new BindableBool();
 
         private const int judgement_line_width = 14;
 
@@ -453,7 +461,7 @@ namespace osu.Game.Screens.Play.HUD.HitErrorMeters
             rotateContainer.RotateTo(calculateRotateAngle(floatingAverage), arrow_move_duration, Easing.OutQuint);
         }
 
-        private float calculateRotateAngle(double value) => -Math.Clamp((float)(value / maxHitWindow) / 2 * MaxAngle.Value, -MaxAngle.Value, MaxAngle.Value);
+        private float calculateRotateAngle(double value) => (InvertRotate.Value ? 1 : -1) * Math.Clamp((float)(value / maxHitWindow) / 2 * MaxAngle.Value, -MaxAngle.Value, MaxAngle.Value);
 
         private float getRelativeJudgementPosition(double value) => Math.Clamp((float)((value / maxHitWindow) + 1) / 2, 0, 1);
 
