@@ -28,7 +28,7 @@ namespace osu.Game.Screens.ReplayVs
 
         // We are managing our own adjustments. For now, this happens inside the Player instances themselves.
         public override bool? ApplyModTrackAdjustments => false;
-        public override bool AllowBackButton => false;
+        public override bool AllowUserExit => false;
 
         /// <summary>
         /// Whether all spectating players have finished loading.

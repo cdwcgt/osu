@@ -94,7 +94,6 @@ namespace osu.Game.Tournament.Screens
 
         // Not using api.Activity because the tournament client MetadataClient has already bound to it
         public IBindable<UserActivity> Activity => activity;
-        public IBindable<UserStatistics?> Statistics => api.Statistics;
         public Language Language => api.Language;
         public string AccessToken => api.AccessToken;
         public Guid SessionIdentifier => api.SessionIdentifier;
@@ -117,8 +116,6 @@ namespace osu.Game.Tournament.Screens
         public void AuthenticateSecondFactor(string code) => api.AuthenticateSecondFactor(code);
 
         public void Logout() => api.Logout();
-
-        public void UpdateStatistics(UserStatistics newStatistics) => api.UpdateStatistics(newStatistics);
 
         public IHubClientConnector? GetHubConnector(string clientName, string endpoint, bool preferMessagePack = true) => api.GetHubConnector(clientName, endpoint, preferMessagePack);
 

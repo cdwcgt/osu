@@ -30,7 +30,7 @@ namespace osu.Game.Screens.MapGuess
 
         public override bool? AllowGlobalTrackControl => false;
 
-        public override bool AllowBackButton => false;
+        public override bool AllowUserExit => false;
 
         public override bool HideOverlaysOnEnter => true;
 
