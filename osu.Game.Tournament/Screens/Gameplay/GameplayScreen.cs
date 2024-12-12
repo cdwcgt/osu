@@ -185,6 +185,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 warmupButton.Alpha = !w.NewValue ? 0.5f : 1;
                 header.ShowScores = !w.NewValue;
             }, true);
+
+            sceneManager?.CurrentScreen.BindValueChanged(s =>
+            {
+                if (s.OldValue == typeof(MapPoolScreen) && s.NewValue == typeof(GameplayScreen))
+                    switchFromMappool = true;
+            });
         }
 
         private bool roundPreviewShow;
