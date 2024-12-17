@@ -10,6 +10,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Game.Beatmaps;
 using osu.Game.Graphics;
 using osu.Game.Tournament.Models;
 using osuTK;
@@ -28,7 +29,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         public RoundInformationPreview()
         {
-            Width = 1030;
+            AutoSizeAxes = Axes.X;
             Height = 110;
             Masking = true;
 
@@ -85,10 +86,14 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 new Container
                 {
                     Name = "右侧主要内容",
-                    Width = 1000f,
+                    AutoSizeAxes = Axes.X,
                     Anchor = Anchor.CentreRight,
                     Origin = Anchor.CentreRight,
                     RelativeSizeAxes = Axes.Y,
+                    Padding = new MarginPadding
+                    {
+                        Left = 30f,
+                    },
                     Children = new Drawable[]
                     {
                         mapContentContainer = new FillFlowContainer
@@ -143,23 +148,18 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             var remainChoices = ladderInfo.CurrentMatch.Value.PicksBans.Except(banChoices);
             banChoices = banChoices.Concat(Enumerable.Repeat((BeatmapChoice?)null, (ladderInfo.CurrentMatch.Value.Round.Value?.BanCount.Value ?? 2) * 2 - banChoices.Length)).ToArray();
 
-            var firstHalfPickDetail = new MapDetailContent("上半场");
-            var secondHalfPickDetail = new MapDetailContent("下半场");
+            var pickDetail = new MapDetailContent("选图");
 
-            int halfMapCount = (ladderInfo.CurrentMatch.Value.Round.Value?.BestOf.Value - 1) / 2 ?? 99;
+            int pickMapCount = ladderInfo.CurrentMatch.Value.Round.Value.BestOf.Value - 1;
 
-            var firstHalfPickChoice = remainChoices.Take(halfMapCount)
+            var pickChoice = remainChoices.Take(pickMapCount)
                                                    // 往后面填充null
-                                                   .Concat(Enumerable.Repeat((BeatmapChoice?)null, halfMapCount - remainChoices.Take(halfMapCount).Count()));
-
-            var secondHalfPickChoice = remainChoices.Skip(halfMapCount).Take(halfMapCount)
-                                                    .Concat(Enumerable.Repeat((BeatmapChoice?)null, halfMapCount - remainChoices.Skip(halfMapCount).Take(halfMapCount).Count()));;
+                                                   .Concat(Enumerable.Repeat((BeatmapChoice?)null, pickMapCount - remainChoices.Take(pickMapCount).Count()));
 
             mapContentContainer.Add(banMapDetail);
             mapContentContainer.Add(createDivideLine());
-            mapContentContainer.Add(firstHalfPickDetail);
+            mapContentContainer.Add(pickDetail);
             mapContentContainer.Add(createDivideLine());
-            mapContentContainer.Add(secondHalfPickDetail);
             mapContentContainer.Add(createDivideLine());
             var TBMap = ladderInfo.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(map => map.Mods == "TB");
 
@@ -177,8 +177,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             Scheduler.Add(() =>
             {
                 banMapDetail.UpdateBeatmap(banChoices);
-                firstHalfPickDetail.UpdateBeatmap(firstHalfPickChoice);
-                secondHalfPickDetail.UpdateBeatmap(secondHalfPickChoice);
+                pickDetail.UpdateBeatmap(pickChoice);
             });
         }
 
@@ -287,7 +286,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             public void UpdateBeatmap(IEnumerable<BeatmapChoice?> maps)
             {
-                if (ladderInfo.CurrentMatch.Value?.Round.Value == null)
+                TournamentRound? round = ladderInfo.CurrentMatch.Value?.Round.Value;
+
+                if (round == null)
                     return;
 
                 banMapContent.Clear();
@@ -299,7 +300,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     if (map == null)
                         return mapBox;
 
-                    var roundBeatmap = ladderInfo.CurrentMatch.Value.Round.Value.Beatmaps.FirstOrDefault(roundMap => roundMap.ID == map.BeatmapID);
+                    var roundBeatmap = round.Beatmaps.FirstOrDefault(roundMap => roundMap.ID == map.BeatmapID);
                     if (roundBeatmap == null)
                         return mapBox;
 
@@ -310,7 +311,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     Color4 backgroundColor = map.Type == ChoiceType.Ban ? Color4.Gray : roundBeatmap.BackgroundColor;
                     Color4 textColor = map.Type == ChoiceType.Ban ? new Color4(229, 229, 229, 255) : roundBeatmap.TextColor;
 
-                    var modArray = ladderInfo.CurrentMatch.Value.Round.Value.Beatmaps.Where(b => b.Mods == roundBeatmap.Mods).ToArray();
+                    var modArray = round.Beatmaps.Where(b => b.Mods == roundBeatmap.Mods).ToArray();
 
                     int id = Array.FindIndex(modArray, b => b.ID == roundBeatmap.ID) + 1;
 
