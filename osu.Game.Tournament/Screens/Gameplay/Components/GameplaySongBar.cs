@@ -33,6 +33,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private SpriteIcon leftArrow = null!;
         private SpriteIcon rightArrow = null!;
         private bool expanded;
+        private Container modContainer = null!;
+
+        private TeamColour? pickTeamColour;
 
         [Resolved]
         private LadderInfo ladder { get; set; } = null!;
@@ -117,12 +120,20 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                                         Colour = Colour4.Black,
                                         Alpha = 0.55f,
                                     },
+                                    modContainer = new Container
+                                    {
+                                        Anchor = Anchor.CentreLeft,
+                                        Origin = Anchor.CentreLeft,
+                                        AutoSizeAxes = Axes.X,
+                                        RelativeSizeAxes = Axes.Y,
+                                        Padding = new MarginPadding { Left = 17f }
+                                    },
                                     leftData = new FillFlowContainer
                                     {
                                         RelativeSizeAxes = Axes.X,
                                         AutoSizeAxes = Axes.Y,
-                                        Anchor = Anchor.Centre,
-                                        Origin = Anchor.Centre,
+                                        Anchor = Anchor.CentreRight,
+                                        Origin = Anchor.CentreRight,
                                         Direction = FillDirection.Vertical,
                                     }
                                 },
@@ -131,7 +142,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                             {
                                 RelativeSizeAxes = Axes.Y,
                                 AutoSizeAxes = Axes.X,
-                                Child = new TournamentBeatmapPanel(beatmap)
+                                Child = new TournamentBeatmapPanel(beatmap, isGameplaySongBar: true)
                                 {
                                     Width = 500,
                                     CenterText = true
@@ -154,8 +165,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                                     {
                                         RelativeSizeAxes = Axes.X,
                                         AutoSizeAxes = Axes.Y,
-                                        Anchor = Anchor.Centre,
-                                        Origin = Anchor.Centre,
+                                        Anchor = Anchor.CentreLeft,
+                                        Origin = Anchor.CentreLeft,
                                         Direction = FillDirection.Vertical,
                                     }
                                 },
@@ -210,15 +221,29 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private void updateState()
         {
-            BeatmapChoice? isChoice = currentMatch.Value?.PicksBans.FirstOrDefault(p => p.BeatmapID == beatmap?.OnlineID && p.Type == ChoiceType.Pick);
+            pickTeamColour = currentMatch.Value?.PicksBans.FirstOrDefault(p => p.BeatmapID == beatmap?.OnlineID && p.Type == ChoiceType.Pick)?.Team;
+            string? modString = currentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(b => b.ID == beatmap?.OnlineID)?.Mods;
 
-            if (isChoice == null)
+            modContainer.Clear();
+
+            if (!string.IsNullOrEmpty(modString))
+            {
+                modContainer.Add(new TournamentModIcon(modString)
+                {
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    RelativeSizeAxes = Axes.Y,
+                    Width = 44f,
+                });
+            }
+
+            if (pickTeamColour == null)
             {
                 arrowColor.Value = Color4.White;
                 return;
             }
 
-            arrowColor.Value = getTeamColour(isChoice.Team);
+            arrowColor.Value = getTeamColour(pickTeamColour.Value);
 
             static ColourInfo getTeamColour(TeamColour teamColour) => teamColour == TeamColour.Red ? Color4Extensions.FromHex("#D43030") : Color4Extensions.FromHex("#2A82E4");
         }
@@ -260,17 +285,23 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 srAndModStats = srAndModStats.Append(("谱面位置", modPosition)).ToArray();
             }
 
+            (string, string)[] bpmAndPickTeam =
+            {
+                ("选图方", pickTeamColour == null ? "无" : pickTeamColour.Value == TeamColour.Red ? "红队" : "蓝队"),
+                ("BPM", $"{bpm:0.#}")
+            };
+
             leftData.Children = new Drawable[]
             {
-                new DiffPiece(("BPM", $"{bpm:0.#}"))
+                new DiffPiece(bpmAndPickTeam)
                 {
-                    Origin = Anchor.Centre,
-                    Anchor = Anchor.Centre,
+                    Origin = Anchor.CentreRight,
+                    Anchor = Anchor.CentreRight,
                 },
                 new DiffPiece(("谱面长度", length.ToFormattedDuration().ToString()))
                 {
-                    Origin = Anchor.Centre,
-                    Anchor = Anchor.Centre,
+                    Origin = Anchor.CentreRight,
+                    Anchor = Anchor.CentreRight,
                 },
             };
 
@@ -278,17 +309,17 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             {
                 new DiffPiece(stats)
                 {
-                    Origin = Anchor.Centre,
-                    Anchor = Anchor.Centre,
+                    Origin = Anchor.CentreLeft,
+                    Anchor = Anchor.CentreLeft,
                 },
                 new DiffPiece(srAndModStats)
                 {
-                    Origin = Anchor.Centre,
-                    Anchor = Anchor.Centre,
+                    Origin = Anchor.CentreLeft,
+                    Anchor = Anchor.CentreLeft,
                 }
             };
 
-            beatmapPanel.Child = new TournamentBeatmapPanel(beatmap)
+            beatmapPanel.Child = new TournamentBeatmapPanel(beatmap, isGameplaySongBar: true)
             {
                 Width = 500,
                 CenterText = true,
