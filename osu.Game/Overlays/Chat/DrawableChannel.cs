@@ -84,24 +84,26 @@ namespace osu.Game.Overlays.Chat
             highlightedMessage.BindValueChanged(_ => processMessageHighlighting(), true);
         }
 
-        protected override void Update()
-        {
-            base.Update();
-
-            long? lastMinutes = null;
-
-            for (int i = 0; i < ChatLineFlow.Count; i++)
-            {
-                if (ChatLineFlow[i] is ChatLine chatline)
-                {
-                    long minutes = chatline.Message.Timestamp.ToUnixTimeSeconds() / 60;
-
-                    chatline.AlternatingBackground = i % 2 == 0;
-                    chatline.RequiresTimestamp = minutes != lastMinutes;
-                    lastMinutes = minutes;
-                }
-            }
-        }
+        // 去除背景替换和时间消除
+        // 其实就是返回旧版
+        // protected override void Update()
+        // {
+        //     base.Update();
+        //
+        //     long? lastMinutes = null;
+        //
+        //     for (int i = 0; i < ChatLineFlow.Count; i++)
+        //     {
+        //         if (ChatLineFlow[i] is ChatLine chatline)
+        //         {
+        //             long minutes = chatline.Message.Timestamp.ToUnixTimeSeconds() / 60;
+        //
+        //             chatline.AlternatingBackground = i % 2 == 0;
+        //             chatline.RequiresTimestamp = minutes != lastMinutes;
+        //             lastMinutes = minutes;
+        //         }
+        //     }
+        // }
 
         /// <summary>
         /// Processes any pending message in <see cref="highlightedMessage"/>.

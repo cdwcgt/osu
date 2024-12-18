@@ -300,7 +300,7 @@ namespace osu.Game.Overlays.Chat
 
         private void updateTimestamp()
         {
-            drawableTimestamp.Text = message.Timestamp.LocalDateTime.ToLocalisableString(prefer24HourTime.Value ? @"HH:mm" : @"hh:mm tt");
+            drawableTimestamp.Text = message.Timestamp.LocalDateTime.ToLocalisableString(prefer24HourTime.Value ? @"HH:mm:ss" : @"hh:mm:ss tt");
         }
 
         private static readonly Color4[] default_username_colours =
