@@ -49,6 +49,19 @@ namespace osu.Game.Tournament.Models
             TotalObjectCount = beatmap.TotalObjectCount;
         }
 
+        public TournamentBeatmap(IBeatmapInfo beatmap)
+        {
+            OnlineID = beatmap.OnlineID;
+            DifficultyName = beatmap.DifficultyName;
+            BPM = beatmap.BPM;
+            Length = beatmap.Length;
+            StarRating = beatmap.StarRating;
+            Metadata = beatmap.Metadata;
+            Difficulty = beatmap.Difficulty;
+            EndTimeObjectCount = beatmap.EndTimeObjectCount;
+            TotalObjectCount = beatmap.TotalObjectCount;
+        }
+
         public bool Equals(IBeatmapInfo? other) => other is TournamentBeatmap b && this.MatchesOnlineID(b);
 
         #region IBeatmapInfo/IBeatmapSetOnlineInfo explicit implementation

@@ -16,7 +16,7 @@ namespace osu.Game.Tournament.Screens
         protected readonly SongBar SongBar;
         protected ControlPanel ControlPanel;
 
-        protected virtual SongBar CreateSongBar() => new SongBar()
+        protected virtual SongBar CreateSongBar() => new SongBar
         {
             Anchor = Anchor.BottomRight,
             Origin = Anchor.BottomRight,
@@ -74,8 +74,8 @@ namespace osu.Game.Tournament.Screens
         [BackgroundDependencyLoader]
         private void load(MatchIPCInfo ipc)
         {
-            ipc.Beatmap.BindValueChanged(beatmapChanged, true);
-            ipc.Mods.BindValueChanged(modsChanged, true);
+            ipc.Beatmap.BindValueChanged(IpcBeatmapChanged, true);
+            ipc.Mods.BindValueChanged(IpcModsChanged, true);
         }
 
         private void setMods(LegacyMods mods, string acronym)
@@ -86,12 +86,12 @@ namespace osu.Game.Tournament.Screens
 
         protected virtual void SetModAcronym(string acronym) { }
 
-        private void modsChanged(ValueChangedEvent<LegacyMods> mods)
+        protected virtual void IpcModsChanged(ValueChangedEvent<LegacyMods> mods)
         {
             SongBar.Mods = mods.NewValue;
         }
 
-        private void beatmapChanged(ValueChangedEvent<TournamentBeatmap?> beatmap)
+        protected virtual void IpcBeatmapChanged(ValueChangedEvent<TournamentBeatmap?> beatmap)
         {
             SongBar.FadeInFromZero(300, Easing.OutQuint);
             SongBar.Beatmap = beatmap.NewValue;
