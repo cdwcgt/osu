@@ -84,17 +84,17 @@ namespace osu.Game.Tournament.Components
 
         private readonly int? id;
         private readonly bool isMappool;
-        private readonly bool isGameplaySongBar;
+        private readonly bool isSongBar;
         private readonly Colour4 textColor;
         private readonly Colour4 backgroundColor;
         private Container container = null!;
 
-        public TournamentBeatmapPanel(IBeatmapInfo? beatmap, string mod = "", float cornerRadius = 0, bool isMappool = false, bool isGameplaySongBar = false)
+        public TournamentBeatmapPanel(IBeatmapInfo? beatmap, string mod = "", float cornerRadius = 0, bool isMappool = false, bool isSongBar = false)
         {
             Beatmap = beatmap;
             this.mod = mod;
             this.isMappool = isMappool;
-            this.isGameplaySongBar = isGameplaySongBar;
+            this.isSongBar = isSongBar;
 
             Width = mod == "TB" && id.HasValue ? 600 : 400;
             Height = HEIGHT;
@@ -240,7 +240,7 @@ namespace osu.Game.Tournament.Components
 
         private Drawable[] createInformation()
         {
-            if (isGameplaySongBar)
+            if (isSongBar)
             {
                 return new Drawable[]
                 {

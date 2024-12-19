@@ -49,14 +49,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             Expanded = true;
         }
 
-        protected override void LoadComplete()
-        {
-            base.LoadComplete();
-
-            leftArrow.MoveToX(-25, 1500, Easing.Out).Then().MoveToX(0, 1500, Easing.In).Loop();
-            rightArrow.MoveToX(25, 1500, Easing.Out).Then().MoveToX(0, 1500, Easing.In).Loop();
-        }
-
         private void matchChanged(ValueChangedEvent<TournamentMatch?> match)
         {
             if (match.OldValue != null)
@@ -142,7 +134,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 }
             };
 
-            beatmapPanel.Child = new TournamentBeatmapPanel(beatmap, isGameplaySongBar: true)
+            beatmapPanel.Child = new TournamentBeatmapPanel(beatmap, isSongBar: true)
             {
                 Width = 500,
                 CenterText = true,
