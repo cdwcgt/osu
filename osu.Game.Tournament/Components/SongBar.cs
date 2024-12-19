@@ -2,10 +2,12 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Primitives;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
@@ -28,7 +30,18 @@ namespace osu.Game.Tournament.Components
     {
         protected IBeatmapInfo? beatmap;
 
-        public const float HEIGHT = 145 / 2f;
+        protected FillFlowContainer leftData = null!;
+        protected Container beatmapPanel = null!;
+        protected FillFlowContainer rightData = null!;
+
+        protected SpriteIcon leftArrow = null!;
+        protected SpriteIcon rightArrow = null!;
+        protected Container modContainer = null!;
+
+        public const float HEIGHT = 50f;
+
+        [Resolved]
+        protected LadderInfo Ladder { get; private set; } = null!;
 
         [Resolved]
         private IBindable<RulesetInfo> ruleset { get; set; } = null!;
@@ -62,23 +75,23 @@ namespace osu.Game.Tournament.Components
 
         protected FillFlowContainer Flow = null!;
 
-        private bool expanded;
-
-        public virtual bool Expanded
-        {
-            get => expanded;
-            set
-            {
-                expanded = value;
-                Flow.Direction = expanded ? FillDirection.Full : FillDirection.Vertical;
-            }
-        }
+        private string? modString;
 
         // Todo: This is a hack for https://github.com/ppy/osu-framework/issues/3617 since this container is at the very edge of the screen and potentially initially masked away.
         protected override bool ComputeIsMaskedAway(RectangleF maskingBounds) => false;
 
         [Resolved]
         private TextureStore store { get; set; } = null!;
+
+        public string? ModString
+        {
+            get => modString;
+            set
+            {
+                modString = value;
+                refreshContent();
+            }
+        }
 
         public SongBar()
         {
@@ -87,33 +100,148 @@ namespace osu.Game.Tournament.Components
         }
 
         [BackgroundDependencyLoader]
-        private void load(OsuColour colours)
+        private void load()
         {
             Masking = true;
             CornerRadius = 5;
 
-            InternalChildren = new Drawable[]
+            Anchor = Anchor.BottomCentre;
+            Origin = Anchor.BottomCentre;
+
+            RelativeSizeAxes = Axes.None;
+            AutoSizeAxes = Axes.X;
+            Height = HEIGHT + 7f;
+
+            Padding = new MarginPadding { Bottom = 7f };
+
+            InternalChild = new FillFlowContainer
             {
-                new Box
+                Anchor = Anchor.BottomCentre,
+                Origin = Anchor.BottomCentre,
+                RelativeSizeAxes = Axes.Y,
+                AutoSizeAxes = Axes.X,
+                Direction = FillDirection.Horizontal,
+                Children = new Drawable[]
                 {
-                    Colour = colours.Gray3,
-                    RelativeSizeAxes = Axes.Both,
-                    Alpha = 0.4f,
-                },
-                Flow = new FillFlowContainer
-                {
-                    RelativeSizeAxes = Axes.X,
-                    AutoSizeAxes = Axes.Y,
-                    Direction = FillDirection.Full,
-                    Anchor = Anchor.BottomRight,
-                    Origin = Anchor.BottomRight,
+                    new Container
+                    {
+                        Name = "Left arrow",
+                        AutoSizeAxes = Axes.Both,
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        Child = leftArrow = new SpriteIcon
+                        {
+                            Anchor = Anchor.CentreRight,
+                            Origin = Anchor.CentreRight,
+                            Size = new Vector2(30),
+                            Icon = FontAwesome.Solid.ChevronRight,
+                            Shadow = true
+                        },
+                    },
+                    new FillFlowContainer
+                    {
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        AutoSizeAxes = Axes.X,
+                        RelativeSizeAxes = Axes.Y,
+                        Direction = FillDirection.Horizontal,
+                        Masking = true,
+                        EdgeEffect = new EdgeEffectParameters
+                        {
+                            Colour = new Color4(0f, 0f, 0f, 0.25f),
+                            Type = EdgeEffectType.Shadow,
+                            Radius = 8,
+                            Offset = new Vector2(1, 1),
+                            Hollow = true
+                        },
+                        Children = new Drawable[]
+                        {
+                            new Container
+                            {
+                                RelativeSizeAxes = Axes.Y,
+                                Width = 240,
+                                Name = "Left data",
+                                Children = new Drawable[]
+                                {
+                                    new Box
+                                    {
+                                        RelativeSizeAxes = Axes.Both,
+                                        Colour = Colour4.Black,
+                                        Alpha = 0.55f,
+                                    },
+                                    modContainer = new Container
+                                    {
+                                        Anchor = Anchor.CentreLeft,
+                                        Origin = Anchor.CentreLeft,
+                                        AutoSizeAxes = Axes.X,
+                                        RelativeSizeAxes = Axes.Y,
+                                        Padding = new MarginPadding { Left = 17f }
+                                    },
+                                    leftData = new FillFlowContainer
+                                    {
+                                        RelativeSizeAxes = Axes.X,
+                                        AutoSizeAxes = Axes.Y,
+                                        Anchor = Anchor.CentreRight,
+                                        Origin = Anchor.CentreRight,
+                                        Direction = FillDirection.Vertical,
+                                    }
+                                },
+                            },
+                            beatmapPanel = new Container
+                            {
+                                RelativeSizeAxes = Axes.Y,
+                                AutoSizeAxes = Axes.X,
+                                Child = new TournamentBeatmapPanel(beatmap, isGameplaySongBar: true)
+                                {
+                                    Width = 500,
+                                    CenterText = true
+                                },
+                            },
+                            new Container
+                            {
+                                RelativeSizeAxes = Axes.Y,
+                                Width = 240,
+                                Name = "Right data",
+                                Children = new Drawable[]
+                                {
+                                    new Box
+                                    {
+                                        RelativeSizeAxes = Axes.Both,
+                                        Colour = Colour4.Black,
+                                        Alpha = 0.55f,
+                                    },
+                                    rightData = new FillFlowContainer
+                                    {
+                                        RelativeSizeAxes = Axes.X,
+                                        AutoSizeAxes = Axes.Y,
+                                        Anchor = Anchor.CentreLeft,
+                                        Origin = Anchor.CentreLeft,
+                                        Direction = FillDirection.Vertical,
+                                    }
+                                },
+                            },
+                        }
+                    },
+                    new Container
+                    {
+                        Name = "Right arrow",
+                        AutoSizeAxes = Axes.Both,
+                        Anchor = Anchor.CentreLeft,
+                        Origin = Anchor.CentreLeft,
+                        Child = rightArrow = new SpriteIcon
+                        {
+                            Size = new Vector2(30),
+                            Icon = FontAwesome.Solid.ChevronLeft,
+                            Anchor = Anchor.CentreLeft,
+                            Origin = Anchor.CentreLeft,
+                            Shadow = true
+                        },
+                    }
                 }
             };
-
-            Expanded = true;
         }
 
-        private void refreshContent()
+        private void refreshContent() => Scheduler.AddOnce(() =>
         {
             if (beatmap == null)
             {
@@ -152,93 +280,88 @@ namespace osu.Game.Tournament.Components
                 Schedule(PostUpdate);
             };
             api.Queue(req);
+        });
+
+        protected string? getBeatmapModPosition()
+        {
+            var roundBeatmap = Ladder.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(roundMap => roundMap.ID == beatmap!.OnlineID);
+
+            if (roundBeatmap == null)
+                return null;
+
+            var modArray = Ladder.CurrentMatch.Value!.Round.Value.Beatmaps.Where(b => b.Mods == roundBeatmap.Mods).ToArray();
+
+            int id = Array.FindIndex(modArray, b => b.ID == roundBeatmap?.ID) + 1;
+
+            return $"{roundBeatmap.Mods}{id}";
         }
 
         protected virtual void PostUpdate()
         {
             GetBeatmapInformation(out double bpm, out double length, out string srExtra, out var stats);
 
-            Flow.Children = new Drawable[]
+            modContainer.Clear();
+
+            if (!string.IsNullOrEmpty(modString))
             {
-                new Container
+                modContainer.Add(new TournamentModIcon(modString)
                 {
-                    RelativeSizeAxes = Axes.X,
-                    Height = HEIGHT,
-                    Width = 0.5f,
-                    Anchor = Anchor.BottomRight,
-                    Origin = Anchor.BottomRight,
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    RelativeSizeAxes = Axes.Y,
+                    Width = 44f,
+                });
+            }
 
-                    Children = new Drawable[]
-                    {
-                        new GridContainer
-                        {
-                            RelativeSizeAxes = Axes.Both,
-                            ColumnDimensions = new[] { new Dimension(GridSizeMode.Relative, 0.45f) },
+            (string, string)[] srAndModStats =
+            {
+                ("星级", $"{beatmap!.StarRating:0.00}{srExtra}")
+            };
 
-                            Content = new[]
-                            {
-                                new Drawable[]
-                                {
-                                    new FillFlowContainer
-                                    {
-                                        RelativeSizeAxes = Axes.X,
-                                        AutoSizeAxes = Axes.Y,
-                                        Anchor = Anchor.Centre,
-                                        Origin = Anchor.Centre,
-                                        Direction = FillDirection.Vertical,
-                                        Children = new Drawable[]
-                                        {
-                                            new DiffPiece(stats),
-                                            new DiffPiece(("难度星级", $"{beatmap.StarRating:0.00}{srExtra}"))
-                                        }
-                                    },
-                                    new FillFlowContainer
-                                    {
-                                        RelativeSizeAxes = Axes.X,
-                                        AutoSizeAxes = Axes.Y,
-                                        Anchor = Anchor.Centre,
-                                        Origin = Anchor.Centre,
-                                        Direction = FillDirection.Vertical,
-                                        Children = new Drawable[]
-                                        {
-                                            new DiffPiece(("谱面长度", length.ToFormattedDuration().ToString())),
-                                            new DiffPiece(("BPM", $"{bpm:0.#}")),
-                                        }
-                                    },
-                                    new Container
-                                    {
-                                        RelativeSizeAxes = Axes.Both,
-                                        Children = new Drawable[]
-                                        {
-                                            new Box
-                                            {
-                                                Colour = Color4.Black,
-                                                RelativeSizeAxes = Axes.Both,
-                                                Alpha = 0.1f,
-                                            },
-                                            new Sprite
-                                            {
-                                                Texture = store.Get("hsc-logo"),
-                                                Scale = new Vector2(0.32f),
-                                                Margin = new MarginPadding(20),
-                                                Origin = Anchor.CentreRight,
-                                                Anchor = Anchor.CentreRight,
-                                            },
-                                        }
-                                    },
-                                },
-                            }
-                        }
-                    }
+            string? modPosition = getBeatmapModPosition();
+
+            if (modPosition != null)
+            {
+                srAndModStats = srAndModStats.Append(("谱面位置", modPosition)).ToArray();
+            }
+
+            (string, string)[] bpmAndPickTeam =
+            {
+                ("BPM", $"{bpm:0.#}")
+            };
+
+            leftData.Children = new Drawable[]
+            {
+                new DiffPiece(bpmAndPickTeam)
+                {
+                    Origin = Anchor.CentreRight,
+                    Anchor = Anchor.CentreRight,
                 },
-                new TournamentBeatmapPanel(beatmap)
+                new DiffPiece(("谱面长度", length.ToFormattedDuration().ToString()))
                 {
-                    RelativeSizeAxes = Axes.X,
-                    Width = 0.5f,
-                    Height = HEIGHT,
-                    Anchor = Anchor.BottomRight,
-                    Origin = Anchor.BottomRight,
+                    Origin = Anchor.CentreRight,
+                    Anchor = Anchor.CentreRight,
+                },
+            };
+
+            rightData.Children = new Drawable[]
+            {
+                new DiffPiece(stats)
+                {
+                    Origin = Anchor.CentreLeft,
+                    Anchor = Anchor.CentreLeft,
+                },
+                new DiffPiece(srAndModStats)
+                {
+                    Origin = Anchor.CentreLeft,
+                    Anchor = Anchor.CentreLeft,
                 }
+            };
+
+            beatmapPanel.Child = new TournamentBeatmapPanel(beatmap, isGameplaySongBar: true)
+            {
+                Width = 500,
+                CenterText = true,
             };
         }
 

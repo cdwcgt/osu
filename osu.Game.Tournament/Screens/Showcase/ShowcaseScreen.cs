@@ -19,7 +19,6 @@ using osu.Game.Overlays;
 using osu.Game.Overlays.Settings;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Tournament.Models;
-using osu.Game.Tournament.Screens.Gameplay.Components;
 using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Screens.Showcase
@@ -44,11 +43,6 @@ namespace osu.Game.Tournament.Screens.Showcase
 
         private readonly BindableBool useOsuLazer = new BindableBool();
 
-        protected override SongBar CreateSongBar() => new GameplaySongBar
-        {
-            Depth = float.MinValue,
-        };
-
         [BackgroundDependencyLoader]
         private void load()
         {
@@ -68,7 +62,7 @@ namespace osu.Game.Tournament.Screens.Showcase
                 },
                 showcaseContainer = new Container
                 {
-                    Padding = new MarginPadding { Bottom = SongBar.HEIGHT },
+                    Padding = new MarginPadding { Bottom = SongBar.HEIGHT + 14f },
                     RelativeSizeAxes = Axes.Both,
                 },
             });
@@ -162,6 +156,7 @@ namespace osu.Game.Tournament.Screens.Showcase
             if (existing != null)
             {
                 SongBar.Beatmap = existing.Beatmap;
+                SongBar.ModString = existing.Mods;
             }
             else
             {
