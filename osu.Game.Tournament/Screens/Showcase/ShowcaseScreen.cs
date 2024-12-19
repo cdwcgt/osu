@@ -156,7 +156,6 @@ namespace osu.Game.Tournament.Screens.Showcase
             if (existing != null)
             {
                 SongBar.Beatmap = existing.Beatmap;
-                SongBar.ModString = existing.Mods;
             }
             else
             {

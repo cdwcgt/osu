@@ -73,7 +73,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private void updateState()
         {
             pickTeamColour = currentMatch.Value?.PicksBans.FirstOrDefault(p => p.BeatmapID == beatmap?.OnlineID && p.Type == ChoiceType.Pick)?.Team;
-            ModString = currentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(b => b.ID == beatmap?.OnlineID)?.Mods;
 
             if (pickTeamColour == null)
             {
@@ -102,7 +101,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 ("星级", $"{beatmap!.StarRating:0.00}{srExtra}")
             };
 
-            string? modPosition = getBeatmapModPosition();
+            string? modPosition = GetBeatmapModPosition();
 
             if (modPosition != null)
             {

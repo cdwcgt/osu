@@ -68,6 +68,9 @@ namespace osu.Game.Tournament.Components
             get => mods;
             set
             {
+                if (mods == value)
+                    return;
+
                 mods = value;
                 refreshContent();
             }
@@ -82,16 +85,6 @@ namespace osu.Game.Tournament.Components
 
         [Resolved]
         private TextureStore store { get; set; } = null!;
-
-        public string? ModString
-        {
-            get => modString;
-            set
-            {
-                modString = value;
-                refreshContent();
-            }
-        }
 
         public SongBar()
         {
@@ -243,6 +236,21 @@ namespace osu.Game.Tournament.Components
 
         private void refreshContent() => Scheduler.AddOnce(() =>
         {
+            modString = Ladder.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(b => b.ID == beatmap?.OnlineID)?.Mods;
+
+            modContainer.Clear();
+
+            if (!string.IsNullOrEmpty(modString))
+            {
+                modContainer.Add(new TournamentModIcon(modString)
+                {
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    RelativeSizeAxes = Axes.Y,
+                    Width = 44f,
+                });
+            }
+
             if (beatmap == null)
             {
                 beatmap = new BeatmapInfo
@@ -282,7 +290,7 @@ namespace osu.Game.Tournament.Components
             api.Queue(req);
         });
 
-        protected string? getBeatmapModPosition()
+        protected string? GetBeatmapModPosition()
         {
             var roundBeatmap = Ladder.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(roundMap => roundMap.ID == beatmap!.OnlineID);
 
@@ -300,25 +308,12 @@ namespace osu.Game.Tournament.Components
         {
             GetBeatmapInformation(out double bpm, out double length, out string srExtra, out var stats);
 
-            modContainer.Clear();
-
-            if (!string.IsNullOrEmpty(modString))
-            {
-                modContainer.Add(new TournamentModIcon(modString)
-                {
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
-                    RelativeSizeAxes = Axes.Y,
-                    Width = 44f,
-                });
-            }
-
             (string, string)[] srAndModStats =
             {
                 ("星级", $"{beatmap!.StarRating:0.00}{srExtra}")
             };
 
-            string? modPosition = getBeatmapModPosition();
+            string? modPosition = GetBeatmapModPosition();
 
             if (modPosition != null)
             {
