@@ -328,7 +328,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                         flowCount = 1;
                     }
 
-                    currentFlow.Add(new TournamentBeatmapPanel(b.Beatmap, b.Mods)
+                    currentFlow.Add(new TournamentBeatmapPanel(b.Beatmap, b.Mods, true)
                     {
                         Anchor = Anchor.TopCentre,
                         Origin = Anchor.TopCentre,
