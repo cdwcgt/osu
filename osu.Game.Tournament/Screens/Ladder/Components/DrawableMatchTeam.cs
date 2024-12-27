@@ -30,6 +30,8 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
         private Box background = null!;
         private Box backgroundRight = null!;
 
+        private readonly bool wider;
+
         private readonly Bindable<int?> score = new Bindable<int?>();
         private readonly BindableBool completed = new BindableBool();
 
@@ -56,16 +58,21 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
         [Resolved]
         private LadderEditorInfo? editorInfo { get; set; }
 
-        public DrawableMatchTeam(TournamentTeam? team, TournamentMatch match, bool losers)
+        public DrawableMatchTeam(TournamentTeam? team, TournamentMatch match, bool losers, bool wider = false)
             : base(team)
         {
             this.match = match;
             this.losers = losers;
+            this.wider = wider;
             Size = new Vector2(150, 40);
+
+            if (wider)
+                Width = 300;
 
             AcronymText.Anchor = AcronymText.Origin = Anchor.CentreLeft;
             AcronymText.Padding = new MarginPadding { Left = 10 };
             AcronymText.Font = OsuFont.Torus.With(size: 22, weight: FontWeight.Bold);
+            AcronymText.RelativeSizeAxes = Axes.X;
 
             isWinner = () => match.Winner == Team;
 
@@ -91,7 +98,10 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
                 },
                 new Container
                 {
-                    Padding = new MarginPadding(5),
+                    Padding = new MarginPadding(5)
+                    {
+                        Right = 50
+                    },
                     RelativeSizeAxes = Axes.Both,
                     Children = new Drawable[]
                     {
@@ -101,10 +111,10 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
                 new Container
                 {
                     Masking = true,
-                    Width = 0.3f,
+                    Width = 45,
                     Anchor = Anchor.CentreRight,
                     Origin = Anchor.CentreRight,
-                    RelativeSizeAxes = Axes.Both,
+                    RelativeSizeAxes = Axes.Y,
                     Children = new Drawable[]
                     {
                         backgroundRight = new Box

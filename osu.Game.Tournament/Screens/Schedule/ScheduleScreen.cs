@@ -182,38 +182,60 @@ namespace osu.Game.Tournament.Screens.Schedule
                     Spacing = new Vector2(30),
                     Children = new Drawable[]
                     {
-                        new ScheduleMatch(currentMatch.Value, false)
+                        new ScheduleMatch(currentMatch.Value, false, true)
                         {
                             Anchor = Anchor.CentreLeft,
                             Origin = Anchor.CentreLeft,
-                        },
-                        new TournamentSpriteTextWithBackground(currentMatch.Value.Round.Value?.Name.Value ?? string.Empty)
-                        {
-                            Anchor = Anchor.CentreLeft,
-                            Origin = Anchor.CentreLeft,
-                            Scale = new Vector2(0.5f)
-                        },
-                        new TournamentSpriteText
-                        {
-                            Anchor = Anchor.CentreLeft,
-                            Origin = Anchor.CentreLeft,
-                            Text = currentMatch.Value.Team1.Value?.FullName + " vs " + currentMatch.Value.Team2.Value?.FullName,
-                            Font = OsuFont.Torus.With(size: 24, weight: FontWeight.SemiBold)
                         },
                         new FillFlowContainer
                         {
-                            AutoSizeAxes = Axes.Both,
-                            Direction = FillDirection.Horizontal,
                             Anchor = Anchor.CentreLeft,
                             Origin = Anchor.CentreLeft,
+                            Direction = FillDirection.Vertical,
+                            Spacing = new Vector2(0, 5),
+                            AutoSizeAxes = Axes.Both,
                             Children = new Drawable[]
                             {
-                                new ScheduleMatchDate(currentMatch.Value.Date.Value)
+                                new FillFlowContainer
                                 {
-                                    Font = OsuFont.Torus.With(size: 24, weight: FontWeight.Regular)
-                                }
+                                    Anchor = Anchor.CentreLeft,
+                                    Origin = Anchor.CentreLeft,
+                                    Direction = FillDirection.Horizontal,
+                                    Spacing = new Vector2(10, 0),
+                                    AutoSizeAxes = Axes.Both,
+                                    Children = new Drawable[]
+                                    {
+                                        new TournamentSpriteTextWithBackground(currentMatch.Value.Round.Value?.Name.Value ?? string.Empty)
+                                        {
+                                            Anchor = Anchor.CentreLeft,
+                                            Origin = Anchor.CentreLeft,
+                                            Scale = new Vector2(0.5f)
+                                        },
+                                        new FillFlowContainer
+                                        {
+                                            AutoSizeAxes = Axes.Both,
+                                            Direction = FillDirection.Horizontal,
+                                            Anchor = Anchor.CentreLeft,
+                                            Origin = Anchor.CentreLeft,
+                                            Children = new Drawable[]
+                                            {
+                                                new ScheduleMatchDate(currentMatch.Value.Date.Value)
+                                                {
+                                                    Font = OsuFont.Torus.With(size: 24, weight: FontWeight.Regular)
+                                                }
+                                            }
+                                        },
+                                    }
+                                },
+                                new TournamentSpriteText
+                                {
+                                    Anchor = Anchor.CentreLeft,
+                                    Origin = Anchor.CentreLeft,
+                                    Text = currentMatch.Value.Team1.Value?.FullName + " vs " + currentMatch.Value.Team2.Value?.FullName,
+                                    Font = OsuFont.Torus.With(size: 24, weight: FontWeight.SemiBold)
+                                },
                             }
-                        },
+                        }
                     }
                 };
             }
@@ -221,11 +243,10 @@ namespace osu.Game.Tournament.Screens.Schedule
 
         public partial class ScheduleMatch : DrawableTournamentMatch
         {
-            public ScheduleMatch(TournamentMatch match, bool showTimestamp = true)
+            public ScheduleMatch(TournamentMatch match, bool showTimestamp = true, bool isVertical = false)
                 : base(match)
             {
-                Flow.Direction = FillDirection.Horizontal;
-
+                IsVertical = isVertical;
                 Scale = new Vector2(0.8f);
 
                 bool conditional = match is ConditionalTournamentMatch;
@@ -253,6 +274,21 @@ namespace osu.Game.Tournament.Screens.Schedule
                         Margin = new MarginPadding { Horizontal = 10, Vertical = 5 },
                         Text = match.Date.Value.ToUniversalTime().ToString("HH:mm UTC") + (conditional ? " (conditional)" : "")
                     });
+                }
+            }
+
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+
+                if (IsVertical)
+                {
+                    AutoSizeAxes = Axes.Y;
+                    Width = 302;
+                }
+                else
+                {
+                    Flow.Direction = FillDirection.Horizontal;
                 }
             }
         }

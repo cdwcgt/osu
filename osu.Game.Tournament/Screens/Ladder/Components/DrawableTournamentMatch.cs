@@ -28,6 +28,8 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
         private readonly Drawable currentMatchSelectionBox;
         private Bindable<TournamentMatch>? globalSelection;
 
+        public bool IsVertical;
+
         [Resolved]
         private LadderEditorInfo? editorInfo { get; set; }
 
@@ -279,8 +281,8 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
 
             Flow.Children = new[]
             {
-                new DrawableMatchTeam(Match.Team1.Value, Match, Match.Losers.Value),
-                new DrawableMatchTeam(Match.Team2.Value, Match, Match.Losers.Value)
+                new DrawableMatchTeam(Match.Team1.Value, Match, Match.Losers.Value, IsVertical),
+                new DrawableMatchTeam(Match.Team2.Value, Match, Match.Losers.Value, IsVertical)
             };
 
             SchedulerAfterChildren.Add(() => Scheduler.Add(updateProgression));

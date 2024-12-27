@@ -15,7 +15,7 @@ namespace osu.Game.Tournament.Components
         public readonly TournamentTeam? Team;
 
         protected readonly Container Flag;
-        protected readonly TournamentSpriteText AcronymText;
+        protected readonly TournamentTruncatingSpriteText AcronymText;
 
         [UsedImplicitly]
         private Bindable<string>? acronym;
@@ -25,7 +25,7 @@ namespace osu.Game.Tournament.Components
             Team = team;
 
             Flag = new DrawableTeamFlag(team);
-            AcronymText = new TournamentSpriteText
+            AcronymText = new TournamentTruncatingSpriteText
             {
                 Font = OsuFont.Torus.With(weight: FontWeight.Regular),
             };
