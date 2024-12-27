@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Diagnostics;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -130,6 +131,7 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                         RelativeSizeAxes = Axes.X,
                         AutoSizeAxes = Axes.Y,
                         Direction = FillDirection.Vertical,
+                        Spacing = new Vector2(0, 5)
                     },
                 };
 
@@ -156,20 +158,30 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                     RelativeSizeAxes = Axes.X;
                     AutoSizeAxes = Axes.Y;
 
+                    string modifyDiffName = beatmap.Beatmap.DifficultyName.Replace("[4k]", "", StringComparison.OrdinalIgnoreCase).Trim();
+                    string mapNameFormatString = string.IsNullOrEmpty(beatmap.CustomIdInformation) ? "{1} by {2}" : "{0} {1} by {2}";
+
                     InternalChildren = new Drawable[]
                     {
                         new FillFlowContainer
                         {
                             RelativeSizeAxes = Axes.X,
                             AutoSizeAxes = Axes.Y,
-                            Direction = FillDirection.Horizontal,
-                            Spacing = new Vector2(5),
+                            Direction = FillDirection.Vertical,
+                            Padding = new MarginPadding { Right = 5 },
                             Children = new Drawable[]
                             {
                                 new TournamentTruncatingSpriteText
                                 {
-                                    Text = LocalisableString.Format("{0} {1} by {2}",
+                                    Text = LocalisableString.Format(mapNameFormatString,
                                         beatmap.CustomIdInformation, beatmap.Beatmap.Metadata.Title, beatmap.Beatmap.Metadata.Artist),
+                                    Colour = TournamentGame.TEXT_COLOUR,
+                                    RelativeSizeAxes = Axes.X
+                                },
+                                new TournamentTruncatingSpriteText
+                                {
+                                    Text = LocalisableString.Format("({0})[{1}]",
+                                        beatmap.Beatmap.Metadata.Author.Username, modifyDiffName),
                                     Colour = TournamentGame.TEXT_COLOUR,
                                     RelativeSizeAxes = Axes.X
                                 },
