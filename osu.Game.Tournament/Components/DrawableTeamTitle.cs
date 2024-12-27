@@ -8,7 +8,7 @@ using osu.Game.Tournament.Models;
 
 namespace osu.Game.Tournament.Components
 {
-    public partial class DrawableTeamTitle : TournamentSpriteTextWithBackground
+    public partial class DrawableTeamTitle : TournamentSpriteTextWithMaxWidthBackground
     {
         private readonly TournamentTeam? team;
 
@@ -18,6 +18,7 @@ namespace osu.Game.Tournament.Components
         public DrawableTeamTitle(TournamentTeam? team)
         {
             this.team = team;
+            MaxWidth = 500;
         }
 
         [BackgroundDependencyLoader]
