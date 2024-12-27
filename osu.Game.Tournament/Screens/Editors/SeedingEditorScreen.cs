@@ -144,6 +144,8 @@ namespace osu.Game.Tournament.Screens.Editors
 
                     private readonly Bindable<string> score = new Bindable<string>(string.Empty);
 
+                    public Bindable<string> customIdInformation = new Bindable<string>(string.Empty);
+
                     private readonly Container drawableContainer;
 
                     public SeedingBeatmapRow(SeedingResult result, SeedingBeatmap beatmap)
@@ -195,6 +197,13 @@ namespace osu.Game.Tournament.Screens.Editors
                                         RelativeSizeAxes = Axes.None,
                                         Width = 200,
                                         Current = score,
+                                    },
+                                    new SettingsTextBox
+                                    {
+                                        LabelText = "Custom ID",
+                                        RelativeSizeAxes = Axes.None,
+                                        Width = 200,
+                                        Current = customIdInformation,
                                     },
                                     drawableContainer = new Container
                                     {
@@ -254,6 +263,9 @@ namespace osu.Game.Tournament.Screens.Editors
 
                         score.Value = Model.Score.ToString();
                         score.BindValueChanged(str => long.TryParse(str.NewValue, out Model.Score));
+
+                        customIdInformation.Value = Model.CustomIdInformation;
+                        customIdInformation.BindValueChanged(str => Model.CustomIdInformation = str.NewValue);
                     }
 
                     private void updatePanel()

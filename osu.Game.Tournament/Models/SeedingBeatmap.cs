@@ -15,6 +15,8 @@ namespace osu.Game.Tournament.Models
 
         public long Score;
 
+        public string CustomIdInformation { get; set; } = string.Empty;
+
         public Bindable<int> Seed = new BindableInt
         {
             MinValue = 1,
