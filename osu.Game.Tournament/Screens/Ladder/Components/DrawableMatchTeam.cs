@@ -30,8 +30,6 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
         private Box background = null!;
         private Box backgroundRight = null!;
 
-        private readonly bool wider;
-
         private readonly Bindable<int?> score = new Bindable<int?>();
         private readonly BindableBool completed = new BindableBool();
 
@@ -58,16 +56,12 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
         [Resolved]
         private LadderEditorInfo? editorInfo { get; set; }
 
-        public DrawableMatchTeam(TournamentTeam? team, TournamentMatch match, bool losers, bool wider = false)
+        public DrawableMatchTeam(TournamentTeam? team, TournamentMatch match, bool losers, float targetWidth = 150)
             : base(team)
         {
             this.match = match;
             this.losers = losers;
-            this.wider = wider;
-            Size = new Vector2(150, 40);
-
-            if (wider)
-                Width = 300;
+            Size = new Vector2(targetWidth, 40);
 
             AcronymText.Anchor = AcronymText.Origin = Anchor.CentreLeft;
             AcronymText.Padding = new MarginPadding { Left = 10 };

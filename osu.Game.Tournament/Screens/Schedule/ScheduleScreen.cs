@@ -246,8 +246,14 @@ namespace osu.Game.Tournament.Screens.Schedule
             public ScheduleMatch(TournamentMatch match, bool showTimestamp = true, bool isVertical = false)
                 : base(match)
             {
-                IsVertical = isVertical;
+                TargetMatchWidth = 240;
+
                 Scale = new Vector2(0.8f);
+
+                if (!isVertical)
+                {
+                    Flow.Direction = FillDirection.Horizontal;
+                }
 
                 bool conditional = match is ConditionalTournamentMatch;
 
@@ -274,21 +280,6 @@ namespace osu.Game.Tournament.Screens.Schedule
                         Margin = new MarginPadding { Horizontal = 10, Vertical = 5 },
                         Text = match.Date.Value.ToUniversalTime().ToString("HH:mm UTC") + (conditional ? " (conditional)" : "")
                     });
-                }
-            }
-
-            protected override void LoadComplete()
-            {
-                base.LoadComplete();
-
-                if (IsVertical)
-                {
-                    AutoSizeAxes = Axes.Y;
-                    Width = 302;
-                }
-                else
-                {
-                    Flow.Direction = FillDirection.Horizontal;
                 }
             }
         }
