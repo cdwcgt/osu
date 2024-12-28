@@ -32,7 +32,8 @@ namespace osu.Game.Tournament.Components
         private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
 
         private Box flash = null!;
-        private PadLock padLock = null!;
+        private MapStatusIcon padLock = null!;
+        private MapStatusIcon banIcon = null!;
         private readonly bool isMappool;
 
         public TournamentBeatmapPanel(IBeatmapInfo? beatmap, string mod = "", bool isMappool = false)
@@ -113,7 +114,13 @@ namespace osu.Game.Tournament.Components
                         }
                     },
                 },
-                padLock = new PadLock
+                padLock = new MapStatusIcon(FontAwesome.Solid.ShieldAlt)
+                {
+                    Origin = Anchor.Centre,
+                    Anchor = Anchor.Centre,
+                    Alpha = 0f,
+                },
+                banIcon = new MapStatusIcon(FontAwesome.Solid.Ban)
                 {
                     Origin = Anchor.Centre,
                     Anchor = Anchor.Centre,
@@ -203,6 +210,13 @@ namespace osu.Game.Tournament.Components
                     case ChoiceType.Ban:
                         Colour = Color4.Gray;
                         Alpha = 0.5f;
+
+                        if (isMappool)
+                        {
+                            banIcon.Team = lastFound.Team;
+                            banIcon.Show();
+                        }
+
                         break;
 
                     case ChoiceType.Protected:
@@ -216,6 +230,11 @@ namespace osu.Game.Tournament.Components
                 Colour = Color4.White;
                 BorderThickness = 0;
                 Alpha = 1;
+
+                if (isMappool)
+                {
+                    banIcon.Hide();
+                }
             }
 
             choice = lastFound;
@@ -231,18 +250,25 @@ namespace osu.Game.Tournament.Components
                 => new DelayedLoadWrapper(createContentFunc(), timeBeforeLoad);
         }
 
-        private partial class PadLock : Container
+        private partial class MapStatusIcon : Container
         {
+            private readonly IconUsage icon;
+
             [Resolved]
             private OsuColour osuColour { get; set; } = null!;
 
             public TeamColour Team
             {
-                set => lockIcon.Colour = value == TeamColour.Red ? osuColour.TeamColourRed : osuColour.TeamColourBlue;
+                set => spriteIcon.Colour = value == TeamColour.Red ? osuColour.TeamColourRed : osuColour.TeamColourBlue;
             }
 
             private Sprite background = null!;
-            private SpriteIcon lockIcon = null!;
+            private SpriteIcon spriteIcon = null!;
+
+            public MapStatusIcon(IconUsage icon)
+            {
+                this.icon = icon;
+            }
 
             [BackgroundDependencyLoader]
             private void load(TextureStore textures)
@@ -259,12 +285,12 @@ namespace osu.Game.Tournament.Components
                         Anchor = Anchor.Centre,
                         Origin = Anchor.Centre,
                     },
-                    lockIcon = new SpriteIcon
+                    spriteIcon = new SpriteIcon
                     {
                         Origin = Anchor.Centre,
                         Anchor = Anchor.Centre,
                         Size = new Vector2(22),
-                        Icon = FontAwesome.Solid.ShieldAlt,
+                        Icon = icon,
                         Shadow = true,
                     }
                 };
