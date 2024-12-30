@@ -316,7 +316,7 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                 public TeamDisplay(TournamentTeam? team)
                     : base(team)
                 {
-                    AutoSizeAxes = Axes.Both;
+                    AutoSizeAxes = Axes.Y;
 
                     Flag.RelativeSizeAxes = Axes.None;
                     Flag.Scale = new Vector2(1.2f);
@@ -329,11 +329,12 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                         Children = new Drawable[]
                         {
                             Flag,
-                            new OsuSpriteText
+                            new TextFlowContainer(t => t.Font = OsuFont.Torus.With(size: 32, weight: FontWeight.SemiBold))
                             {
                                 Text = team?.FullName.Value ?? "???",
-                                Font = OsuFont.Torus.With(size: 32, weight: FontWeight.SemiBold),
-                                Colour = TournamentGame.TEXT_COLOUR,
+                                AutoSizeAxes = Axes.Y,
+                                Width = 415,
+                                Colour = TournamentGame.TEXT_COLOUR
                             },
                         }
                     };
