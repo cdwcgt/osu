@@ -10,7 +10,6 @@ using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
 using osu.Game.Graphics;
-using osu.Game.Graphics.Sprites;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Ladder.Components;
@@ -18,14 +17,11 @@ using osuTK;
 
 namespace osu.Game.Tournament.Screens.TeamIntro
 {
-    public partial class SeedingScreen : TournamentMatchScreen
+    public partial class SeedingScreen : TournamentScreen
     {
         private Container mainContainer = null!;
 
         private readonly Bindable<TournamentTeam?> currentTeam = new Bindable<TournamentTeam?>();
-
-        private TourneyButton showFirstTeamButton = null!;
-        private TourneyButton showSecondTeamButton = null!;
 
         [BackgroundDependencyLoader]
         private void load()
@@ -47,21 +43,21 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                 {
                     Children = new Drawable[]
                     {
-                        showFirstTeamButton = new TourneyButton
+                        new TourneyButton
                         {
                             RelativeSizeAxes = Axes.X,
-                            Text = "Show first team",
-                            Action = () => currentTeam.Value = CurrentMatch.Value?.Team1.Value,
+                            Text = "上一个队伍",
+                            Action = () => switchTeam(Direction.Previous)
                         },
-                        showSecondTeamButton = new TourneyButton
+                        new TourneyButton
                         {
                             RelativeSizeAxes = Axes.X,
-                            Text = "Show second team",
-                            Action = () => currentTeam.Value = CurrentMatch.Value?.Team2.Value,
+                            Text = "下一个队伍",
+                            Action = () => switchTeam(Direction.Next)
                         },
                         new SettingsTeamDropdown(LadderInfo.Teams)
                         {
-                            LabelText = "Show specific team",
+                            LabelText = "指定队伍",
                             Current = currentTeam,
                         }
                     }
@@ -69,6 +65,44 @@ namespace osu.Game.Tournament.Screens.TeamIntro
             };
 
             currentTeam.BindValueChanged(teamChanged, true);
+        }
+
+        private enum Direction
+        {
+            Previous,
+            Next
+        }
+
+        private void switchTeam(Direction direction)
+        {
+            int index = 0;
+
+            if (currentTeam.Value != null)
+            {
+                index = LadderInfo.Teams.IndexOf(currentTeam.Value);
+            }
+
+            switch (direction)
+            {
+                case Direction.Previous:
+                    index--;
+                    break;
+
+                case Direction.Next:
+                    index++;
+                    break;
+            }
+
+            if (index < 0)
+            {
+                index = LadderInfo.Teams.Count - 1;
+            }
+            else if (index >= LadderInfo.Teams.Count)
+            {
+                index = 0;
+            }
+
+            currentTeam.Value = LadderInfo.Teams[index];
         }
 
         private void teamChanged(ValueChangedEvent<TournamentTeam?> team) => updateTeamDisplay();
@@ -80,23 +114,6 @@ namespace osu.Game.Tournament.Screens.TeamIntro
             // Changes could have been made on editor screen.
             // Rather than trying to track all the possibilities (teams / players / scores) just force a full refresh.
             updateTeamDisplay();
-        }
-
-        protected override void CurrentMatchChanged(ValueChangedEvent<TournamentMatch?> match)
-        {
-            base.CurrentMatchChanged(match);
-
-            if (match.NewValue == null)
-            {
-                showFirstTeamButton.Enabled.Value = false;
-                showSecondTeamButton.Enabled.Value = false;
-                return;
-            }
-
-            showFirstTeamButton.Enabled.Value = true;
-            showSecondTeamButton.Enabled.Value = true;
-
-            currentTeam.Value = match.NewValue.Team1.Value;
         }
 
         private void updateTeamDisplay() => Scheduler.AddOnce(() =>
@@ -243,7 +260,7 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                             {
                                 Anchor = Anchor.Centre,
                                 Origin = Anchor.Centre,
-                                Text = seeding.ToString("#,0"),
+                                Text = $"#{seeding:#,0}",
                                 Colour = TournamentGame.ELEMENT_FOREGROUND_COLOUR
                             },
                         }
@@ -271,9 +288,9 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                         Direction = FillDirection.Vertical,
                         Children = new Drawable[]
                         {
-                            new TeamDisplay(team) { Margin = new MarginPadding { Bottom = 30 } },
-                            new RowDisplay("Average Rank:", $"#{team.AverageRank:#,0}"),
-                            new RowDisplay("Seed:", team.Seed.Value),
+                            new TeamDisplay(team) { Margin = new MarginPadding { Bottom = 30 }, },
+                            new RowDisplay("平均排名:", $"#{team.AverageRank:#,0}"),
+                            new RowDisplay("种子:", $"#{team.Seed.Value}"),
                             new Container { Margin = new MarginPadding { Bottom = 30 } },
                         }
                     },
