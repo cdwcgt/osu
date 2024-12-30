@@ -3,7 +3,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions;
@@ -27,6 +29,8 @@ namespace osu.Game.Tournament.Screens.Editors
     {
         protected override BindableList<TournamentTeam> Storage => LadderInfo.Teams;
 
+        private SettingsTextBox teamData = null!;
+
         [BackgroundDependencyLoader]
         private void load()
         {
@@ -35,6 +39,33 @@ namespace osu.Game.Tournament.Screens.Editors
                 RelativeSizeAxes = Axes.X,
                 Text = "Add all countries",
                 Action = addAllCountries
+            });
+
+            ControlPanel.Add(teamData = new SettingsTextBox
+            {
+                RelativeSizeAxes = Axes.X,
+                LabelText = "data",
+            });
+
+            ControlPanel.Add(new TourneyButton
+            {
+                RelativeSizeAxes = Axes.X,
+                Text = "Add Team",
+                Action = addTeam
+            });
+
+            ControlPanel.Add(new TourneyButton
+            {
+                RelativeSizeAxes = Axes.X,
+                Text = "Update Flag",
+                Action = updateFlag
+            });
+
+            ControlPanel.Add(new TourneyButton
+            {
+                RelativeSizeAxes = Axes.X,
+                Text = "Update Seed",
+                Action = updateSeed
             });
         }
 
@@ -56,6 +87,110 @@ namespace osu.Game.Tournament.Screens.Editors
 
             foreach (var c in countries)
                 Storage.Add(c);
+        }
+
+        private void addTeam()
+        {
+            try
+            {
+                string path = teamData.Current.Value;
+                string[] content = File.ReadAllText(path, Encoding.UTF8).Split(Environment.NewLine.ToCharArray());
+
+                int[] beatmaps = { 4905922, 4905214, 4905199, 4905210, 4905359, 4905268, 4905201, 4905208, 4905198 };
+
+                foreach (string item in content)
+                {
+                    try
+                    {
+                        string[] data = item.Split(",");
+
+                        int[][] point =
+                        {
+                            new[] { 0, 1, 2, 3 },
+                            new[] { 4, 5, 6 },
+                            new[] { 7, 8 },
+                        };
+
+                        string[] mods = { "RC", "LN", "HB", };
+
+                        var team = new TournamentTeam
+                        {
+                            FullName = { Value = data[0] },
+                            Seed = { Value = data[21] },
+                            Acronym = { Value = data[0] },
+                            FlagName = { Value = data[1] }
+                        };
+
+                        if (int.TryParse(data[1], out int id))
+                        {
+                            team.Players.Add(new TournamentUser
+                            {
+                                OnlineID = id
+                            });
+                        }
+
+                        // 调整偏移 单图数据
+                        int mapOffset = 2;
+
+                        for (int i = 0; i < mods.Length; i++)
+                        {
+                            var result = new SeedingResult();
+                            result.Mod.Value = mods[i];
+
+                            for (int j = 0; j < point[i].Length; j++)
+                            {
+                                int p = point[i][j];
+                                var beatmap = new SeedingBeatmap
+                                {
+                                    ID = beatmaps[p],
+
+                                    Score = int.Parse(data[p + mapOffset]),
+                                    Seed =
+                                    {
+                                        Value = int.Parse(data[p + mapOffset + beatmaps.Length])
+                                    }
+                                };
+                                result.Beatmaps.Add(beatmap);
+                            }
+
+                            // 单mod seed 排名
+                            result.Seed.Value = int.Parse(data[i + 25]);
+
+                            team.SeedingResults.Add(result);
+                        }
+
+                        Storage.Add(team);
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        private void updateSeed()
+        {
+            foreach (var team in Storage)
+            {
+                //team.SeedingResults[1].Beatmaps[0].ID = 4128929;
+                //team.SeedingResults[1].Beatmaps[0].Beatmap = null;
+
+                foreach (var seed in team.SeedingResults)
+                {
+                    seed.Seed.Value = seed.Beatmaps[0].Seed.Value;
+                }
+            }
+        }
+
+        private void updateFlag()
+        {
+            foreach (var team in Storage)
+            {
+                team.FlagName.Value = team.Players[0].Username;
+            }
         }
 
         public partial class TeamRow : CompositeDrawable, IModelBacked<TournamentTeam>

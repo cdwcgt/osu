@@ -45,6 +45,8 @@ namespace osu.Game.Tournament
             return dependencies = new DependencyContainer(base.CreateChildDependencies(parent));
         }
 
+        public override bool UseDevelopmentServer => false;
+
         public override EndpointConfiguration CreateEndpoints()
         {
             if (UseDevelopmentServer)
