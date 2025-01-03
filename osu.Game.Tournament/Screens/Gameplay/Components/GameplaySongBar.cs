@@ -102,7 +102,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             (string, string)[] bpmAndPickTeam =
             {
-                ("选图方", pickTeamColour == null ? "无" : pickTeamColour.Value == TeamColour.Red ? "红队" : "蓝队"),
+                ("选图方", pickTeamColour == null ? "第三方" : pickTeamColour.Value == TeamColour.Red ? "红队" : "蓝队"),
                 ("BPM", $"{bpm:0.#}")
             };
 
