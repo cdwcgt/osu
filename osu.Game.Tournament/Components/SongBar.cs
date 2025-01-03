@@ -21,6 +21,7 @@ using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
 using osu.Game.Rulesets;
 using osu.Game.Tournament.Models;
+using osu.Game.Utils;
 using osuTK;
 using osuTK.Graphics;
 
@@ -318,7 +319,7 @@ namespace osu.Game.Tournament.Components
 
             (string, string)[] srAndModStats =
             {
-                ("星级", $"{beatmap!.StarRating:0.00}{srExtra}")
+                ("星级", $"{beatmap!.StarRating.FormatStarRating()}{srExtra}")
             };
 
             string? modPosition = GetBeatmapModPosition();

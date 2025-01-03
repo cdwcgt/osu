@@ -523,6 +523,8 @@ namespace osu.Game.Screens.Edit
 
         public void TestGameplay()
         {
+            clock.Stop();
+
             if (HasUnsavedChanges)
             {
                 dialogOverlay.Push(new SaveRequiredPopupDialog(() => attemptMutationOperation(() =>
@@ -1277,12 +1279,15 @@ namespace osu.Game.Screens.Edit
             saveRelatedMenuItems.Add(save);
             yield return save;
 
-            if (RuntimeInfo.IsDesktop)
+            if (RuntimeInfo.OS != RuntimeInfo.Platform.Android)
             {
                 var export = createExportMenu();
                 saveRelatedMenuItems.AddRange(export.Items);
                 yield return export;
+            }
 
+            if (RuntimeInfo.IsDesktop)
+            {
                 var externalEdit = new EditorMenuItem("Edit externally", MenuItemType.Standard, editExternally);
                 saveRelatedMenuItems.Add(externalEdit);
                 yield return externalEdit;

@@ -28,6 +28,7 @@ using osu.Game.Online.API;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Dialog;
 using osu.Game.Overlays.SkinEditor;
+using osu.Game.Overlays.Volume;
 using osu.Game.Rulesets;
 using osu.Game.Screens.Backgrounds;
 using osu.Game.Screens.Edit;
@@ -36,6 +37,7 @@ using osu.Game.Screens.OnlinePlay.Multiplayer;
 using osu.Game.Screens.OnlinePlay.Playlists;
 using osu.Game.Screens.Select;
 using osu.Game.Screens.ReplayVs;
+using osu.Game.Seasonal;
 using osuTK;
 using osuTK.Graphics;
 
@@ -125,6 +127,8 @@ namespace osu.Game.Screens.Menu
 
             AddRangeInternal(new[]
             {
+                SeasonalUIConfig.ENABLED ? new MainMenuSeasonalLighting() : Empty(),
+                new GlobalScrollAdjustsVolume(),
                 buttonsContainer = new ParallaxContainer
                 {
                     ParallaxAmount = 0.01f,
@@ -161,14 +165,15 @@ namespace osu.Game.Screens.Menu
                     }
                 },
                 logoTarget = new Container { RelativeSizeAxes = Axes.Both, },
-                sideFlashes = new MenuSideFlashes(),
+                sideFlashes = SeasonalUIConfig.ENABLED ? new SeasonalMenuSideFlashes() : new MenuSideFlashes(),
                 songTicker = new SongTicker
                 {
                     Anchor = Anchor.TopRight,
                     Origin = Anchor.TopRight,
                     Margin = new MarginPadding { Right = 15, Top = 5 }
                 },
-                new KiaiMenuFountains(),
+                // For now, this is too much alongside the seasonal lighting.
+                SeasonalUIConfig.ENABLED ? Empty() : new KiaiMenuFountains(),
                 bottomElementsFlow = new FillFlowContainer
                 {
                     AutoSizeAxes = Axes.Both,
@@ -199,18 +204,20 @@ namespace osu.Game.Screens.Menu
                 holdToExitGameOverlay?.CreateProxy() ?? Empty()
             });
 
+            float baseDim = SeasonalUIConfig.ENABLED ? 0.84f : 1;
+
             Buttons.StateChanged += state =>
             {
                 switch (state)
                 {
                     case ButtonSystemState.Initial:
                     case ButtonSystemState.Exit:
-                        ApplyToBackground(b => b.FadeColour(Color4.White, 500, Easing.OutSine));
+                        ApplyToBackground(b => b.FadeColour(OsuColour.Gray(baseDim), 500, Easing.OutSine));
                         onlineMenuBanner.State.Value = Visibility.Hidden;
                         break;
 
                     default:
-                        ApplyToBackground(b => b.FadeColour(OsuColour.Gray(0.8f), 500, Easing.OutSine));
+                        ApplyToBackground(b => b.FadeColour(OsuColour.Gray(baseDim * 0.8f), 500, Easing.OutSine));
                         onlineMenuBanner.State.Value = Visibility.Visible;
                         break;
                 }
