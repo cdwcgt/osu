@@ -456,7 +456,7 @@ namespace osu.Game.Tournament.Components
         {
             public DiffPiece(params (string heading, string content)[] tuples)
             {
-                Margin = new MarginPadding { Horizontal = 15, Vertical = 1 };
+                Margin = new MarginPadding { Horizontal = 7, Vertical = 1 };
                 AutoSizeAxes = Axes.Both;
 
                 static void cp(SpriteText s, bool bold)
