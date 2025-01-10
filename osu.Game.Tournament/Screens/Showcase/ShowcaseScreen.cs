@@ -46,12 +46,6 @@ namespace osu.Game.Tournament.Screens.Showcase
         [BackgroundDependencyLoader]
         private void load()
         {
-            nestedGame = new NestedOsuGame(host.Storage, new ForwardingAPIAccess(api))
-            {
-                Masking = true
-            };
-            nestedGame.SetHost(host);
-
             AddRangeInternal(new Drawable[]
             {
                 new TournamentLogo(),
