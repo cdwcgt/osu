@@ -117,6 +117,9 @@ namespace osu.Game.Tournament.Screens.Showcase
                 Masking = true
             };
             nestedGame.SetHost(host);
+
+            host.Window.CursorState = CursorState.Default;
+
             showcaseContainer.Add(nestedGame);
 
             nestedGame.OnLoadComplete += _ =>
