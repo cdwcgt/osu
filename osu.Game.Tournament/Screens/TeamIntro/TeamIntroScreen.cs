@@ -32,7 +32,7 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                 new Sprite
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Texture = store.Get("Videos/TeamRequest"),
+                    Texture = store.Get("Videos/teamintro"),
                     FillMode = FillMode.Fit,
                 },
                 mainContainer = new Container
