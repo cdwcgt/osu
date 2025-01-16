@@ -3,19 +3,29 @@
 
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Graphics;
+using osu.Framework.Graphics.Containers;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 
 namespace osu.Game.Tournament.Screens.Gameplay.Components
 {
-    public partial class MatchRoundDisplay : TournamentSpriteTextWithBackground
+    public partial class MatchRoundDisplay : CircularContainer
     {
         private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
         private readonly Bindable<TournamentRound?> currentRound = new Bindable<TournamentRound?>();
+        private TournamentSpriteTextWithBackground text = null!;
 
         [BackgroundDependencyLoader]
         private void load(LadderInfo ladder)
         {
+            AutoSizeAxes = Axes.Both;
+            Masking = true;
+
+            InternalChild = text = new TournamentSpriteTextWithBackground();
+
+            text.Text.Margin = new MarginPadding { Horizontal = 10f };
+
             currentMatch.BindValueChanged(matchChanged);
             currentMatch.BindTo(ladder.CurrentMatch);
         }
@@ -28,7 +38,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private void updateText()
         {
-            Text.Text = currentMatch.Value?.Round.Value?.Name.Value ?? "Unknown Round";
+            text.Text.Text = currentMatch.Value?.Round.Value?.Name.Value ?? "Unknown Round";
         }
     }
 }
