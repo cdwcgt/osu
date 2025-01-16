@@ -153,6 +153,7 @@ namespace osu.Game.Tournament.Screens.Showcase
             if (existing != null)
             {
                 SongBar.Beatmap = existing.Beatmap;
+                SongBar.SetSongBarColour(existing.BackgroundColor);
             }
             else
             {
