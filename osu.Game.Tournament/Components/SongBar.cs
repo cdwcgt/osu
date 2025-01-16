@@ -308,6 +308,11 @@ namespace osu.Game.Tournament.Components
 
             var modArray = Ladder.CurrentMatch.Value!.Round.Value.Beatmaps.Where(b => b.Mods == roundBeatmap.Mods).ToArray();
 
+            if (modArray.Length == 1)
+            {
+                return roundBeatmap.Mods;
+            }
+
             int id = Array.FindIndex(modArray, b => b.ID == roundBeatmap?.ID) + 1;
 
             return $"{roundBeatmap.Mods}{id}";
