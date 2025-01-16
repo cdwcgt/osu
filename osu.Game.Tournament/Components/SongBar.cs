@@ -6,6 +6,7 @@ using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Primitives;
@@ -31,13 +32,15 @@ namespace osu.Game.Tournament.Components
     {
         protected IBeatmapInfo? beatmap;
 
-        protected FillFlowContainer leftData = null!;
-        protected Container beatmapPanel = null!;
-        protected FillFlowContainer rightData = null!;
+        protected FillFlowContainer LeftData = null!;
+        protected Container BeatmapPanel = null!;
+        protected FillFlowContainer RightData = null!;
 
-        protected SpriteIcon leftArrow = null!;
-        protected SpriteIcon rightArrow = null!;
-        protected Container modContainer = null!;
+        private SpriteIcon leftArrow = null!;
+        private SpriteIcon rightArrow = null!;
+        private Container modContainer = null!;
+
+        protected readonly Bindable<ColourInfo> ArrowColor = new Bindable<ColourInfo>(Color4.White);
 
         public const float HEIGHT = 50f;
 
@@ -171,7 +174,7 @@ namespace osu.Game.Tournament.Components
                                         RelativeSizeAxes = Axes.Y,
                                         Padding = new MarginPadding { Left = 17f }
                                     },
-                                    leftData = new FillFlowContainer
+                                    LeftData = new FillFlowContainer
                                     {
                                         RelativeSizeAxes = Axes.X,
                                         AutoSizeAxes = Axes.Y,
@@ -181,11 +184,11 @@ namespace osu.Game.Tournament.Components
                                     }
                                 },
                             },
-                            beatmapPanel = new Container
+                            BeatmapPanel = new Container
                             {
                                 RelativeSizeAxes = Axes.Y,
                                 AutoSizeAxes = Axes.X,
-                                Child = new TournamentBeatmapPanel(beatmap, isSongBar: true)
+                                Child = new SongBarBeatmapPanel(beatmap)
                                 {
                                     Width = 500,
                                     CenterText = true
@@ -204,7 +207,7 @@ namespace osu.Game.Tournament.Components
                                         Colour = Colour4.Black,
                                         Alpha = 0.55f,
                                     },
-                                    rightData = new FillFlowContainer
+                                    RightData = new FillFlowContainer
                                     {
                                         RelativeSizeAxes = Axes.X,
                                         AutoSizeAxes = Axes.Y,
@@ -233,6 +236,12 @@ namespace osu.Game.Tournament.Components
                     }
                 }
             };
+
+            ArrowColor.BindValueChanged(c =>
+            {
+                leftArrow.FadeColour(c.NewValue, 300);
+                rightArrow.FadeColour(c.NewValue, 300);
+            });
         }
 
         protected override void LoadComplete()
@@ -241,6 +250,16 @@ namespace osu.Game.Tournament.Components
 
             leftArrow.MoveToX(-25, 1500, Easing.Out).Then().MoveToX(0, 1500, Easing.In).Loop();
             rightArrow.MoveToX(25, 1500, Easing.Out).Then().MoveToX(0, 1500, Easing.In).Loop();
+        }
+
+        public void SetSongBarColour(ColourInfo colour)
+        {
+            ArrowColor.Value = colour;
+
+            if (!BeatmapPanel.Any())
+                return;
+
+            ((SongBarBeatmapPanel)BeatmapPanel.Child).SetBoarderColour(colour);
         }
 
         private void refreshContent() => Scheduler.AddOnce(() =>
@@ -339,7 +358,7 @@ namespace osu.Game.Tournament.Components
                 ("BPM", $"{bpm:0.#}")
             };
 
-            leftData.Children = new Drawable[]
+            LeftData.Children = new Drawable[]
             {
                 new DiffPiece(bpmAndPickTeam)
                 {
@@ -353,7 +372,7 @@ namespace osu.Game.Tournament.Components
                 },
             };
 
-            rightData.Children = new Drawable[]
+            RightData.Children = new Drawable[]
             {
                 new DiffPiece(stats)
                 {
@@ -367,7 +386,7 @@ namespace osu.Game.Tournament.Components
                 }
             };
 
-            beatmapPanel.Child = new TournamentBeatmapPanel(beatmap, isSongBar: true)
+            BeatmapPanel.Child = new SongBarBeatmapPanel(beatmap)
             {
                 Width = 500,
                 CenterText = true,

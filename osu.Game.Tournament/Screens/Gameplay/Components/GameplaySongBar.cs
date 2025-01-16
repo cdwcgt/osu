@@ -19,7 +19,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
     public partial class GameplaySongBar : SongBar
     {
         private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
-        private readonly Bindable<ColourInfo> arrowColor = new Bindable<ColourInfo>(Color4.White);
 
         private TeamColour? pickTeamColour;
         private bool expanded;
@@ -39,12 +38,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         {
             currentMatch.BindValueChanged(matchChanged);
             currentMatch.BindTo(Ladder.CurrentMatch);
-
-            arrowColor.BindValueChanged(c =>
-            {
-                leftArrow.FadeColour(c.NewValue, 300);
-                rightArrow.FadeColour(c.NewValue, 300);
-            });
 
             Expanded = true;
         }
@@ -68,11 +61,11 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             if (pickTeamColour == null)
             {
-                arrowColor.Value = Color4.White;
+                ArrowColor.Value = Color4.White;
                 return;
             }
 
-            arrowColor.Value = getTeamColour(pickTeamColour.Value);
+            ArrowColor.Value = getTeamColour(pickTeamColour.Value);
 
             static ColourInfo getTeamColour(TeamColour teamColour) => teamColour == TeamColour.Red ? Color4Extensions.FromHex("#D43030") : Color4Extensions.FromHex("#2A82E4");
         }
@@ -106,7 +99,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 ("BPM", $"{bpm:0.#}")
             };
 
-            leftData.Children = new Drawable[]
+            LeftData.Children = new Drawable[]
             {
                 new DiffPiece(bpmAndPickTeam)
                 {
@@ -120,7 +113,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 },
             };
 
-            rightData.Children = new Drawable[]
+            RightData.Children = new Drawable[]
             {
                 new DiffPiece(stats)
                 {
@@ -134,7 +127,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 }
             };
 
-            beatmapPanel.Child = new TournamentBeatmapPanel(beatmap, isSongBar: true)
+            BeatmapPanel.Child = new SongBarBeatmapPanel(beatmap)
             {
                 Width = 500,
                 CenterText = true,
