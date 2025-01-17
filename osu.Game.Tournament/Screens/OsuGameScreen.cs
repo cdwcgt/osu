@@ -13,7 +13,6 @@ using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Chat;
 using osu.Game.Online.Notifications.WebSocket;
-using osu.Game.Overlays.Notifications;
 using osu.Game.Users;
 
 namespace osu.Game.Tournament.Screens
@@ -68,10 +67,10 @@ namespace osu.Game.Tournament.Screens
         {
             base.LoadComplete();
             LocalConfig.SetValue(OsuSetting.ShowFirstRunSetup, false);
-            Notifications.Post(new SimpleNotification
-            {
-                Text = "不要用主菜单的退出按钮\n会退出整个比赛端"
-            });
+            //Notifications.Post(new SimpleNotification
+            //{
+            //    Text = "不要用主菜单的退出按钮\n会退出整个比赛端"
+            //});
         }
     }
 
