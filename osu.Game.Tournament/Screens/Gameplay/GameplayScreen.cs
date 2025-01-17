@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -319,10 +320,18 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 {
                     if (warmup.Value || CurrentMatch.Value == null) return;
 
+                    var lastPick = CurrentMatch.Value.PicksBans.LastOrDefault(p => p.Type == ChoiceType.Pick && p.BeatmapID == ipc.Beatmap.Value?.OnlineID);
+
                     if (ipc.Score1.Value > ipc.Score2.Value)
+                    {
                         CurrentMatch.Value.Team1Score.Value++;
+                        if (lastPick != null) lastPick.Winner.Value = TeamColour.Red;
+                    }
                     else
+                    {
                         CurrentMatch.Value.Team2Score.Value++;
+                        if (lastPick != null) lastPick.Winner.Value = TeamColour.Blue;
+                    }
                 }
 
                 switch (State.Value)

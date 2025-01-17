@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Drawing;
 using Newtonsoft.Json;
 using osu.Framework.Bindables;
@@ -48,7 +47,7 @@ namespace osu.Game.Tournament.Models
 
         public readonly Bindable<bool> Losers = new Bindable<bool>();
 
-        public readonly ObservableCollection<BeatmapChoice> PicksBans = new ObservableCollection<BeatmapChoice>();
+        public readonly BindableList<BeatmapChoice> PicksBans = new BindableList<BeatmapChoice>();
 
         [JsonIgnore]
         public readonly Bindable<TournamentRound?> Round = new Bindable<TournamentRound?>();

@@ -29,6 +29,7 @@ namespace osu.Game.Tournament.Screens.MapPool
 
         private TeamColour pickColour;
         private ChoiceType pickType;
+        private TeamColour pendingWinnerSetColor;
 
         private OsuButton buttonRedProtected = null!;
         private OsuButton buttonBlueProtected = null!;
@@ -36,6 +37,8 @@ namespace osu.Game.Tournament.Screens.MapPool
         private OsuButton buttonBlueBan = null!;
         private OsuButton buttonRedPick = null!;
         private OsuButton buttonBluePick = null!;
+        private OsuButton buttonRedWinner;
+        private OsuButton buttonBlueWinner;
 
         private ScheduledDelegate? scheduledScreenChange;
 
@@ -104,6 +107,29 @@ namespace osu.Game.Tournament.Screens.MapPool
                             RelativeSizeAxes = Axes.X,
                             Text = "Blue Pick",
                             Action = () => setMode(TeamColour.Blue, ChoiceType.Pick)
+                        },
+                        buttonRedWinner = new TourneyButton
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Text = "Set Red Win",
+                            Action = () =>
+                            {
+                                pendingWinnerSetColor = TeamColour.Red;
+                                buttonRedWinner.Colour = Color4.White;
+                                buttonBlueWinner.Colour = Color4.Gray;
+                            }
+                        },
+                        buttonBlueWinner = new TourneyButton
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Text = "Set Blue Win",
+                            Colour = Color4.Gray,
+                            Action = () =>
+                            {
+                                pendingWinnerSetColor = TeamColour.Blue;
+                                buttonBlueWinner.Colour = Color4.White;
+                                buttonRedWinner.Colour = Color4.Gray;
+                            }
                         },
                         new ControlPanel.Spacer(),
                         new TourneyButton
@@ -216,6 +242,8 @@ namespace osu.Game.Tournament.Screens.MapPool
             {
                 if (e.Button == MouseButton.Left && map.Beatmap?.OnlineID > 0)
                     addForBeatmap(map.Beatmap.OnlineID);
+                else if (e.Button == MouseButton.Middle && map.Beatmap?.OnlineID > 0)
+                    changeWinnerForBeatmap(map.Beatmap.OnlineID);
                 else
                 {
                     var existing = CurrentMatch.Value?.PicksBans.FirstOrDefault(p => p.BeatmapID == map.Beatmap?.OnlineID);
@@ -276,6 +304,27 @@ namespace osu.Game.Tournament.Screens.MapPool
                     scheduledScreenChange = Scheduler.AddDelayed(() => { sceneManager?.SetScreen(typeof(GameplayScreen)); }, 10000);
                 }
             }
+        }
+
+        private void changeWinnerForBeatmap(int beatmapOnlineID)
+        {
+            if (CurrentMatch.Value?.Round.Value == null)
+                return;
+
+            var pickChoice = CurrentMatch.Value.PicksBans.FirstOrDefault(p => p.BeatmapID == beatmapOnlineID && p.Type == ChoiceType.Pick);
+
+            if (pickChoice == null)
+                return;
+
+            int index = CurrentMatch.Value.PicksBans.IndexOf(pickChoice);
+
+            if (pickChoice.Winner.Value == pendingWinnerSetColor)
+            {
+                pickChoice.Winner.Value = null;
+                return;
+            }
+
+            pickChoice.Winner.Value = pendingWinnerSetColor;
         }
 
         public override void Hide()

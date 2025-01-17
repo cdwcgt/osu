@@ -4,6 +4,7 @@
 using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using osu.Framework.Bindables;
 
 namespace osu.Game.Tournament.Models
 {
@@ -18,6 +19,8 @@ namespace osu.Game.Tournament.Models
 
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
         public ChoiceType Type;
+
+        public Bindable<TeamColour?> Winner = new Bindable<TeamColour?>();
 
         public int BeatmapID;
     }
