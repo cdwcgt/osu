@@ -100,7 +100,6 @@ namespace osu.Game.Tournament.Components
         private void load()
         {
             Masking = true;
-            CornerRadius = 5;
 
             Anchor = Anchor.BottomCentre;
             Origin = Anchor.BottomCentre;
@@ -137,6 +136,7 @@ namespace osu.Game.Tournament.Components
                     },
                     new FillFlowContainer
                     {
+                        CornerRadius = 5,
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.CentreLeft,
                         AutoSizeAxes = Axes.X,
