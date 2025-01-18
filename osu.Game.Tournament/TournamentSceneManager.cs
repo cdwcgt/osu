@@ -60,106 +60,110 @@ namespace osu.Game.Tournament
         [BackgroundDependencyLoader]
         private void load()
         {
-            InternalChildren = new Drawable[]
+            InternalChild = new RefCountedBackbufferProvider
             {
-                new Container
+                RelativeSizeAxes = Axes.Both,
+                Children = new Drawable[]
                 {
-                    RelativeSizeAxes = Axes.Y,
-                    X = CONTROL_AREA_WIDTH,
-                    FillMode = FillMode.Fit,
-                    FillAspectRatio = ASPECT_RATIO,
-                    Anchor = Anchor.TopLeft,
-                    Origin = Anchor.TopLeft,
-                    Width = STREAM_AREA_WIDTH,
-                    //Masking = true,
-                    Children = new Drawable[]
+                    new Container
                     {
-                        new Box
+                        RelativeSizeAxes = Axes.Y,
+                        X = CONTROL_AREA_WIDTH,
+                        FillMode = FillMode.Fit,
+                        FillAspectRatio = ASPECT_RATIO,
+                        Anchor = Anchor.TopLeft,
+                        Origin = Anchor.TopLeft,
+                        Width = STREAM_AREA_WIDTH,
+                        //Masking = true,
+                        Children = new Drawable[]
                         {
-                            Colour = new Color4(20, 20, 20, 255),
-                            Anchor = Anchor.TopRight,
-                            RelativeSizeAxes = Axes.Both,
-                            Width = 10,
-                        },
-                        video = new TourneyVideo("main", true)
-                        {
-                            Loop = true,
-                            RelativeSizeAxes = Axes.Both,
-                        },
-                        screens = new Container
-                        {
-                            RelativeSizeAxes = Axes.Both,
-                            Children = new Drawable[]
+                            new Box
                             {
-                                new SetupScreen(),
-                                new ScheduleScreen(),
-                                new LadderScreen(),
-                                new LadderEditorScreen(),
-                                new TeamEditorScreen(),
-                                new RoundEditorScreen(),
-                                new ShowcaseScreen(),
-                                new MapPoolScreen(),
-                                new TeamIntroScreen(),
-                                new SeedingScreen(),
-                                new DrawingsScreen(),
-                                new GameplayScreen(),
-                                new TeamWinScreen(),
-                                new OsuGameScreen()
-                            }
-                        },
-                        chatContainer = new Container
-                        {
-                            Position = new Vector2(332, -142),
-                            Width = 700,
-                            Anchor = Anchor.BottomLeft,
-                            Origin = Anchor.TopLeft,
-                            Child = chat
-                        },
-                    }
-                },
-                new Container
-                {
-                    RelativeSizeAxes = Axes.Y,
-                    Width = CONTROL_AREA_WIDTH,
-                    Children = new Drawable[]
+                                Colour = new Color4(20, 20, 20, 255),
+                                Anchor = Anchor.TopRight,
+                                RelativeSizeAxes = Axes.Both,
+                                Width = 10,
+                            },
+                            video = new TourneyVideo("main", true)
+                            {
+                                Loop = true,
+                                RelativeSizeAxes = Axes.Both,
+                            },
+                            screens = new Container
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Children = new Drawable[]
+                                {
+                                    new SetupScreen(),
+                                    new ScheduleScreen(),
+                                    new LadderScreen(),
+                                    new LadderEditorScreen(),
+                                    new TeamEditorScreen(),
+                                    new RoundEditorScreen(),
+                                    new ShowcaseScreen(),
+                                    new MapPoolScreen(),
+                                    new TeamIntroScreen(),
+                                    new SeedingScreen(),
+                                    new DrawingsScreen(),
+                                    new GameplayScreen(),
+                                    new TeamWinScreen(),
+                                    new OsuGameScreen()
+                                }
+                            },
+                            chatContainer = new Container
+                            {
+                                Position = new Vector2(332, -142),
+                                Width = 700,
+                                Anchor = Anchor.BottomLeft,
+                                Origin = Anchor.TopLeft,
+                                Child = chat
+                            },
+                        }
+                    },
+                    new Container
                     {
-                        new Box
+                        RelativeSizeAxes = Axes.Y,
+                        Width = CONTROL_AREA_WIDTH,
+                        Children = new Drawable[]
                         {
-                            Colour = Color4.Black,
-                            RelativeSizeAxes = Axes.Both,
-                        },
-                        buttons = new FillFlowContainer
-                        {
-                            RelativeSizeAxes = Axes.Both,
-                            Direction = FillDirection.Vertical,
-                            Spacing = new Vector2(5),
-                            Padding = new MarginPadding(5),
-                            Children = new Drawable[]
+                            new Box
                             {
-                                new ScreenButton(typeof(SetupScreen)) { Text = "Setup", RequestSelection = SetScreen },
-                                new Separator(),
-                                new ScreenButton(typeof(TeamEditorScreen)) { Text = "Team Editor", RequestSelection = SetScreen },
-                                new ScreenButton(typeof(RoundEditorScreen)) { Text = "Rounds Editor", RequestSelection = SetScreen },
-                                new ScreenButton(typeof(LadderEditorScreen)) { Text = "Bracket Editor", RequestSelection = SetScreen },
-                                new Separator(),
-                                new ScreenButton(typeof(ScheduleScreen), Key.S) { Text = "Schedule", RequestSelection = SetScreen },
-                                new ScreenButton(typeof(LadderScreen), Key.B) { Text = "Bracket", RequestSelection = SetScreen },
-                                new Separator(),
-                                new ScreenButton(typeof(TeamIntroScreen), Key.I) { Text = "Team Intro", RequestSelection = SetScreen },
-                                new ScreenButton(typeof(SeedingScreen), Key.D) { Text = "Seeding", RequestSelection = SetScreen },
-                                new Separator(),
-                                new ScreenButton(typeof(MapPoolScreen), Key.M) { Text = "Map Pool", RequestSelection = SetScreen },
-                                new ScreenButton(typeof(GameplayScreen), Key.G) { Text = "Gameplay", RequestSelection = SetScreen },
-                                new Separator(),
-                                new ScreenButton(typeof(TeamWinScreen), Key.W) { Text = "Win", RequestSelection = SetScreen },
-                                new Separator(),
-                                new ScreenButton(typeof(DrawingsScreen)) { Text = "Drawings", RequestSelection = SetScreen },
-                                new ScreenButton(typeof(ShowcaseScreen)) { Text = "Showcase", RequestSelection = SetScreen },
-                                new ScreenButton(typeof(OsuGameScreen)) { Text = "Osu", RequestSelection = SetScreen }
-                            }
+                                Colour = Color4.Black,
+                                RelativeSizeAxes = Axes.Both,
+                            },
+                            buttons = new FillFlowContainer
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Direction = FillDirection.Vertical,
+                                Spacing = new Vector2(5),
+                                Padding = new MarginPadding(5),
+                                Children = new Drawable[]
+                                {
+                                    new ScreenButton(typeof(SetupScreen)) { Text = "Setup", RequestSelection = SetScreen },
+                                    new Separator(),
+                                    new ScreenButton(typeof(TeamEditorScreen)) { Text = "Team Editor", RequestSelection = SetScreen },
+                                    new ScreenButton(typeof(RoundEditorScreen)) { Text = "Rounds Editor", RequestSelection = SetScreen },
+                                    new ScreenButton(typeof(LadderEditorScreen)) { Text = "Bracket Editor", RequestSelection = SetScreen },
+                                    new Separator(),
+                                    new ScreenButton(typeof(ScheduleScreen), Key.S) { Text = "Schedule", RequestSelection = SetScreen },
+                                    new ScreenButton(typeof(LadderScreen), Key.B) { Text = "Bracket", RequestSelection = SetScreen },
+                                    new Separator(),
+                                    new ScreenButton(typeof(TeamIntroScreen), Key.I) { Text = "Team Intro", RequestSelection = SetScreen },
+                                    new ScreenButton(typeof(SeedingScreen), Key.D) { Text = "Seeding", RequestSelection = SetScreen },
+                                    new Separator(),
+                                    new ScreenButton(typeof(MapPoolScreen), Key.M) { Text = "Map Pool", RequestSelection = SetScreen },
+                                    new ScreenButton(typeof(GameplayScreen), Key.G) { Text = "Gameplay", RequestSelection = SetScreen },
+                                    new Separator(),
+                                    new ScreenButton(typeof(TeamWinScreen), Key.W) { Text = "Win", RequestSelection = SetScreen },
+                                    new Separator(),
+                                    new ScreenButton(typeof(DrawingsScreen)) { Text = "Drawings", RequestSelection = SetScreen },
+                                    new ScreenButton(typeof(ShowcaseScreen)) { Text = "Showcase", RequestSelection = SetScreen },
+                                    new ScreenButton(typeof(OsuGameScreen)) { Text = "Osu", RequestSelection = SetScreen }
+                                }
+                            },
                         },
                     },
-                },
+                }
             };
 
             foreach (var drawable in screens)

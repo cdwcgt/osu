@@ -37,17 +37,23 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             Masking = true;
             CornerRadius = 10;
 
-            BorderColour = boarder_color;
-            BorderThickness = 2f;
-
             InternalChildren = new Drawable[]
             {
-                new Box
+                new BackdropBlurContainer
                 {
-                    Name = "backgroud",
+                    BorderColour = boarder_color,
+                    BorderThickness = 2f,
                     RelativeSizeAxes = Axes.Both,
-                    Colour = Color4.Black,
-                    Alpha = 0.25f,
+                    BlurSigma = new Vector2(10f),
+                    CornerRadius = 10,
+                    Masking = true,
+                    Child = new Box
+                    {
+                        Name = "backgroud",
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = Color4.Black,
+                        Alpha = 0.25f,
+                    },
                 },
                 new Container
                 {
