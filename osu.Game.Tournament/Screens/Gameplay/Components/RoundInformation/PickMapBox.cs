@@ -30,6 +30,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.RoundInformation
 
         protected override void UpdateStatus()
         {
+            TopMapContainer.Clear();
+            BottomMapContainer.Clear();
+
             if (winnerColour.Value == null)
             {
                 base.UpdateStatus();
