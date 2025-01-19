@@ -25,21 +25,27 @@ namespace osu.Game.Tournament.Components
     {
         public readonly IBeatmapInfo? Beatmap;
 
-        private readonly string? mod;
+        private string? mod;
 
         public const float HEIGHT = 50;
 
         private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
 
         private Box flash = null!;
-        private PadLock padLock = null!;
-        private readonly bool isMappool;
 
-        public TournamentBeatmapPanel(IBeatmapInfo? beatmap, string mod = "", bool isMappool = false)
+        protected Container PadLockContainer = null!;
+        private PadLock padLock = null!;
+
+        protected Container ModIconContainer = null!;
+
+        [Resolved]
+        private LadderInfo ladderInfo { get; set; } = null!;
+
+        protected virtual bool TranslucentProtectedAfterPick => true;
+
+        public TournamentBeatmapPanel(IBeatmapInfo? beatmap)
         {
             Beatmap = beatmap;
-            this.mod = mod;
-            this.isMappool = isMappool;
 
             Width = 400;
             Height = HEIGHT;
@@ -52,6 +58,8 @@ namespace osu.Game.Tournament.Components
             currentMatch.BindTo(ladder.CurrentMatch);
 
             Masking = true;
+
+            mod = ladderInfo.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(b => b.Beatmap?.OnlineID == Beatmap?.OnlineID)?.Mods;
 
             AddRangeInternal(new Drawable[]
             {
@@ -113,11 +121,25 @@ namespace osu.Game.Tournament.Components
                         }
                     },
                 },
-                padLock = new PadLock
+                PadLockContainer = new Container
                 {
                     Origin = Anchor.Centre,
                     Anchor = Anchor.Centre,
-                    Alpha = 0f,
+                    AutoSizeAxes = Axes.Both,
+                    Child = padLock = new PadLock
+                    {
+                        Origin = Anchor.Centre,
+                        Anchor = Anchor.Centre,
+                        Alpha = 0f,
+                    },
+                },
+                ModIconContainer = new Container
+                {
+                    Anchor = Anchor.CentreRight,
+                    Origin = Anchor.CentreRight,
+                    Margin = new MarginPadding(10),
+                    Width = 60,
+                    RelativeSizeAxes = Axes.Y,
                 },
                 flash = new Box
                 {
@@ -130,13 +152,9 @@ namespace osu.Game.Tournament.Components
 
             if (!string.IsNullOrEmpty(mod))
             {
-                AddInternal(new TournamentModIcon(mod)
+                ModIconContainer.Add(new TournamentModIcon(mod)
                 {
-                    Anchor = Anchor.CentreRight,
-                    Origin = Anchor.CentreRight,
-                    Margin = new MarginPadding(10),
-                    Width = 60,
-                    RelativeSizeAxes = Axes.Y,
+                    RelativeSizeAxes = Axes.Both,
                 });
             }
         }
@@ -164,17 +182,17 @@ namespace osu.Game.Tournament.Components
             }
 
             var found = currentMatch.Value.PicksBans.Where(p => p.BeatmapID == Beatmap?.OnlineID).ToList();
-            var foundProtected = isMappool ? found.FirstOrDefault(s => s.Type == ChoiceType.Protected) : null;
+            var foundProtected = found.FirstOrDefault(s => s.Type == ChoiceType.Protected);
             var lastFound = found.LastOrDefault();
 
             bool shouldFlash = lastFound != choice;
 
-            if (foundProtected != null && isMappool)
+            if (foundProtected != null)
             {
                 padLock.Team = foundProtected.Team;
                 padLock.Show();
 
-                if (currentMatch.Value.PicksBans.Any(p => p.Type == ChoiceType.Pick))
+                if (currentMatch.Value.PicksBans.Any(p => p.Type == ChoiceType.Pick) && TranslucentProtectedAfterPick)
                 {
                     padLock.FadeTo(0.5f);
                 }
