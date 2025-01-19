@@ -213,7 +213,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             banChoices = banChoices.Concat(Enumerable.Repeat((BeatmapChoice?)null, (ladderInfo.CurrentMatch.Value.Round.Value?.BanCount.Value ?? 2) * 2 - banChoices.Length)).ToArray();
 
-            int pickMapCount = ladderInfo.CurrentMatch.Value.Round.Value.BestOf.Value - 1 // 去掉TB
+            int pickMapCount = ladderInfo.CurrentMatch.Value.Round.Value.BestOf.Value - 1; // 去掉TB
 
             var pickChoice = pickChoices.Take(pickMapCount)
                                         // 往后面填充null
