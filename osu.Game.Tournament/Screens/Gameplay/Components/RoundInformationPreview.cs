@@ -241,7 +241,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         {
             Colour = Color4Extensions.FromHex("#E5E5E5"),
             Height = 38.5f,
-            Width = 1f,
+            Width = 2f,
             Margin = new MarginPadding
             {
                 Top = 37f
