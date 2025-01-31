@@ -95,7 +95,7 @@ namespace osu.Game.Tournament.Components
             this.mod = mod;
             this.isMappool = isMappool;
 
-            Width = mod == "TB" && id.HasValue ? 600 : 400;
+            Width = mod == "TB" && isMappool ? 600 : 400;
             Height = HEIGHT;
         }
 
