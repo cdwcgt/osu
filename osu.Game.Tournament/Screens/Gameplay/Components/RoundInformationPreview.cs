@@ -62,10 +62,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     Anchor = Anchor.CentreRight,
                     Origin = Anchor.CentreRight,
                     RelativeSizeAxes = Axes.Y,
-                    Padding = new MarginPadding
-                    {
-                        Left = 30f,
-                    },
                     Children = new Drawable[]
                     {
                         new BufferedContainer
@@ -145,38 +141,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             ladderInfo.CurrentMatch.BindValueChanged(matchChanged, true);
         }
 
-        private bool mapContentReturnPosition;
-        private bool mapContentNeedRoll;
-        private double pauseTime;
-
-        protected override void Update()
-        {
-            base.Update();
-
-            if (!mapContentNeedRoll)
-                return;
-
-            if (pauseTime > 0)
-            {
-                pauseTime -= Clock.ElapsedFrameTime;
-                return;
-            }
-
-            if (!mapContentReturnPosition && mapContentContainer.DrawWidth + mapContentContainer.X < 1000 - cover_width)
-            {
-                mapContentReturnPosition = true;
-                pauseTime = 3000;
-            }
-
-            if (mapContentReturnPosition && mapContentContainer.X >= cover_width)
-            {
-                mapContentReturnPosition = false;
-                pauseTime = 3000;
-            }
-
-            mapContentContainer.X = mapContentReturnPosition ? mapContentContainer.X + (float)(50 * Time.Elapsed / 1000) : mapContentContainer.X + (float)(-50 * Time.Elapsed / 1000);
-        }
-
         private void matchChanged(ValueChangedEvent<TournamentMatch?> match)
         {
             if (match.OldValue != null)
@@ -252,19 +216,23 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
                 Scheduler.Add(() =>
                 {
+                    FinishTransforms();
+
                     if (mapContentContainer.DrawWidth < 1000)
                     {
-                        mapContentNeedRoll = false;
                         mapContentContainer.Anchor = Anchor.TopCentre;
                         mapContentContainer.Origin = Anchor.TopCentre;
                         mapContentContainer.X = 0;
                         return;
                     }
 
-                    mapContentNeedRoll = true;
-
                     mapContentContainer.Anchor = Anchor.TopLeft;
                     mapContentContainer.Origin = Anchor.TopLeft;
+
+                    // 每秒走50px
+                    double timeToRepeat = (mapContentContainer.DrawWidth - 1000 + cover_width) / 30f * 1000;
+                    mapContentContainer.X = cover_width;
+                    mapContentContainer.MoveToX((1000 - cover_width - mapContentContainer.DrawWidth), timeToRepeat, Easing.OutSine).Then(5000).MoveToX(cover_width, timeToRepeat, Easing.OutSine).Then(5000).Loop();
                 });
             });
         }
