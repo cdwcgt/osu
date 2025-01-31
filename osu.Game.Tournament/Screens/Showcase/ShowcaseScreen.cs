@@ -153,10 +153,12 @@ namespace osu.Game.Tournament.Screens.Showcase
             if (existing != null)
             {
                 SongBar.Beatmap = existing.Beatmap;
-                SongBar.SetSongBarColour(existing.BackgroundColor);
+                SongBar.SongBarColour.Value = existing.BackgroundColor;
             }
             else
             {
+                SongBar.SongBarColour.Value = null;
+
                 beatmapLookupRequest = new GetBeatmapRequest(new APIBeatmap { OnlineID = workingBeatmap.BeatmapInfo.OnlineID });
 
                 beatmapLookupRequest.Success += b =>

@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
@@ -13,6 +15,11 @@ namespace osu.Game.Tournament.Components
 {
     public partial class SongBarBeatmapPanel : TournamentBeatmapPanel
     {
+        [Resolved]
+        private SongBar songBar { get; set; } = null!;
+
+        private Bindable<ColourInfo?> songBarColour = new Bindable<ColourInfo?>();
+
         public SongBarBeatmapPanel(RoundBeatmap beatmap, int? id = null, bool isMappool = false)
             : base(beatmap, id, isMappool)
         {
@@ -23,10 +30,33 @@ namespace osu.Game.Tournament.Components
         {
         }
 
-        public void SetBoarderColour(ColourInfo colour)
+        protected override void LoadComplete()
         {
+            base.LoadComplete();
+
+            songBarColour.BindTo(songBar.SongBarColour);
+            songBarColour.BindValueChanged(c =>
+            {
+                if (c.NewValue == null)
+                {
+                    MainContainer.BorderThickness = 0;
+                    return;
+                }
+
+                MainContainer.BorderThickness = 6;
+                MainContainer.BorderColour = c.NewValue.Value;
+            }, true);
+        }
+
+        protected override void UpdateState()
+        {
+            base.UpdateState();
+
+            if (songBarColour.Value == null)
+                return;
+
             MainContainer.BorderThickness = 6;
-            MainContainer.BorderColour = colour;
+            MainContainer.BorderColour = songBarColour.Value.Value;
         }
 
         protected override Drawable[] CreateInformation() =>

@@ -233,7 +233,7 @@ namespace osu.Game.Tournament.Components
             if (match.NewValue != null)
                 match.NewValue.PicksBans.CollectionChanged += picksBansOnCollectionChanged;
 
-            Scheduler.AddOnce(updateState);
+            Scheduler.AddOnce(UpdateState);
         }
 
         protected virtual Drawable[] CreateInformation() =>
@@ -278,13 +278,13 @@ namespace osu.Game.Tournament.Components
             };
 
         private void picksBansOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-            => Scheduler.AddOnce(updateState);
+            => Scheduler.AddOnce(UpdateState);
 
         private BeatmapChoice? choice;
         private bool centerText = false;
         private FillFlowContainer information = null!;
 
-        private void updateState()
+        protected virtual void UpdateState()
         {
             if (currentMatch.Value == null)
             {
@@ -365,6 +365,8 @@ namespace osu.Game.Tournament.Components
         {
             // As covers are displayed on stream, we want them to load as soon as possible.
             protected override double LoadDelay => 0;
+
+            protected override double TransformDuration => 0;
 
             // Use DelayedLoadWrapper to avoid content unloading when switching away to another screen.
             protected override DelayedLoadWrapper CreateDelayedLoadWrapper(Func<Drawable> createContentFunc, double timeBeforeLoad)
