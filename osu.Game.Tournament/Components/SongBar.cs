@@ -2,13 +2,13 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
-using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Primitives;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
@@ -28,17 +28,20 @@ using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Components
 {
+    [Cached]
     public partial class SongBar : CompositeDrawable
     {
         protected IBeatmapInfo? beatmap;
 
-        protected FillFlowContainer LeftData = null!;
+        protected FillFlowContainer LeftDataContainer = null!;
         protected Container BeatmapPanel = null!;
-        protected FillFlowContainer RightData = null!;
+        protected FillFlowContainer RightDataContainer = null!;
 
         private SpriteIcon leftArrow = null!;
         private SpriteIcon rightArrow = null!;
         private Container modContainer = null!;
+
+        public Bindable<ColourInfo?> SongBarColour { get; } = new Bindable<ColourInfo?>();
 
         protected readonly Bindable<ColourInfo> ArrowColor = new Bindable<ColourInfo>(Color4.White);
 
@@ -49,6 +52,9 @@ namespace osu.Game.Tournament.Components
 
         [Resolved]
         private IBindable<RulesetInfo> ruleset { get; set; } = null!;
+
+        protected List<Drawable[]> LeftData = new List<Drawable[]>();
+        protected List<Drawable[]> RightData = new List<Drawable[]>();
 
         public IBeatmapInfo? Beatmap
         {
@@ -250,6 +256,54 @@ namespace osu.Game.Tournament.Components
                 leftArrow.FadeColour(c.NewValue, 300);
                 rightArrow.FadeColour(c.NewValue, 300);
             });
+
+            LeftDataIndex.BindValueChanged(i =>
+            {
+                if (i.NewValue >= LeftData.Count && i.NewValue != 0)
+                {
+                    LeftDataIndex.Value = 0;
+                    return;
+                }
+
+                if (i.NewValue >= LeftData.Count)
+                    return;
+
+                LeftDataContainer.FinishTransforms();
+
+                LeftDataContainer.FadeOut(150).Then().Schedule(c =>
+                {
+                    c.Clear(false);
+                    if (i.NewValue >= LeftData.Count)
+                        return;
+
+                    c.Children = LeftData.ElementAt(i.NewValue);
+                }, LeftDataContainer).Then().FadeIn(150);
+            });
+
+            RightDataIndex.BindValueChanged(i =>
+            {
+                if (i.NewValue >= RightData.Count && i.NewValue != 0)
+                {
+                    RightDataIndex.Value = 0;
+                    return;
+                }
+
+                if (i.NewValue >= RightData.Count)
+                    return;
+
+                RightDataContainer.FinishTransforms();
+
+                RightDataContainer.FadeOut(150).Then().Schedule(c =>
+                {
+                    c.Clear(false);
+                    if (i.NewValue >= LeftData.Count)
+                        return;
+
+                    c.Children = RightData.ElementAt(i.NewValue);
+                }, RightDataContainer).Then().FadeIn(150);
+            });
+
+            SongBarColour.BindValueChanged(c => ArrowColor.Value = c.NewValue ?? Color4.White);
         }
 
         protected override void LoadComplete()
@@ -260,18 +314,37 @@ namespace osu.Game.Tournament.Components
             rightArrow.MoveToX(25, 1500, Easing.Out).Then().MoveToX(0, 1500, Easing.In).Loop();
         }
 
-        public void SetSongBarColour(ColourInfo colour)
+        protected readonly BindableInt LeftDataIndex = new BindableInt();
+        protected readonly BindableInt RightDataIndex = new BindableInt();
+
+        // 轮换时间5秒
+        private const int wait_turn_time = 5000;
+
+        private double waitTime;
+
+        protected override void Update()
         {
-            ArrowColor.Value = colour;
+            base.Update();
 
-            if (!BeatmapPanel.Any())
-                return;
+            if (waitTime > wait_turn_time)
+            {
+                LeftDataIndex.Value = (LeftDataIndex.Value + 1) % Math.Max(1, LeftData.Count);
+                RightDataIndex.Value = (RightDataIndex.Value + 1) % Math.Max(1, RightData.Count);
+                waitTime = 0;
+            }
 
-            ((SongBarBeatmapPanel)BeatmapPanel.Child).SetBoarderColour(colour);
+            waitTime += Time.Elapsed;
         }
 
         private void refreshContent() => Scheduler.AddOnce(() =>
         {
+            waitTime = 0;
+
+            if ((mods & LegacyMods.FreeMod) > 0)
+            {
+                mods &= ~LegacyMods.FreeMod;
+            }
+
             modString = Ladder.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(b => b.ID == beatmap?.OnlineID)?.Mods;
 
             modContainer.Clear();
@@ -333,6 +406,12 @@ namespace osu.Game.Tournament.Components
             if (roundBeatmap == null)
                 return null;
 
+            // hardcode
+            if (roundBeatmap.Mods == "FM")
+            {
+                mods = LegacyMods.FreeMod;
+            }
+
             var modArray = Ladder.CurrentMatch.Value!.Round.Value.Beatmaps.Where(b => b.Mods == roundBeatmap.Mods).ToArray();
 
             if (modArray.Length == 1)
@@ -347,14 +426,19 @@ namespace osu.Game.Tournament.Components
 
         protected virtual void PostUpdate()
         {
-            GetBeatmapInformation(out double bpm, out double length, out string srExtra, out var stats);
+            // 这步会顺便判断是否为FM谱面
+            string? modPosition = GetBeatmapModPosition();
+            double bpm;
+            double length;
+            string srExtra;
+            (string heading, string content)[]? stats;
+
+            GetBeatmapInformation(mods, out bpm, out length, out srExtra, out stats);
 
             (string, string)[] srAndModStats =
             {
                 ("星级", $"{beatmap!.StarRating.FormatStarRating()}{srExtra}")
             };
-
-            string? modPosition = GetBeatmapModPosition();
 
             if (modPosition != null)
             {
@@ -366,7 +450,12 @@ namespace osu.Game.Tournament.Components
                 ("BPM", $"{bpm:0.#}")
             };
 
-            LeftData.Children = new Drawable[]
+            LeftData.Clear();
+            RightData.Clear();
+            LeftDataContainer.Clear();
+            RightDataContainer.Clear();
+
+            LeftData.Add(new Drawable[]
             {
                 new DiffPiece(bpmAndPickTeam)
                 {
@@ -378,9 +467,9 @@ namespace osu.Game.Tournament.Components
                     Origin = Anchor.CentreRight,
                     Anchor = Anchor.CentreRight,
                 },
-            };
+            });
 
-            RightData.Children = new Drawable[]
+            RightData.Add(new Drawable[]
             {
                 new DiffPiece(stats)
                 {
@@ -392,16 +481,62 @@ namespace osu.Game.Tournament.Components
                     Origin = Anchor.CentreLeft,
                     Anchor = Anchor.CentreLeft,
                 }
-            };
+            });
+
+            if ((mods & LegacyMods.FreeMod) > 0)
+            {
+                GetBeatmapInformation(LegacyMods.HardRock, out bpm, out length, out srExtra, out stats);
+
+                srAndModStats[0] = ("星级", $"{beatmap!.StarRating:0.00}{srExtra}");
+                srAndModStats[1] = ("谱面位置", $"{modPosition} (HR)");
+
+                RightData.Add(new Drawable[]
+                {
+                    new DiffPiece(stats)
+                    {
+                        Origin = Anchor.CentreLeft,
+                        Anchor = Anchor.CentreLeft,
+                    },
+                    new DiffPiece(srAndModStats)
+                    {
+                        Origin = Anchor.CentreLeft,
+                        Anchor = Anchor.CentreLeft,
+                    }
+                });
+
+                GetBeatmapInformation(LegacyMods.Easy, out bpm, out length, out srExtra, out stats);
+
+                srAndModStats[0] = ("星级", $"{beatmap!.StarRating:0.00}{srExtra}");
+                srAndModStats[1] = ("谱面位置", $"{modPosition} (EZ)");
+
+                RightData.Add(new Drawable[]
+                {
+                    new DiffPiece(stats)
+                    {
+                        Origin = Anchor.CentreLeft,
+                        Anchor = Anchor.CentreLeft,
+                    },
+                    new DiffPiece(srAndModStats)
+                    {
+                        Origin = Anchor.CentreLeft,
+                        Anchor = Anchor.CentreLeft,
+                    }
+                });
+            }
 
             BeatmapPanel.Child = new SongBarBeatmapPanel(beatmap)
             {
                 Width = 500,
                 CenterText = true,
             };
+
+            LeftDataIndex.Value = 0;
+            LeftDataIndex.TriggerChange();
+            RightDataIndex.Value = 0;
+            RightDataIndex.TriggerChange();
         }
 
-        protected void GetBeatmapInformation(out double bpm, out double length, out string srExtra, out (string heading, string content)[] stats)
+        protected void GetBeatmapInformation(LegacyMods mods, out double bpm, out double length, out string srExtra, out (string heading, string content)[] stats)
         {
             bpm = beatmap!.BPM;
             length = beatmap.Length;

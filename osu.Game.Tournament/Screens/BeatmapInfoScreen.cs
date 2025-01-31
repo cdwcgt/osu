@@ -46,7 +46,7 @@ namespace osu.Game.Tournament.Screens
                         {
                             RelativeSizeAxes = Axes.X,
                             Text = "Set FM",
-                            Action = () => setMods(LegacyMods.None, "FM")
+                            Action = () => setMods(LegacyMods.FreeMod, "FM")
                         },
                         new TourneyButton
                         {

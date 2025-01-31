@@ -8,6 +8,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
+using osu.Game.Beatmaps.Legacy;
 using osu.Game.Extensions;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
@@ -77,16 +78,15 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         protected override void PostUpdate()
         {
+            string? modPosition = GetBeatmapModPosition();
             updateState();
 
-            GetBeatmapInformation(out double bpm, out double length, out string srExtra, out var stats);
+            GetBeatmapInformation(mods, out double bpm, out double length, out string srExtra, out var stats);
 
             (string, string)[] srAndModStats =
             {
                 ("星级", $"{beatmap!.StarRating:0.00}{srExtra}")
             };
-
-            string? modPosition = GetBeatmapModPosition();
 
             if (modPosition != null)
             {
@@ -99,7 +99,12 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 ("BPM", $"{bpm:0.#}")
             };
 
-            LeftData.Children = new Drawable[]
+            LeftData.Clear();
+            RightData.Clear();
+            LeftDataContainer.Clear();
+            RightDataContainer.Clear();
+
+            LeftData.Add(new Drawable[]
             {
                 new DiffPiece(bpmAndPickTeam)
                 {
@@ -111,9 +116,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     Origin = Anchor.CentreRight,
                     Anchor = Anchor.CentreRight,
                 },
-            };
+            });
 
-            RightData.Children = new Drawable[]
+            RightData.Add(new Drawable[]
             {
                 new DiffPiece(stats)
                 {
@@ -125,13 +130,59 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     Origin = Anchor.CentreLeft,
                     Anchor = Anchor.CentreLeft,
                 }
-            };
+            });
+
+            if ((mods & LegacyMods.FreeMod) > 0)
+            {
+                GetBeatmapInformation(LegacyMods.HardRock, out bpm, out length, out srExtra, out stats);
+
+                srAndModStats[0] = ("星级", $"{beatmap!.StarRating:0.00}{srExtra}");
+                srAndModStats[1] = ("谱面位置", $"{modPosition} (HR)");
+
+                RightData.Add(new Drawable[]
+                {
+                    new DiffPiece(stats)
+                    {
+                        Origin = Anchor.CentreLeft,
+                        Anchor = Anchor.CentreLeft,
+                    },
+                    new DiffPiece(srAndModStats)
+                    {
+                        Origin = Anchor.CentreLeft,
+                        Anchor = Anchor.CentreLeft,
+                    }
+                });
+
+                GetBeatmapInformation(LegacyMods.Easy, out bpm, out length, out srExtra, out stats);
+
+                srAndModStats[0] = ("星级", $"{beatmap!.StarRating:0.00}{srExtra}");
+                srAndModStats[1] = ("谱面位置", $"{modPosition} (EZ)");
+
+                RightData.Add(new Drawable[]
+                {
+                    new DiffPiece(stats)
+                    {
+                        Origin = Anchor.CentreLeft,
+                        Anchor = Anchor.CentreLeft,
+                    },
+                    new DiffPiece(srAndModStats)
+                    {
+                        Origin = Anchor.CentreLeft,
+                        Anchor = Anchor.CentreLeft,
+                    }
+                });
+            }
 
             BeatmapPanel.Child = new SongBarBeatmapPanel(beatmap)
             {
                 Width = 500,
                 CenterText = true,
             };
+
+            LeftDataIndex.Value = 0;
+            LeftDataIndex.TriggerChange();
+            RightDataIndex.Value = 0;
+            RightDataIndex.TriggerChange();
         }
     }
 }
