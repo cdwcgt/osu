@@ -51,7 +51,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private bool switchFromMappool;
 
         [BackgroundDependencyLoader]
-        private void load(MatchIPCInfo ipc)
+        private void load(MatchIPCInfo ipc, TextureStore store)
         {
             this.ipc = ipc;
 
@@ -61,6 +61,19 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 {
                     Loop = true,
                     RelativeSizeAxes = Axes.Both,
+                },
+                new Sprite
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Texture = store.Get("Videos/gameplay"),
+                    FillMode = FillMode.Fit,
+                },
+                supporterSprite = new Sprite
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Texture = store.Get("我们至高无上的金主大人的赞助商图片"),
+                    FillMode = FillMode.Fit,
+                    Alpha = 0,
                 },
                 header = new MatchHeader
                 {
@@ -192,6 +205,16 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 if (s.OldValue == typeof(MapPoolScreen) && s.NewValue == typeof(GameplayScreen))
                     switchFromMappool = true;
             });
+
+            supporterSprite.FadeOut(250).Then()
+                           .Then(5000)
+                           .FadeIn(250).Then()
+                           .Then(5000).Loop();
+
+            Scheduler.AddDelayed(() =>
+            {
+                header.ShowRound = !header.ShowRound;
+            }, 5250, true);
         }
 
         private bool roundPreviewShow;
@@ -280,6 +303,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private TourneyState lastState;
         private MatchHeader header = null!;
         private RoundInformationPreview roundPreview = null!;
+        private Sprite supporterSprite;
 
         private void contract()
         {
