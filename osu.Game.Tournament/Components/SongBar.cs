@@ -134,88 +134,96 @@ namespace osu.Game.Tournament.Components
                             Shadow = true
                         },
                     },
-                    new FillFlowContainer
+                    new Container
                     {
-                        CornerRadius = 5,
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.CentreLeft,
-                        AutoSizeAxes = Axes.X,
                         RelativeSizeAxes = Axes.Y,
-                        Direction = FillDirection.Horizontal,
-                        Masking = true,
-                        EdgeEffect = new EdgeEffectParameters
-                        {
-                            Colour = new Color4(0f, 0f, 0f, 0.25f),
-                            Type = EdgeEffectType.Shadow,
-                            Radius = 8,
-                            Offset = new Vector2(1, 1),
-                            Hollow = true
-                        },
+                        AutoSizeAxes = Axes.X,
                         Children = new Drawable[]
                         {
                             new Container
                             {
-                                RelativeSizeAxes = Axes.Y,
-                                Width = 240,
-                                Name = "Left data",
-                                Children = new Drawable[]
+                                Padding = new MarginPadding { Vertical = 6f },
+                                RelativeSizeAxes = Axes.Both,
+                                Child = new BackdropBlurContainer
                                 {
-                                    new Box
+                                    BlurSigma = new Vector2(10f),
+                                    RelativeSizeAxes = Axes.Both,
+                                    CornerRadius = 5,
+                                    Masking = true,
+                                    Child = new Box
                                     {
                                         RelativeSizeAxes = Axes.Both,
                                         Colour = Colour4.Black,
-                                        Alpha = 0.55f,
-                                    },
-                                    modContainer = new Container
-                                    {
-                                        Anchor = Anchor.CentreLeft,
-                                        Origin = Anchor.CentreLeft,
-                                        AutoSizeAxes = Axes.X,
-                                        RelativeSizeAxes = Axes.Y,
-                                        Padding = new MarginPadding { Left = 17f }
-                                    },
-                                    LeftData = new FillFlowContainer
-                                    {
-                                        RelativeSizeAxes = Axes.X,
-                                        AutoSizeAxes = Axes.Y,
-                                        Anchor = Anchor.CentreRight,
-                                        Origin = Anchor.CentreRight,
-                                        Direction = FillDirection.Vertical,
+                                        Alpha = 0.5f,
                                     }
                                 },
                             },
-                            BeatmapPanel = new Container
+                            new FillFlowContainer
                             {
-                                RelativeSizeAxes = Axes.Y,
+                                Anchor = Anchor.CentreLeft,
+                                Origin = Anchor.CentreLeft,
                                 AutoSizeAxes = Axes.X,
-                                Child = new SongBarBeatmapPanel(beatmap)
-                                {
-                                    Width = 500,
-                                    CenterText = true
-                                },
-                            },
-                            new Container
-                            {
                                 RelativeSizeAxes = Axes.Y,
-                                Width = 240,
-                                Name = "Right data",
+                                Direction = FillDirection.Horizontal,
+                                Masking = true,
+
                                 Children = new Drawable[]
                                 {
-                                    new Box
+                                    new Container
                                     {
-                                        RelativeSizeAxes = Axes.Both,
-                                        Colour = Colour4.Black,
-                                        Alpha = 0.55f,
+                                        RelativeSizeAxes = Axes.Y,
+                                        Width = 240,
+                                        Name = "Left data",
+                                        Children = new Drawable[]
+                                        {
+                                            modContainer = new Container
+                                            {
+                                                Anchor = Anchor.CentreLeft,
+                                                Origin = Anchor.CentreLeft,
+                                                AutoSizeAxes = Axes.X,
+                                                RelativeSizeAxes = Axes.Y,
+                                                Padding = new MarginPadding { Left = 17f }
+                                            },
+                                            LeftDataContainer = new FillFlowContainer
+                                            {
+                                                RelativeSizeAxes = Axes.X,
+                                                AutoSizeAxes = Axes.Y,
+                                                Anchor = Anchor.CentreRight,
+                                                Origin = Anchor.CentreRight,
+                                                Direction = FillDirection.Vertical,
+                                            }
+                                        },
                                     },
-                                    RightData = new FillFlowContainer
+                                    BeatmapPanel = new Container
                                     {
-                                        RelativeSizeAxes = Axes.X,
-                                        AutoSizeAxes = Axes.Y,
-                                        Anchor = Anchor.CentreLeft,
-                                        Origin = Anchor.CentreLeft,
-                                        Direction = FillDirection.Vertical,
-                                    }
-                                },
+                                        RelativeSizeAxes = Axes.Y,
+                                        AutoSizeAxes = Axes.X,
+                                        Child = new SongBarBeatmapPanel(beatmap)
+                                        {
+                                            Width = 500,
+                                            CenterText = true
+                                        },
+                                    },
+                                    new Container
+                                    {
+                                        RelativeSizeAxes = Axes.Y,
+                                        Width = 240,
+                                        Name = "Right data",
+                                        Children = new Drawable[]
+                                        {
+                                            RightDataContainer = new FillFlowContainer
+                                            {
+                                                RelativeSizeAxes = Axes.X,
+                                                AutoSizeAxes = Axes.Y,
+                                                Anchor = Anchor.CentreLeft,
+                                                Origin = Anchor.CentreLeft,
+                                                Direction = FillDirection.Vertical,
+                                            }
+                                        },
+                                    },
+                                }
                             },
                         }
                     },
