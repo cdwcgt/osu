@@ -366,8 +366,6 @@ namespace osu.Game.Tournament.Components
             // As covers are displayed on stream, we want them to load as soon as possible.
             protected override double LoadDelay => 0;
 
-            protected override double TransformDuration => 0;
-
             // Use DelayedLoadWrapper to avoid content unloading when switching away to another screen.
             protected override DelayedLoadWrapper CreateDelayedLoadWrapper(Func<Drawable> createContentFunc, double timeBeforeLoad)
                 => new DelayedLoadWrapper(createContentFunc(), timeBeforeLoad);

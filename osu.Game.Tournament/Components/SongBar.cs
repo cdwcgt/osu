@@ -296,7 +296,7 @@ namespace osu.Game.Tournament.Components
                 RightDataContainer.FadeOut(150).Then().Schedule(c =>
                 {
                     c.Clear(false);
-                    if (i.NewValue >= LeftData.Count)
+                    if (i.NewValue >= RightData.Count)
                         return;
 
                     c.Children = RightData.ElementAt(i.NewValue);
