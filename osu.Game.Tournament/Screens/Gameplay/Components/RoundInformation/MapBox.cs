@@ -29,6 +29,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.RoundInformation
         protected Box CenterLine = null!;
 
         protected RoundBeatmap RoundBeatmap = null!;
+        private Box flash;
 
         [Resolved]
         protected LadderInfo Ladder { get; private set; } = null!;
@@ -87,9 +88,35 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.RoundInformation
                     Padding = new MarginPadding { Top = 6f },
                     RelativeSizeAxes = Axes.Both,
                 },
+                flash = new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Colour = Color4.White,
+                    Blending = new BlendingParameters
+                    {
+                        RGBEquation = BlendingEquation.Add,
+                        Source = BlendingType.Zero,
+                        Destination = BlendingType.One,
+                        AlphaEquation = BlendingEquation.Add,
+                        SourceAlpha = BlendingType.Zero,
+                        DestinationAlpha = BlendingType.OneMinusSrcAlpha
+                    },
+                    Alpha = 0,
+                },
             };
 
             UpdateStatus();
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            Scheduler.AddOnce(() =>
+            {
+                if (Ladder.CurrentMatch.Value?.PicksBans.LastOrDefault() == Choice)
+                    flash.FadeIn(500).Then().FadeOut(500).Loop(0, 10);
+            });
         }
 
         protected virtual Drawable CreateCenterLine(TeamColour color) => CreateCenterLineBox(color);
