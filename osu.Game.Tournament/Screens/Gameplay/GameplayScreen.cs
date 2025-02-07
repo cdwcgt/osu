@@ -421,7 +421,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 scheduledShowRoundPreview = Scheduler.AddDelayed(() =>
                 {
                     if (ShowRoundPreview())
-                        scheduledHideRoundPreview = Scheduler.AddDelayed(HideRoundPreview, 5000);
+                        scheduledHideRoundPreview = Scheduler.AddDelayed(HideRoundPreview, 30000);
                 }, 5000);
             }
 
