@@ -1,0 +1,66 @@
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// See the LICENCE file in the repository root for full licence text.
+
+using osu.Framework.Allocation;
+using osu.Framework.Bindables;
+using osu.Framework.Graphics;
+using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Shapes;
+using osu.Game.Graphics;
+using osu.Game.Tournament.Models;
+using osuTK.Graphics;
+
+namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
+{
+    public partial class MatchRoundDisplay : Container
+    {
+        private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
+        private readonly Bindable<TournamentRound?> currentRound = new Bindable<TournamentRound?>();
+        private TournamentSpriteText roundName = null!;
+        private TournamentSpriteText roundInfo = null!;
+
+        [BackgroundDependencyLoader]
+        private void load(LadderInfo ladder)
+        {
+            Height = 24;
+            AutoSizeAxes = Axes.X;
+
+            InternalChildren = new Drawable[]
+            {
+                new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Colour = Color4.White,
+                },
+                roundName = new TournamentSpriteText
+                {
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.TopCentre,
+                    Font = OsuFont.Torus.With(size: 13),
+                },
+                roundInfo = new TournamentSpriteText
+                {
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.TopCentre,
+                    Font = OsuFont.Torus.With(size: 11),
+                },
+            };
+
+            roundName.Margin = new MarginPadding { Horizontal = 10f };
+
+            currentMatch.BindValueChanged(matchChanged);
+            currentMatch.BindTo(ladder.CurrentMatch);
+        }
+
+        private void matchChanged(ValueChangedEvent<TournamentMatch?> match)
+        {
+            currentRound.Value = match.NewValue?.Round.Value;
+            currentRound.Value?.Name.BindValueChanged(_ => Schedule(updateText), true);
+        }
+
+        private void updateText()
+        {
+            roundName.Text = currentMatch.Value?.Round.Value?.Name.Value ?? "Unknown Round";
+        }
+    }
+}

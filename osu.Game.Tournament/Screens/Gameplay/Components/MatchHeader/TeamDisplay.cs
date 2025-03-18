@@ -8,7 +8,7 @@ using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osuTK;
 
-namespace osu.Game.Tournament.Screens.Gameplay.Components
+namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 {
     public partial class TeamDisplay : DrawableTournamentTeam
     {

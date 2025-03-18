@@ -16,6 +16,7 @@ using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Gameplay.Components;
+using osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader;
 using osu.Game.Tournament.Screens.MapPool;
 using osu.Game.Tournament.Screens.TeamWin;
 using osuTK;
@@ -72,13 +73,9 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 {
                     RelativeSizeAxes = Axes.Both,
                     Texture = store.Get("我们至高无上的金主大人的赞助商图片"),
-                    FillMode = FillMode.Fit,
-                    Alpha = 0,
+                    FillMode = FillMode.Fit
                 },
-                header = new MatchHeader
-                {
-                    ShowLogo = false,
-                },
+                header = new MatchHeader(),
                 new Container
                 {
                     RelativeSizeAxes = Axes.X,
@@ -205,16 +202,6 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 if (s.OldValue == typeof(MapPoolScreen) && s.NewValue == typeof(GameplayScreen))
                     switchFromMappool = true;
             });
-
-            supporterSprite.FadeOut(250).Then()
-                           .Then(5000)
-                           .FadeIn(250).Then()
-                           .Then(5000).Loop();
-
-            Scheduler.AddDelayed(() =>
-            {
-                header.ShowRound = !header.ShowRound;
-            }, 5250, true);
         }
 
         private bool roundPreviewShow;
@@ -303,7 +290,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private TourneyState lastState;
         private MatchHeader header = null!;
         private RoundInformationPreview roundPreview = null!;
-        private Sprite supporterSprite;
+        private Sprite supporterSprite = null!;
 
         private void contract()
         {

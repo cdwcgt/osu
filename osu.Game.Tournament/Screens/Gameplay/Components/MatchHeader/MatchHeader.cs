@@ -4,18 +4,16 @@
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osuTK;
 
-namespace osu.Game.Tournament.Screens.Gameplay.Components
+namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 {
     public partial class MatchHeader : Container
     {
         private TeamScoreDisplay teamDisplay1 = null!;
         private TeamScoreDisplay teamDisplay2 = null!;
-        private DrawableTournamentHeaderLogo logo = null!;
-        private MatchRoundDisplay roundDisplay = null!;
+        private RoundStage roundStage = null!;
 
         private bool showScores = true;
 
@@ -34,34 +32,17 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             }
         }
 
-        private bool showLogo = true;
-
-        public bool ShowLogo
-        {
-            get => showLogo;
-            set
-            {
-                if (value == showLogo)
-                    return;
-
-                showLogo = value;
-
-                if (IsLoaded)
-                    updateDisplay();
-            }
-        }
-
-        private bool showRound = true;
+        private bool showPoint = true;
 
         public bool ShowRound
         {
-            get => showRound;
+            get => showPoint;
             set
             {
-                if (value == showRound)
+                if (value == showPoint)
                     return;
 
-                showRound = value;
+                showPoint = value;
 
                 if (IsLoaded)
                     updateDisplay();
@@ -73,45 +54,38 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         {
             RelativeSizeAxes = Axes.X;
             Height = 95;
+
             Children = new Drawable[]
             {
                 new FillFlowContainer
                 {
+                    Origin = Anchor.Centre,
+                    Anchor = Anchor.Centre,
                     RelativeSizeAxes = Axes.Both,
-                    Direction = FillDirection.Vertical,
+                    Direction = FillDirection.Horizontal,
                     Padding = new MarginPadding(20),
                     Spacing = new Vector2(5),
                     Children = new Drawable[]
                     {
-                        logo = new DrawableTournamentHeaderLogo
+                        teamDisplay1 = new TeamScoreDisplay(TeamColour.Red)
                         {
-                            Anchor = Anchor.TopCentre,
-                            Origin = Anchor.TopCentre,
-                            Alpha = showLogo ? 1 : 0
+                            Anchor = Anchor.TopLeft,
+                            Origin = Anchor.TopLeft,
                         },
-                        new DrawableTournamentHeaderText
+                        new MatchRoundDisplay
                         {
-                            Anchor = Anchor.TopCentre,
-                            Origin = Anchor.TopCentre,
-                        },
-                        roundDisplay = new MatchRoundDisplay
-                        {
-                            Anchor = Anchor.TopCentre,
-                            Origin = Anchor.TopCentre,
+                            Anchor = Anchor.TopLeft,
+                            Origin = Anchor.TopLeft,
                             Scale = new Vector2(0.4f)
+                        },
+                        teamDisplay2 = new TeamScoreDisplay(TeamColour.Blue)
+                        {
+                            Anchor = Anchor.TopLeft,
+                            Origin = Anchor.TopLeft,
                         },
                     }
                 },
-                teamDisplay1 = new TeamScoreDisplay(TeamColour.Red)
-                {
-                    Anchor = Anchor.TopLeft,
-                    Origin = Anchor.TopLeft,
-                },
-                teamDisplay2 = new TeamScoreDisplay(TeamColour.Blue)
-                {
-                    Anchor = Anchor.TopRight,
-                    Origin = Anchor.TopRight,
-                },
+                roundStage = new RoundStage()
             };
         }
 
@@ -125,13 +99,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         {
             teamDisplay1.ShowScore = showScores;
             teamDisplay2.ShowScore = showScores;
-
-            logo.Alpha = showLogo ? 1 : 0;
-
-            if (showRound)
-                roundDisplay.FadeIn(250);
-            else
-                roundDisplay.FadeOut(250);
+            roundStage.WarmUp.Value = !showScores;
         }
     }
 }

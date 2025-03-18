@@ -5,7 +5,7 @@ using osu.Framework.Allocation;
 using osu.Game.Overlays.Settings;
 using osu.Game.Tournament.Models;
 
-namespace osu.Game.Tournament.Screens.Gameplay.Components
+namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 {
     public partial class MatchRoundNameTextBox : SettingsTextBox
     {
