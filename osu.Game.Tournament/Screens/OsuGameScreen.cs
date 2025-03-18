@@ -98,8 +98,7 @@ namespace osu.Game.Tournament.Screens
         public Guid SessionIdentifier => api.SessionIdentifier;
         public bool IsLoggedIn => api.IsLoggedIn;
         public string ProvidedUsername => api.ProvidedUsername;
-        public string APIEndpointUrl => api.APIEndpointUrl;
-        public string WebsiteRootUrl => api.WebsiteRootUrl;
+        public EndpointConfiguration Endpoints => api.Endpoints;
         public int APIVersion => api.APIVersion;
         public Exception? LastLoginError => api.LastLoginError;
         public IBindable<APIState> State => api.State;
