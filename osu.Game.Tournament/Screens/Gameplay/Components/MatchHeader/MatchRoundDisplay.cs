@@ -62,6 +62,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
         private void matchChanged(ValueChangedEvent<TournamentMatch?> match)
         {
             banPicks.UnbindBindings();
+            currentRoundName.UnbindBindings();
 
             Scheduler.AddOnce(updateMatch);
         }

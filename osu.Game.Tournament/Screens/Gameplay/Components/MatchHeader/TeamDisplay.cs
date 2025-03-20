@@ -23,9 +23,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
             get => showScore;
             set
             {
-                if (showScore == value)
-                    return;
-
                 showScore = value;
 
                 if (IsLoaded)
@@ -120,7 +117,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
         private void updateDisplay()
         {
-            score.FadeTo(ShowScore ? 1 : 0, 200);
+            score.ShowScore = ShowScore;
         }
     }
 }
