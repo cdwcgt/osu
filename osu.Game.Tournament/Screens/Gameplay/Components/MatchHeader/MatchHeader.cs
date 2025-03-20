@@ -53,7 +53,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
         private void load()
         {
             RelativeSizeAxes = Axes.X;
-            Height = 95;
+            Height = 24;
+            Margin = new MarginPadding { Top = 50 };
 
             Children = new Drawable[]
             {
@@ -63,25 +64,22 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                     Anchor = Anchor.Centre,
                     RelativeSizeAxes = Axes.Both,
                     Direction = FillDirection.Horizontal,
-                    Padding = new MarginPadding(20),
-                    Spacing = new Vector2(5),
                     Children = new Drawable[]
                     {
                         teamDisplay1 = new TeamScoreDisplay(TeamColour.Red)
                         {
-                            Anchor = Anchor.TopLeft,
-                            Origin = Anchor.TopLeft,
+                            Anchor = Anchor.Centre,
+                            Origin = Anchor.Centre,
                         },
                         new MatchRoundDisplay
                         {
-                            Anchor = Anchor.TopLeft,
-                            Origin = Anchor.TopLeft,
-                            Scale = new Vector2(0.4f)
+                            Anchor = Anchor.Centre,
+                            Origin = Anchor.Centre,
                         },
                         teamDisplay2 = new TeamScoreDisplay(TeamColour.Blue)
                         {
-                            Anchor = Anchor.TopLeft,
-                            Origin = Anchor.TopLeft,
+                            Anchor = Anchor.Centre,
+                            Origin = Anchor.Centre,
                         },
                     }
                 },

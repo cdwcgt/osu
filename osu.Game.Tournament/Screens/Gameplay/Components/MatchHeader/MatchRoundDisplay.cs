@@ -4,6 +4,7 @@
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
@@ -26,7 +27,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
         [BackgroundDependencyLoader]
         private void load(LadderInfo ladder)
         {
-            Height = 24;
+            RelativeSizeAxes = Axes.Y;
             AutoSizeAxes = Axes.X;
 
             InternalChildren = new Drawable[]
@@ -41,12 +42,14 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
                     Font = OsuFont.Torus.With(size: 13),
+                    Colour = Color4.Black,
                 },
                 roundInfo = new TournamentSpriteText
                 {
-                    Anchor = Anchor.TopCentre,
-                    Origin = Anchor.TopCentre,
+                    Anchor = Anchor.BottomCentre,
+                    Origin = Anchor.BottomCentre,
                     Font = OsuFont.Torus.With(size: 11),
+                    Colour = Color4Extensions.FromHex("#808080"),
                 },
             };
 
@@ -87,7 +90,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
             roundName.Text = currentRoundName.Value ?? "Unknown Round";
 
-            roundInfo.Text = $"BO{currentRound.Value} 回合{banPicks.Count(p => p.Type == ChoiceType.Pick)}";
+            roundInfo.Text = $"BO{currentRound.Value.BestOf} 回合{banPicks.Count(p => p.Type == ChoiceType.Pick)}";
         }
     }
 }

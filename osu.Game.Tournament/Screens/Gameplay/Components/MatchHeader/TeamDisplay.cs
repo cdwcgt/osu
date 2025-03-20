@@ -44,8 +44,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
             Flag.Origin = anchor;
             Flag.Anchor = anchor;
 
-            Margin = new MarginPadding(20);
-
             InternalChild = new Container
             {
                 AutoSizeAxes = Axes.Both,
