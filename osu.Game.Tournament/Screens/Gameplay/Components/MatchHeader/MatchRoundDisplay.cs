@@ -41,7 +41,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                 {
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
-                    Font = OsuFont.Torus.With(size: 13),
+                    Font = OsuFont.Torus.With(size: 16),
                     Colour = Color4.Black,
                 },
                 roundInfo = new TournamentSpriteText
@@ -53,7 +53,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                 },
             };
 
-            roundName.Margin = new MarginPadding { Horizontal = 10f };
+            roundName.Margin = new MarginPadding { Horizontal = 20f };
 
             currentMatch.BindValueChanged(matchChanged);
             currentMatch.BindTo(ladder.CurrentMatch);
@@ -79,6 +79,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
             match.StartMatch();
 
             currentRound.Value = match.Round.Value;
+            if (currentRound.Value == null)
+                return;
 
             banPicks.BindTo(match.PicksBans);
             currentRoundName.BindTo(currentRound.Value?.Name);

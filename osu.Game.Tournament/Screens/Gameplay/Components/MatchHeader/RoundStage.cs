@@ -6,6 +6,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
+using osu.Game.Graphics;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osuTK.Graphics;
@@ -31,8 +32,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
             Height = 16;
             Width = 120;
 
-            Text.Alpha = 0;
-            Background.Alpha = 0;
+            Text.Anchor = Anchor.Centre;
+            Text.Origin = Anchor.Centre;
+            Text.Font = OsuFont.Torus.With(size: 16);
         }
 
         [BackgroundDependencyLoader]
@@ -41,7 +43,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
             currentMatch.BindTo(ladder.CurrentMatch);
             currentMatch.BindValueChanged(matchChanged);
             WarmUp.BindValueChanged(_ => updateDisplay());
-            banPicks.BindCollectionChanged((_, _) => Scheduler.AddOnce(updateDisplay));
+            banPicks.BindCollectionChanged((_, _) => updateDisplay());
 
             updateMatch();
         }
@@ -50,6 +52,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
         {
             team1Score.UnbindBindings();
             team2Score.UnbindBindings();
+            banPicks.UnbindBindings();
+            WarmUp.UnbindBindings();
 
             Scheduler.AddOnce(updateMatch);
         }
@@ -64,6 +68,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
             team1Score.BindTo(match.Team1Score);
             team2Score.BindTo(match.Team2Score);
+            banPicks.BindTo(match.PicksBans);
 
             updateDisplay();
         }
@@ -72,15 +77,15 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
         {
             if (currentMatch.Value == null)
             {
-                this.FadeOut(200);
+                retract();
                 return;
             }
 
             if (WarmUp.Value)
             {
-                this.FadeIn(200);
-                Background.FadeColour(Color4Extensions.FromHex("#FFC300"), 200);
-                Text.FadeColour(Color4.Black, 200);
+                extend();
+                Background.FadeColour(Color4Extensions.FromHex("#FFC300"));
+                Text.FadeColour(Color4.Black);
                 Text.Text = "热 身 阶 段";
                 return;
             }
@@ -93,23 +98,28 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
             if (!matchPoint)
             {
-                this.FadeOut(200);
+                retract();
                 return;
             }
 
-            this.FadeIn(200);
-            Text.FadeColour(Color4.White, 200);
+            extend();
+            Text.FadeColour(Color4.White);
 
-            if (score1 + score2 >= pointToWin * 2 - 1 && Math.Max(score1, score2) != pointToWin)
+            bool isTiebreaker = score1 + score2 >= pointToWin * 2 - 2 && Math.Max(score1, score2) != pointToWin;
+
+            if (isTiebreaker)
             {
-                Background.FadeColour(Color4Extensions.FromHex("#E33C64"), 200);
+                Background.FadeColour(Color4Extensions.FromHex("#E33C64"));
                 Text.Text = "决 胜 局";
             }
             else
             {
-                Background.FadeColour(Color4Extensions.FromHex("#2A82E4"), 200);
+                Background.FadeColour(Color4Extensions.FromHex("#2A82E4"));
                 Text.Text = "赛 点";
             }
         }
+
+        private void retract() => this.MoveToY(-16, 400, Easing.InElastic);
+        private void extend() => this.MoveToY(5, 400, Easing.OutElastic);
     }
 }

@@ -4,6 +4,7 @@
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Game.Graphics;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osuTK;
@@ -35,9 +36,10 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
         {
             AutoSizeAxes = Axes.Both;
 
-            bool flip = colour == TeamColour.Red;
+            Anchor = Anchor.CentreLeft;
+            Origin = Anchor.CentreLeft;
 
-            var anchor = flip ? Anchor.TopLeft : Anchor.TopRight;
+            var anchor = colour == TeamColour.Red ? Anchor.CentreLeft : Anchor.CentreRight;
 
             Flag.RelativeSizeAxes = Axes.None;
             Flag.Scale = new Vector2(0.8f);
@@ -53,44 +55,32 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                     {
                         AutoSizeAxes = Axes.Both,
                         Direction = FillDirection.Horizontal,
-                        Spacing = new Vector2(5),
+                        Spacing = new Vector2(10, 0),
                         Children = new Drawable[]
                         {
                             Flag,
+                            new DrawableTeamHeader(colour)
+                            {
+                                Origin = anchor,
+                                Anchor = anchor,
+                                Text = { Font = OsuFont.Torus.With(size: 24) }
+                            },
                             new FillFlowContainer
                             {
                                 AutoSizeAxes = Axes.Both,
-                                Direction = FillDirection.Vertical,
+                                Direction = FillDirection.Horizontal,
                                 Origin = anchor,
                                 Anchor = anchor,
-                                Spacing = new Vector2(5),
                                 Children = new Drawable[]
                                 {
-                                    new FillFlowContainer
+                                    new DrawableTeamTitle(team, colour)
                                     {
-                                        AutoSizeAxes = Axes.Both,
-                                        Direction = FillDirection.Horizontal,
-                                        Spacing = new Vector2(5),
+                                        RelativeSizeAxes = Axes.Y,
                                         Origin = anchor,
                                         Anchor = anchor,
-                                        Children = new Drawable[]
-                                        {
-                                            new DrawableTeamHeader(colour)
-                                            {
-                                                Scale = new Vector2(0.75f),
-                                                Origin = anchor,
-                                                Anchor = anchor,
-                                            },
-                                            score = new TeamScore(currentTeamScore, colour, pointsToWin)
-                                            {
-                                                Origin = anchor,
-                                                Anchor = anchor,
-                                            }
-                                        }
                                     },
-                                    new DrawableTeamTitle(team)
+                                    score = new TeamScore(currentTeamScore, colour, pointsToWin)
                                     {
-                                        Scale = new Vector2(0.5f),
                                         Origin = anchor,
                                         Anchor = anchor,
                                     },

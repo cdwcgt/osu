@@ -4,8 +4,8 @@
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Game.Screens.Menu;
 using osu.Game.Tournament.Models;
-using osuTK;
 
 namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 {
@@ -56,34 +56,29 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
             Height = 24;
             Margin = new MarginPadding { Top = 50 };
 
+            MatchRoundDisplay matchRoundDisplay = new MatchRoundDisplay();
+
             Children = new Drawable[]
             {
-                new FillFlowContainer
+                roundStage = new RoundStage
                 {
-                    Origin = Anchor.Centre,
+                    Anchor = Anchor.BottomCentre,
+                    Origin = Anchor.TopCentre,
+                },
+                new FlowContainerWithOrigin
+                {
                     Anchor = Anchor.Centre,
-                    RelativeSizeAxes = Axes.Both,
+                    RelativeSizeAxes = Axes.Y,
+                    AutoSizeAxes = Axes.X,
                     Direction = FillDirection.Horizontal,
+                    CentreTarget = matchRoundDisplay,
                     Children = new Drawable[]
                     {
-                        teamDisplay1 = new TeamScoreDisplay(TeamColour.Red)
-                        {
-                            Anchor = Anchor.Centre,
-                            Origin = Anchor.Centre,
-                        },
-                        new MatchRoundDisplay
-                        {
-                            Anchor = Anchor.Centre,
-                            Origin = Anchor.Centre,
-                        },
+                        teamDisplay1 = new TeamScoreDisplay(TeamColour.Red),
+                        matchRoundDisplay,
                         teamDisplay2 = new TeamScoreDisplay(TeamColour.Blue)
-                        {
-                            Anchor = Anchor.Centre,
-                            Origin = Anchor.Centre,
-                        },
                     }
                 },
-                roundStage = new RoundStage()
             };
         }
 
