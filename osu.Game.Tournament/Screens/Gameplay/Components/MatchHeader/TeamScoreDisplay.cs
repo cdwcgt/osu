@@ -7,10 +7,9 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Input.Events;
 using osu.Game.Tournament.Models;
-using osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader;
 using osuTK.Input;
 
-namespace osu.Game.Tournament.Screens.Gameplay.Components
+namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 {
     public partial class TeamScoreDisplay : CompositeDrawable
     {
