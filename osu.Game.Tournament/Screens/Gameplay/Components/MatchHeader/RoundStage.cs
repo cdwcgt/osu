@@ -21,6 +21,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
         private readonly Bindable<int?> team1Score = new Bindable<int?>();
         private readonly Bindable<int?> team2Score = new Bindable<int?>();
 
+        private readonly BindableList<BeatmapChoice> banPicks = new BindableList<BeatmapChoice>();
+
         public BindableBool WarmUp { get; } = new BindableBool();
 
         public RoundStage()
@@ -39,6 +41,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
             currentMatch.BindTo(ladder.CurrentMatch);
             currentMatch.BindValueChanged(matchChanged);
             WarmUp.BindValueChanged(_ => updateDisplay());
+            banPicks.BindCollectionChanged((_, _) => Scheduler.AddOnce(updateDisplay));
 
             updateMatch();
         }
@@ -97,7 +100,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
             this.FadeIn(200);
             Text.FadeColour(Color4.White, 200);
 
-            if (score1 + score2 >= pointToWin * 2 - 1)
+            if (score1 + score2 >= pointToWin * 2 - 1 && Math.Max(score1, score2) != pointToWin)
             {
                 Background.FadeColour(Color4Extensions.FromHex("#E33C64"), 200);
                 Text.Text = "决 胜 局";

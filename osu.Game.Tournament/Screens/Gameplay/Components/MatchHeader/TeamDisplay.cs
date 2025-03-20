@@ -93,7 +93,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                                             }
                                         }
                                     },
-                                    new DrawableTeamTitle(team, anchor)
+                                    new DrawableTeamTitle(team)
                                     {
                                         Scale = new Vector2(0.5f),
                                         Origin = anchor,

@@ -1,6 +1,7 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -16,8 +17,11 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
     {
         private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
         private readonly Bindable<TournamentRound?> currentRound = new Bindable<TournamentRound?>();
+        private readonly Bindable<string> currentRoundName = new Bindable<string>();
         private TournamentSpriteText roundName = null!;
         private TournamentSpriteText roundInfo = null!;
+
+        private readonly BindableList<BeatmapChoice> banPicks = new BindableList<BeatmapChoice>();
 
         [BackgroundDependencyLoader]
         private void load(LadderInfo ladder)
@@ -50,17 +54,39 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
             currentMatch.BindValueChanged(matchChanged);
             currentMatch.BindTo(ladder.CurrentMatch);
+
+            currentRoundName.BindValueChanged(_ => Scheduler.AddOnce(updateDisplay));
+            banPicks.BindCollectionChanged((_, _) => Scheduler.AddOnce(updateDisplay));
         }
 
         private void matchChanged(ValueChangedEvent<TournamentMatch?> match)
         {
-            currentRound.Value = match.NewValue?.Round.Value;
-            currentRound.Value?.Name.BindValueChanged(_ => Schedule(updateText), true);
+            banPicks.UnbindBindings();
+
+            Scheduler.AddOnce(updateMatch);
         }
 
-        private void updateText()
+        private void updateMatch()
         {
-            roundName.Text = currentMatch.Value?.Round.Value?.Name.Value ?? "Unknown Round";
+            var match = currentMatch.Value;
+
+            if (match == null) return;
+
+            match.StartMatch();
+
+            currentRound.Value = match.Round.Value;
+
+            banPicks.BindTo(match.PicksBans);
+            currentRoundName.BindTo(currentRound.Value?.Name);
+        }
+
+        private void updateDisplay()
+        {
+            if (currentRound.Value == null) return;
+
+            roundName.Text = currentRoundName.Value ?? "Unknown Round";
+
+            roundInfo.Text = $"BO{currentRound.Value} 回合{banPicks.Count(p => p.Type == ChoiceType.Pick)}";
         }
     }
 }

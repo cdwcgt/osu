@@ -6,50 +6,67 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Shapes;
+using osu.Game.Graphics;
 using osu.Game.Tournament.Models;
+using osuTK;
+using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Components
 {
     public partial class DrawableTeamTitle : CompositeDrawable
     {
         private readonly TournamentTeam? team;
-        private readonly TournamentSpriteTextWithBackground teamText;
+        private readonly TournamentSpriteText teamText;
 
         [UsedImplicitly]
         private Bindable<string>? acronym;
 
-        public DrawableTeamTitle(TournamentTeam? team, Anchor anchor = Anchor.TopLeft)
+        public DrawableTeamTitle(TournamentTeam? team)
         {
             TournamentSpriteTextWithBackground teamIdText;
             AutoSizeAxes = Axes.Both;
-            InternalChild = new FillFlowContainer
+            InternalChild = new Container
             {
-                AutoSizeAxes = Axes.Both,
-                Direction = FillDirection.Horizontal,
+                AutoSizeAxes = Axes.X,
                 Children = new Drawable[]
                 {
-                    teamIdText = new TournamentSpriteTextWithBackground
+                    new Box
                     {
-                        Origin = anchor,
-                        Anchor = anchor
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = Color4.White
                     },
-                    teamText = new TournamentSpriteTextWithBackground
+                    new FillFlowContainer
                     {
-                        Origin = anchor,
-                        Anchor = anchor
+                        AutoSizeAxes = Axes.X,
+                        Direction = FillDirection.Horizontal,
+                        Margin = new MarginPadding { Horizontal = 10, Vertical = 2 },
+                        Spacing = new Vector2(2, 0),
+                        Children = new Drawable[]
+                        {
+                            teamText = new TournamentSpriteText
+                            {
+                                Anchor = Anchor.BottomLeft,
+                                Origin = Anchor.BottomLeft,
+                                Font = OsuFont.GetFont(size: 20, weight: FontWeight.Bold),
+                            },
+                            teamIdText = new TournamentSpriteTextWithBackground
+                            {
+                                Margin = new MarginPadding { Top = 7 },
+                                Anchor = Anchor.BottomLeft,
+                                Origin = Anchor.BottomLeft,
+                            },
+                        }
                     }
                 }
             };
-            teamIdText.Text.Padding = new MarginPadding { Horizontal = 15 };
 
             if (team != null)
             {
-                team.FullName.BindValueChanged(name => teamText.Text.Text = name.NewValue, true);
+                team.FullName.BindValueChanged(name => teamText.Text = name.NewValue, true);
                 team.Seed.BindValueChanged(seed => teamIdText.Text.Text = seed.NewValue, true);
                 team.Color.BindValueChanged(color => teamIdText.BackgroundColor = color.NewValue, true);
                 team.IdTextColor.BindValueChanged(color => teamIdText.Text.Colour = color.NewValue, true);
-                team.NameBackgroundColor.BindValueChanged(color => teamText.BackgroundColor = color.NewValue, true);
-                team.NameTextColor.BindValueChanged(color => teamText.Text.Colour = color.NewValue, true);
             }
 
             this.team = team;
@@ -60,7 +77,7 @@ namespace osu.Game.Tournament.Components
         {
             if (team == null) return;
 
-            (acronym = team.Acronym.GetBoundCopy()).BindValueChanged(_ => teamText.Text.Text = team?.FullName.Value ?? string.Empty, true);
+            (acronym = team.Acronym.GetBoundCopy()).BindValueChanged(_ => teamText.Text = team?.FullName.Value ?? string.Empty, true);
         }
     }
 }
