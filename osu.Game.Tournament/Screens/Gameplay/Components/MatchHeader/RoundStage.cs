@@ -6,6 +6,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Colour;
 using osu.Game.Graphics;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
@@ -25,6 +26,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
         private readonly BindableList<BeatmapChoice> banPicks = new BindableList<BeatmapChoice>();
 
         public BindableBool WarmUp { get; } = new BindableBool();
+
+        private bool isExtend;
 
         public RoundStage()
         {
@@ -84,8 +87,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
             if (WarmUp.Value)
             {
                 extend();
-                Background.FadeColour(Color4Extensions.FromHex("#FFC300"));
-                Text.FadeColour(Color4.Black);
+                fadeBackgroundColour(Color4Extensions.FromHex("#FFC300"));
+                fadeTextColour(Color4.Black);
                 Text.Text = "热 身 阶 段";
                 return;
             }
@@ -103,23 +106,56 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
             }
 
             extend();
-            Text.FadeColour(Color4.White);
+            fadeTextColour(Color4.White);
 
             bool isTiebreaker = score1 + score2 >= pointToWin * 2 - 2 && Math.Max(score1, score2) != pointToWin;
 
             if (isTiebreaker)
             {
-                Background.FadeColour(Color4Extensions.FromHex("#E33C64"));
+                fadeBackgroundColour(Color4Extensions.FromHex("#E33C64"));
                 Text.Text = "决 胜 局";
             }
             else
             {
-                Background.FadeColour(Color4Extensions.FromHex("#2A82E4"));
+                fadeBackgroundColour(TournamentGame.GetTeamColour(score1 > score2 ? TeamColour.Red : TeamColour.Blue));
                 Text.Text = "赛 点";
             }
         }
 
-        private void retract() => this.MoveToY(-16, 400, Easing.InElastic);
-        private void extend() => this.MoveToY(5, 400, Easing.OutElastic);
+        private void fadeBackgroundColour(ColourInfo colour)
+        {
+            if (isExtend)
+            {
+                Background.FadeColour(colour, 200);
+            }
+            else
+            {
+                Background.FadeColour(colour);
+            }
+        }
+
+        private void fadeTextColour(ColourInfo colour)
+        {
+            if (isExtend)
+            {
+                Text.FadeColour(colour, 200);
+            }
+            else
+            {
+                Text.FadeColour(colour);
+            }
+        }
+
+        private void retract()
+        {
+            isExtend = false;
+            this.MoveToY(-16, 400, Easing.InElastic);
+        }
+
+        private void extend()
+        {
+            isExtend = true;
+            this.MoveToY(5, 400, Easing.OutElastic);
+        }
     }
 }
