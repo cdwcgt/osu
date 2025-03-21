@@ -6,6 +6,8 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Sprites;
+using osu.Framework.Graphics.Textures;
 using osu.Framework.Input.Events;
 using osu.Framework.Threading;
 using osu.Game.Graphics.UserInterface;
@@ -43,7 +45,7 @@ namespace osu.Game.Tournament.Screens.MapPool
         private ScheduledDelegate? scheduledScreenChange;
 
         [BackgroundDependencyLoader]
-        private void load(MatchIPCInfo ipc)
+        private void load(MatchIPCInfo ipc, TextureStore store)
         {
             InternalChildren = new Drawable[]
             {
@@ -51,6 +53,12 @@ namespace osu.Game.Tournament.Screens.MapPool
                 {
                     Loop = true,
                     RelativeSizeAxes = Axes.Both,
+                },
+                new Sprite
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Texture = store.Get("Videos/mappool"),
+                    FillMode = FillMode.Fit,
                 },
                 new MatchHeader
                 {
