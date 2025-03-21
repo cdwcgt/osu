@@ -84,11 +84,12 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                 return;
             }
 
+            fadeTextColour(Color4.White);
+
             if (WarmUp.Value)
             {
                 extend();
-                fadeBackgroundColour(Color4Extensions.FromHex("#FFC300"));
-                fadeTextColour(Color4.Black);
+                fadeBackgroundColour(Color4Extensions.FromHex("#AC33C1"));
                 Text.Text = "热 身 阶 段";
                 return;
             }
@@ -106,13 +107,13 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
             }
 
             extend();
-            fadeTextColour(Color4.White);
 
             bool isTiebreaker = score1 + score2 >= pointToWin * 2 - 2 && Math.Max(score1, score2) != pointToWin;
 
             if (isTiebreaker)
             {
-                fadeBackgroundColour(Color4Extensions.FromHex("#E33C64"));
+                fadeBackgroundColour(Color4Extensions.FromHex("#FFC300"));
+                fadeTextColour(Color4.Black);
                 Text.Text = "决 胜 局";
             }
             else
