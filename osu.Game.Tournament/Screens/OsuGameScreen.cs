@@ -35,6 +35,7 @@ namespace osu.Game.Tournament.Screens
                 Masking = true
             };
             nestedGame.SetHost(host);
+            host.Window.CursorState = CursorState.Default;
             AddInternal(nestedGame);
         }
 
@@ -67,6 +68,11 @@ namespace osu.Game.Tournament.Screens
         {
             base.LoadComplete();
             LocalConfig.SetValue(OsuSetting.ShowFirstRunSetup, false);
+
+            GlobalCursorDisplay.MenuCursor.AlwaysPresent = true; // required for tooltip display
+
+            // we don't want to show the menu cursor as it would appear on stream output.
+            GlobalCursorDisplay.MenuCursor.Alpha = 0;
             //Notifications.Post(new SimpleNotification
             //{
             //    Text = "不要用主菜单的退出按钮\n会退出整个比赛端"
