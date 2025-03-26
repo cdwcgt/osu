@@ -42,29 +42,7 @@ namespace osu.Game.Tournament.Screens.Editors
             {
                 otherRound.BanPickFlowGroups.Clear();
 
-                foreach (var group in round.BanPickFlowGroups)
-                {
-                    var newGroup = new BanPickFlowGroup
-                    {
-                        Name = new Bindable<string>
-                        {
-                            Value = group.Name.Value,
-                        },
-                        RepeatCount = new Bindable<int>
-                        {
-                            Value = group.RepeatCount.Value,
-                        },
-                        Steps = new BindableList<BanPickFlowStep>(
-                            group.Steps
-                                 .Select(s => new BanPickFlowStep
-                                 {
-                                     CurrentAction = { Value = s.CurrentAction.Value },
-                                     SwapFromLastColor = { Value = s.SwapFromLastColor.Value }
-                                 }))
-                    };
-
-                    otherRound.BanPickFlowGroups.Add(newGroup);
-                }
+                otherRound.BanPickFlowGroups.AddRange(round.BanPickFlowGroups);
             }
         }
 
