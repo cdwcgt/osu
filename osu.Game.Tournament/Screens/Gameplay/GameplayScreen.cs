@@ -280,7 +280,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
             scheduledScreenChange?.Cancel();
         }
 
-        private ScheduledDelegate? scheduledScreenChange;
+        private AutoAdvancePrompt? scheduledScreenChange;
         private ScheduledDelegate? scheduledContract;
         private ScheduledDelegate? scheduledShowRoundPreview;
         private ScheduledDelegate? scheduledHideRoundPreview;
@@ -359,9 +359,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
                             if (lastState == TourneyState.Ranking && !warmup.Value)
                             {
                                 if (CurrentMatch.Value?.Completed.Value == true)
-                                    scheduledScreenChange = Scheduler.AddDelayed(() => { sceneManager?.SetScreen(typeof(TeamWinScreen)); }, delay_before_progression);
+                                    scheduledScreenChange = new AutoAdvancePrompt(() => { sceneManager?.SetScreen(typeof(TeamWinScreen)); }, delay_before_progression);
                                 else if (CurrentMatch.Value?.Completed.Value == false)
-                                    scheduledScreenChange = Scheduler.AddDelayed(() => { sceneManager?.SetScreen(typeof(MapPoolScreen)); }, delay_before_progression);
+                                    scheduledScreenChange = new AutoAdvancePrompt(() => { sceneManager?.SetScreen(typeof(MapPoolScreen)); }, delay_before_progression);
+
+                                if (scheduledScreenChange != null)
+                                    ControlPanel.Add(scheduledScreenChange);
                             }
                         }
 
