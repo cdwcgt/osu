@@ -218,7 +218,7 @@ namespace osu.Game.Tournament.Screens.MapPool
 
             foreach (BanPickFlowGroup g in groups)
             {
-                accumulatedSteps += g.Steps.Count;
+                accumulatedSteps += g.Steps.Count * (g.RepeatCount.Value + 1);
 
                 if (accumulatedSteps <= banPickCount) continue;
 

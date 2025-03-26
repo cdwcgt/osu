@@ -11,6 +11,6 @@ namespace osu.Game.Tournament.Models
 
         public BindableList<BanPickFlowStep> Steps = new BindableList<BanPickFlowStep>();
 
-        public Bindable<int?> RepeatCount = new Bindable<int?>(0);
+        public Bindable<int> RepeatCount = new Bindable<int>(0);
     }
 }
