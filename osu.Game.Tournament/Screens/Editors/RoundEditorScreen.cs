@@ -26,6 +26,7 @@ namespace osu.Game.Tournament.Screens.Editors
 
         public partial class RoundRow : CompositeDrawable, IModelBacked<TournamentRound>
         {
+            private readonly TournamentScreen parent;
             public TournamentRound Model { get; }
 
             [Resolved]
@@ -34,8 +35,12 @@ namespace osu.Game.Tournament.Screens.Editors
             [Resolved]
             private IDialogOverlay? dialogOverlay { get; set; }
 
-            public RoundRow(TournamentRound round)
+            [Resolved]
+            private TournamentSceneManager? sceneManager { get; set; }
+
+            public RoundRow(TournamentRound round, TournamentScreen parent)
             {
+                this.parent = parent;
                 Model = round;
 
                 Masking = true;
@@ -99,6 +104,16 @@ namespace osu.Game.Tournament.Screens.Editors
                                 Margin = new MarginPadding(10),
                                 Text = "Add beatmap",
                                 Action = () => beatmapEditor.CreateNew()
+                            },
+                            new SettingsButton
+                            {
+                                Width = 0.2f,
+                                Margin = new MarginPadding(10),
+                                Text = "Edit ban pick flow",
+                                Action = () =>
+                                {
+                                    sceneManager?.SetScreen(new BanPickGroupFlowEditor(round, parent));
+                                }
                             },
                             beatmapEditor
                         }
@@ -319,6 +334,6 @@ namespace osu.Game.Tournament.Screens.Editors
             }
         }
 
-        protected override RoundRow CreateDrawable(TournamentRound model) => new RoundRow(model);
+        protected override RoundRow CreateDrawable(TournamentRound model) => new RoundRow(model, this);
     }
 }

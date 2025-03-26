@@ -209,34 +209,56 @@ namespace osu.Game.Tournament.Screens.MapPool
             if (CurrentMatch.Value?.Round.Value == null)
                 return;
 
-            int totalBansRequired = CurrentMatch.Value.Round.Value.BanCount.Value * 2;
+            int banPickCount = CurrentMatch.Value.PicksBans.Count;
+            var groups = CurrentMatch.Value.Round.Value.BanPickFlowGroups;
 
-            TeamColour lastPickColour = CurrentMatch.Value.PicksBans.LastOrDefault()?.Team ?? TeamColour.Red;
+            int accumulatedSteps = 0;
 
-            TeamColour nextColour;
+            BanPickFlowGroup? currentGroup = null;
 
-            //bool hasAllProtected = CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Protected) >= 2;
-
-            bool hasAllBans = CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Ban) >= totalBansRequired;
-
-            if (!hasAllBans)
+            foreach (BanPickFlowGroup g in groups)
             {
-                // Ban phase: switch teams every second ban.
-                nextColour = CurrentMatch.Value.PicksBans.Count % 2 == 1
-                    ? getOppositeTeamColour(lastPickColour)
-                    : lastPickColour;
-            }
-            else
-            {
-                // Pick phase : switch teams every pick, except for the first pick which generally goes to the team that placed the last ban.
-                nextColour = pickType == ChoiceType.Pick
-                    ? getOppositeTeamColour(lastPickColour)
-                    : lastPickColour;
+                accumulatedSteps += g.Steps.Count;
+
+                if (accumulatedSteps <= banPickCount) continue;
+
+                currentGroup = g;
+                break;
             }
 
-            ChoiceType nextMode = !hasAllBans ? ChoiceType.Ban : ChoiceType.Pick;
+            if (currentGroup == null)
+            {
+                // we've exhausted all defined steps; loop the last group
+                currentGroup = groups.LastOrDefault();
+                if (currentGroup == null)
+                    return;
 
-            setMode(nextColour, nextMode);
+                int loopIndex = (banPickCount - (accumulatedSteps - currentGroup.Steps.Count)) % currentGroup.Steps.Count;
+                BanPickFlowStep loopStep = currentGroup.Steps[loopIndex];
+
+                TeamColour lastPickColour = CurrentMatch.Value.PicksBans.LastOrDefault()?.Team ?? TeamColour.Red;
+                TeamColour loopColour = !loopStep.SwapFromLastColor.Value
+                    ? lastPickColour
+                    : getOppositeTeamColour(lastPickColour);
+
+                setMode(loopColour, loopStep.CurrentAction.Value);
+                return;
+            }
+
+            int stepsBeforeGroup = accumulatedSteps - currentGroup.Steps.Count;
+            int currentIndex = banPickCount - stepsBeforeGroup;
+
+            if (currentIndex < 0 || currentIndex >= currentGroup.Steps.Count)
+                return;
+
+            BanPickFlowStep currentStep = currentGroup.Steps[currentIndex];
+
+            TeamColour lastTeam = CurrentMatch.Value.PicksBans.LastOrDefault()?.Team ?? TeamColour.Red;
+            TeamColour nextColor = !currentStep.SwapFromLastColor.Value
+                ? lastTeam
+                : getOppositeTeamColour(lastTeam);
+
+            setMode(nextColor, currentStep.CurrentAction.Value);
 
             TeamColour getOppositeTeamColour(TeamColour colour) => colour == TeamColour.Red ? TeamColour.Blue : TeamColour.Red;
         }
@@ -344,6 +366,7 @@ namespace osu.Game.Tournament.Screens.MapPool
         protected override void CurrentMatchChanged(ValueChangedEvent<TournamentMatch?> match)
         {
             base.CurrentMatchChanged(match);
+            setNextMode();
             updateDisplay();
         }
 
