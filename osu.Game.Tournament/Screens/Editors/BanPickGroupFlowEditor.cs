@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -22,6 +23,49 @@ namespace osu.Game.Tournament.Screens.Editors
             : base(parentScreen)
         {
             this.round = round;
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            ControlPanel.Add(new TourneyButton
+            {
+                Text = "Apply to all rounds",
+                Action = applyToAllRounds
+            });
+        }
+
+        private void applyToAllRounds()
+        {
+            foreach (var otherRound in LadderInfo.Rounds.Except(new[] { round }))
+            {
+                otherRound.BanPickFlowGroups.Clear();
+
+                foreach (var group in round.BanPickFlowGroups)
+                {
+                    var newGroup = new BanPickFlowGroup
+                    {
+                        Name = new Bindable<string>
+                        {
+                            Value = group.Name.Value,
+                        },
+                        RepeatCount = new Bindable<int>
+                        {
+                            Value = group.RepeatCount.Value,
+                        },
+                        Steps = new BindableList<BanPickFlowStep>(
+                            group.Steps
+                                 .Select(s => new BanPickFlowStep
+                                 {
+                                     CurrentAction = { Value = s.CurrentAction.Value },
+                                     SwapFromLastColor = { Value = s.SwapFromLastColor.Value }
+                                 }))
+                    };
+
+                    otherRound.BanPickFlowGroups.Add(newGroup);
+                }
+            }
         }
 
         protected override BindableList<BanPickFlowGroup> Storage => round.BanPickFlowGroups;
@@ -50,7 +94,8 @@ namespace osu.Game.Tournament.Screens.Editors
                 Masking = true;
                 CornerRadius = 10;
 
-                repeatCount.BindTo(Model.RepeatCount);
+                repeatCount.Value = model.RepeatCount.Value;
+                repeatCount.BindValueChanged(r => model.RepeatCount.Value = r.NewValue ?? 0);
             }
 
             [BackgroundDependencyLoader]
