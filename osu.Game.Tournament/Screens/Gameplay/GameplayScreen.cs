@@ -237,6 +237,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
             if (!roundPreviewShow)
                 return;
 
+            scheduledHideRoundPreview?.Cancel();
+
             roundPreview.FadeOut(100);
 
             using (SongBar.BeginDelayedSequence(200))
