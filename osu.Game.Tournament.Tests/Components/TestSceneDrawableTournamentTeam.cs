@@ -8,7 +8,6 @@ using osu.Game.Tests.Visual;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Drawings.Components;
-using osu.Game.Tournament.Screens.Gameplay.Components;
 using osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader;
 using osu.Game.Tournament.Screens.Ladder.Components;
 

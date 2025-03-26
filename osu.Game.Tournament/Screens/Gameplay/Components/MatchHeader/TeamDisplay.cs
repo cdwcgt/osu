@@ -73,7 +73,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                                 Anchor = anchor,
                                 Children = new Drawable[]
                                 {
-                                    new DrawableTeamTitle(team, colour)
+                                    new DrawableTeamDisplayTitle(team, colour)
                                     {
                                         RelativeSizeAxes = Axes.Y,
                                         Origin = anchor,
