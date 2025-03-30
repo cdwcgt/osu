@@ -119,6 +119,8 @@ namespace osu.Game.Screens.Play.HUD
             Team2Score.BindValueChanged(_ => updateScores(), true);
         }
 
+        private long previousDiffScore = 0;
+
         private void updateScores()
         {
             Score1Text.Current.Value = Team1Score.Value;
@@ -152,7 +154,24 @@ namespace osu.Game.Screens.Play.HUD
 
             ScoreDiffText.Alpha = diff != 0 ? 1 : 0;
             ScoreDiffText.Current.Value = -diff;
-            ScoreDiffText.Origin = Team1Score.Value > Team2Score.Value ? Anchor.TopLeft : Anchor.TopRight;
+            ScoreDiffText.SetAnchor(Team1Score.Value > Team2Score.Value ? Anchor.TopLeft : Anchor.TopRight);
+
+            if (previousDiffScore > diff)
+            {
+                ScoreDiffText.ArrowIcon.Alpha = 1;
+                ScoreDiffText.ArrowIcon.Rotation = Team1Score.Value > Team2Score.Value ? 90 : -90;
+            }
+            else if (previousDiffScore < diff)
+            {
+                ScoreDiffText.ArrowIcon.Alpha = 1;
+                ScoreDiffText.ArrowIcon.Rotation = Team1Score.Value > Team2Score.Value ? -90 : 90;
+            }
+            else
+            {
+                ScoreDiffText.ArrowIcon.Alpha = 0;
+            }
+
+            previousDiffScore = diff;
         }
 
         protected override void UpdateAfterChildren()
@@ -191,6 +210,67 @@ namespace osu.Game.Screens.Play.HUD
 
         protected partial class MatchScoreDiffCounter : CommaSeparatedScoreCounter
         {
+            private readonly FillFlowContainer fillFlow;
+            public Triangle ArrowIcon { get; }
+
+            protected override Container<Drawable> Content { get; } = new Container
+            {
+                AutoSizeAxes = Axes.Both,
+                Anchor = Anchor.CentreLeft,
+                Origin = Anchor.CentreLeft
+            };
+
+            public MatchScoreDiffCounter()
+            {
+                AutoSizeAxes = Axes.Both;
+                InternalChild = new Container
+                {
+                    AutoSizeAxes = Axes.Both,
+                    Children = new Drawable[]
+                    {
+                        fillFlow = new FillFlowContainer
+                        {
+                            AutoSizeAxes = Axes.Both,
+                            Direction = FillDirection.Horizontal,
+                            Padding = new MarginPadding { Horizontal = 2f },
+                            Children = new Drawable[]
+                            {
+                                Content,
+                                new Container
+                                {
+                                    AutoSizeAxes = Axes.Both,
+                                    Anchor = Anchor.CentreLeft,
+                                    Origin = Anchor.CentreLeft,
+                                    Padding = new MarginPadding { Horizontal = 4f, Top = 2f },
+                                    Child = ArrowIcon = new Triangle
+                                    {
+                                        Size = new Vector2(12),
+                                        Anchor = Anchor.Centre,
+                                        Origin = Anchor.Centre,
+                                        Scale = new Vector2(0.8f),
+                                        Rotation = -90,
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+            }
+
+            public void SetAnchor(Anchor anchor)
+            {
+                foreach (var drawable in fillFlow)
+                {
+                    if (drawable != null)
+                    {
+                        drawable.Anchor = anchor;
+                        drawable.Origin = anchor;
+                    }
+                }
+
+                Origin = anchor;
+            }
+
             protected override OsuSpriteText CreateSpriteText() => base.CreateSpriteText().With(s =>
             {
                 s.Spacing = new Vector2(-2);
