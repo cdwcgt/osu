@@ -344,8 +344,6 @@ namespace osu.Game.Tournament.Screens.MapPool
             if (pickChoice == null)
                 return;
 
-            int index = CurrentMatch.Value.PicksBans.IndexOf(pickChoice);
-
             if (pickChoice.Winner.Value == pendingWinnerSetColor)
             {
                 pickChoice.Winner.Value = null;
