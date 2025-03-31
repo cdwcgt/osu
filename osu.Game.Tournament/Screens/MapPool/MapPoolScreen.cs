@@ -322,8 +322,6 @@ namespace osu.Game.Tournament.Screens.MapPool
                 BeatmapID = beatmapId
             });
 
-            setNextMode();
-
             if (LadderInfo.AutoProgressScreens.Value)
             {
                 if (pickType == ChoiceType.Pick && CurrentMatch.Value.PicksBans.Any(i => i.Type == ChoiceType.Pick))
@@ -332,6 +330,8 @@ namespace osu.Game.Tournament.Screens.MapPool
                     controlPanel.Add(scheduledScreenChange = new AutoAdvancePrompt(() => { sceneManager?.SetScreen(typeof(GameplayScreen)); }, 10000));
                 }
             }
+
+            setNextMode();
         }
 
         private void changeWinnerForBeatmap(int beatmapOnlineID)
