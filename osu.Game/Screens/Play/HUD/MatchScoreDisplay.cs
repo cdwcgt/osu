@@ -7,6 +7,8 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Graphics.Sprites;
+using osu.Framework.Graphics.Textures;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
@@ -121,7 +123,7 @@ namespace osu.Game.Screens.Play.HUD
 
         private long previousDiffScore = 0;
 
-        private void updateScores()
+        private void updateScores() => Scheduler.AddOnce(() =>
         {
             Score1Text.Current.Value = Team1Score.Value;
             Score2Text.Current.Value = Team2Score.Value;
@@ -172,7 +174,7 @@ namespace osu.Game.Screens.Play.HUD
             }
 
             previousDiffScore = diff;
-        }
+        });
 
         protected override void UpdateAfterChildren()
         {
@@ -210,8 +212,9 @@ namespace osu.Game.Screens.Play.HUD
 
         protected partial class MatchScoreDiffCounter : CommaSeparatedScoreCounter
         {
-            private readonly FillFlowContainer fillFlow;
-            public Triangle ArrowIcon { get; }
+            private FillFlowContainer fillFlow;
+
+            public Sprite ArrowIcon { get; private set; }
 
             protected override Container<Drawable> Content { get; } = new Container
             {
@@ -220,7 +223,8 @@ namespace osu.Game.Screens.Play.HUD
                 Origin = Anchor.CentreLeft
             };
 
-            public MatchScoreDiffCounter()
+            [BackgroundDependencyLoader]
+            private void load(TextureStore textures)
             {
                 AutoSizeAxes = Axes.Both;
                 InternalChild = new Container
@@ -241,14 +245,17 @@ namespace osu.Game.Screens.Play.HUD
                                     AutoSizeAxes = Axes.Both,
                                     Anchor = Anchor.CentreLeft,
                                     Origin = Anchor.CentreLeft,
-                                    Padding = new MarginPadding { Horizontal = 4f, Top = 2f },
-                                    Child = ArrowIcon = new Triangle
+                                    Padding = new MarginPadding { Horizontal = 4f, Top = 1f },
+                                    Child = ArrowIcon = new Sprite
                                     {
-                                        Size = new Vector2(12),
+                                        Width = 16f,
+                                        Height = 10f,
                                         Anchor = Anchor.Centre,
                                         Origin = Anchor.Centre,
-                                        Scale = new Vector2(0.8f),
+                                        FillMode = FillMode.Fit,
+                                        Texture = textures.Get("triangle"),
                                         Rotation = -90,
+                                        EdgeSmoothness = Vector2.Zero,
                                     }
                                 }
                             }
