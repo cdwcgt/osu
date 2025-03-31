@@ -98,7 +98,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.RoundInformation
 
             if (failedPick)
             {
-                var smileIcon = textures.Get("round-information/smile");
+                var smileIcon = Textures.Get("round-information/smile");
 
                 container.Add(new Sprite
                 {
@@ -122,7 +122,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.RoundInformation
 
         protected override Drawable CreateCenterLine(TeamColour color)
         {
-            var triangle = textures.Get("round-information/triangle");
+            var triangle = Textures.Get("triangle");
 
             return new Container
             {

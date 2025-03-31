@@ -35,7 +35,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.RoundInformation
         protected LadderInfo Ladder { get; private set; } = null!;
 
         [Resolved]
-        protected TextureStore textures { get; private set; } = null!;
+        protected TextureStore Textures { get; private set; } = null!;
 
         protected string ModString
         {

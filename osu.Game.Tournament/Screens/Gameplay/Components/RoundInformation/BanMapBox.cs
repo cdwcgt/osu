@@ -23,7 +23,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.RoundInformation
 
         protected override Drawable CreateCenterLine(TeamColour color)
         {
-            var banIcon = textures.Get("round-information/ban-icon");
+            var banIcon = Textures.Get("round-information/ban-icon");
 
             return new Container
             {

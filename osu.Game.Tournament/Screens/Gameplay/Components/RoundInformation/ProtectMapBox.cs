@@ -19,7 +19,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.RoundInformation
 
         protected override Drawable CreateCenterLine(TeamColour color)
         {
-            var protectedIcon = textures.Get("round-information/protect-icon");
+            var protectedIcon = Textures.Get("round-information/protect-icon");
 
             return new Container
             {
