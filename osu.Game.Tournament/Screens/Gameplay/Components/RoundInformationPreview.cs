@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
@@ -175,13 +176,13 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             BeatmapChoice?[] pickChoices = ladderInfo.CurrentMatch.Value.PicksBans.Where(b => b.Type == ChoiceType.Pick).ToArray();
 
-            banChoices = banChoices.Concat(Enumerable.Repeat((BeatmapChoice?)null, (ladderInfo.CurrentMatch.Value.Round.Value?.BanCount.Value ?? 2) * 2 - banChoices.Length)).ToArray();
+            banChoices = banChoices.Concat(Enumerable.Repeat((BeatmapChoice?)null, Math.Max(0, (ladderInfo.CurrentMatch.Value.Round.Value?.BanCount.Value ?? 2) * 2 - banChoices.Length))).ToArray();
 
             int pickMapCount = ladderInfo.CurrentMatch.Value.Round.Value.BestOf.Value - 1; // 去掉TB
 
             var pickChoice = pickChoices.Take(pickMapCount)
                                         // 往后面填充null
-                                        .Concat(Enumerable.Repeat((BeatmapChoice?)null, pickMapCount - pickChoices.Take(pickMapCount).Count()));
+                                        .Concat(Enumerable.Repeat((BeatmapChoice?)null, Math.Max(0, pickMapCount - pickChoices.Take(pickMapCount).Count())));
 
             //mapContentContainer.Add(protectedDetail);
             //mapContentContainer.Add(createDivideLine());
