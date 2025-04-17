@@ -96,12 +96,6 @@ namespace osu.Game.Tournament.Components
         [Resolved]
         private TextureStore store { get; set; } = null!;
 
-        public SongBar()
-        {
-            RelativeSizeAxes = Axes.X;
-            AutoSizeAxes = Axes.Y;
-        }
-
         [BackgroundDependencyLoader]
         private void load()
         {
