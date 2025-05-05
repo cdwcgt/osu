@@ -32,8 +32,6 @@ namespace osu.Game.Screens.Play
         private const int button_height = 70;
         private const float background_alpha = 0.75f;
 
-        protected override bool BlockNonPositionalInput => true;
-
         protected override bool BlockScrollInput => false;
 
         public override bool ReceivePositionalInputAt(Vector2 screenSpacePos) => true;
@@ -167,11 +165,6 @@ namespace osu.Game.Screens.Play
         }
 
         protected override void PopOut() => this.FadeOut(TRANSITION_DURATION, Easing.In);
-
-        // Don't let mouse down events through the overlay or people can click circles while paused.
-        protected override bool OnMouseDown(MouseDownEvent e) => true;
-
-        protected override bool OnMouseMove(MouseMoveEvent e) => true;
 
         protected void AddButton(LocalisableString text, Color4 colour, Action? action)
         {

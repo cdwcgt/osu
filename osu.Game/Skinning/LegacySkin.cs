@@ -148,12 +148,11 @@ namespace osu.Game.Skinning
                     Debug.Assert(maniaLookup.ColumnIndex != null);
                     return SkinUtils.As<TValue>(new Bindable<float>(existing.WidthForNoteHeightScale));
 
-                case LegacyManiaSkinConfigurationLookups.ColumnSpacing:
-                    Debug.Assert(maniaLookup.ColumnIndex != null);
-                    return SkinUtils.As<TValue>(new Bindable<float>(existing.ColumnSpacing[maniaLookup.ColumnIndex.Value]));
-
                 case LegacyManiaSkinConfigurationLookups.HitPosition:
                     return SkinUtils.As<TValue>(new Bindable<float>(existing.HitPosition));
+
+                case LegacyManiaSkinConfigurationLookups.ComboPosition:
+                    return SkinUtils.As<TValue>(new Bindable<float>(existing.ComboPosition));
 
                 case LegacyManiaSkinConfigurationLookups.ScorePosition:
                     return SkinUtils.As<TValue>(new Bindable<float>(existing.ScorePosition));
@@ -166,17 +165,6 @@ namespace osu.Game.Skinning
 
                 case LegacyManiaSkinConfigurationLookups.ExplosionImage:
                     return SkinUtils.As<TValue>(getManiaImage(existing, "LightingN"));
-
-                case LegacyManiaSkinConfigurationLookups.ExplosionScale:
-                    Debug.Assert(maniaLookup.ColumnIndex != null);
-
-                    if (GetConfig<SkinConfiguration.LegacySetting, decimal>(SkinConfiguration.LegacySetting.Version)?.Value < 2.5m)
-                        return SkinUtils.As<TValue>(new Bindable<float>(1));
-
-                    if (existing.ExplosionWidth[maniaLookup.ColumnIndex.Value] != 0)
-                        return SkinUtils.As<TValue>(new Bindable<float>(existing.ExplosionWidth[maniaLookup.ColumnIndex.Value] / LegacyManiaSkinConfiguration.DEFAULT_COLUMN_SIZE));
-
-                    return SkinUtils.As<TValue>(new Bindable<float>(existing.ColumnWidth[maniaLookup.ColumnIndex.Value] / LegacyManiaSkinConfiguration.DEFAULT_COLUMN_SIZE));
 
                 case LegacyManiaSkinConfigurationLookups.ColumnLineColour:
                     return SkinUtils.As<TValue>(getCustomColour(existing, "ColourColumnLine"));
@@ -192,8 +180,17 @@ namespace osu.Game.Skinning
                     Debug.Assert(maniaLookup.ColumnIndex != null);
                     return SkinUtils.As<TValue>(getCustomColour(existing, $"ColourLight{maniaLookup.ColumnIndex + 1}"));
 
+                case LegacyManiaSkinConfigurationLookups.ComboBreakColour:
+                    return SkinUtils.As<TValue>(getCustomColour(existing, "ColourBreak"));
+
+                case LegacyManiaSkinConfigurationLookups.BarLineColour:
+                    return SkinUtils.As<TValue>(getCustomColour(existing, "ColourBarline"));
+
                 case LegacyManiaSkinConfigurationLookups.MinimumColumnWidth:
                     return SkinUtils.As<TValue>(new Bindable<float>(existing.MinimumColumnWidth));
+
+                case LegacyManiaSkinConfigurationLookups.BarLineHeight:
+                    return SkinUtils.As<TValue>(new Bindable<float>(existing.BarLineHeight));
 
                 case LegacyManiaSkinConfigurationLookups.NoteBodyStyle:
 
@@ -224,17 +221,6 @@ namespace osu.Game.Skinning
                 case LegacyManiaSkinConfigurationLookups.HoldNoteLightImage:
                     return SkinUtils.As<TValue>(getManiaImage(existing, "LightingL"));
 
-                case LegacyManiaSkinConfigurationLookups.HoldNoteLightScale:
-                    Debug.Assert(maniaLookup.ColumnIndex != null);
-
-                    if (GetConfig<SkinConfiguration.LegacySetting, decimal>(SkinConfiguration.LegacySetting.Version)?.Value < 2.5m)
-                        return SkinUtils.As<TValue>(new Bindable<float>(1));
-
-                    if (existing.HoldNoteLightWidth[maniaLookup.ColumnIndex.Value] != 0)
-                        return SkinUtils.As<TValue>(new Bindable<float>(existing.HoldNoteLightWidth[maniaLookup.ColumnIndex.Value] / LegacyManiaSkinConfiguration.DEFAULT_COLUMN_SIZE));
-
-                    return SkinUtils.As<TValue>(new Bindable<float>(existing.ColumnWidth[maniaLookup.ColumnIndex.Value] / LegacyManiaSkinConfiguration.DEFAULT_COLUMN_SIZE));
-
                 case LegacyManiaSkinConfigurationLookups.KeyImage:
                     Debug.Assert(maniaLookup.ColumnIndex != null);
                     return SkinUtils.As<TValue>(getManiaImage(existing, $"KeyImage{maniaLookup.ColumnIndex}"));
@@ -258,14 +244,6 @@ namespace osu.Game.Skinning
                 case LegacyManiaSkinConfigurationLookups.HitTargetImage:
                     return SkinUtils.As<TValue>(getManiaImage(existing, "StageHint"));
 
-                case LegacyManiaSkinConfigurationLookups.LeftLineWidth:
-                    Debug.Assert(maniaLookup.ColumnIndex != null);
-                    return SkinUtils.As<TValue>(new Bindable<float>(existing.ColumnLineWidth[maniaLookup.ColumnIndex.Value]));
-
-                case LegacyManiaSkinConfigurationLookups.RightLineWidth:
-                    Debug.Assert(maniaLookup.ColumnIndex != null);
-                    return SkinUtils.As<TValue>(new Bindable<float>(existing.ColumnLineWidth[maniaLookup.ColumnIndex.Value + 1]));
-
                 case LegacyManiaSkinConfigurationLookups.Hit0:
                 case LegacyManiaSkinConfigurationLookups.Hit50:
                 case LegacyManiaSkinConfigurationLookups.Hit100:
@@ -279,6 +257,50 @@ namespace osu.Game.Skinning
 
                 case LegacyManiaSkinConfigurationLookups.LightFramePerSecond:
                     return SkinUtils.As<TValue>(new Bindable<int>(existing.LightFramePerSecond));
+
+                case LegacyManiaSkinConfigurationLookups.LeftColumnSpacing:
+                    Debug.Assert(maniaLookup.ColumnIndex != null);
+                    if (maniaLookup.ColumnIndex == 0)
+                        return SkinUtils.As<TValue>(new Bindable<float>());
+
+                    return SkinUtils.As<TValue>(new Bindable<float>(existing.ColumnSpacing[maniaLookup.ColumnIndex.Value - 1] / 2));
+
+                case LegacyManiaSkinConfigurationLookups.RightColumnSpacing:
+                    Debug.Assert(maniaLookup.ColumnIndex != null);
+                    if (maniaLookup.ColumnIndex == existing.ColumnSpacing.Length)
+                        return SkinUtils.As<TValue>(new Bindable<float>());
+
+                    return SkinUtils.As<TValue>(new Bindable<float>(existing.ColumnSpacing[maniaLookup.ColumnIndex.Value] / 2));
+
+                case LegacyManiaSkinConfigurationLookups.LeftLineWidth:
+                    Debug.Assert(maniaLookup.ColumnIndex != null);
+                    return SkinUtils.As<TValue>(new Bindable<float>(existing.ColumnLineWidth[maniaLookup.ColumnIndex.Value]));
+
+                case LegacyManiaSkinConfigurationLookups.RightLineWidth:
+                    Debug.Assert(maniaLookup.ColumnIndex != null);
+                    return SkinUtils.As<TValue>(new Bindable<float>(existing.ColumnLineWidth[maniaLookup.ColumnIndex.Value + 1]));
+
+                case LegacyManiaSkinConfigurationLookups.ExplosionScale:
+                    Debug.Assert(maniaLookup.ColumnIndex != null);
+
+                    if (GetConfig<SkinConfiguration.LegacySetting, decimal>(SkinConfiguration.LegacySetting.Version)?.Value < 2.5m)
+                        return SkinUtils.As<TValue>(new Bindable<float>(1));
+
+                    if (existing.ExplosionWidth[maniaLookup.ColumnIndex.Value] != 0)
+                        return SkinUtils.As<TValue>(new Bindable<float>(existing.ExplosionWidth[maniaLookup.ColumnIndex.Value] / LegacyManiaSkinConfiguration.DEFAULT_COLUMN_SIZE));
+
+                    return SkinUtils.As<TValue>(new Bindable<float>(existing.ColumnWidth[maniaLookup.ColumnIndex.Value] / LegacyManiaSkinConfiguration.DEFAULT_COLUMN_SIZE));
+
+                case LegacyManiaSkinConfigurationLookups.HoldNoteLightScale:
+                    Debug.Assert(maniaLookup.ColumnIndex != null);
+
+                    if (GetConfig<SkinConfiguration.LegacySetting, decimal>(SkinConfiguration.LegacySetting.Version)?.Value < 2.5m)
+                        return SkinUtils.As<TValue>(new Bindable<float>(1));
+
+                    if (existing.HoldNoteLightWidth[maniaLookup.ColumnIndex.Value] != 0)
+                        return SkinUtils.As<TValue>(new Bindable<float>(existing.HoldNoteLightWidth[maniaLookup.ColumnIndex.Value] / LegacyManiaSkinConfiguration.DEFAULT_COLUMN_SIZE));
+
+                    return SkinUtils.As<TValue>(new Bindable<float>(existing.ColumnWidth[maniaLookup.ColumnIndex.Value] / LegacyManiaSkinConfiguration.DEFAULT_COLUMN_SIZE));
             }
 
             return null;
@@ -309,6 +331,9 @@ namespace osu.Game.Skinning
             {
                 case SkinConfiguration.LegacySetting.Version:
                     return SkinUtils.As<TValue>(new Bindable<decimal>(Configuration.LegacyVersion ?? SkinConfiguration.LATEST_VERSION));
+
+                case SkinConfiguration.LegacySetting.InputOverlayText:
+                    return SkinUtils.As<TValue>(new Bindable<Colour4>(Configuration.CustomColours.TryGetValue(@"InputOverlayText", out var colour) ? colour : Colour4.Black));
 
                 default:
                     return genericLookup<SkinConfiguration.LegacySetting, TValue>(legacySetting);
@@ -347,19 +372,43 @@ namespace osu.Game.Skinning
 
         public override Drawable? GetDrawableComponent(ISkinComponentLookup lookup)
         {
-            if (base.GetDrawableComponent(lookup) is Drawable c)
-                return c;
-
             switch (lookup)
             {
-                case SkinComponentsContainerLookup containerLookup:
-                    // Only handle global level defaults for now.
-                    if (containerLookup.Ruleset != null)
-                        return null;
-
-                    switch (containerLookup.Target)
+                case GlobalSkinnableContainerLookup containerLookup:
+                    switch (containerLookup.Lookup)
                     {
-                        case SkinComponentsContainerLookup.TargetArea.MainHUDComponents:
+                        case GlobalSkinnableContainers.MainHUDComponents:
+                            if (containerLookup.Ruleset != null)
+                            {
+                                return new DefaultSkinComponentsContainer(container =>
+                                {
+                                    var combo = container.OfType<LegacyDefaultComboCounter>().FirstOrDefault();
+                                    var spectatorList = container.OfType<SpectatorList>().FirstOrDefault();
+
+                                    Vector2 pos = new Vector2();
+
+                                    if (combo != null)
+                                    {
+                                        combo.Anchor = Anchor.BottomLeft;
+                                        combo.Origin = Anchor.BottomLeft;
+                                        combo.Scale = new Vector2(1.28f);
+
+                                        pos += new Vector2(10, -(combo.DrawHeight * 1.56f + 20) * combo.Scale.X);
+                                    }
+
+                                    if (spectatorList != null)
+                                    {
+                                        spectatorList.Anchor = Anchor.BottomLeft;
+                                        spectatorList.Origin = Anchor.BottomLeft;
+                                        spectatorList.Position = pos;
+                                    }
+                                })
+                                {
+                                    new LegacyDefaultComboCounter(),
+                                    new SpectatorList(),
+                                };
+                            }
+
                             return new DefaultSkinComponentsContainer(container =>
                             {
                                 var score = container.OfType<LegacyScoreCounter>().FirstOrDefault();
@@ -381,41 +430,29 @@ namespace osu.Game.Skinning
                                 }
 
                                 var hitError = container.OfType<HitErrorMeter>().FirstOrDefault();
-                                var keyCounter = container.OfType<DefaultKeyCounterDisplay>().FirstOrDefault();
 
                                 if (hitError != null)
                                 {
                                     hitError.Anchor = Anchor.BottomCentre;
                                     hitError.Origin = Anchor.CentreLeft;
                                     hitError.Rotation = -90;
-
-                                    if (keyCounter != null)
-                                    {
-                                        const float padding = 10;
-
-                                        keyCounter.Anchor = Anchor.BottomRight;
-                                        keyCounter.Origin = Anchor.BottomRight;
-                                        keyCounter.Position = new Vector2(-padding, -(padding + hitError.Width));
-                                    }
                                 }
                             })
                             {
                                 Children = new Drawable[]
                                 {
-                                    new LegacyComboCounter(),
                                     new LegacyScoreCounter(),
                                     new LegacyAccuracyCounter(),
                                     new LegacySongProgress(),
                                     new LegacyHealthDisplay(),
                                     new BarHitErrorMeter(),
-                                    new DefaultKeyCounterDisplay()
                                 }
                             };
                     }
 
                     return null;
 
-                case GameplaySkinComponentLookup<HitResult> resultComponent:
+                case SkinComponentLookup<HitResult> resultComponent:
 
                     // kind of wasteful that we throw this away, but should do for now.
                     if (getJudgementAnimation(resultComponent.Component) != null)
@@ -434,7 +471,7 @@ namespace osu.Game.Skinning
                     return null;
             }
 
-            return null;
+            return base.GetDrawableComponent(lookup);
         }
 
         private Texture? getParticleTexture(HitResult result)

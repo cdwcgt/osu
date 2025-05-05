@@ -31,7 +31,10 @@ namespace osu.Game.Rulesets.Objects
         /// </summary>
         public readonly Bindable<double?> ExpectedDistance = new Bindable<double?>();
 
-        public bool HasValidLength => Precision.DefinitelyBigger(Distance, 0);
+        /// <summary>
+        /// Should be used to check whether placement can continue after a user editor operation.
+        /// </summary>
+        public bool HasValidLengthForPlacement => Precision.DefinitelyBigger(Distance, 0, 1);
 
         /// <summary>
         /// The control points of the path.
@@ -328,6 +331,20 @@ namespace osu.Game.Rulesets.Objects
                 case SplineType.PerfectCurve:
                 {
                     if (subControlPoints.Length != 3)
+                        break;
+
+                    CircularArcProperties circularArcProperties = new CircularArcProperties(subControlPoints);
+
+                    // `PathApproximator` will already internally revert to B-spline if the arc isn't valid.
+                    if (!circularArcProperties.IsValid)
+                        break;
+
+                    // taken from https://github.com/ppy/osu-framework/blob/1201e641699a1d50d2f6f9295192dad6263d5820/osu.Framework/Utils/PathApproximator.cs#L181-L186
+                    int subPoints = (2f * circularArcProperties.Radius <= 0.1f) ? 2 : Math.Max(2, (int)Math.Ceiling(circularArcProperties.ThetaRange / (2.0 * Math.Acos(1f - (0.1f / circularArcProperties.Radius)))));
+
+                    // 1000 subpoints requires an arc length of at least ~120 thousand to occur
+                    // See here for calculations https://www.desmos.com/calculator/umj6jvmcz7
+                    if (subPoints >= 1000)
                         break;
 
                     List<Vector2> subPath = PathApproximator.CircularArcToPiecewiseLinear(subControlPoints);

@@ -98,7 +98,7 @@ namespace osu.Game.Overlays.BeatmapSet
                         {
                             Vertical = BeatmapSetOverlay.Y_PADDING,
                             Left = WaveOverlayContainer.HORIZONTAL_PADDING,
-                            Right = WaveOverlayContainer.HORIZONTAL_PADDING + BeatmapSetOverlay.RIGHT_WIDTH,
+                            Right = WaveOverlayContainer.HORIZONTAL_PADDING + BeatmapSetOverlay.RIGHT_WIDTH + 10,
                         },
                         Children = new Drawable[]
                         {
@@ -177,7 +177,6 @@ namespace osu.Game.Overlays.BeatmapSet
                         {
                             onlineStatusPill = new BeatmapSetOnlineStatusPill
                             {
-                                AutoSizeAxes = Axes.Both,
                                 Anchor = Anchor.TopRight,
                                 Origin = Anchor.TopRight,
                                 TextSize = 14,
@@ -200,7 +199,8 @@ namespace osu.Game.Overlays.BeatmapSet
 
         private void updateExternalLink()
         {
-            if (externalLink != null) externalLink.Link = $@"{api.WebsiteRootUrl}/beatmapsets/{BeatmapSet.Value?.OnlineID}#{Picker.Beatmap.Value?.Ruleset.ShortName}/{Picker.Beatmap.Value?.OnlineID}";
+            if (externalLink != null)
+                externalLink.Link = Picker.Beatmap.Value?.GetOnlineURL(api) ?? BeatmapSet.Value?.GetOnlineURL(api);
         }
 
         [BackgroundDependencyLoader]
@@ -241,7 +241,7 @@ namespace osu.Game.Overlays.BeatmapSet
                     title.Clear();
                     artist.Clear();
 
-                    title.AddLink(titleText, LinkAction.SearchBeatmapSet, titleText);
+                    title.AddLink(titleText, LinkAction.SearchBeatmapSet, LocalisableString.Interpolate($@"title=""""{titleText}"""""));
 
                     title.AddArbitraryDrawable(Empty().With(d => d.Width = 5));
                     title.AddArbitraryDrawable(externalLink = new ExternalLinkButton());
@@ -258,7 +258,7 @@ namespace osu.Game.Overlays.BeatmapSet
                         title.AddArbitraryDrawable(new SpotlightBeatmapBadge());
                     }
 
-                    artist.AddLink(artistText, LinkAction.SearchBeatmapSet, artistText);
+                    artist.AddLink(artistText, LinkAction.SearchBeatmapSet, LocalisableString.Interpolate($@"artist=""""{artistText}"""""));
 
                     if (setInfo.NewValue.TrackId != null)
                     {

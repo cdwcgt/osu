@@ -12,6 +12,7 @@ using JetBrains.Annotations;
 using Newtonsoft.Json;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.ListExtensions;
+using osu.Framework.Extensions.TypeExtensions;
 using osu.Framework.Lists;
 using osu.Game.Audio;
 using osu.Game.Beatmaps;
@@ -103,6 +104,8 @@ namespace osu.Game.Rulesets.Objects
         /// <param name="cancellationToken">The cancellation token.</param>
         public void ApplyDefaults(ControlPointInfo controlPointInfo, IBeatmapDifficultyInfo difficulty, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             ApplyDefaultsToSelf(controlPointInfo, difficulty);
 
             nestedHitObjects.Clear();
@@ -113,6 +116,8 @@ namespace osu.Game.Rulesets.Objects
             {
                 foreach (HitObject hitObject in nestedHitObjects)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
+
                     if (hitObject is IHasComboInformation n)
                     {
                         n.ComboIndexBindable.BindTo(hasCombo.ComboIndexBindable);
@@ -223,11 +228,21 @@ namespace osu.Game.Rulesets.Objects
         /// <returns>A populated <see cref="HitSampleInfo"/>.</returns>
         public HitSampleInfo CreateHitSampleInfo(string sampleName = HitSampleInfo.HIT_NORMAL)
         {
-            if (Samples.FirstOrDefault(s => s.Name == HitSampleInfo.HIT_NORMAL) is HitSampleInfo existingSample)
-                return existingSample.With(newName: sampleName);
+            // As per stable, all non-normal "addition" samples should use the same bank.
+            if (sampleName != HitSampleInfo.HIT_NORMAL)
+            {
+                if (Samples.FirstOrDefault(s => s.Name != HitSampleInfo.HIT_NORMAL) is HitSampleInfo existingAddition)
+                    return existingAddition.With(newName: sampleName);
+            }
+
+            // Fall back to using the normal sample bank otherwise.
+            if (Samples.FirstOrDefault(s => s.Name == HitSampleInfo.HIT_NORMAL) is HitSampleInfo existingNormal)
+                return existingNormal.With(newName: sampleName, newEditorAutoBank: true);
 
             return new HitSampleInfo(sampleName);
         }
+
+        public override string ToString() => $"{GetType().ReadableName()} @ {StartTime}";
     }
 
     public static class HitObjectExtensions

@@ -115,11 +115,13 @@ namespace osu.Game.Graphics
         public static IconUsage ChangelogB => get(OsuIconMapping.ChangelogB);
         public static IconUsage Chat => get(OsuIconMapping.Chat);
         public static IconUsage CheckCircle => get(OsuIconMapping.CheckCircle);
+        public static IconUsage Clock => get(OsuIconMapping.Clock);
         public static IconUsage CollapseA => get(OsuIconMapping.CollapseA);
         public static IconUsage Collections => get(OsuIconMapping.Collections);
         public static IconUsage Cross => get(OsuIconMapping.Cross);
         public static IconUsage CrossCircle => get(OsuIconMapping.CrossCircle);
         public static IconUsage Crown => get(OsuIconMapping.Crown);
+        public static IconUsage DailyChallenge => get(OsuIconMapping.DailyChallenge);
         public static IconUsage Debug => get(OsuIconMapping.Debug);
         public static IconUsage Delete => get(OsuIconMapping.Delete);
         public static IconUsage Details => get(OsuIconMapping.Details);
@@ -140,6 +142,7 @@ namespace osu.Game.Graphics
         public static IconUsage Input => get(OsuIconMapping.Input);
         public static IconUsage Maintenance => get(OsuIconMapping.Maintenance);
         public static IconUsage Megaphone => get(OsuIconMapping.Megaphone);
+        public static IconUsage Metronome => get(OsuIconMapping.Metronome);
         public static IconUsage Music => get(OsuIconMapping.Music);
         public static IconUsage News => get(OsuIconMapping.News);
         public static IconUsage Next => get(OsuIconMapping.Next);
@@ -203,6 +206,9 @@ namespace osu.Game.Graphics
             [Description(@"check-circle")]
             CheckCircle,
 
+            [Description(@"clock")]
+            Clock,
+
             [Description(@"collapse-a")]
             CollapseA,
 
@@ -217,6 +223,9 @@ namespace osu.Game.Graphics
 
             [Description(@"crown")]
             Crown,
+
+            [Description(@"daily-challenge")]
+            DailyChallenge,
 
             [Description(@"debug")]
             Debug,
@@ -277,6 +286,9 @@ namespace osu.Game.Graphics
 
             [Description(@"megaphone")]
             Megaphone,
+
+            [Description(@"metronome")]
+            Metronome,
 
             [Description(@"music")]
             Music,

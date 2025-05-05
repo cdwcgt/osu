@@ -40,6 +40,7 @@ namespace osu.Game.Screens.Play
         public readonly Score Score;
 
         public readonly ScoreProcessor ScoreProcessor;
+        public readonly HealthProcessor HealthProcessor;
 
         /// <summary>
         /// The storyboard associated with the beatmap.
@@ -61,6 +62,8 @@ namespace osu.Game.Screens.Play
         /// </summary>
         public bool HasQuit { get; set; }
 
+        public bool HasCompleted => HasPassed || HasFailed || HasQuit;
+
         /// <summary>
         /// A bindable tracking the last judgement result applied to any hit object.
         /// </summary>
@@ -68,7 +71,20 @@ namespace osu.Game.Screens.Play
 
         private readonly Bindable<JudgementResult> lastJudgementResult = new Bindable<JudgementResult>();
 
-        public GameplayState(IBeatmap beatmap, Ruleset ruleset, IReadOnlyList<Mod>? mods = null, Score? score = null, ScoreProcessor? scoreProcessor = null, Storyboard? storyboard = null)
+        /// <summary>
+        /// The local user's playing state (whether actively playing, paused, or not playing due to watching a replay or similar).
+        /// </summary>
+        public IBindable<LocalUserPlayingState> PlayingState { get; } = new Bindable<LocalUserPlayingState>();
+
+        public GameplayState(
+            IBeatmap beatmap,
+            Ruleset ruleset,
+            IReadOnlyList<Mod>? mods = null,
+            Score? score = null,
+            ScoreProcessor? scoreProcessor = null,
+            HealthProcessor? healthProcessor = null,
+            Storyboard? storyboard = null,
+            IBindable<LocalUserPlayingState>? localUserPlayingState = null)
         {
             Beatmap = beatmap;
             Ruleset = ruleset;
@@ -82,7 +98,11 @@ namespace osu.Game.Screens.Play
             };
             Mods = mods ?? Array.Empty<Mod>();
             ScoreProcessor = scoreProcessor ?? ruleset.CreateScoreProcessor();
+            HealthProcessor = healthProcessor ?? ruleset.CreateHealthProcessor(beatmap.HitObjects[0].StartTime);
             Storyboard = storyboard ?? new Storyboard();
+
+            if (localUserPlayingState != null)
+                PlayingState.BindTo(localUserPlayingState);
         }
 
         /// <summary>
