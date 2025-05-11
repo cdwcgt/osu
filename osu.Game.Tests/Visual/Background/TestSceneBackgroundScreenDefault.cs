@@ -287,6 +287,23 @@ namespace osu.Game.Tests.Visual.Background
             AddAssert("next cycles background", () => screen.Next());
         }
 
+        [Test]
+        public void TestBypassEpilepsyStoryboard()
+        {
+            setSourceMode(BackgroundSource.BeatmapWithStoryboard);
+            setSupporter(true);
+
+            AddStep("set bypass epilepsy storyboard to false", () => config.SetValue(OsuSetting.BypassEpilepsyStoryboardContent, false));
+            AddStep("change beatmap with epilepsy storyboard", () => Beatmap.Value = createTestWorkingBeatmapWithEpilepsyStoryboard());
+            AddUntilStep("is storyboard background", () => getCurrentBackground() is BeatmapBackgroundWithStoryboard);
+
+            AddStep("set bypass epilepsy storyboard to true", () => config.SetValue(OsuSetting.BypassEpilepsyStoryboardContent, true));
+            AddUntilStep("is beatmap background", () => getCurrentBackground() is BeatmapBackground);
+
+            AddStep("change beatmap without epilepsy storyboard", () => Beatmap.Value = createTestWorkingBeatmapWithStoryboard());
+            AddUntilStep("is storyboard background", () => getCurrentBackground() is BeatmapBackgroundWithStoryboard);
+        }
+
         private void setSourceMode(BackgroundSource source) =>
             AddStep($"set background mode to {source}", () => config.SetValue(OsuSetting.MenuBackgroundSource, source));
 
@@ -299,6 +316,7 @@ namespace osu.Game.Tests.Visual.Background
 
         private WorkingBeatmap createTestWorkingBeatmapWithUniqueBackground() => new UniqueBackgroundTestWorkingBeatmap(renderer, Audio);
         private WorkingBeatmap createTestWorkingBeatmapWithStoryboard() => new TestWorkingBeatmapWithStoryboard(Audio);
+        private WorkingBeatmap createTestWorkingBeatmapWithEpilepsyStoryboard() => new TestWorkingBeatmapWithStoryboard(Audio, true);
 
         private partial class TestBackgroundScreenDefault : BackgroundScreenDefault
         {
@@ -334,8 +352,8 @@ namespace osu.Game.Tests.Visual.Background
 
         private partial class TestWorkingBeatmapWithStoryboard : TestWorkingBeatmap
         {
-            public TestWorkingBeatmapWithStoryboard(AudioManager audioManager)
-                : base(new Beatmap(), createStoryboard(), audioManager)
+            public TestWorkingBeatmapWithStoryboard(AudioManager audioManager, bool isEpilepsy = false)
+                : base(new Beatmap { EpilepsyWarning = isEpilepsy }, createStoryboard(), audioManager)
             {
             }
 
