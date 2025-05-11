@@ -189,6 +189,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.IntroSequence, IntroSequence.Triangles);
 
             SetDefault(OsuSetting.MenuBackgroundSource, BackgroundSource.Skin);
+            SetDefault(OsuSetting.BypassEpilepsyStoryboardContent, true);
             SetDefault(OsuSetting.SeasonalBackgroundMode, SeasonalBackgroundMode.Sometimes);
 
             SetDefault(OsuSetting.DiscordRichPresence, DiscordRichPresenceMode.Full);
@@ -426,6 +427,7 @@ namespace osu.Game.Configuration
         HitLighting,
         StarFountains,
         MenuBackgroundSource,
+        BypassEpilepsyStoryboardContent,
         GameplayDisableWinKey,
         SeasonalBackgroundMode,
         EditorWaveformOpacity,

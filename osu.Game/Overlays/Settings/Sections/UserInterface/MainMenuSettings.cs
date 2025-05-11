@@ -21,6 +21,7 @@ namespace osu.Game.Overlays.Settings.Sections.UserInterface
         private IBindable<APIUser> user;
 
         private SettingsEnumDropdown<BackgroundSource> backgroundSourceDropdown;
+        private SettingsCheckbox bypassEpilepsyStoryboardCheckBox;
 
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config, IAPIProvider api)
@@ -56,6 +57,11 @@ namespace osu.Game.Overlays.Settings.Sections.UserInterface
                     LabelText = UserInterfaceStrings.BackgroundSource,
                     Current = config.GetBindable<BackgroundSource>(OsuSetting.MenuBackgroundSource),
                 },
+                bypassEpilepsyStoryboardCheckBox = new SettingsCheckbox
+                {
+                    LabelText = UserInterfaceStrings.BypassEpilepsyStoryboard,
+                    Current = config.GetBindable<bool>(OsuSetting.BypassEpilepsyStoryboardContent)
+                },
                 new SettingsEnumDropdown<SeasonalBackgroundMode>
                 {
                     LabelText = UserInterfaceStrings.SeasonalBackgrounds,
@@ -71,10 +77,33 @@ namespace osu.Game.Overlays.Settings.Sections.UserInterface
             user.BindValueChanged(u =>
             {
                 if (u.NewValue?.IsSupporter != true)
+                {
                     backgroundSourceDropdown.SetNoticeText(UserInterfaceStrings.NotSupporterNote, true);
+                }
                 else
                     backgroundSourceDropdown.ClearNoticeText();
+
+                updateBypassEpilepsyStoryboardVisibility();
             }, true);
+
+            backgroundSourceDropdown.Current.BindValueChanged(_ =>
+            {
+                updateBypassEpilepsyStoryboardVisibility();
+            }, true);
+
+            void updateBypassEpilepsyStoryboardVisibility()
+            {
+                if (user.Value.IsSupporter && backgroundSourceDropdown.Current.Value == BackgroundSource.BeatmapWithStoryboard)
+                {
+                    bypassEpilepsyStoryboardCheckBox.CanBeShown.Value = true;
+                    bypassEpilepsyStoryboardCheckBox.AutoSizeAxes = Axes.Y;
+                }
+                else
+                {
+                    bypassEpilepsyStoryboardCheckBox.CanBeShown.Value = false;
+                    bypassEpilepsyStoryboardCheckBox.AutoSizeAxes = Axes.None;
+                }
+            }
         }
     }
 }

@@ -65,6 +65,11 @@ namespace osu.Game.Localisation
         public static LocalisableString BackgroundSource => new TranslatableString(getKey(@"background_source"), @"Background source");
 
         /// <summary>
+        /// "Bypass Storyboard with epilepsy content."
+        /// </summary>
+        public static LocalisableString BypassEpilepsyStoryboard => new TranslatableString(getKey(@"bypass_epilepsy_storyboard"), @"Bypass Storyboard with epilepsy content.");
+
+        /// <summary>
         /// "Seasonal backgrounds"
         /// </summary>
         public static LocalisableString SeasonalBackgrounds => new TranslatableString(getKey(@"seasonal_backgrounds"), @"Seasonal backgrounds");

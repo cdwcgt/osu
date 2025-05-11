@@ -31,6 +31,7 @@ namespace osu.Game.Screens.Backgrounds
         private IBindable<APIUser> user;
         private Bindable<Skin> skin;
         private Bindable<BackgroundSource> source;
+        private Bindable<bool> bypassEpilepsyStoryboard;
         private Bindable<IntroSequence> introSequence;
         private readonly SeasonalBackgroundLoader seasonalBackgroundLoader = new SeasonalBackgroundLoader();
 
@@ -48,6 +49,7 @@ namespace osu.Game.Screens.Backgrounds
             user = api.LocalUser.GetBoundCopy();
             skin = skinManager.CurrentSkin.GetBoundCopy();
             source = config.GetBindable<BackgroundSource>(OsuSetting.MenuBackgroundSource);
+            bypassEpilepsyStoryboard = config.GetBindable<bool>(OsuSetting.BypassEpilepsyStoryboardContent);
             introSequence = config.GetBindable<IntroSequence>(OsuSetting.IntroSequence);
 
             AddInternal(seasonalBackgroundLoader);
@@ -60,6 +62,7 @@ namespace osu.Game.Screens.Backgrounds
             user.ValueChanged += _ => Scheduler.AddOnce(next);
             skin.ValueChanged += _ => Scheduler.AddOnce(next);
             source.ValueChanged += _ => Scheduler.AddOnce(next);
+            bypassEpilepsyStoryboard.ValueChanged += _ => Scheduler.AddOnce(next);
             beatmap.ValueChanged += _ => Scheduler.AddOnce(next);
             introSequence.ValueChanged += _ => Scheduler.AddOnce(next);
             seasonalBackgroundLoader.SeasonalBackgroundChanged += () => Scheduler.AddOnce(next);
@@ -150,7 +153,8 @@ namespace osu.Game.Screens.Backgrounds
                     case BackgroundSource.Beatmap:
                     case BackgroundSource.BeatmapWithStoryboard:
                     {
-                        if (source.Value == BackgroundSource.BeatmapWithStoryboard && AllowStoryboardBackground)
+                        if (source.Value == BackgroundSource.BeatmapWithStoryboard && AllowStoryboardBackground
+                                                                                   && (!bypassEpilepsyStoryboard.Value || !beatmap.Value.Beatmap.EpilepsyWarning))
                             newBackground = new BeatmapBackgroundWithStoryboard(beatmap.Value, getBackgroundTextureName());
                         newBackground ??= new BeatmapBackground(beatmap.Value, getBackgroundTextureName());
 
