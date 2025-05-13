@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using osu.Game.Beatmaps;
+using osu.Game.Graphics.Carousel;
 using osu.Game.Screens.Select;
 using osu.Game.Screens.Select.Filter;
 using osu.Game.Utils;
@@ -22,7 +23,7 @@ namespace osu.Game.Screens.SelectV2
             this.getCriteria = getCriteria;
         }
 
-        public async Task<IEnumerable<CarouselItem>> Run(IEnumerable<CarouselItem> items, CancellationToken cancellationToken) => await Task.Run(() =>
+        public async Task<List<CarouselItem>> Run(IEnumerable<CarouselItem> items, CancellationToken cancellationToken) => await Task.Run(() =>
         {
             var criteria = getCriteria();
 
@@ -54,7 +55,7 @@ namespace osu.Game.Screens.SelectV2
                 }
 
                 return comparison;
-            }));
+            })).ToList();
         }, cancellationToken).ConfigureAwait(false);
     }
 }

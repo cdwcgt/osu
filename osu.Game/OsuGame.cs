@@ -46,7 +46,9 @@ using osu.Game.Input.Bindings;
 using osu.Game.IO;
 using osu.Game.Localisation;
 using osu.Game.Online;
+using osu.Game.Online.API.Requests;
 using osu.Game.Online.Chat;
+using osu.Game.Online.Leaderboards;
 using osu.Game.Online.Rooms;
 using osu.Game.Overlays;
 using osu.Game.Overlays.BeatmapListing;
@@ -58,15 +60,18 @@ using osu.Game.Overlays.SkinEditor;
 using osu.Game.Overlays.Toolbar;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Scoring;
+using osu.Game.Scoring.Legacy;
 using osu.Game.Screens;
 using osu.Game.Screens.Edit;
 using osu.Game.Screens.Footer;
 using osu.Game.Screens.Menu;
 using osu.Game.Screens.OnlinePlay.DailyChallenge;
 using osu.Game.Screens.OnlinePlay.Multiplayer;
+using osu.Game.Screens.OnlinePlay.Playlists;
 using osu.Game.Screens.Play;
 using osu.Game.Screens.Ranking;
 using osu.Game.Screens.Select;
+using osu.Game.Screens.Select.Leaderboards;
 using osu.Game.Seasonal;
 using osu.Game.Skinning;
 using osu.Game.Updater;
@@ -75,6 +80,7 @@ using osu.Game.Utils;
 using osuTK;
 using osuTK.Graphics;
 using Sentry;
+using MatchType = osu.Game.Online.Rooms.MatchType;
 
 namespace osu.Game
 {
@@ -100,7 +106,12 @@ namespace osu.Game
         /// <summary>
         /// A common shear factor applied to most components of the game.
         /// </summary>
-        public const float SHEAR = 0.2f;
+        public static readonly Vector2 SHEAR = new Vector2(0.2f, 0);
+
+        /// <summary>
+        /// For elements placed close to the screen edge, this is the margin to leave to the edge.
+        /// </summary>
+        public const float SCREEN_EDGE_MARGIN = 12f;
 
         public Toolbar Toolbar { get; private set; }
 
@@ -472,7 +483,6 @@ namespace osu.Game
                     HandleTimestamp(argString);
                     break;
 
-                case LinkAction.JoinMultiplayerMatch:
                 case LinkAction.Spectate:
                     waitForReady(() => Notifications, _ => Notifications.Post(new SimpleNotification
                     {
@@ -504,15 +514,20 @@ namespace osu.Game
 
                     break;
 
+                case LinkAction.JoinRoom:
+                    if (long.TryParse(argString, out long roomId))
+                        JoinRoom(roomId);
+                    break;
+
                 default:
                     throw new NotImplementedException($"This {nameof(LinkAction)} ({link.Action.ToString()}) is missing an associated action.");
             }
         });
 
-        public void CopyUrlToClipboard(string url) => waitForReady(() => onScreenDisplay, _ =>
+        public void CopyToClipboard(string value) => waitForReady(() => onScreenDisplay, _ =>
         {
-            dependencies.Get<Clipboard>().SetText(url);
-            onScreenDisplay.Display(new CopyUrlToast());
+            dependencies.Get<Clipboard>().SetText(value);
+            onScreenDisplay.Display(new CopiedToClipboardToast());
         });
 
         public void OpenUrlExternally(string url, LinkWarnMode warnMode = LinkWarnMode.Default) => waitForReady(() => externalLinkOpener, _ => externalLinkOpener.OpenUrlExternally(url, warnMode));
@@ -578,6 +593,28 @@ namespace osu.Game
         /// <param name="updateStream">The update stream name</param>
         /// <param name="version">The build version of the update stream</param>
         public void ShowChangelogBuild(string updateStream, string version) => waitForReady(() => changelogOverlay, _ => changelogOverlay.ShowBuild(updateStream, version));
+
+        /// <summary>
+        /// Joins a multiplayer or playlists room with the given <paramref name="id"/>.
+        /// </summary>
+        public void JoinRoom(long id)
+        {
+            var request = new GetRoomRequest(id);
+            request.Success += room =>
+            {
+                switch (room.Type)
+                {
+                    case MatchType.Playlists:
+                        PresentPlaylist(room);
+                        break;
+
+                    default:
+                        PresentMultiplayerMatch(room, string.Empty);
+                        break;
+                }
+            };
+            API.Queue(request);
+        }
 
         /// <summary>
         /// Seeks to the provided <paramref name="timestamp"/> if the editor is currently open.
@@ -706,6 +743,22 @@ namespace osu.Game
         /// <param name="password">The password to join the room, if any is given.</param>
         public void PresentMultiplayerMatch(Room room, string password)
         {
+            if (room.HasEnded)
+            {
+                // TODO: Eventually it should be possible to display ended multiplayer rooms in game too,
+                // but it generally will require turning off the entirety of communication with spectator server which is currently embedded into multiplayer screens.
+                Notifications.Post(new SimpleNotification
+                {
+                    Text = NotificationsStrings.MultiplayerRoomEnded,
+                    Activated = () =>
+                    {
+                        OpenUrlExternally($@"/multiplayer/rooms/{room.RoomID}");
+                        return true;
+                    }
+                });
+                return;
+            }
+
             PerformFromScreen(screen =>
             {
                 if (!(screen is Multiplayer multiplayer))
@@ -718,6 +771,23 @@ namespace osu.Game
         }
 
         /// <summary>
+        /// Join a playlist immediately.
+        /// </summary>
+        /// <param name="room">The playlist to join.</param>
+        public void PresentPlaylist(Room room)
+        {
+            PerformFromScreen(screen =>
+            {
+                if (!(screen is Playlists playlists))
+                    screen.Push(playlists = new Playlists());
+
+                playlists.Join(room);
+            });
+            // TODO: We should really be able to use `validScreens: new[] { typeof(Playlists) }` here
+            // but `PerformFromScreen` doesn't understand nested stacks.
+        }
+
+        /// <summary>
         /// Present a score's replay immediately.
         /// The user should have already requested this interactively.
         /// </summary>
@@ -725,23 +795,33 @@ namespace osu.Game
         {
             Logger.Log($"Beginning {nameof(PresentScore)} with score {score}");
 
-            var databasedScore = ScoreManager.GetScore(score);
+            Score databasedScore;
+
+            try
+            {
+                databasedScore = ScoreManager.GetScore(score);
+            }
+            catch (LegacyScoreDecoder.BeatmapNotFoundException notFound)
+            {
+                Logger.Log("The replay cannot be played because the beatmap is missing.", LoggingTarget.Information);
+
+                var req = new GetBeatmapRequest(new BeatmapInfo { MD5Hash = notFound.Hash });
+                req.Success += res => Notifications.Post(new MissingBeatmapNotification(res, notFound.Hash, null));
+                API.Queue(req);
+
+                return;
+            }
 
             if (databasedScore == null) return;
 
             if (databasedScore.Replay == null)
             {
-                Logger.Log("The loaded score has no replay data.", LoggingTarget.Information);
+                Logger.Log("The loaded score has no replay data.", LoggingTarget.Information, LogLevel.Important);
                 return;
             }
 
-            var databasedBeatmap = BeatmapManager.QueryBeatmap(b => b.ID == databasedScore.ScoreInfo.BeatmapInfo.ID);
-
-            if (databasedBeatmap == null)
-            {
-                Logger.Log("Tried to load a score for a beatmap we don't have!", LoggingTarget.Information);
-                return;
-            }
+            var databasedBeatmap = databasedScore.ScoreInfo.BeatmapInfo;
+            Debug.Assert(databasedBeatmap != null);
 
             // This should be able to be performed from song select always, but that is disabled for now
             // due to the weird decoupled ruleset logic (which can cause a crash in certain filter scenarios).
@@ -773,6 +853,19 @@ namespace osu.Game
 
                 if (!Beatmap.Value.BeatmapInfo.Equals(databasedBeatmap))
                     Beatmap.Value = BeatmapManager.GetWorkingBeatmap(databasedBeatmap);
+
+                var currentLeaderboard = LeaderboardManager.CurrentCriteria;
+
+                bool leaderboardBeatmapMatches = currentLeaderboard != null && databasedBeatmap.Equals(currentLeaderboard.Beatmap);
+                bool leaderboardRulesetMatches = currentLeaderboard != null && databasedScore.ScoreInfo.Ruleset.Equals(currentLeaderboard.Ruleset);
+
+                if (!leaderboardBeatmapMatches || !leaderboardRulesetMatches)
+                {
+                    var newLeaderboard = currentLeaderboard != null
+                        ? currentLeaderboard with { Beatmap = databasedBeatmap, Ruleset = databasedScore.ScoreInfo.Ruleset }
+                        : new LeaderboardCriteria(databasedBeatmap, databasedScore.ScoreInfo.Ruleset, BeatmapLeaderboardScope.Global, null);
+                    LeaderboardManager.FetchWithCriteria(newLeaderboard);
+                }
 
                 switch (presentType)
                 {
@@ -965,20 +1058,6 @@ namespace osu.Game
 
             MultiplayerClient.PostNotification = n => Notifications.Post(n);
             MultiplayerClient.PresentMatch = PresentMultiplayerMatch;
-
-            // make config aware of how to lookup skins for on-screen display purposes.
-            // if this becomes a more common thing, tracked settings should be reconsidered to allow local DI.
-            LocalConfig.LookupSkinName = id => SkinManager.Query(s => s.ID == id)?.ToString() ?? "Unknown";
-
-            LocalConfig.LookupKeyBindings = l =>
-            {
-                var combinations = KeyBindingStore.GetReadableKeyCombinationsFor(l);
-
-                if (combinations.Count == 0)
-                    return ToastStrings.NoKeyBound;
-
-                return string.Join(" / ", combinations);
-            };
 
             ScreenFooter.BackReceptor backReceptor;
 

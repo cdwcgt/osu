@@ -18,6 +18,7 @@ using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Metadata;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Dashboard.Friends;
+using osu.Game.Tests.Resources;
 using osu.Game.Tests.Visual.Metadata;
 using osu.Game.Users;
 
@@ -218,7 +219,7 @@ namespace osu.Game.Tests.Visual.Online
         }
 
         private void waitForLoad()
-            => AddUntilStep("wait for panels to load", () => this.ChildrenOfType<LoadingSpinner>().Single().State.Value, () => Is.EqualTo(Visibility.Hidden));
+            => AddUntilStep("wait for panels to load", () => this.ChildrenOfType<LoadingSpinner>().First().State.Value, () => Is.EqualTo(Visibility.Hidden));
 
         private void assertVisiblePanelCount<T>(int expectedVisible)
             where T : UserPanel
@@ -234,19 +235,19 @@ namespace osu.Game.Tests.Visual.Online
             {
                 Username = "flyte",
                 Id = 3103765,
-                IsOnline = true,
+                WasRecentlyOnline = true,
                 Statistics = new UserStatistics { GlobalRank = 1111 },
                 CountryCode = CountryCode.JP,
-                CoverUrl = "https://osu.ppy.sh/images/headers/profile-covers/c6.jpg"
+                CoverUrl = TestResources.COVER_IMAGE_4
             },
             new APIUser
             {
                 Username = "peppy",
                 Id = 2,
-                IsOnline = false,
+                WasRecentlyOnline = false,
                 Statistics = new UserStatistics { GlobalRank = 2222 },
                 CountryCode = CountryCode.AU,
-                CoverUrl = "https://osu.ppy.sh/images/headers/profile-covers/c3.jpg",
+                CoverUrl = TestResources.COVER_IMAGE_3,
                 IsSupporter = true,
                 SupportLevel = 3,
             },
@@ -256,7 +257,7 @@ namespace osu.Game.Tests.Visual.Online
                 Id = 8195163,
                 CountryCode = CountryCode.BY,
                 CoverUrl = "https://assets.ppy.sh/user-profile-covers/8195163/4a8e2ad5a02a2642b631438cfa6c6bd7e2f9db289be881cb27df18331f64144c.jpeg",
-                IsOnline = false,
+                WasRecentlyOnline = false,
                 LastVisit = DateTimeOffset.Now
             }
         };
