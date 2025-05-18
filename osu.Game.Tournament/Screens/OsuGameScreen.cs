@@ -94,8 +94,11 @@ namespace osu.Game.Tournament.Screens
 
         public void UpdateLocalFriends() => api.UpdateLocalFriends();
 
+        public void UpdateLocalBlocks() => api.UpdateLocalBlocks();
+
         public IBindable<APIUser> LocalUser => api.LocalUser;
         public IBindableList<APIRelation> Friends => api.Friends;
+        public IBindableList<APIRelation> Blocks => api.Blocks;
 
         // Not using api.Activity because the tournament client MetadataClient has already bound to it
         public IBindable<UserActivity> Activity => activity;
