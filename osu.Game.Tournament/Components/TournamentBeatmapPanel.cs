@@ -78,15 +78,12 @@ namespace osu.Game.Tournament.Components
             : this(beatmap.Beatmap, beatmap.Mods, isMappool: isMappool)
         {
             this.id = id;
-            backgroundColor = beatmap.BackgroundColor;
-            textColor = beatmap.TextColor;
         }
 
         private readonly int? id;
         private readonly bool isMappool;
-        private readonly bool isSongBar;
-        private readonly Colour4 textColor;
-        private readonly Colour4 backgroundColor;
+        private Colour4 textColor;
+        private Colour4 backgroundColor;
         protected Container MainContainer = null!;
 
         public TournamentBeatmapPanel(IBeatmapInfo? beatmap, string mod = "", bool isMappool = false)
@@ -104,6 +101,12 @@ namespace osu.Game.Tournament.Components
         {
             currentMatch.BindValueChanged(matchChanged);
             currentMatch.BindTo(ladder.CurrentMatch);
+
+            if (string.IsNullOrEmpty(mod))
+            {
+                backgroundColor = ladder.GetModColorByModName(mod).BackgroundColor;
+                textColor = ladder.GetModColorByModName(mod).TextColor;
+            }
 
             AddRangeInternal(new Drawable[]
             {

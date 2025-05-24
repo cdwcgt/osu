@@ -45,11 +45,11 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.RoundInformation
 
             if (failedPick)
             {
-                AddModContent(Choice.Team == TeamColour.Red ? fail_pick_red_color : fail_pick_blue_color, RoundBeatmap.TextColor);
+                AddModContent(Choice.Team == TeamColour.Red ? fail_pick_red_color : fail_pick_blue_color, Ladder.GetModColorByModName(RoundBeatmap.Mods).TextColor);
             }
             else
             {
-                AddModContent(GetColorFromTeamColor(Choice.Team), RoundBeatmap.TextColor);
+                AddModContent(GetColorFromTeamColor(Choice.Team), Ladder.GetModColorByModName(RoundBeatmap.Mods).TextColor);
             }
         }
 

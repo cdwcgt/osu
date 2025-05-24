@@ -132,7 +132,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.RoundInformation
             Colour = GetColorFromTeamColor(color)
         };
 
-        protected virtual void UpdateStatus() => AddModContent(RoundBeatmap.BackgroundColor, RoundBeatmap.TextColor);
+        protected virtual void UpdateStatus() => AddModContent(Ladder.GetModColorByModName(RoundBeatmap.Mods).BackgroundColor, Ladder.GetModColorByModName(RoundBeatmap.Mods).TextColor);
 
         protected void AddModContent(Color4 backgroundColor, Color4 textColor)
         {

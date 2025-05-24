@@ -153,7 +153,7 @@ namespace osu.Game.Tournament.Screens.Showcase
             if (existing != null)
             {
                 SongBar.Beatmap = existing.Beatmap;
-                SongBar.SongBarColour.Value = existing.BackgroundColor;
+                SongBar.SongBarColour.Value = ladder.GetModColorByModName(existing.Mods).BackgroundColor;
             }
             else
             {

@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 using osu.Framework.Bindables;
 using osu.Game.Rulesets;
@@ -48,5 +49,9 @@ namespace osu.Game.Tournament.Models
         public Bindable<bool> InvertScoreColour = new BindableBool();
 
         public Bindable<bool> UseAlternateChatSource = new BindableBool();
+
+        public BindableList<ModColor> ModColors = new BindableList<ModColor>();
+
+        public ModColor GetModColorByModName(string mod) => ModColors.FirstOrDefault(m => m.ModName == mod) ?? new ModColor();
     }
 }
