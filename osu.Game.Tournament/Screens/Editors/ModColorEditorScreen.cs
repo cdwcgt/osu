@@ -36,6 +36,9 @@ namespace osu.Game.Tournament.Screens.Editors
             private readonly Bindable<string> textColor = new Bindable<string>("#FFFFFF");
             private readonly Bindable<string> backgroundColor = new Bindable<string>("#000000");
 
+            private readonly Box background;
+            private readonly TournamentSpriteText text;
+
             public ModColorRow(ModColor modColor)
             {
                 Model = modColor;
@@ -49,27 +52,6 @@ namespace osu.Game.Tournament.Screens.Editors
                 modName.Value = Model.ModName;
                 textColor.Value = modColor.TextColor.ToHex();
                 backgroundColor.Value = modColor.BackgroundColor.ToHex();
-
-                modName.BindValueChanged(m =>
-                {
-                    Model.ModName = m.NewValue;
-                });
-
-                textColor.BindValueChanged(c =>
-                {
-                    if (Colour4.TryParseHex(c.NewValue, out var colour))
-                    {
-                        Model.TextColor = colour;
-                    }
-                });
-
-                backgroundColor.BindValueChanged(c =>
-                {
-                    if (Colour4.TryParseHex(c.NewValue, out var colour))
-                    {
-                        Model.BackgroundColor = colour;
-                    }
-                });
 
                 InternalChildren = new Drawable[]
                 {
@@ -90,22 +72,49 @@ namespace osu.Game.Tournament.Screens.Editors
                         {
                             new SettingsTextBox
                             {
+                                Anchor = Anchor.CentreLeft,
+                                Origin = Anchor.CentreLeft,
                                 LabelText = "Mod名称",
-                                Width = 0.33f,
+                                Width = 0.2f,
                                 Current = modName
                             },
                             new SettingsTextBox
                             {
+                                Anchor = Anchor.CentreLeft,
+                                Origin = Anchor.CentreLeft,
                                 LabelText = "文字颜色",
-                                Width = 0.33f,
+                                Width = 0.3f,
                                 Current = textColor
                             },
                             new SettingsTextBox
                             {
+                                Anchor = Anchor.CentreLeft,
+                                Origin = Anchor.CentreLeft,
                                 LabelText = "背景颜色",
-                                Width = 0.33f,
+                                Width = 0.3f,
                                 Current = backgroundColor
                             },
+                            new Container
+                            {
+                                Anchor = Anchor.CentreLeft,
+                                Origin = Anchor.CentreLeft,
+                                RelativeSizeAxes = Axes.X,
+                                Width = 0.1f,
+                                Height = 40,
+                                Padding = new MarginPadding(5),
+                                Children = new Drawable[]
+                                {
+                                    background = new Box
+                                    {
+                                        RelativeSizeAxes = Axes.Both,
+                                    },
+                                    text = new TournamentSpriteText
+                                    {
+                                        Origin = Anchor.Centre,
+                                        Anchor = Anchor.Centre,
+                                    }
+                                }
+                            }
                         }
                     },
                     new DangerousSettingsButton
@@ -122,6 +131,30 @@ namespace osu.Game.Tournament.Screens.Editors
                         }))
                     }
                 };
+
+                modName.BindValueChanged(m =>
+                {
+                    Model.ModName = m.NewValue;
+                    text.Text = m.NewValue;
+                }, true);
+
+                textColor.BindValueChanged(c =>
+                {
+                    if (Colour4.TryParseHex(c.NewValue, out var colour))
+                    {
+                        Model.TextColor = colour;
+                        text.Colour = colour;
+                    }
+                }, true);
+
+                backgroundColor.BindValueChanged(c =>
+                {
+                    if (Colour4.TryParseHex(c.NewValue, out var colour))
+                    {
+                        Model.BackgroundColor = colour;
+                        background.Colour = colour;
+                    }
+                }, true);
             }
         }
 
