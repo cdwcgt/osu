@@ -4,13 +4,18 @@
 using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Audio;
+using osu.Framework.Audio.Track;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Game.Tournament.Components;
 using osu.Framework.Platform;
+using osu.Framework.Timing;
 using osu.Game.Beatmaps;
+using osu.Game.Beatmaps.ControlPoints;
 using osu.Game.Beatmaps.Legacy;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
@@ -18,12 +23,15 @@ using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Settings;
 using osu.Game.Rulesets.Mods;
+using osu.Game.Screens.Menu;
 using osu.Game.Tournament.Models;
+using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Screens.Showcase
 {
-    public partial class ShowcaseScreen : BeatmapInfoScreen
+    [Cached]
+    public partial class ShowcaseScreen : BeatmapInfoScreen, IBeatSyncProvider
     {
         [Resolved]
         private GameHost host { get; set; } = null!;
@@ -35,6 +43,19 @@ namespace osu.Game.Tournament.Screens.Showcase
         private LadderInfo ladder { get; set; } = null!;
 
         private NestedOsuGame? nestedGame;
+        private ShowCaseSideFlash? flash;
+
+        private readonly BindableFloat flashIntensity = new BindableFloat(2)
+        {
+            MinValue = 0,
+            MaxValue = 8,
+        };
+
+        private readonly BindableBool flashKiaiOnly = new BindableBool(true);
+        private readonly Bindable<string> flashColorString = new Bindable<string>("#FFFFFF");
+        private readonly Bindable<Color4> flashColor = new Bindable<Color4>(Color4.White);
+
+        private FillFlowContainer nestedLazerSettingContainer = null!;
 
         private MusicController? musicController;
         private readonly Bindable<IReadOnlyList<Mod>> mods = new Bindable<IReadOnlyList<Mod>>();
@@ -61,6 +82,11 @@ namespace osu.Game.Tournament.Screens.Showcase
                 },
             });
 
+            flashColor.BindTo(ladder.ShowcaseSettings.FlashColor);
+            flashIntensity.BindTo(ladder.ShowcaseSettings.FlashIntensity);
+            flashKiaiOnly.BindTo(ladder.ShowcaseSettings.FlashKiaiOnly);
+            useOsuLazer.BindTo(ladder.ShowcaseSettings.UseLazer);
+
             mods.BindValueChanged(m =>
             {
                 var ruleset = ladder.Ruleset.Value?.CreateInstance();
@@ -75,18 +101,57 @@ namespace osu.Game.Tournament.Screens.Showcase
             ControlPanel.Add(new SettingsCheckbox
             {
                 LabelText = "Use osu!lazer",
-                Current = useOsuLazer,
+                Current = { BindTarget = useOsuLazer },
+            });
+
+            flashColorString.Value = flashColor.Value.ToHex();
+
+            ControlPanel.Add(nestedLazerSettingContainer = new FillFlowContainer
+            {
+                RelativeSizeAxes = Axes.X,
+                AutoSizeAxes = Axes.None,
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(0, 5f),
+                Children = new Drawable[]
+                {
+                    new SettingsSlider<float>
+                    {
+                        LabelText = "闪光强度",
+                        Current = { BindTarget = flashIntensity },
+                        KeyboardStep = 0.5f,
+                    },
+                    new SettingsCheckbox
+                    {
+                        LabelText = "仅kiai闪光",
+                        Current = { BindTarget = flashKiaiOnly }
+                    },
+                    new SettingsTextBox
+                    {
+                        LabelText = "闪光颜色",
+                        Current = { BindTarget = flashColorString }
+                    }
+                }
+            });
+
+            flashColorString.BindValueChanged(c =>
+            {
+                if (Colour4.TryParseHex(c.NewValue, out var colour))
+                {
+                    flashColor.Value = colour;
+                }
             });
 
             useOsuLazer.BindValueChanged(u =>
             {
                 if (u.NewValue)
                 {
+                    nestedLazerSettingContainer.AutoSizeAxes = Axes.Y;
                     showcaseContainer.Clear(true);
                     startInnerLazer();
                 }
                 else
                 {
+                    nestedLazerSettingContainer.AutoSizeAxes = Axes.None;
                     closeInnerLazer();
                     showcaseContainer.Clear();
                     showcaseContainer.Add(new Box
@@ -130,12 +195,20 @@ namespace osu.Game.Tournament.Screens.Showcase
 
                 mods.BindTarget = nestedGame.Dependencies.Get<Bindable<IReadOnlyList<Mod>>>();
             };
+
+            AddInternal(flash = new ShowCaseSideFlash());
+            flash.FlashIntensity.BindTo(flashIntensity);
+            flash.FlashColor.BindTo(flashColor);
+            flash.FlashKiaiOnly.BindTo(flashKiaiOnly);
         }
 
         private void closeInnerLazer()
         {
             if (nestedGame != null)
                 showcaseContainer.Remove(nestedGame, true);
+
+            if (flash != null)
+                RemoveInternal(flash, true);
 
             musicController = null;
         }
@@ -192,6 +265,43 @@ namespace osu.Game.Tournament.Screens.Showcase
         {
             // showcase screen doesn't care about a match being selected.
             // base call intentionally omitted to not show match warning.
+        }
+
+        ControlPointInfo IBeatSyncProvider.ControlPoints => ((IBeatSyncProvider?)nestedGame)?.ControlPoints ?? new ControlPointInfo();
+        IClock IBeatSyncProvider.Clock => ((IBeatSyncProvider?)nestedGame)?.Clock ?? Clock;
+
+        ChannelAmplitudes IHasAmplitudes.CurrentAmplitudes => ((IBeatSyncProvider?)nestedGame)?.CurrentAmplitudes ?? ChannelAmplitudes.Empty;
+
+        private partial class ShowCaseSideFlash : MenuSideFlashes
+        {
+            protected override bool RefreshColoursEveryFlash => true;
+
+            protected override Color4 GetBaseColour() => FlashColor.Value;
+
+            protected override float Intensity => FlashIntensity.Value;
+
+            protected override bool OnlyKiai =>
+                FlashKiaiOnly.Value;
+
+            public readonly BindableFloat FlashIntensity = new BindableFloat(2)
+            {
+                MinValue = 0,
+                MaxValue = 8,
+            };
+
+            public readonly BindableBool FlashKiaiOnly = new BindableBool(true);
+            public readonly Bindable<Color4> FlashColor = new Bindable<Color4>();
+
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+
+                FlashIntensity.BindValueChanged(i =>
+                {
+                    LeftBox.Width = BOX_WIDTH * i.NewValue;
+                    RightBox.Width = BOX_WIDTH * i.NewValue;
+                });
+            }
         }
     }
 }

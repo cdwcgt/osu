@@ -53,5 +53,7 @@ namespace osu.Game.Tournament.Models
         public BindableList<ModColor> ModColors = new BindableList<ModColor>();
 
         public ModColor GetModColorByModName(string mod) => ModColors.FirstOrDefault(m => m.ModName == mod) ?? new ModColor();
+
+        public ShowcaseSettings ShowcaseSettings = new ShowcaseSettings();
     }
 }

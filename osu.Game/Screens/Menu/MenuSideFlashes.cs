@@ -26,12 +26,12 @@ namespace osu.Game.Screens.Menu
     {
         protected virtual bool RefreshColoursEveryFlash => false;
 
-        protected virtual float Intensity => 2;
+        protected virtual float Intensity => 5;
 
         private readonly IBindable<WorkingBeatmap> beatmap = new Bindable<WorkingBeatmap>();
 
-        private Box leftBox;
-        private Box rightBox;
+        protected Box LeftBox;
+        protected Box RightBox;
 
         private const float amplitude_dead_zone = 0.25f;
         private const float alpha_multiplier = (1 - amplitude_dead_zone) / 0.55f;
@@ -39,10 +39,12 @@ namespace osu.Game.Screens.Menu
 
         private const int box_max_alpha = 200;
         private const double box_fade_in_time = 65;
-        private const int box_width = 200;
+        protected const int BOX_WIDTH = 200;
 
         private IBindable<APIUser> user;
         private Bindable<Skin> skin;
+
+        protected virtual bool OnlyKiai => true;
 
         [Resolved]
         private OsuColour colours { get; set; }
@@ -66,26 +68,26 @@ namespace osu.Game.Screens.Menu
 
             Children = new Drawable[]
             {
-                leftBox = new Box
+                LeftBox = new Box
                 {
                     Anchor = Anchor.CentreLeft,
                     Origin = Anchor.CentreLeft,
                     RelativeSizeAxes = Axes.Y,
-                    Width = box_width * Intensity,
+                    Width = BOX_WIDTH * Intensity,
                     Height = 1.5f,
                     // align off-screen to make sure our edges don't become visible during parallax.
-                    X = -box_width,
+                    X = -BOX_WIDTH,
                     Alpha = 0,
                     Blending = BlendingParameters.Additive
                 },
-                rightBox = new Box
+                RightBox = new Box
                 {
                     Anchor = Anchor.CentreRight,
                     Origin = Anchor.CentreRight,
                     RelativeSizeAxes = Axes.Y,
-                    Width = box_width * Intensity,
+                    Width = BOX_WIDTH * Intensity,
                     Height = 1.5f,
-                    X = box_width,
+                    X = BOX_WIDTH,
                     Alpha = 0,
                     Blending = BlendingParameters.Additive
                 }
@@ -103,10 +105,13 @@ namespace osu.Game.Screens.Menu
             if (beatIndex < 0)
                 return;
 
+            if (OnlyKiai && !effectPoint.KiaiMode)
+                return;
+
             if (effectPoint.KiaiMode ? beatIndex % 2 == 0 : beatIndex % timingPoint.TimeSignature.Numerator == 0)
-                flash(leftBox, timingPoint.BeatLength, effectPoint.KiaiMode, amplitudes);
+                flash(LeftBox, timingPoint.BeatLength, effectPoint.KiaiMode, amplitudes);
             if (effectPoint.KiaiMode ? beatIndex % 2 == 1 : beatIndex % timingPoint.TimeSignature.Numerator == 0)
-                flash(rightBox, timingPoint.BeatLength, effectPoint.KiaiMode, amplitudes);
+                flash(RightBox, timingPoint.BeatLength, effectPoint.KiaiMode, amplitudes);
         }
 
         private void flash(Drawable d, double beatLength, bool kiai, ChannelAmplitudes amplitudes)
@@ -114,7 +119,7 @@ namespace osu.Game.Screens.Menu
             if (RefreshColoursEveryFlash)
                 updateColour();
 
-            d.FadeTo(Math.Clamp(0.1f + ((ReferenceEquals(d, leftBox) ? amplitudes.LeftChannel : amplitudes.RightChannel) - amplitude_dead_zone) / (kiai ? kiai_multiplier : alpha_multiplier), 0.1f, 1),
+            d.FadeTo(Math.Clamp(0.1f + ((ReferenceEquals(d, LeftBox) ? amplitudes.LeftChannel : amplitudes.RightChannel) - amplitude_dead_zone) / (kiai ? kiai_multiplier : alpha_multiplier), 0.1f, 1),
                  box_fade_in_time)
              .Then()
              .FadeOut(beatLength, Easing.In);
@@ -137,8 +142,8 @@ namespace osu.Game.Screens.Menu
             Color4 gradientDark = baseColour.Opacity(0).ToLinear();
             Color4 gradientLight = baseColour.Opacity(0.6f).ToLinear();
 
-            leftBox.Colour = ColourInfo.GradientHorizontal(gradientLight, gradientDark);
-            rightBox.Colour = ColourInfo.GradientHorizontal(gradientDark, gradientLight);
+            LeftBox.Colour = ColourInfo.GradientHorizontal(gradientLight, gradientDark);
+            RightBox.Colour = ColourInfo.GradientHorizontal(gradientDark, gradientLight);
         }
     }
 }
