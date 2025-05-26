@@ -99,8 +99,6 @@ namespace osu.Game.Tournament.Components
         [BackgroundDependencyLoader]
         private void load()
         {
-            Masking = true;
-
             Anchor = Anchor.BottomCentre;
             Origin = Anchor.BottomCentre;
 
@@ -122,7 +120,6 @@ namespace osu.Game.Tournament.Components
                     new Container
                     {
                         Name = "Left arrow",
-                        AutoSizeAxes = Axes.Both,
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.CentreLeft,
                         Child = leftArrow = new SpriteIcon
@@ -230,7 +227,6 @@ namespace osu.Game.Tournament.Components
                     new Container
                     {
                         Name = "Right arrow",
-                        AutoSizeAxes = Axes.Both,
                         Anchor = Anchor.CentreLeft,
                         Origin = Anchor.CentreLeft,
                         Child = rightArrow = new SpriteIcon
