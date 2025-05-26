@@ -148,6 +148,10 @@ namespace osu.Game.Tournament.Screens.Showcase
 
             useOsuLazer.BindValueChanged(u =>
             {
+                nestedLazerSettingContainer.ClearTransforms();
+                nestedLazerSettingContainer.AutoSizeDuration = 400;
+                nestedLazerSettingContainer.AutoSizeEasing = Easing.OutQuint;
+
                 if (u.NewValue)
                 {
                     nestedLazerSettingContainer.AutoSizeAxes = Axes.Y;
@@ -156,6 +160,7 @@ namespace osu.Game.Tournament.Screens.Showcase
                 }
                 else
                 {
+                    nestedLazerSettingContainer.ResizeHeightTo(0, 400, Easing.OutQuint);
                     nestedLazerSettingContainer.AutoSizeAxes = Axes.None;
                     closeInnerLazer();
                     showcaseContainer.Clear();
