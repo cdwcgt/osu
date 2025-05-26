@@ -3,7 +3,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions;
@@ -30,6 +32,8 @@ namespace osu.Game.Tournament.Screens.Editors
     {
         protected override BindableList<TournamentTeam> Storage => LadderInfo.Teams;
 
+        private Bindable<string> csvPath = new Bindable<string>();
+
         [BackgroundDependencyLoader]
         private void load()
         {
@@ -39,6 +43,111 @@ namespace osu.Game.Tournament.Screens.Editors
                 Text = "Add all countries",
                 Action = addAllCountries
             });
+
+            ControlPanel.Add(new SettingsTextBox
+            {
+                RelativeSizeAxes = Axes.X,
+                LabelText = "Path",
+                Current = { BindTarget = csvPath }
+            });
+
+            ControlPanel.Add(new TourneyButton
+            {
+                RelativeSizeAxes = Axes.X,
+                Text = "import",
+                Action = importFromCsv
+            });
+        }
+
+        private void importFromCsv()
+        {
+            try
+            {
+                string path = csvPath.Value;
+                string[] content = File.ReadAllText(path, Encoding.UTF8).Split(Environment.NewLine.ToCharArray());
+
+                int[] beatmaps = { 3381770, 4392407, 4226373, 2906707, 3582595, 3340552, 4725790, 2727958, 2007934, 2686353 };
+
+                int count = 1;
+
+                string[] teamFlagMame = { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L" };
+
+                foreach (string item in content)
+                {
+                    try
+                    {
+                        string[] data = item.Split(",");
+
+                        int[][] point =
+                        {
+                            new[] { 0, 1, 2, 3 },
+                            new[] { 4, 5, },
+                            new[] { 6, 7 },
+                            new[] { 8, 9 },
+                        };
+
+                        string[] mods = { "NM", "HD", "HR", "DT", };
+
+                        var team = new TournamentTeam
+                        {
+                            FullName = { Value = data[0] },
+                            Seed = { Value = count.ToString() },
+                            Acronym = { Value = teamFlagMame[count - 1] },
+                            FlagName = { Value = teamFlagMame[count - 1] }
+                        };
+
+                        for (int i = 25; i <= 29; i++)
+                        {
+                            if (int.TryParse(data[i], out int id))
+                            {
+                                team.Players.Add(new TournamentUser
+                                {
+                                    OnlineID = id
+                                });
+                            }
+                        }
+
+                        // 调整偏移 单图数据
+                        int mapOffset = 1;
+
+                        for (int i = 0; i < mods.Length; i++)
+                        {
+                            var result = new SeedingResult();
+                            result.Mod.Value = mods[i];
+
+                            for (int j = 0; j < point[i].Length; j++)
+                            {
+                                int p = point[i][j];
+                                var beatmap = new SeedingBeatmap
+                                {
+                                    ID = beatmaps[p],
+
+                                    Score = int.Parse(data[p + mapOffset]),
+                                    Seed =
+                                    {
+                                        Value = int.Parse(data[p + mapOffset + beatmaps.Length])
+                                    }
+                                };
+                                result.Beatmaps.Add(beatmap);
+                            }
+
+                            // 单mod seed 排名
+                            result.Seed.Value = int.Parse(data[i + 20]);
+
+                            team.SeedingResults.Add(result);
+                        }
+
+                        Storage.Add(team);
+                        count++;
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+            catch
+            {
+            }
         }
 
         protected override TeamRow CreateDrawable(TournamentTeam model) => new TeamRow(model, this);
