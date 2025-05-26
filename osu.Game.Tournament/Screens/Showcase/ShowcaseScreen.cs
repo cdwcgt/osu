@@ -1,6 +1,7 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
@@ -250,8 +251,13 @@ namespace osu.Game.Tournament.Screens.Showcase
                     SongBar.Beatmap = new TournamentBeatmap(b);
                 };
 
-                beatmapLookupRequest.Failure += _ =>
+                beatmapLookupRequest.Failure += f =>
                 {
+                    if (f is OperationCanceledException)
+                    {
+                        return;
+                    }
+
                     //SongBar.FadeInFromZero(300, Easing.OutQuint);
                     SongBar.Beatmap = new TournamentBeatmap(workingBeatmap.BeatmapInfo);
                 };
