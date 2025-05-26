@@ -141,7 +141,7 @@ namespace osu.Game
         /// </summary>
         protected virtual Edges SafeAreaOverrideEdges => Edges.None;
 
-        protected OsuConfigManager LocalConfig { get; private set; }
+        protected OsuConfigManager LocalConfig { get; set; }
 
         protected SessionStatics SessionStatics { get; private set; }
 

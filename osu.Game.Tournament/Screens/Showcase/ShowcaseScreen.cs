@@ -17,6 +17,7 @@ using osu.Framework.Timing;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.ControlPoints;
 using osu.Game.Beatmaps.Legacy;
+using osu.Game.Configuration;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
 using osu.Game.Online.API.Requests.Responses;
@@ -41,6 +42,9 @@ namespace osu.Game.Tournament.Screens.Showcase
 
         [Resolved]
         private LadderInfo ladder { get; set; } = null!;
+
+        [Resolved]
+        private OsuConfigManager config { get; set; } = null!;
 
         private NestedOsuGame? nestedGame;
         private ShowCaseSideFlash? flash;
@@ -112,6 +116,7 @@ namespace osu.Game.Tournament.Screens.Showcase
                 AutoSizeAxes = Axes.None,
                 Direction = FillDirection.Vertical,
                 Spacing = new Vector2(0, 5f),
+                Masking = true,
                 Children = new Drawable[]
                 {
                     new SettingsSlider<float>
@@ -177,7 +182,7 @@ namespace osu.Game.Tournament.Screens.Showcase
 
         private void startInnerLazer()
         {
-            nestedGame = new NestedOsuGame(host.Storage, new ForwardingAPIAccess(api))
+            nestedGame = new NestedOsuGame(host.Storage, new ForwardingAPIAccess(api), config)
             {
                 Masking = true
             };

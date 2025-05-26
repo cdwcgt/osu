@@ -25,12 +25,15 @@ namespace osu.Game.Tournament.Screens
         [Resolved]
         private IAPIProvider api { get; set; } = null!;
 
+        [Resolved]
+        private OsuConfigManager config { get; set; } = null!;
+
         private NestedOsuGame? nestedGame;
 
         public override void Show()
         {
             base.Show();
-            nestedGame = new NestedOsuGame(host.Storage, new ForwardingAPIAccess(api))
+            nestedGame = new NestedOsuGame(host.Storage, new ForwardingAPIAccess(api), config)
             {
                 Masking = true
             };
@@ -50,11 +53,12 @@ namespace osu.Game.Tournament.Screens
 
     public partial class NestedOsuGame : OsuGame
     {
-        public NestedOsuGame(Storage storage, IAPIProvider api, string[]? args = null)
+        public NestedOsuGame(Storage storage, IAPIProvider api, OsuConfigManager config, string[]? args = null)
             : base(args)
         {
             Storage = storage;
             API = api;
+            LocalConfig = config;
         }
 
         protected override void Update()
