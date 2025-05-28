@@ -102,7 +102,7 @@ namespace osu.Game.Tournament.Components
             currentMatch.BindValueChanged(matchChanged);
             currentMatch.BindTo(ladder.CurrentMatch);
 
-            if (string.IsNullOrEmpty(mod))
+            if (!string.IsNullOrEmpty(mod))
             {
                 backgroundColor = ladder.GetModColorByModName(mod).BackgroundColor;
                 textColor = ladder.GetModColorByModName(mod).TextColor;
