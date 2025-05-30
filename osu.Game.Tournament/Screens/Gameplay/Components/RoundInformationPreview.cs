@@ -166,8 +166,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             //var protectedDetail = new MapDetailContent("保图");
             var banMapDetail = new MapDetailContent("禁图");
             var pickDetail = new MapDetailContent("选图");
-            var banMapDetail1 = new MapDetailContent("禁图1");
-            var pickDetail1 = new MapDetailContent("选图1");
 
             //BeatmapChoice?[] protectedChoice = ladderInfo.CurrentMatch.Value.PicksBans.Where(b => b.Type == ChoiceType.Protected).ToArray();
             //protectedChoice = protectedChoice.Concat(Enumerable.Repeat<BeatmapChoice?>(null, Math.Max(2 - protectedChoice.Length, 0))).ToArray();
@@ -190,10 +188,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             mapContentContainer.Add(createDivideLine());
             mapContentContainer.Add(pickDetail);
             mapContentContainer.Add(createDivideLine());
-            mapContentContainer.Add(banMapDetail1);
-            mapContentContainer.Add(createDivideLine());
-            mapContentContainer.Add(pickDetail1);
-            mapContentContainer.Add(createDivideLine());
 
             var TBMap = ladderInfo.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(map => map.Mods == "TB");
 
@@ -211,9 +205,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             {
                 //protectedDetail.UpdateBeatmap(protectedChoice);
                 banMapDetail.UpdateBeatmap(banChoices.Take(2));
-                pickDetail.UpdateBeatmap(pickChoice.Take(2));
-                banMapDetail1.UpdateBeatmap(banChoices.Skip(2));
-                pickDetail1.UpdateBeatmap(pickChoice.Skip(2));
+                pickDetail.UpdateBeatmap(pickChoice);
 
                 Scheduler.Add(() =>
                 {
