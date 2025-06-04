@@ -161,8 +161,6 @@ namespace osu.Game.Tournament.Tests
                     {
                         new RoundBeatmap
                         {
-                            BackgroundColor = Color4.OrangeRed,
-                            TextColor = Color4.White,
                             Mods = "DT"
                         }
                     }
