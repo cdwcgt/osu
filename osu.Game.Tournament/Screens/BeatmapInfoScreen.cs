@@ -4,6 +4,8 @@
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Sprites;
+using osu.Framework.Graphics.Textures;
 using osu.Game.Beatmaps.Legacy;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
@@ -15,6 +17,11 @@ namespace osu.Game.Tournament.Screens
     {
         protected readonly SongBar SongBar;
         protected ControlPanel ControlPanel;
+
+        private Sprite supporterSprite = null!;
+        private Sprite logoSprite = null!;
+
+        protected virtual bool ShowLogo => false;
 
         protected virtual SongBar CreateSongBar() => new SongBar
         {
@@ -72,10 +79,34 @@ namespace osu.Game.Tournament.Screens
         }
 
         [BackgroundDependencyLoader]
-        private void load(MatchIPCInfo ipc)
+        private void load(MatchIPCInfo ipc, TextureStore store)
         {
             ipc.Beatmap.BindValueChanged(IpcBeatmapChanged, true);
             ipc.Mods.BindValueChanged(IpcModsChanged, true);
+
+            if (ShowLogo)
+            {
+                AddRangeInternal([
+                    supporterSprite = new Sprite
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Texture = store.Get("我们至高无上的金主大人的赞助商图片"),
+                        FillMode = FillMode.Fit,
+                        Depth = float.MinValue,
+                    },
+                    logoSprite = new Sprite
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Texture = store.Get("我们尊贵的比赛logo"),
+                        FillMode = FillMode.Fit,
+                        Alpha = 0,
+                        Depth = float.MinValue,
+                    },
+                ]);
+
+                supporterSprite.FadeIn(200).Then(10000).FadeOut(200).Then(10000).Loop();
+                logoSprite.FadeOut(200).Then(10000).FadeIn(200).Then(10000).Loop();
+            }
         }
 
         private void setMods(LegacyMods mods, string acronym)

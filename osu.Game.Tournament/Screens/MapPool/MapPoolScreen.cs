@@ -44,6 +44,8 @@ namespace osu.Game.Tournament.Screens.MapPool
 
         private AutoAdvancePrompt? scheduledScreenChange;
 
+        protected override bool ShowLogo => true;
+
         [BackgroundDependencyLoader]
         private void load(MatchIPCInfo ipc, TextureStore store)
         {

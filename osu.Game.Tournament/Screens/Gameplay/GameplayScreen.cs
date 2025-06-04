@@ -35,8 +35,6 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         private MatchHeader header = null!;
         private RoundInformationPreview roundPreview = null!;
-        private Sprite supporterSprite = null!;
-        private Sprite logoSprite = null!;
 
         [Resolved]
         private TournamentSceneManager? sceneManager { get; set; }
@@ -53,6 +51,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
         {
             Depth = float.MinValue,
         };
+
+        protected override bool ShowLogo => true;
 
         private bool switchFromMappool;
 
@@ -73,19 +73,6 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     RelativeSizeAxes = Axes.Both,
                     Texture = store.Get("Videos/gameplay"),
                     FillMode = FillMode.Fit,
-                },
-                supporterSprite = new Sprite
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Texture = store.Get("我们至高无上的金主大人的赞助商图片"),
-                    FillMode = FillMode.Fit
-                },
-                logoSprite = new Sprite
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Texture = store.Get("我们尊贵的比赛logo"),
-                    FillMode = FillMode.Fit,
-                    Alpha = 0,
                 },
                 header = new MatchHeader(),
                 new Container
@@ -214,9 +201,6 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 if (s.OldValue == typeof(MapPoolScreen) && s.NewValue == typeof(GameplayScreen))
                     switchFromMappool = true;
             });
-
-            supporterSprite.FadeIn(200).Then(10000).FadeOut(200).Then(10000).Loop();
-            logoSprite.FadeOut(200).Then(10000).FadeIn(200).Then(10000).Loop();
         }
 
         private bool roundPreviewShow;
