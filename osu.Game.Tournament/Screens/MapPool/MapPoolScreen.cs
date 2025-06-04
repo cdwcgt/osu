@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Diagnostics;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -9,7 +10,10 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
 using osu.Framework.Input.Events;
+using osu.Game.Beatmaps;
+using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Overlays.Settings;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
@@ -30,7 +34,10 @@ namespace osu.Game.Tournament.Screens.MapPool
 
         private TeamColour pickColour;
         private ChoiceType pickType;
-        private TeamColour pendingWinnerSetColor;
+        private readonly BindableBool pendingSelectMapModifyWinner = new BindableBool();
+        private readonly Bindable<IBeatmapInfo?> modifyWinnerMap = new Bindable<IBeatmapInfo?>();
+        private TournamentSpriteText modifyWinnerMapText = null!;
+        private SettingsWinnerDropdown winnerColorDropDown = null!;
 
         private OsuButton buttonRedProtected = null!;
         private OsuButton buttonBlueProtected = null!;
@@ -38,8 +45,6 @@ namespace osu.Game.Tournament.Screens.MapPool
         private OsuButton buttonBlueBan = null!;
         private OsuButton buttonRedPick = null!;
         private OsuButton buttonBluePick = null!;
-        private OsuButton buttonRedWinner = null!;
-        private OsuButton buttonBlueWinner = null!;
         private ControlPanel controlPanel = null!;
 
         private AutoAdvancePrompt? scheduledScreenChange;
@@ -118,28 +123,30 @@ namespace osu.Game.Tournament.Screens.MapPool
                             Text = "Blue Pick",
                             Action = () => setMode(TeamColour.Blue, ChoiceType.Pick)
                         },
-                        buttonRedWinner = new TourneyButton
+                        new ControlPanel.Spacer(),
+                        new SettingsCheckbox
                         {
                             RelativeSizeAxes = Axes.X,
-                            Text = "Set Red Win",
-                            Action = () =>
-                            {
-                                pendingWinnerSetColor = TeamColour.Red;
-                                buttonRedWinner.Colour = Color4.White;
-                                buttonBlueWinner.Colour = Color4.Gray;
-                            }
+                            LabelText = "修改地图胜者",
+                            Current = { BindTarget = pendingSelectMapModifyWinner }
                         },
-                        buttonBlueWinner = new TourneyButton
+                        new TextFlowContainer(f => f.Font = OsuFont.Default.With(size: 10))
                         {
                             RelativeSizeAxes = Axes.X,
-                            Text = "Set Blue Win",
-                            Colour = Color4.Gray,
-                            Action = () =>
-                            {
-                                pendingWinnerSetColor = TeamColour.Blue;
-                                buttonBlueWinner.Colour = Color4.White;
-                                buttonRedWinner.Colour = Color4.Gray;
-                            }
+                            AutoSizeAxes = Axes.Y,
+                            Text = "打开上方开关后选择要修改的地图\n别忘记关了"
+                        },
+                        modifyWinnerMapText = new TournamentSpriteText
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            AllowMultiline = true,
+                            Font = OsuFont.Default.With(size: 10),
+                            Text = "当前选择的地图为: 没选吧"
+                        },
+                        winnerColorDropDown = new SettingsWinnerDropdown
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            LabelText = "胜者队伍"
                         },
                         new ControlPanel.Spacer(),
                         new TourneyButton
@@ -164,6 +171,35 @@ namespace osu.Game.Tournament.Screens.MapPool
             };
 
             ipc.Beatmap.BindValueChanged(beatmapChanged);
+
+            modifyWinnerMap.BindValueChanged(m =>
+            {
+                winnerColorDropDown.Current = new Bindable<TeamColour?>();
+
+                if (m.NewValue == null)
+                {
+                    modifyWinnerMapText.Text = "当前选择的地图为: 没选吧";
+                }
+                else
+                {
+                    Debug.Assert(CurrentMatch.Value != null);
+
+                    var pickChoice = CurrentMatch.Value.PicksBans.FirstOrDefault(p => p.BeatmapID == m.NewValue.OnlineID && p.Type == ChoiceType.Pick);
+
+                    if (pickChoice == null)
+                    {
+                        modifyWinnerMap.Value = null;
+                        winnerColorDropDown.SetNoticeText("选择的图没有被pick过");
+                        return;
+                    }
+
+                    winnerColorDropDown.Current = pickChoice.Winner;
+                    winnerColorDropDown.ClearNoticeText();
+
+                    string beatmapInformation = m.NewValue.Metadata.TitleUnicode;
+                    modifyWinnerMapText.Text = $"当前选择的地图为: {beatmapInformation}";
+                }
+            });
         }
 
         private Bindable<bool>? splitMapPoolByMods;
@@ -271,9 +307,16 @@ namespace osu.Game.Tournament.Screens.MapPool
             if (map != null)
             {
                 if (e.Button == MouseButton.Left && map.Beatmap?.OnlineID > 0)
-                    addForBeatmap(map.Beatmap.OnlineID);
-                else if (e.Button == MouseButton.Middle && map.Beatmap?.OnlineID > 0)
-                    changeWinnerForBeatmap(map.Beatmap.OnlineID);
+                {
+                    if (pendingSelectMapModifyWinner.Value)
+                    {
+                        modifyWinnerMap.Value = map.Beatmap;
+                    }
+                    else
+                    {
+                        addForBeatmap(map.Beatmap.OnlineID);
+                    }
+                }
                 else
                 {
                     var existing = CurrentMatch.Value?.PicksBans.FirstOrDefault(p => p.BeatmapID == map.Beatmap?.OnlineID);
@@ -334,25 +377,6 @@ namespace osu.Game.Tournament.Screens.MapPool
             }
 
             setNextMode();
-        }
-
-        private void changeWinnerForBeatmap(int beatmapOnlineID)
-        {
-            if (CurrentMatch.Value?.Round.Value == null)
-                return;
-
-            var pickChoice = CurrentMatch.Value.PicksBans.FirstOrDefault(p => p.BeatmapID == beatmapOnlineID && p.Type == ChoiceType.Pick);
-
-            if (pickChoice == null)
-                return;
-
-            if (pickChoice.Winner.Value == pendingWinnerSetColor)
-            {
-                pickChoice.Winner.Value = null;
-                return;
-            }
-
-            pickChoice.Winner.Value = pendingWinnerSetColor;
         }
 
         public override void Hide()
