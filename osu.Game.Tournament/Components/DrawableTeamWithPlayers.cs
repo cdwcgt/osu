@@ -30,7 +30,7 @@ namespace osu.Game.Tournament.Components
                 {
                     AutoSizeAxes = Axes.Both,
                     Direction = FillDirection.Vertical,
-                    Spacing = new Vector2(30),
+                    Spacing = new Vector2(15),
                     Children = new Drawable[]
                     {
                         new DrawableTeamTitleWithHeader(team, colour),
