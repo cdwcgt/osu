@@ -1,7 +1,6 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
@@ -30,6 +29,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private static readonly Color4 boarder_color = Color4Extensions.FromHex("#808080");
 
         private const float cover_width = 50f;
+
+        private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
 
         public RoundInformationPreview()
         {
@@ -139,7 +140,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         protected override void LoadComplete()
         {
             base.LoadComplete();
-            ladderInfo.CurrentMatch.BindValueChanged(matchChanged, true);
+            currentMatch.BindTo(ladderInfo.CurrentMatch);
+            currentMatch.BindValueChanged(matchChanged, true);
         }
 
         private void matchChanged(ValueChangedEvent<TournamentMatch?> match)
@@ -160,73 +162,71 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             mapContentContainer.Clear();
             mapCountText.Text = string.Empty;
 
-            if (ladderInfo.CurrentMatch.Value?.Round.Value == null)
+            if (currentMatch.Value?.Round.Value == null)
                 return;
 
-            //var protectedDetail = new MapDetailContent("保图");
-            var banMapDetail = new MapDetailContent("禁图");
-            var pickDetail = new MapDetailContent("选图");
+            var currentPicksBans = currentMatch.Value.PicksBans.ToList();
 
-            //BeatmapChoice?[] protectedChoice = ladderInfo.CurrentMatch.Value.PicksBans.Where(b => b.Type == ChoiceType.Protected).ToArray();
-            //protectedChoice = protectedChoice.Concat(Enumerable.Repeat<BeatmapChoice?>(null, Math.Max(2 - protectedChoice.Length, 0))).ToArray();
+            foreach (var group in currentMatch.Value.Round.Value.BanPickFlowGroups)
+            {
+                var currentMapDetail = new MapDetailContent(group.Name.Value);
+                List<BeatmapChoice?> currentChoices = new List<BeatmapChoice?>();
 
-            BeatmapChoice?[] banChoices = ladderInfo.CurrentMatch.Value.PicksBans.Where(b => b.Type == ChoiceType.Ban).ToArray();
+                for (int i = 0; i < group.TotalStep; i++)
+                {
+                    var find = currentPicksBans.FirstOrDefault(p => p.Type == group.Steps[i % group.Steps.Count].CurrentAction.Value);
 
-            BeatmapChoice?[] pickChoices = ladderInfo.CurrentMatch.Value.PicksBans.Where(b => b.Type == ChoiceType.Pick).ToArray();
+                    if (find != null)
+                    {
+                        currentChoices.Add(find);
+                        currentPicksBans.Remove(find);
+                    }
+                    else
+                        break;
+                }
 
-            banChoices = banChoices.Concat(Enumerable.Repeat((BeatmapChoice?)null, Math.Max(0, (ladderInfo.CurrentMatch.Value.Round.Value?.BanCount.Value ?? 2) * 2 - banChoices.Length))).ToArray();
+                while (currentChoices.Count < group.TotalStep)
+                {
+                    currentChoices.Add(null);
+                }
 
-            int pickMapCount = ladderInfo.CurrentMatch.Value.Round.Value.BestOf.Value - 1; // 去掉TB
+                currentMapDetail.UpdateBeatmap(currentChoices);
+                mapContentContainer.Add(currentMapDetail);
+                mapContentContainer.Add(createDivideLine());
+            }
 
-            var pickChoice = pickChoices.Take(pickMapCount)
-                                        // 往后面填充null
-                                        .Concat(Enumerable.Repeat((BeatmapChoice?)null, Math.Max(0, pickMapCount - pickChoices.Take(pickMapCount).Count())));
-
-            //mapContentContainer.Add(protectedDetail);
-            //mapContentContainer.Add(createDivideLine());
-            mapContentContainer.Add(banMapDetail);
-            mapContentContainer.Add(createDivideLine());
-            mapContentContainer.Add(pickDetail);
-            mapContentContainer.Add(createDivideLine());
-
-            var TBMap = ladderInfo.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(map => map.Mods == "TB");
+            var TBMap = currentMatch.Value.Round.Value?.Beatmaps.FirstOrDefault(map => map.Mods == "TB");
 
             if (TBMap != null)
             {
                 mapContentContainer.Add(new TBMapBox());
             }
 
-            int mapCount = ladderInfo.CurrentMatch.Value.Round.Value.Beatmaps.Count;
-            int remainMapCount = mapCount - ladderInfo.CurrentMatch.Value.PicksBans.Count;
+            int mapCount = currentMatch.Value.Round.Value!.Beatmaps.Count;
+            int remainMapCount = mapCount - currentMatch.Value.PicksBans.Count;
 
             mapCountText.Text = $"图池内谱面数量：{mapCount}  |  图池内剩余谱面：{remainMapCount}";
 
             Scheduler.Add(() =>
             {
-                //protectedDetail.UpdateBeatmap(protectedChoice);
-                banMapDetail.UpdateBeatmap(banChoices.Take(2));
-                pickDetail.UpdateBeatmap(pickChoice);
+                FinishTransforms();
 
-                Scheduler.Add(() =>
+                if (mapContentContainer.DrawWidth < 1000)
                 {
-                    FinishTransforms();
+                    mapContentContainer.Anchor = Anchor.TopCentre;
+                    mapContentContainer.Origin = Anchor.TopCentre;
+                    mapContentContainer.X = 0;
+                    return;
+                }
 
-                    if (mapContentContainer.DrawWidth < 1000)
-                    {
-                        mapContentContainer.Anchor = Anchor.TopCentre;
-                        mapContentContainer.Origin = Anchor.TopCentre;
-                        mapContentContainer.X = 0;
-                        return;
-                    }
+                mapContentContainer.Anchor = Anchor.TopLeft;
+                mapContentContainer.Origin = Anchor.TopLeft;
 
-                    mapContentContainer.Anchor = Anchor.TopLeft;
-                    mapContentContainer.Origin = Anchor.TopLeft;
-
-                    // 每秒走50px
-                    double timeToRepeat = (mapContentContainer.DrawWidth - 1000 + cover_width) / 30f * 1000;
-                    mapContentContainer.X = cover_width;
-                    mapContentContainer.MoveToX((1000 - cover_width - mapContentContainer.DrawWidth), timeToRepeat, Easing.OutSine).Then(5000).MoveToX(cover_width, timeToRepeat, Easing.OutSine).Then(5000).Loop();
-                });
+                // 每秒走50px
+                double timeToRepeat = (mapContentContainer.DrawWidth - 1000 + cover_width) / 30f * 1000;
+                mapContentContainer.X = cover_width;
+                mapContentContainer.MoveToX((1000 - cover_width - mapContentContainer.DrawWidth), timeToRepeat, Easing.OutSine).Then(5000).MoveToX(cover_width, timeToRepeat, Easing.OutSine).Then(5000)
+                                   .Loop();
             });
         }
 
@@ -279,7 +279,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 };
             }
 
-            public void UpdateBeatmap(IEnumerable<BeatmapChoice?> maps)
+            public void UpdateBeatmap(IEnumerable<BeatmapChoice?> maps) => Scheduler.AddOnce(() =>
             {
                 TournamentRound? round = ladderInfo.CurrentMatch.Value?.Round.Value;
 
@@ -314,7 +314,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
                     return mapBox;
                 });
-            }
+            });
 
             private static Drawable createHeaderSection(string text)
             {
