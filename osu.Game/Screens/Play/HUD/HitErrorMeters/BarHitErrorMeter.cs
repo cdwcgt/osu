@@ -89,7 +89,7 @@ namespace osu.Game.Screens.Play.HUD.HitErrorMeters
         private Container colourBars = null!;
         private Container arrowContainer = null!;
 
-        private Container rotateContainer = null;
+        private Container rotateContainer = null!;
 
         private (HitResult result, double length)[] hitWindows = null!;
 

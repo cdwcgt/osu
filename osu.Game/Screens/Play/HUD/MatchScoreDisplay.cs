@@ -212,9 +212,9 @@ namespace osu.Game.Screens.Play.HUD
 
         protected partial class MatchScoreDiffCounter : CommaSeparatedScoreCounter
         {
-            private FillFlowContainer fillFlow;
+            private FillFlowContainer fillFlow = null!;
 
-            public Sprite ArrowIcon { get; private set; }
+            public Sprite ArrowIcon { get; private set; } = null!;
 
             protected override Container<Drawable> Content { get; } = new Container
             {
