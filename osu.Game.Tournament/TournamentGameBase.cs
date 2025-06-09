@@ -14,6 +14,7 @@ using osu.Framework.Input;
 using osu.Framework.IO.Stores;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
+using osu.Game.Beatmaps.Legacy;
 using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Online;
@@ -288,6 +289,24 @@ namespace osu.Game.Tournament
             return true;
         }
 
+        private bool addFmBeatmapStar()
+        {
+            var beatmapsRequiringPopulation = ladder.Rounds
+                                                    .SelectMany(r => r.Beatmaps)
+                                                    .Where(b => b.Mods == "FM" && b.Beatmap != null && b.Beatmap.OnlineID != 0 && b.Beatmap.StarRatingWithMods.Count == 0)
+                                                    .ToList();
+
+            if (beatmapsRequiringPopulation.Count == 0)
+                return false;
+
+            foreach (var t in beatmapsRequiringPopulation)
+            {
+                PopulateFmBeatmapStarRating(t.Beatmap!);
+            }
+
+            return true;
+        }
+
         private void updateLoadProgressMessage(string s) => Schedule(() => initialisationText.Text = s);
 
         public void PopulatePlayer(TournamentUser user, Action? success = null, Action? failure = null, bool immediate = false)
@@ -326,6 +345,23 @@ namespace osu.Game.Tournament
                 user.Rank = res.Statistics?.GlobalRank;
 
                 success?.Invoke();
+            }
+        }
+
+        public void PopulateFmBeatmapStarRating(TournamentBeatmap beatmap)
+        {
+            foreach (string mod in Freemods)
+            {
+                var getBeatmapStarRatingRequest = new GetBeatmapAttributesRequest(beatmap.OnlineID,
+                    ((int)ConvertFromAcronym(mod)).ToString(),
+                    ladder.Ruleset.Value?.OnlineID.ToString());
+
+                getBeatmapStarRatingRequest.Success += data =>
+                {
+                    beatmap.StarRatingWithMods[mod] = data.Attributes.StarRating;
+                };
+
+                API.Perform(getBeatmapStarRatingRequest);
             }
         }
 

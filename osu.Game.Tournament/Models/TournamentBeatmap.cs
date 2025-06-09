@@ -2,6 +2,8 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
+using osu.Framework.Bindables;
 using osu.Game.Beatmaps;
 using osu.Game.Extensions;
 using osu.Game.Online.API.Requests.Responses;
@@ -30,6 +32,8 @@ namespace osu.Game.Tournament.Models
         public IBeatmapDifficultyInfo Difficulty { get; set; } = new BeatmapDifficulty();
 
         public BeatmapSetOnlineCovers Covers { get; set; }
+
+        public Dictionary<string, double> StarRatingWithMods { get; set; } = new Dictionary<string, double>();
 
         public TournamentBeatmap()
         {
@@ -113,6 +117,5 @@ namespace osu.Game.Tournament.Models
         bool IBeatmapSetOnlineInfo.HasStoryboard => throw new NotImplementedException();
 
         #endregion
-
     }
 }

@@ -245,7 +245,7 @@ namespace osu.Game.Tournament.Screens.Editors
                     }
 
                     [BackgroundDependencyLoader]
-                    private void load()
+                    private void load(TournamentGameBase gameBase)
                     {
                         beatmapId.Value = Model.ID;
                         beatmapId.BindValueChanged(id =>
@@ -266,6 +266,12 @@ namespace osu.Game.Tournament.Screens.Editors
                             req.Success += res =>
                             {
                                 Model.Beatmap = new TournamentBeatmap(res);
+
+                                if (Model.Mods == "FM")
+                                {
+                                    gameBase.PopulateFmBeatmapStarRating(Model.Beatmap);
+                                }
+
                                 updatePanel();
                             };
 
@@ -279,7 +285,15 @@ namespace osu.Game.Tournament.Screens.Editors
                         }, true);
 
                         mods.Value = Model.Mods;
-                        mods.BindValueChanged(modString => Model.Mods = modString.NewValue);
+                        mods.BindValueChanged(modString =>
+                        {
+                            Model.Mods = modString.NewValue;
+
+                            if (Model.Beatmap != null && modString.NewValue == "FM")
+                            {
+                                gameBase.PopulateFmBeatmapStarRating(Model.Beatmap);
+                            }
+                        });
                     }
 
                     private void updatePanel() => Schedule(() =>
