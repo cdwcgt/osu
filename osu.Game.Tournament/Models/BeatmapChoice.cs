@@ -39,4 +39,9 @@ namespace osu.Game.Tournament.Models
         Ban,
         Protected,
     }
+
+    public static class BeatmapChoiceExtensions
+    {
+        public static bool IsConsumed(this BeatmapChoice choice) => choice.Type == ChoiceType.Pick || choice.Type == ChoiceType.Ban;
+    }
 }
