@@ -13,6 +13,7 @@ using osu.Framework.Graphics.Primitives;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
+using osu.Framework.Localisation;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Legacy;
 using osu.Game.Extensions;
@@ -22,7 +23,6 @@ using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
 using osu.Game.Rulesets;
 using osu.Game.Tournament.Models;
-using osu.Game.Utils;
 using osuTK;
 using osuTK.Graphics;
 
@@ -31,7 +31,7 @@ namespace osu.Game.Tournament.Components
     [Cached]
     public partial class SongBar : CompositeDrawable
     {
-        protected IBeatmapInfo? beatmap;
+        private IBeatmapInfo? beatmap;
 
         protected FillFlowContainer LeftDataContainer = null!;
         protected Container BeatmapPanel = null!;
@@ -58,6 +58,7 @@ namespace osu.Game.Tournament.Components
 
         public IBeatmapInfo? Beatmap
         {
+            protected get => beatmap;
             set
             {
                 if (beatmap == value)
@@ -71,7 +72,7 @@ namespace osu.Game.Tournament.Components
         [Resolved]
         private IAPIProvider api { get; set; } = null!;
 
-        protected LegacyMods mods;
+        private LegacyMods mods;
 
         public LegacyMods Mods
         {
@@ -330,10 +331,8 @@ namespace osu.Game.Tournament.Components
         {
             waitTime = 0;
 
-            if ((mods & LegacyMods.FreeMod) > 0)
-            {
-                mods &= ~LegacyMods.FreeMod;
-            }
+            var modsForFetch = mods;
+            modsForFetch &= ~LegacyMods.FreeMod;
 
             modString = Ladder.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(b => b.ID == beatmap?.OnlineID)?.Mods;
 
@@ -376,7 +375,7 @@ namespace osu.Game.Tournament.Components
                 return;
             }
 
-            var req = new GetBeatmapAttributesRequest(beatmap.OnlineID, ((int)mods).ToString(), ruleset.Value.ShortName);
+            var req = new GetBeatmapAttributesRequest(beatmap.OnlineID, ((int)modsForFetch).ToString(), ruleset.Value.ShortName);
             req.Success += res =>
             {
                 ((TournamentBeatmap)beatmap).StarRating = res.Attributes.StarRating;
@@ -418,101 +417,15 @@ namespace osu.Game.Tournament.Components
         {
             // 这步会顺便判断是否为FM谱面
             string? modPosition = GetBeatmapModPosition();
-            double bpm;
-            double length;
-            string srExtra;
-            (string heading, string content)[]? stats;
-
-            GetBeatmapInformation(mods, out bpm, out length, out srExtra, out stats);
-
-            (string, string)[] srAndModStats =
-            {
-                ("星级", $"{beatmap!.StarRating.FormatStarRating()}{srExtra}")
-            };
-
-            if (modPosition != null)
-            {
-                srAndModStats = srAndModStats.Append(("谱面位置", modPosition)).ToArray();
-            }
-
-            (string, string)[] bpmAndPickTeam =
-            {
-                ("BPM", $"{bpm:0.#}")
-            };
 
             LeftData.Clear();
             RightData.Clear();
             LeftDataContainer.Clear();
             RightDataContainer.Clear();
 
-            LeftData.Add(new Drawable[]
-            {
-                new DiffPiece(bpmAndPickTeam)
-                {
-                    Origin = Anchor.CentreRight,
-                    Anchor = Anchor.CentreRight,
-                },
-                new DiffPiece(("谱面长度", length.ToFormattedDuration().ToString()))
-                {
-                    Origin = Anchor.CentreRight,
-                    Anchor = Anchor.CentreRight,
-                },
-            });
+            LeftData.AddRange(CreateLeftData());
 
-            RightData.Add(new Drawable[]
-            {
-                new DiffPiece(stats)
-                {
-                    Origin = Anchor.CentreLeft,
-                    Anchor = Anchor.CentreLeft,
-                },
-                new DiffPiece(srAndModStats)
-                {
-                    Origin = Anchor.CentreLeft,
-                    Anchor = Anchor.CentreLeft,
-                }
-            });
-
-            if ((mods & LegacyMods.FreeMod) > 0)
-            {
-                GetBeatmapInformation(LegacyMods.HardRock, out bpm, out length, out srExtra, out stats);
-
-                srAndModStats[0] = ("星级", $"{beatmap!.StarRating:0.00}{srExtra}");
-                srAndModStats[1] = ("谱面位置", $"{modPosition} (HR)");
-
-                RightData.Add(new Drawable[]
-                {
-                    new DiffPiece(stats)
-                    {
-                        Origin = Anchor.CentreLeft,
-                        Anchor = Anchor.CentreLeft,
-                    },
-                    new DiffPiece(srAndModStats)
-                    {
-                        Origin = Anchor.CentreLeft,
-                        Anchor = Anchor.CentreLeft,
-                    }
-                });
-
-                GetBeatmapInformation(LegacyMods.Easy, out bpm, out length, out srExtra, out stats);
-
-                srAndModStats[0] = ("星级", $"{beatmap!.StarRating:0.00}{srExtra}");
-                srAndModStats[1] = ("谱面位置", $"{modPosition} (EZ)");
-
-                RightData.Add(new Drawable[]
-                {
-                    new DiffPiece(stats)
-                    {
-                        Origin = Anchor.CentreLeft,
-                        Anchor = Anchor.CentreLeft,
-                    },
-                    new DiffPiece(srAndModStats)
-                    {
-                        Origin = Anchor.CentreLeft,
-                        Anchor = Anchor.CentreLeft,
-                    }
-                });
-            }
+            RightData.AddRange(CreateRightData(modPosition));
 
             BeatmapPanel.Child = new SongBarBeatmapPanel(beatmap)
             {
@@ -524,6 +437,219 @@ namespace osu.Game.Tournament.Components
             LeftDataIndex.TriggerChange();
             RightDataIndex.Value = 0;
             RightDataIndex.TriggerChange();
+        }
+
+        protected virtual Drawable[][] CreateLeftData()
+        {
+            GetBeatmapInformation(mods, out double bpm, out double length, out _, out _);
+
+            return new Drawable[][]
+            {
+                new Drawable[]
+                {
+                    new DiffPiece(("BPM", $"{bpm:0.#}"))
+                    {
+                        Origin = Anchor.CentreRight,
+                        Anchor = Anchor.CentreRight,
+                    },
+                    new DiffPiece(("谱面长度", length.ToFormattedDuration().ToString()))
+                    {
+                        Origin = Anchor.CentreRight,
+                        Anchor = Anchor.CentreRight,
+                    },
+                }
+            };
+        }
+
+        protected virtual DiffPiece[][] CreateRightData(string? modPosition)
+        {
+            if ((mods & LegacyMods.FreeMod) > 0)
+            {
+                return CreateFmDiffPieces(modPosition);
+            }
+
+            GetBeatmapInformation(mods, out double _, out double _, out _, out var stats);
+
+            List<(string, string)> diffPieces = new List<(string, string)>(2)
+            {
+                ("星级", $"{beatmap!.StarRating:0.00}")
+            };
+
+            if (modPosition != null)
+            {
+                diffPieces.Add(("谱面位置", modPosition));
+            }
+
+            return new[]
+            {
+                new[]
+                {
+                    new DiffPiece(stats),
+                    new DiffPiece(diffPieces.ToArray()),
+                }
+            };
+        }
+
+        protected virtual DiffPiece[][] CreateFmDiffPieces(string? modPosition)
+        {
+            List<DiffPiece[]> diffPieces = new List<DiffPiece[]>();
+
+            foreach (string mod in TournamentGameBase.Freemods)
+            {
+                GetBeatmapInformation(TournamentGameBase.ConvertFromAcronym(mod), out _, out _, out _, out var stats);
+                diffPieces.Add(new[]
+                {
+                    new DiffPiece(stats)
+                    {
+                        Origin = Anchor.CentreLeft,
+                        Anchor = Anchor.CentreLeft,
+                    },
+                    new DiffPiece(createSrAndPosition(beatmap!.StarRating, mod))
+                    {
+                        Origin = Anchor.CentreLeft,
+                        Anchor = Anchor.CentreLeft,
+                    }
+                });
+            }
+
+            return diffPieces.ToArray();
+
+            (Drawable heading, Drawable content)[] createSrAndPosition(double sr, string mod)
+            {
+                var modColor = Ladder.ModColors.FirstOrDefault(m => m.ModName == mod);
+
+                var modSection = new FillFlowContainer
+                {
+                    AutoSizeAxes = Axes.Both,
+                    Direction = FillDirection.Horizontal,
+                    Spacing = new Vector2(5, 0),
+                    Children = new Drawable[]
+                    {
+                        modPosition != null ? createText($"{modPosition}", false) : Empty(),
+                        new TournamentSpriteTextWithBackground(mod, text =>
+                        {
+                            text.Font = OsuFont.Default.With(weight: FontWeight.Bold, size: 15);
+                        })
+                        {
+                            BackgroundColor = modColor?.BackgroundColor ?? TournamentGame.ELEMENT_BACKGROUND_COLOUR,
+                            TextColor = modColor?.TextColor ?? TournamentGame.ELEMENT_FOREGROUND_COLOUR
+                        }
+                    }
+                };
+
+                return new[]
+                {
+                    (createText("星级", true) as Drawable, createText($"{sr:0.00}", false) as Drawable),
+                    (createText("铺面位置", true) as Drawable, modSection as Drawable),
+                };
+            }
+
+            TournamentSpriteText createText(string text, bool bold) => new TournamentSpriteText
+                { Text = text, Font = OsuFont.Torus.With(weight: bold ? FontWeight.Bold : FontWeight.Regular, size: 15) };
+        }
+
+        public partial class DiffPiece : FillFlowContainer
+        {
+            public DiffPiece(params (string heading, string content)[] tuples)
+                : this()
+            {
+                for (int i = 0; i < tuples.Length; i++)
+                {
+                    (string heading, string content) = tuples[i];
+
+                    if (i > 0)
+                    {
+                        addDelimiter();
+                    }
+
+                    addText(CreateHeadingText(heading), s => cp(s, false));
+                    addText(" ", s => cp(s, false));
+                    addText(CreateContentText(content), s => cp(s, true));
+                }
+            }
+
+            /// <summary>
+            /// Creates the heading text drawable. Override to customize font.
+            /// </summary>
+            protected virtual TournamentSpriteText CreateHeadingText(string text) => new TournamentSpriteText { Text = text };
+
+            /// <summary>
+            /// Creates the content text drawable. Override to customize font.
+            /// </summary>
+            protected virtual TournamentSpriteText CreateContentText(string text) => new TournamentSpriteText { Text = text };
+
+            public DiffPiece()
+            {
+                Margin = new MarginPadding { Horizontal = 7, Vertical = 1 };
+                AutoSizeAxes = Axes.Both;
+                Direction = FillDirection.Horizontal;
+            }
+
+            public DiffPiece(params Drawable[] drawables)
+                : this()
+            {
+                for (int i = 0; i < drawables.Length; i++)
+                {
+                    if (i > 0)
+                    {
+                        addDelimiter();
+                    }
+
+                    Add(drawables[i]);
+                }
+            }
+
+            public DiffPiece(params (Drawable heading, Drawable content)[] customPairs)
+                : this()
+            {
+                for (int i = 0; i < customPairs.Length; i++)
+                {
+                    if (i > 0)
+                    {
+                        addDelimiter();
+                    }
+
+                    Add(customPairs[i].heading);
+                    Add(new DrawableSpacer());
+                    Add(customPairs[i].content);
+                }
+            }
+
+            private static void cp(SpriteText s, bool bold)
+            {
+                s.Font = OsuFont.Torus.With(weight: bold ? FontWeight.Bold : FontWeight.Regular, size: 15);
+            }
+
+            private void addText(LocalisableString text, Action<SpriteText>? creationParameters = null)
+            {
+                var spriteText = new TournamentSpriteText { Text = text };
+                creationParameters?.Invoke(spriteText);
+                Add(spriteText);
+            }
+
+            private void addText(SpriteText text, Action<SpriteText>? creationParameters = null)
+            {
+                creationParameters?.Invoke(text);
+                Add(text);
+            }
+
+            private void addDelimiter()
+            {
+                addText("/", s =>
+                {
+                    cp(s, false);
+                    s.Margin = new MarginPadding { Horizontal = 2f };
+                });
+            }
+
+            private partial class DrawableSpacer : Drawable
+            {
+                public DrawableSpacer()
+                {
+                    Width = 4;
+                    Height = 1;
+                }
+            }
         }
 
         protected void GetBeatmapInformation(LegacyMods mods, out double bpm, out double length, out string srExtra, out (string heading, string content)[] stats)
@@ -606,38 +732,6 @@ namespace osu.Game.Tournament.Components
                         ("下落速度", $"{ar:0.#}"),
                     };
                     break;
-            }
-        }
-
-        public partial class DiffPiece : TextFlowContainer
-        {
-            public DiffPiece(params (string heading, string content)[] tuples)
-            {
-                Margin = new MarginPadding { Horizontal = 7, Vertical = 1 };
-                AutoSizeAxes = Axes.Both;
-
-                static void cp(SpriteText s, bool bold)
-                {
-                    s.Font = OsuFont.Torus.With(weight: bold ? FontWeight.Bold : FontWeight.Regular, size: 15);
-                }
-
-                for (int i = 0; i < tuples.Length; i++)
-                {
-                    (string heading, string content) = tuples[i];
-
-                    if (i > 0)
-                    {
-                        AddText(" / ", s =>
-                        {
-                            cp(s, false);
-                            s.Spacing = new Vector2(-2, 0);
-                        });
-                    }
-
-                    AddText(new TournamentSpriteText { Text = heading }, s => cp(s, false));
-                    AddText(" ", s => cp(s, false));
-                    AddText(new TournamentSpriteText { Text = content }, s => cp(s, true));
-                }
             }
         }
     }

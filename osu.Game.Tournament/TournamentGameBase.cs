@@ -396,5 +396,25 @@ namespace osu.Game.Tournament
                 public override bool ChangeFocusOnClick => false;
             }
         }
+
+        public static string[] Freemods => new[] { "NM", "HR", "EZ" };
+
+        public static LegacyMods ConvertFromAcronym(string acronym)
+        {
+            switch (acronym)
+            {
+                case "NM":
+                    return LegacyMods.None;
+
+                case "HR":
+                    return LegacyMods.HardRock;
+
+                case "EZ":
+                    return LegacyMods.Easy;
+
+                default:
+                    throw new ArgumentException($"Unknown acronym: {acronym}");
+            }
+        }
     }
 }

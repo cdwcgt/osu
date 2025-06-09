@@ -58,7 +58,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private void updateState()
         {
-            pickTeamColour = currentMatch.Value?.PicksBans.FirstOrDefault(p => p.BeatmapID == beatmap?.OnlineID && p.Type == ChoiceType.Pick)?.Team;
+            pickTeamColour = currentMatch.Value?.PicksBans.FirstOrDefault(p => p.BeatmapID == Beatmap?.OnlineID && p.Type == ChoiceType.Pick)?.Team;
 
             if (pickTeamColour == null)
             {
@@ -76,22 +76,11 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             this.MoveTo(expanded ? new Vector2(0, -25) : Vector2.Zero, 300, Easing.Out);
         }
 
-        protected override void PostUpdate()
+        protected override Drawable[][] CreateLeftData()
         {
-            string? modPosition = GetBeatmapModPosition();
-            updateState();
+            var leftData = base.CreateLeftData();
 
-            GetBeatmapInformation(mods, out double bpm, out double length, out string srExtra, out var stats);
-
-            (string, string)[] srAndModStats =
-            {
-                ("星级", $"{beatmap!.StarRating:0.00}{srExtra}")
-            };
-
-            if (modPosition != null)
-            {
-                srAndModStats = srAndModStats.Append(("谱面位置", modPosition)).ToArray();
-            }
+            GetBeatmapInformation(Mods, out double bpm, out double _, out _, out _);
 
             (string, string)[] bpmAndPickTeam =
             {
@@ -99,90 +88,13 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 ("BPM", $"{bpm:0.#}")
             };
 
-            LeftData.Clear();
-            RightData.Clear();
-            LeftDataContainer.Clear();
-            RightDataContainer.Clear();
-
-            LeftData.Add(new Drawable[]
+            leftData[0][0] = new DiffPiece(bpmAndPickTeam)
             {
-                new DiffPiece(bpmAndPickTeam)
-                {
-                    Origin = Anchor.CentreRight,
-                    Anchor = Anchor.CentreRight,
-                },
-                new DiffPiece(("谱面长度", length.ToFormattedDuration().ToString()))
-                {
-                    Origin = Anchor.CentreRight,
-                    Anchor = Anchor.CentreRight,
-                },
-            });
-
-            RightData.Add(new Drawable[]
-            {
-                new DiffPiece(stats)
-                {
-                    Origin = Anchor.CentreLeft,
-                    Anchor = Anchor.CentreLeft,
-                },
-                new DiffPiece(srAndModStats)
-                {
-                    Origin = Anchor.CentreLeft,
-                    Anchor = Anchor.CentreLeft,
-                }
-            });
-
-            if ((mods & LegacyMods.FreeMod) > 0)
-            {
-                GetBeatmapInformation(LegacyMods.HardRock, out bpm, out length, out srExtra, out stats);
-
-                srAndModStats[0] = ("星级", $"{beatmap!.StarRating:0.00}{srExtra}");
-                srAndModStats[1] = ("谱面位置", $"{modPosition} (HR)");
-
-                RightData.Add(new Drawable[]
-                {
-                    new DiffPiece(stats)
-                    {
-                        Origin = Anchor.CentreLeft,
-                        Anchor = Anchor.CentreLeft,
-                    },
-                    new DiffPiece(srAndModStats)
-                    {
-                        Origin = Anchor.CentreLeft,
-                        Anchor = Anchor.CentreLeft,
-                    }
-                });
-
-                GetBeatmapInformation(LegacyMods.Easy, out bpm, out length, out srExtra, out stats);
-
-                srAndModStats[0] = ("星级", $"{beatmap!.StarRating:0.00}{srExtra}");
-                srAndModStats[1] = ("谱面位置", $"{modPosition} (EZ)");
-
-                RightData.Add(new Drawable[]
-                {
-                    new DiffPiece(stats)
-                    {
-                        Origin = Anchor.CentreLeft,
-                        Anchor = Anchor.CentreLeft,
-                    },
-                    new DiffPiece(srAndModStats)
-                    {
-                        Origin = Anchor.CentreLeft,
-                        Anchor = Anchor.CentreLeft,
-                    }
-                });
-            }
-
-            BeatmapPanel.Child = new SongBarBeatmapPanel(beatmap)
-            {
-                Width = 500,
-                CenterText = true,
+                Origin = Anchor.CentreRight,
+                Anchor = Anchor.CentreRight,
             };
 
-            LeftDataIndex.Value = 0;
-            LeftDataIndex.TriggerChange();
-            RightDataIndex.Value = 0;
-            RightDataIndex.TriggerChange();
+            return leftData;
         }
     }
 }
