@@ -52,6 +52,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
             Depth = float.MinValue,
         };
 
+        private GameplaySongBar gameplaySongBar => (GameplaySongBar)SongBar;
+
         protected override bool ShowLogo => true;
 
         private bool switchFromMappool;
@@ -244,8 +246,6 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 SongBar.FadeIn(200);
 
             roundPreviewShow = false;
-
-            updateState();
         }
 
         protected override void LoadComplete()
@@ -297,7 +297,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
             scheduledContract?.Cancel();
 
-            ((GameplaySongBar)SongBar).Expanded = false;
+            gameplaySongBar.Expanded = false;
             scoreDisplay.FadeOut(100);
             using (chat.BeginDelayedSequence(500))
                 chat.Expand();
@@ -311,7 +311,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
             scheduledContract?.Cancel();
 
             chat.Contract();
-            ((GameplaySongBar)SongBar).Expanded = true;
+            gameplaySongBar.Expanded = true;
 
             using (BeginDelayedSequence(300))
             {
