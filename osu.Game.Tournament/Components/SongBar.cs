@@ -375,7 +375,7 @@ namespace osu.Game.Tournament.Components
                 return;
             }
 
-            var req = new GetBeatmapAttributesRequest(beatmap.OnlineID, ((int)modsForFetch).ToString(), ruleset.Value.ShortName);
+            var req = new GetBeatmapAttributesRequest(beatmap.OnlineID, ((int)modsForFetch).ToString(), ruleset.Value.OnlineID);
             req.Success += res =>
             {
                 ((TournamentBeatmap)beatmap).StarRating = res.Attributes.StarRating;
@@ -562,12 +562,12 @@ namespace osu.Game.Tournament.Components
 
                     if (i > 0)
                     {
-                        addDelimiter();
+                        AddDelimiter();
                     }
 
-                    addText(CreateHeadingText(heading), s => cp(s, false));
-                    addText(" ", s => cp(s, false));
-                    addText(CreateContentText(content), s => cp(s, true));
+                    AddText(CreateHeadingText(heading), s => cp(s, false));
+                    AddText(" ", s => cp(s, false));
+                    AddText(CreateContentText(content), s => cp(s, true));
                 }
             }
 
@@ -595,7 +595,7 @@ namespace osu.Game.Tournament.Components
                 {
                     if (i > 0)
                     {
-                        addDelimiter();
+                        AddDelimiter();
                     }
 
                     Add(drawables[i]);
@@ -609,7 +609,7 @@ namespace osu.Game.Tournament.Components
                 {
                     if (i > 0)
                     {
-                        addDelimiter();
+                        AddDelimiter();
                     }
 
                     Add(customPairs[i].heading);
@@ -623,22 +623,22 @@ namespace osu.Game.Tournament.Components
                 s.Font = OsuFont.Torus.With(weight: bold ? FontWeight.Bold : FontWeight.Regular, size: 15);
             }
 
-            private void addText(LocalisableString text, Action<SpriteText>? creationParameters = null)
+            public void AddText(LocalisableString text, Action<SpriteText>? creationParameters = null)
             {
                 var spriteText = new TournamentSpriteText { Text = text };
                 creationParameters?.Invoke(spriteText);
                 Add(spriteText);
             }
 
-            private void addText(SpriteText text, Action<SpriteText>? creationParameters = null)
+            public void AddText(SpriteText text, Action<SpriteText>? creationParameters = null)
             {
                 creationParameters?.Invoke(text);
                 Add(text);
             }
 
-            private void addDelimiter()
+            public void AddDelimiter()
             {
-                addText("/", s =>
+                AddText("/", s =>
                 {
                     cp(s, false);
                     s.Margin = new MarginPadding { Horizontal = 2f };

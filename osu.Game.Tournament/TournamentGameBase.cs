@@ -174,6 +174,7 @@ namespace osu.Game.Tournament
                 addedInfo |= addPlayers();
                 addedInfo |= await addRoundBeatmaps().ConfigureAwait(false);
                 addedInfo |= await addSeedingBeatmaps().ConfigureAwait(false);
+                addedInfo |= addFmBeatmapStar();
 
                 if (addedInfo)
                     saveChanges();
@@ -293,7 +294,7 @@ namespace osu.Game.Tournament
         {
             var beatmapsRequiringPopulation = ladder.Rounds
                                                     .SelectMany(r => r.Beatmaps)
-                                                    .Where(b => b.Mods == "FM" && b.Beatmap != null && b.Beatmap.OnlineID != 0 && b.Beatmap.StarRatingWithMods.Count == 0)
+                                                    .Where(b => b.Mods == "FM" && b.Beatmap != null && b.Beatmap.OnlineID != 0 && b.Beatmap.StarRatingWithMods.Count != Freemods.Length)
                                                     .ToList();
 
             if (beatmapsRequiringPopulation.Count == 0)
@@ -354,7 +355,7 @@ namespace osu.Game.Tournament
             {
                 var getBeatmapStarRatingRequest = new GetBeatmapAttributesRequest(beatmap.OnlineID,
                     ((int)ConvertFromAcronym(mod)).ToString(),
-                    ladder.Ruleset.Value?.OnlineID.ToString());
+                    ladder.Ruleset.Value?.OnlineID);
 
                 getBeatmapStarRatingRequest.Success += data =>
                 {
