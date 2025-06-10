@@ -497,6 +497,9 @@ namespace osu.Game.Tournament.Components
             foreach (string mod in TournamentGameBase.Freemods)
             {
                 GetBeatmapInformation(TournamentGameBase.ConvertFromAcronym(mod), out _, out _, out _, out var stats);
+
+                double c = Ladder.Rounds.SelectMany(r => r.Beatmaps).FirstOrDefault(b => b.ID == beatmap!.OnlineID)?.Beatmap?.StarRatingWithMods.GetValueOrDefault(mod) ?? beatmap!.StarRating;
+
                 diffPieces.Add(new[]
                 {
                     new DiffPiece(stats)
@@ -504,7 +507,7 @@ namespace osu.Game.Tournament.Components
                         Origin = Anchor.CentreLeft,
                         Anchor = Anchor.CentreLeft,
                     },
-                    new DiffPiece(createSrAndPosition(beatmap!.StarRating, mod))
+                    new DiffPiece(createSrAndPosition(v, mod))
                     {
                         Origin = Anchor.CentreLeft,
                         Anchor = Anchor.CentreLeft,
@@ -516,7 +519,7 @@ namespace osu.Game.Tournament.Components
 
             (Drawable heading, Drawable content)[] createSrAndPosition(double sr, string mod)
             {
-                var modColor = Ladder.ModColors.FirstOrDefault(m => m.ModName == mod);
+                var modColor = Ladder.ModColors.FirstOrDefault(m => m.ModName == mod);x
 
                 var modSection = new FillFlowContainer
                 {
