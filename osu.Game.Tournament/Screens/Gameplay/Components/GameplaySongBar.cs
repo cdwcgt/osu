@@ -8,8 +8,6 @@ using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
-using osu.Game.Beatmaps.Legacy;
-using osu.Game.Extensions;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osuTK;
