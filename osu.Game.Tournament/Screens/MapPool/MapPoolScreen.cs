@@ -254,7 +254,7 @@ namespace osu.Game.Tournament.Screens.MapPool
 
             foreach (BanPickFlowGroup g in groups)
             {
-                accumulatedSteps += g.Steps.Count * (g.RepeatCount.Value + 1);
+                accumulatedSteps += g.TotalStep;
 
                 if (accumulatedSteps <= banPickCount) continue;
 
@@ -281,13 +281,13 @@ namespace osu.Game.Tournament.Screens.MapPool
                 return;
             }
 
-            int stepsBeforeGroup = accumulatedSteps - currentGroup.Steps.Count;
+            int stepsBeforeGroup = accumulatedSteps - currentGroup.TotalStep;
             int currentIndex = banPickCount - stepsBeforeGroup;
 
-            if (currentIndex < 0 || currentIndex >= currentGroup.Steps.Count)
+            if (currentIndex < 0 || currentIndex >= currentGroup.TotalStep)
                 return;
 
-            BanPickFlowStep currentStep = currentGroup.Steps[currentIndex];
+            BanPickFlowStep currentStep = currentGroup.Steps[currentIndex % currentGroup.Steps.Count];
 
             TeamColour lastTeam = CurrentMatch.Value.PicksBans.LastOrDefault()?.Team ?? TeamColour.Red;
             TeamColour nextColor = !currentStep.SwapFromLastColor.Value
