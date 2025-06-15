@@ -11,10 +11,13 @@ using System.Runtime.Versioning;
 using System.Text;
 using System.Threading;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Rendering;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
+using SixLabors.ImageSharp.PixelFormats;
+using TagLib.Id3v2;
 
 namespace osu.Game.Tournament.Components
 {
@@ -24,7 +27,13 @@ namespace osu.Game.Tournament.Components
         private Sprite sprite = null!;
         private readonly string targetWindowTitle;
         private Thread? captureThread;
-        private volatile bool running;
+        private bool running;
+
+        private Bitmap? bitmapPool;
+        private System.Drawing.Graphics? graphicsPool;
+        private byte[]? rawBufferPool;
+        private MemoryTextureUpload? uploadPool;
+        private int poolWidth, poolHeight;
 
         // 同步信号
         private readonly AutoResetEvent captureRequest = new AutoResetEvent(false);
@@ -32,7 +41,7 @@ namespace osu.Game.Tournament.Components
 
         // 当前窗口尺寸 & 像素缓冲区
         private int currentWidth, currentHeight;
-        private byte[]? pixelBuffer;
+        private MemoryTextureUpload? pixelBuffer;
         private readonly object bufferLock = new object();
 
         private Texture? texture;
@@ -116,24 +125,56 @@ namespace osu.Game.Tournament.Components
                         continue;
                     }
 
-                    using var bmp = CaptureWindowFromBitbit(hWnd);
+                    if (bitmapPool == null || graphicsPool == null || poolWidth != w || poolHeight != h)
+                    {
+                        bitmapPool?.Dispose();
+                        graphicsPool?.Dispose();
 
-                    var bmpData = bmp.LockBits(
+                        bitmapPool = new Bitmap(w, h, PixelFormat.Format32bppArgb);
+                        graphicsPool = System.Drawing.Graphics.FromImage(bitmapPool);
+
+                        // 注意 LockBits 时的 stride 可能有行填充
+                        var tmpData = bitmapPool.LockBits(
+                            new Rectangle(0, 0, w, h),
+                            ImageLockMode.ReadOnly,
+                            PixelFormat.Format32bppArgb);
+                        int stride = Math.Abs(tmpData.Stride);
+                        bitmapPool.UnlockBits(tmpData);
+
+                        rawBufferPool = new byte[stride * h];
+
+                        poolWidth = w;
+                        poolHeight = h;
+                    }
+
+                    // —— 真正抓图到 bitmapPool —— //
+                    IntPtr hdcDest = graphicsPool.GetHdc();
+                    IntPtr hdcSrc = GetWindowDC(hWnd);
+                    BitBlt(hdcDest, 0, 0, w, h, hdcSrc, 0, 0, 0x00CC0020);
+                    graphicsPool.ReleaseHdc(hdcDest);
+                    ReleaseDC(hWnd, hdcSrc);
+
+                    // —— 锁像素 + 拷到 rawBufferPool —— //
+                    var bmpData = bitmapPool.LockBits(
                         new Rectangle(0, 0, w, h),
                         ImageLockMode.ReadOnly,
                         PixelFormat.Format32bppArgb);
 
-                    // 4. 计算字节数 & 拷贝
-                    int byteCount = Math.Abs(bmpData.Stride) * h;
-                    byte[] buffer = new byte[byteCount];
-                    Marshal.Copy(bmpData.Scan0, buffer, 0, byteCount);
+                    Marshal.Copy(bmpData.Scan0, rawBufferPool, 0, rawBufferPool.Length);
+                    bitmapPool.UnlockBits(bmpData);
 
-                    // 5. 解锁
-                    bmp.UnlockBits(bmpData);
+                    if (uploadPool == null || uploadPool.Bounds.Width != w || uploadPool.Bounds.Height != h)
+                    {
+                        uploadPool?.Dispose();
+                        uploadPool = new MemoryTextureUpload(w, h);
+                        // ctor 里只分配 new Rgba32[w*h]
+                    }
+
+                    ConvertBgraToRgba32(rawBufferPool!, poolWidth, poolHeight, uploadPool!.PixelData);
 
                     lock (bufferLock)
                     {
-                        pixelBuffer = buffer;
+                        pixelBuffer = uploadPool;
                         currentWidth = w;
                         currentHeight = h;
                     }
@@ -150,11 +191,40 @@ namespace osu.Game.Tournament.Components
             }
         }
 
+        private void ConvertBgraToRgba32(byte[] src, int width, int height, Span<Rgba32> dst)
+        {
+            int dstIdx = 0;
+
+            for (int i = 0; i < src.Length; i += 4)
+            {
+                byte b = src[i + 0];
+                byte g = src[i + 1];
+                byte r = src[i + 2];
+
+                byte a = 255;
+                dst[dstIdx++] = new Rgba32(r, g, b, a);
+            }
+        }
+
+        public BindableInt FrameRate { get; } = new BindableInt(60)
+        {
+            MinValue = 30,
+            MaxValue = 360,
+            Default = 60,
+        };
+
+        private double elapsedTime;
+
         protected override void Update()
         {
             base.Update();
 
-            var sw = Stopwatch.StartNew();
+            elapsedTime += Time.Elapsed;
+
+            if (elapsedTime < 1000f / FrameRate.Value)
+            {
+                return;
+            }
 
             // 1) 请求抓一帧
             captureRequest.Set();
@@ -162,7 +232,6 @@ namespace osu.Game.Tournament.Components
             // 2) 等待抓取完成（同步），最多等 10ms 防止卡死，也可以改为无限等待
             if (!frameReady.WaitOne(0))
             {
-                sw.Stop();
                 return;
             }
 
@@ -172,12 +241,10 @@ namespace osu.Game.Tournament.Components
                 return;
             }
 
-            sw.Stop();
-
             this.FadeIn(100);
 
             // 3) 消费像素缓冲区
-            byte[]? frame;
+            MemoryTextureUpload? frame;
             int w, h;
 
             lock (bufferLock)
@@ -203,7 +270,7 @@ namespace osu.Game.Tournament.Components
                 sprite.Texture = texture;
             }
 
-            texture.SetData(new MemoryTextureUpload(frame, w, h));
+            texture.SetData(frame);
         }
 
         protected override void Dispose(bool isDisposing)

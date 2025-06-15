@@ -11,38 +11,22 @@ namespace osu.Game.Tournament.Components
 {
     public partial class MemoryTextureUpload : ITextureUpload
     {
-        private readonly Rgba32[] pixelData;
+        public readonly Rgba32[] PixelData;
 
         /// <summary>
         /// 构造：rawBytes 必须是 Bitmap.LockBits 拷出来的 BGRA 原始数据，
         /// 并且行长 = width * 4（无额外填充）。
         /// </summary>
-        public MemoryTextureUpload(byte[] rawBytes, int width, int height)
+        public MemoryTextureUpload(int width, int height)
         {
-            if (rawBytes.Length != width * height * 4)
-                throw new ArgumentException("rawBytes 长度应等于 width*height*4");
-
-            pixelData = new Rgba32[width * height];
-            int dstIdx = 0;
-
-            for (int i = 0; i < rawBytes.Length; i += 4)
-            {
-                byte b = rawBytes[i + 0];
-                byte g = rawBytes[i + 1];
-                byte r = rawBytes[i + 2];
-
-                // 貌似部分全黑会导致透明度也0，所以强制为255
-                byte a = 255;
-                pixelData[dstIdx++] = new Rgba32(r, g, b, a);
-            }
-
+            PixelData = new Rgba32[width * height];
             Bounds = new RectangleI(0, 0, width, height);
         }
 
         /// <summary>
         /// 转换后的 Rgba32 数据
         /// </summary>
-        public ReadOnlySpan<Rgba32> Data => pixelData;
+        public ReadOnlySpan<Rgba32> Data => PixelData;
 
         /// <summary>
         /// 目标 Mipmap 级别，一般用 0
