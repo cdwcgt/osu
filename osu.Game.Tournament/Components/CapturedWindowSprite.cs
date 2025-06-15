@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using osu.Framework.Graphics;
 using System.Drawing;
@@ -16,8 +15,8 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Rendering;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
+using osu.Game.Tournament.Models;
 using SixLabors.ImageSharp.PixelFormats;
-using TagLib.Id3v2;
 
 namespace osu.Game.Tournament.Components
 {
@@ -48,6 +47,9 @@ namespace osu.Game.Tournament.Components
 
         private bool isWindowsLive = false;
 
+        [Resolved]
+        private LadderInfo? ladder { get; set; }
+
         public CapturedWindowSprite(string windowTitle)
         {
             Masking = true;
@@ -77,6 +79,11 @@ namespace osu.Game.Tournament.Components
                 Name = $"WindowCapture<{targetWindowTitle}>"
             };
             captureThread.Start();
+
+            if (ladder != null)
+            {
+                FrameRate.BindTo(ladder.FrameRate);
+            }
         }
 
         [Resolved]
@@ -225,6 +232,8 @@ namespace osu.Game.Tournament.Components
             {
                 return;
             }
+
+            elapsedTime = 0;
 
             // 1) 请求抓一帧
             captureRequest.Set();

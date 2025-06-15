@@ -115,6 +115,14 @@ namespace osu.Game.Tournament.Screens.Gameplay
                                 Current = LadderInfo.ChromaKeyWidth,
                                 KeyboardStep = 1,
                             },
+                        OperatingSystem.IsWindows()
+                            ? new SettingsSlider<int>
+                            {
+                                LabelText = "Frame rate",
+                                Current = LadderInfo.FrameRate,
+                                KeyboardStep = 1,
+                            }
+                            : Empty(),
                         new SettingsSlider<int>
                         {
                             LabelText = "Players per team",
@@ -370,7 +378,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                                 RelativeSizeAxes = Axes.Both,
                                 Width = 0.5f,
                                 Height = 0.5f,
-                                Anchor = Anchor.BottomCentre,
+                                Anchor = Anchor.BottomRight,
                                 Origin = Anchor.BottomRight,
                             },
                         };
