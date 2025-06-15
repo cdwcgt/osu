@@ -186,7 +186,7 @@ namespace osu.Game.Tournament.Screens.Showcase
                 startInnerLazer();
         }
 
-        private void startInnerLazer()
+        private void startInnerLazer() => Scheduler.AddOnce(() =>
         {
             nestedGame = new NestedOsuGame(host.Storage, new ForwardingAPIAccess(api), config)
             {
@@ -211,7 +211,7 @@ namespace osu.Game.Tournament.Screens.Showcase
             flash.FlashIntensity.BindTo(flashIntensity);
             flash.FlashColor.BindTo(flashColor);
             flash.FlashKiaiOnly.BindTo(flashKiaiOnly);
-        }
+        });
 
         private void closeInnerLazer()
         {
