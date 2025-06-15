@@ -6,7 +6,6 @@ using System.Runtime.InteropServices;
 using osu.Framework.Graphics;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.IO;
 using System.Runtime.Versioning;
 using System.Text;
 using System.Threading;
@@ -21,22 +20,31 @@ namespace osu.Game.Tournament.Components
     [SupportedOSPlatform("windows")]
     public partial class CapturedWindowSprite : CompositeDrawable
     {
-        private Texture? texture;
-        private Sprite sprite;
-        private string targetWindowTitle;
+        private Sprite sprite = null!;
+        private readonly string targetWindowTitle;
         private Thread? captureThread;
-        private bool running = true;
-        private object frameLock = new object();
-        private byte[]? latestFrameBytes;
+        private volatile bool running;
+
+        // 同步信号
+        private readonly AutoResetEvent captureRequest = new AutoResetEvent(false);
+        private readonly AutoResetEvent frameReady = new AutoResetEvent(false);
+
+        // 当前窗口尺寸 & 像素缓冲区
+        private int currentWidth, currentHeight;
+        private byte[]? pixelBuffer;
+        private readonly object bufferLock = new object();
+
+        private Texture? texture;
 
         public CapturedWindowSprite(string windowTitle)
         {
+            AlwaysPresent = true;
             targetWindowTitle = windowTitle;
             RelativeSizeAxes = Axes.Both;
         }
 
         [BackgroundDependencyLoader]
-        private void load(TextureStore textures)
+        private void load()
         {
             sprite = new Sprite
             {
@@ -45,52 +53,151 @@ namespace osu.Game.Tournament.Components
             };
 
             AddInternal(sprite);
+            texture = renderer.CreateTexture(1, 1);
+            sprite.Texture = texture;
+
+            // 启动后台抓取线程
+            running = true;
+            captureThread = new Thread(captureLoop)
+            {
+                IsBackground = true,
+                Name = $"WindowCapture<{targetWindowTitle}>"
+            };
+            captureThread.Start();
         }
 
         [Resolved]
         private IRenderer renderer { get; set; } = null!;
 
+        private void captureLoop()
+        {
+            // 预先查一次 HWND
+            while (running)
+            {
+                // 等待 Update 发起请求
+                captureRequest.WaitOne();
+
+                if (!running) break;
+
+                IntPtr hWnd = FindWindowByPartialTitle(targetWindowTitle);
+
+                if (hWnd == IntPtr.Zero)
+                {
+                    // 没找到窗口：清空缓冲，通知 Update 隐藏画面
+                    lock (bufferLock)
+                        pixelBuffer = null;
+                    frameReady.Set();
+                    continue;
+                }
+
+                try
+                {
+                    GetWindowRect(hWnd, out RECT rect);
+                    int w = rect.Right - rect.Left;
+                    int h = rect.Bottom - rect.Top;
+
+                    if (w <= 0 || h <= 0)
+                    {
+                        frameReady.Set();
+                        continue;
+                    }
+
+                    using var bmp = CaptureWindowFromBitbit(hWnd);
+
+                    var bmpData = bmp.LockBits(
+                        new Rectangle(0, 0, w, h),
+                        ImageLockMode.ReadOnly,
+                        PixelFormat.Format32bppArgb);
+
+                    // 4. 计算字节数 & 拷贝
+                    int byteCount = Math.Abs(bmpData.Stride) * h;
+                    byte[] buffer = new byte[byteCount];
+                    Marshal.Copy(bmpData.Scan0, buffer, 0, byteCount);
+
+                    // 5. 解锁
+                    bmp.UnlockBits(bmpData);
+
+                    lock (bufferLock)
+                    {
+                        pixelBuffer = buffer;
+                        currentWidth = w;
+                        currentHeight = h;
+                    }
+                }
+                catch
+                {
+                    // 忽略错误
+                }
+                finally
+                {
+                    // 通知 Update 可以消费
+                    frameReady.Set();
+                }
+            }
+        }
+
         protected override void Update()
         {
             base.Update();
 
-            try
+            // 1) 请求抓一帧
+            captureRequest.Set();
+
+            // 2) 等待抓取完成（同步），最多等 10ms 防止卡死，也可以改为无限等待
+            if (!frameReady.WaitOne(0))
+                return;
+
+            // 3) 消费像素缓冲区
+            byte[]? frame;
+            int w, h;
+
+            lock (bufferLock)
             {
-                using var bmp = CaptureWindowFromBitbit(targetWindowTitle);
-                using var ms = new MemoryStream();
-                bmp.Save(ms, ImageFormat.Bmp);
-                ms.Seek(0, SeekOrigin.Begin);
+                if (pixelBuffer == null)
+                {
+                    this.FadeOut();
+                    return;
+                }
 
-                var newTex = Texture.FromStream(renderer, ms);
-                sprite.Texture = newTex;
-
-                texture?.Dispose();
-                texture = newTex;
+                frame = pixelBuffer;
+                w = currentWidth;
+                h = currentHeight;
+                pixelBuffer = null;
             }
-            catch { }
+
+            this.FadeIn();
+
+            if (frame == null) return;
+
+            // 4) 更新或重建纹理
+            if (texture == null || texture.Width != w || texture.Height != h)
+            {
+                texture?.Dispose();
+                texture = renderer.CreateTexture(w, h);
+                sprite.Texture = texture;
+            }
+
+            texture.SetData(new MemoryTextureUpload(frame, w, h));
         }
 
         protected override void Dispose(bool isDisposing)
         {
             base.Dispose(isDisposing);
             running = false;
+            captureRequest.Set();
             captureThread?.Join();
             texture?.Dispose();
         }
 
         #region Windows API
 
-        public static Bitmap CaptureWindowFromBitbit(string windowTitle)
+        public static Bitmap CaptureWindowFromBitbit(IntPtr hWnd)
         {
-            IntPtr hWnd = FindWindowByPartialTitle(windowTitle);
-            if (hWnd == IntPtr.Zero)
-                throw new Exception("窗口未找到: " + windowTitle);
-
             GetWindowRect(hWnd, out RECT rect);
             int width = rect.Right - rect.Left;
             int height = rect.Bottom - rect.Top;
 
-            Bitmap bmp = new Bitmap(width, height);
+            Bitmap bmp = new Bitmap(width, height, PixelFormat.Format32bppArgb);
 
             using (System.Drawing.Graphics gfxBmp = System.Drawing.Graphics.FromImage(bmp))
             {
