@@ -16,6 +16,7 @@ using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Gameplay.Components;
 using osu.Game.Tournament.Screens.MapPool;
 using osu.Game.Tournament.Screens.TeamWin;
+using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Screens.Gameplay
 {
@@ -96,6 +97,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 {
                     Children = new Drawable[]
                     {
+                        warmupButton = new TourneyButton
                         {
                             RelativeSizeAxes = Axes.X,
                             Text = "Toggle warmup",
@@ -279,6 +281,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
             [BackgroundDependencyLoader]
             private void load()
             {
+                if (!OperatingSystem.IsWindows())
+                {
+                    // chroma key area for stable gameplay
+                    Colour = new Color4(0, 255, 0, 255);
+                }
+
                 ladder.PlayersPerTeam.BindValueChanged(performLayout, true);
             }
 
