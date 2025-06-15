@@ -109,14 +109,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
                             Text = "Toggle chat",
                             Action = () => { State.Value = State.Value == TourneyState.Idle ? TourneyState.Playing : TourneyState.Idle; }
                         },
-                        OperatingSystem.IsWindows()
-                            ? Empty()
-                            : new SettingsSlider<int>
-                            {
-                                LabelText = "Chroma width",
-                                Current = LadderInfo.ChromaKeyWidth,
-                                KeyboardStep = 1,
-                            },
+                        new SettingsSlider<int>
+                        {
+                            LabelText = $"{(OperatingSystem.IsWindows() ? "Player Area" : "Chroma")} width",
+                            Current = LadderInfo.ChromaKeyWidth,
+                            KeyboardStep = 1,
+                        },
                         OperatingSystem.IsWindows()
                             ? new SettingsSlider<int>
                             {
@@ -135,8 +133,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 }
             });
 
-            if (!OperatingSystem.IsWindows())
-                LadderInfo.ChromaKeyWidth.BindValueChanged(width => chroma.Width = width.NewValue, true);
+            LadderInfo.ChromaKeyWidth.BindValueChanged(width => chroma.Width = width.NewValue, true);
 
             warmup.BindValueChanged(w =>
             {
