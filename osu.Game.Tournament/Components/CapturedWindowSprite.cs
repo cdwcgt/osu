@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using osu.Framework.Graphics;
 using System.Drawing;
@@ -36,8 +37,11 @@ namespace osu.Game.Tournament.Components
 
         private Texture? texture;
 
+        private bool isWindowsLive = false;
+
         public CapturedWindowSprite(string windowTitle)
         {
+            Masking = true;
             AlwaysPresent = true;
             targetWindowTitle = windowTitle;
             RelativeSizeAxes = Axes.Both;
@@ -71,6 +75,8 @@ namespace osu.Game.Tournament.Components
 
         private void captureLoop()
         {
+            IntPtr hWnd = FindWindowByPartialTitle(targetWindowTitle);
+
             // 预先查一次 HWND
             while (running)
             {
@@ -79,16 +85,24 @@ namespace osu.Game.Tournament.Components
 
                 if (!running) break;
 
-                IntPtr hWnd = FindWindowByPartialTitle(targetWindowTitle);
-
-                if (hWnd == IntPtr.Zero)
+                if (hWnd != IntPtr.Zero && !IsWindow(hWnd))
                 {
-                    // 没找到窗口：清空缓冲，通知 Update 隐藏画面
+                    isWindowsLive = false;
+                    hWnd = IntPtr.Zero;
                     lock (bufferLock)
                         pixelBuffer = null;
                     frameReady.Set();
+                }
+
+                if (hWnd == IntPtr.Zero)
+                {
+                    hWnd = FindWindowByPartialTitle(targetWindowTitle);
+
+                    Thread.Sleep(100);
                     continue;
                 }
+
+                isWindowsLive = true;
 
                 try
                 {
@@ -126,7 +140,7 @@ namespace osu.Game.Tournament.Components
                 }
                 catch
                 {
-                    // 忽略错误
+                    hWnd = IntPtr.Zero;
                 }
                 finally
                 {
@@ -140,12 +154,27 @@ namespace osu.Game.Tournament.Components
         {
             base.Update();
 
+            var sw = Stopwatch.StartNew();
+
             // 1) 请求抓一帧
             captureRequest.Set();
 
             // 2) 等待抓取完成（同步），最多等 10ms 防止卡死，也可以改为无限等待
             if (!frameReady.WaitOne(0))
+            {
+                sw.Stop();
                 return;
+            }
+
+            if (!isWindowsLive)
+            {
+                this.FadeOut(100);
+                return;
+            }
+
+            sw.Stop();
+
+            this.FadeIn(100);
 
             // 3) 消费像素缓冲区
             byte[]? frame;
@@ -155,7 +184,6 @@ namespace osu.Game.Tournament.Components
             {
                 if (pixelBuffer == null)
                 {
-                    this.FadeOut();
                     return;
                 }
 
@@ -164,8 +192,6 @@ namespace osu.Game.Tournament.Components
                 h = currentHeight;
                 pixelBuffer = null;
             }
-
-            this.FadeIn();
 
             if (frame == null) return;
 
@@ -243,6 +269,9 @@ namespace osu.Game.Tournament.Components
 
         [DllImport("user32.dll")]
         private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+        [DllImport("user32.dll")]
+        private static extern bool IsWindow(IntPtr hWnd);
 
         private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
