@@ -432,6 +432,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
             private TeamColour teamColour;
 
+            private const string tournament_client_name = " Tournament Client ";
+
             public PlayerArea(TeamColour teamColour)
             {
                 this.teamColour = teamColour;
@@ -488,7 +490,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     case 1:
                         InternalChildren = new Drawable[]
                         {
-                            new CapturedWindowSprite($"Tournament Client {clientIndex}")
+                            new CapturedWindowSprite($"{tournament_client_name}{clientIndex}")
                             {
                                 RelativeSizeAxes = Axes.Both,
                             }
@@ -498,14 +500,14 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     case 2:
                         InternalChildren = new Drawable[]
                         {
-                            new CapturedWindowSprite($"Tournament Client {clientIndex++}")
+                            new CapturedWindowSprite($"{tournament_client_name}{clientIndex++}")
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Height = 0.5f,
                                 Anchor = Anchor.TopCentre,
                                 Origin = Anchor.TopCentre,
                             },
-                            new CapturedWindowSprite($"Tournament Client {clientIndex}")
+                            new CapturedWindowSprite($"{tournament_client_name}{clientIndex}")
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Height = 0.5f,
@@ -518,7 +520,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     case 3:
                         InternalChildren = new Drawable[]
                         {
-                            new CapturedWindowSprite($"Tournament Client {clientIndex++}")
+                            new CapturedWindowSprite($"{tournament_client_name}{clientIndex++}")
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Width = 0.5f,
@@ -526,7 +528,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                                 Anchor = Anchor.TopCentre,
                                 Origin = Anchor.TopCentre,
                             },
-                            new CapturedWindowSprite($"Tournament Client {clientIndex++}")
+                            new CapturedWindowSprite($"{tournament_client_name}{clientIndex++}")
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Width = 0.5f,
@@ -534,7 +536,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                                 Anchor = Anchor.BottomLeft,
                                 Origin = Anchor.BottomLeft,
                             },
-                            new CapturedWindowSprite($"Tournament Client {clientIndex}")
+                            new CapturedWindowSprite($"{tournament_client_name}{clientIndex}")
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Width = 0.5f,
@@ -548,7 +550,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     case 4:
                         InternalChildren = new Drawable[]
                         {
-                            new CapturedWindowSprite($"Tournament Client {clientIndex++}")
+                            new CapturedWindowSprite($"{tournament_client_name}{clientIndex++}")
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Width = 0.5f,
@@ -556,7 +558,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                                 Anchor = Anchor.TopLeft,
                                 Origin = Anchor.TopLeft,
                             },
-                            new CapturedWindowSprite($"Tournament Client {clientIndex++}")
+                            new CapturedWindowSprite($"{tournament_client_name}{clientIndex++}")
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Width = 0.5f,
@@ -564,7 +566,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                                 Anchor = Anchor.TopRight,
                                 Origin = Anchor.TopRight,
                             },
-                            new CapturedWindowSprite($"Tournament Client {clientIndex++}")
+                            new CapturedWindowSprite($"{tournament_client_name}{clientIndex++}")
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Width = 0.5f,
@@ -572,7 +574,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                                 Anchor = Anchor.BottomLeft,
                                 Origin = Anchor.BottomLeft,
                             },
-                            new CapturedWindowSprite($"Tournament Client {clientIndex}")
+                            new CapturedWindowSprite($"{tournament_client_name}{clientIndex}")
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Width = 0.5f,

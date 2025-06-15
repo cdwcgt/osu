@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using osu.Framework.Graphics;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Runtime.InteropServices.Marshalling;
 using System.Runtime.Versioning;
 using System.Text;
 using System.Threading;
@@ -353,7 +354,11 @@ namespace osu.Game.Tournament.Components
 
         public static IntPtr FindWindowByPartialTitle(string partialTitle)
         {
-            IntPtr result = IntPtr.Zero;
+            IntPtr result = FindWindow(null, partialTitle);
+
+            if (result != IntPtr.Zero)
+                return result;
+
             EnumWindows((hWnd, lParam) =>
             {
                 StringBuilder sb = new StringBuilder(256);
