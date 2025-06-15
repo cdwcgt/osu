@@ -35,7 +35,7 @@ namespace osu.Game.Tournament.Models
 
         public Bindable<int> PlayersPerTeam = new BindableInt(4)
         {
-            MinValue = 3,
+            MinValue = 1,
             MaxValue = 4,
         };
 
