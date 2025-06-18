@@ -188,6 +188,9 @@ namespace osu.Game.Tournament.Screens.Showcase
 
         private void startInnerLazer() => Scheduler.AddOnce(() =>
         {
+            if (nestedGame != null)
+                return;
+
             nestedGame = new NestedOsuGame(host.Storage, new ForwardingAPIAccess(api), config)
             {
                 Masking = true
@@ -222,6 +225,8 @@ namespace osu.Game.Tournament.Screens.Showcase
                 RemoveInternal(flash, true);
 
             musicController = null;
+            nestedGame = null;
+            flash = null;
         }
 
         private GetBeatmapRequest? beatmapLookupRequest;
