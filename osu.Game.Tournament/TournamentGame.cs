@@ -8,6 +8,7 @@ using osu.Framework.Configuration;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
+using osu.Framework.Input.Events;
 using osu.Framework.Input.Handlers.Mouse;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
@@ -17,6 +18,7 @@ using osu.Game.Graphics.UserInterface;
 using osu.Game.Overlays;
 using osu.Game.Tournament.Models;
 using osuTK.Graphics;
+using osuTK.Input;
 
 namespace osu.Game.Tournament
 {
@@ -41,6 +43,8 @@ namespace osu.Game.Tournament
 
         [Cached(typeof(IDialogOverlay))]
         private readonly DialogOverlay dialogOverlay = new DialogOverlay();
+
+        private SettingsOverlay settingsOverlay;
 
         [BackgroundDependencyLoader]
         private void load(FrameworkConfigManager frameworkConfig, GameHost host)
@@ -95,7 +99,8 @@ namespace osu.Game.Tournament
                         RelativeSizeAxes = Axes.Both,
                         Child = new TournamentSceneManager()
                     },
-                    dialogOverlay
+                    dialogOverlay,
+                    settingsOverlay = new SettingsOverlay()
                 }, drawables =>
                 {
                     loadingSpinner.Hide();
@@ -114,6 +119,17 @@ namespace osu.Game.Tournament
                     }), true);
                 });
             }));
+        }
+
+        protected override bool OnKeyDown(KeyDownEvent e)
+        {
+            if (e.ControlPressed && e.Key == Key.O && !e.Repeat)
+            {
+                settingsOverlay.ToggleVisibility();
+                return true;
+            }
+
+            return false;
         }
     }
 }
