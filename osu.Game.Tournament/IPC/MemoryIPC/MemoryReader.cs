@@ -33,6 +33,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
         public bool AttachToProcess(Process process)
         {
+            this.process = process;
             processHandle = WindowsAPI.OpenProcess(WindowsAPI.ProcessAccessFlags.VMRead | WindowsAPI.ProcessAccessFlags.QueryInformation, false, process.Id);
             return processHandle != IntPtr.Zero;
         }
@@ -223,29 +224,31 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
         public static List<MemoryRegion> QueryMemoryRegions(IntPtr processHandle)
         {
-            var regions = new List<MemoryRegion>();
+            List<MemoryRegion> regions = new List<MemoryRegion>();
             IntPtr address = IntPtr.Zero;
-            int mbiSize = Marshal.SizeOf<WindowsAPI.MEMORY_BASIC_INFORMATION>();
 
             while (true)
             {
-                if (WindowsAPI.VirtualQueryEx(processHandle, address, out var mbi, (uint)mbiSize) == 0)
+                WindowsAPI.MEMORY_BASIC_INFORMATION memInfo;
+                int result = WindowsAPI.VirtualQueryEx(processHandle, address, out memInfo, (uint)Marshal.SizeOf(typeof(WindowsAPI.MEMORY_BASIC_INFORMATION)));
+                if (result == 0)
                     break;
 
-                bool isReadable = ((mbi.Protect & (uint)WindowsAPI.AllocationProtect.PAGE_GUARD) == 0) &&
-                                  ((mbi.Protect & (uint)WindowsAPI.AllocationProtect.PAGE_NOACCESS) == 0);
+                bool isCommitted = (memInfo.State & 0x1000) != 0; // MEM_COMMIT
+                bool isReadable =
+                    (memInfo.Protect & 0x04) != 0 ||   // PAGE_READWRITE
+                    (memInfo.Protect & 0x40) != 0;     // PAGE_EXECUTE_READWRITE
 
-                if (mbi.State == 0x1000 /* MEM_COMMIT */ && isReadable)
+                if (isCommitted && isReadable)
                 {
                     regions.Add(new MemoryRegion
                     {
-                        BaseAddress = mbi.BaseAddress,
-                        RegionSize = mbi.RegionSize
+                        BaseAddress = address,
+                        RegionSize = memInfo.RegionSize,
                     });
                 }
 
-                // 下一段区域
-                address = IntPtr.Add(mbi.BaseAddress, (int)mbi.RegionSize);
+                address = new IntPtr(memInfo.BaseAddress.ToInt64() + (long)memInfo.RegionSize);
             }
 
             return regions;

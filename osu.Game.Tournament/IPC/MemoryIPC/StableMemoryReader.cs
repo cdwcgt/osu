@@ -97,6 +97,8 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
             short combo = 0;
             short maxCombo = 0;
 
+            UpdatePlayTime();
+
             if (playTime > 1000)
             {
                 hit100 = memoryReader.ReadShort(scoreAddr + 0x88);
