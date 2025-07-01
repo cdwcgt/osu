@@ -55,7 +55,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
         #endregion
 
-        public GameplayData GetGameplayData()
+        public GameplayData? GetGameplayData()
         {
             // Ruleset = [[Rulesets - 0xB] + 0x4]
             IntPtr rulesetAddr = memoryReader.ReadInt32(memoryReader.ReadInt32(RulesetsAddress - 0xb) + 0x4);
@@ -75,7 +75,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                 throw new InvalidOperationException("HPBar address not found");
 
             // [[[Ruleset + 0x68] + 0x38] + 0x28]
-            string playerName = ReadSharpString(memoryReader.ReadInt32(scoreAddr + 0x28))!;
+            string? playerName = ReadSharpString(memoryReader.ReadInt32(scoreAddr + 0x28));
 
             LegacyMods mods = (LegacyMods)
                 (memoryReader.ReadInt32(memoryReader.ReadInt32(scoreAddr + 0x1c) + 0xc) ^
@@ -86,7 +86,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
             int score = memoryReader.ReadInt32(rulesetAddr + 0x100);
             double hpSmooth = memoryReader.ReadDouble(hpBarAddr + 0x14);
             double hp = memoryReader.ReadDouble(hpBarAddr + 0x1c);
-            double acc = memoryReader.ReadDouble(gameplayBaseAddr + 0x48) + 0xc;
+            double acc = memoryReader.ReadDouble(memoryReader.ReadInt32(gameplayBaseAddr + 0x48) + 0xc);
 
             short hit100 = 0;
             short hit300 = 0;
@@ -110,6 +110,9 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                 combo = memoryReader.ReadShort(scoreAddr + 0x94);
                 maxCombo = memoryReader.ReadShort(scoreAddr + 0x68);
             }
+
+            if (playerName == null)
+                return null;
 
             return new GameplayData
             {
@@ -135,7 +138,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
         {
             try
             {
-                playTime = memoryReader.ReadInt32(PlayTimeAddress + 0x5);
+                playTime = memoryReader.ReadInt32(memoryReader.ReadInt32(PlayTimeAddress + 0x5));
             }
             catch (Exception ex)
             {
