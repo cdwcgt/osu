@@ -6,9 +6,7 @@ using System.Runtime.InteropServices;
 using osu.Framework.Graphics;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Runtime.InteropServices.Marshalling;
 using System.Runtime.Versioning;
-using System.Text;
 using System.Threading;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -92,7 +90,7 @@ namespace osu.Game.Tournament.Components
 
         private void captureLoop()
         {
-            IntPtr hWnd = FindWindowByPartialTitle(targetWindowTitle);
+            IntPtr hWnd = WindowsAPI.FindWindowByPartialTitle(targetWindowTitle);
 
             // 预先查一次 HWND
             while (running)
@@ -102,7 +100,7 @@ namespace osu.Game.Tournament.Components
 
                 if (!running) break;
 
-                if (hWnd != IntPtr.Zero && !IsWindow(hWnd))
+                if (hWnd != IntPtr.Zero && !WindowsAPI.IsWindow(hWnd))
                 {
                     isWindowsLive = false;
                     hWnd = IntPtr.Zero;
@@ -113,7 +111,7 @@ namespace osu.Game.Tournament.Components
 
                 if (hWnd == IntPtr.Zero)
                 {
-                    hWnd = FindWindowByPartialTitle(targetWindowTitle);
+                    hWnd = WindowsAPI.FindWindowByPartialTitle(targetWindowTitle);
 
                     Thread.Sleep(100);
                     continue;
@@ -123,7 +121,7 @@ namespace osu.Game.Tournament.Components
 
                 try
                 {
-                    GetWindowRect(hWnd, out RECT rect);
+                    WindowsAPI.GetWindowRect(hWnd, out WindowsAPI.RECT rect);
                     int w = rect.Right - rect.Left;
                     int h = rect.Bottom - rect.Top;
 
@@ -157,10 +155,10 @@ namespace osu.Game.Tournament.Components
 
                     // —— 真正抓图到 bitmapPool —— //
                     IntPtr hdcDest = graphicsPool.GetHdc();
-                    IntPtr hdcSrc = GetWindowDC(hWnd);
-                    BitBlt(hdcDest, 0, 0, w, h, hdcSrc, 0, 0, 0x00CC0020);
+                    IntPtr hdcSrc = WindowsAPI.GetWindowDC(hWnd);
+                    WindowsAPI.BitBlt(hdcDest, 0, 0, w, h, hdcSrc, 0, 0, 0x00CC0020);
                     graphicsPool.ReleaseHdc(hdcDest);
-                    ReleaseDC(hWnd, hdcSrc);
+                    WindowsAPI.ReleaseDC(hWnd, hdcSrc);
 
                     // —— 锁像素 + 拷到 rawBufferPool —— //
                     var bmpData = bitmapPool.LockBits(
@@ -291,91 +289,5 @@ namespace osu.Game.Tournament.Components
             captureThread?.Join();
             texture?.Dispose();
         }
-
-        #region Windows API
-
-        public static Bitmap CaptureWindowFromBitbit(IntPtr hWnd)
-        {
-            GetWindowRect(hWnd, out RECT rect);
-            int width = rect.Right - rect.Left;
-            int height = rect.Bottom - rect.Top;
-
-            Bitmap bmp = new Bitmap(width, height, PixelFormat.Format32bppArgb);
-
-            using (System.Drawing.Graphics gfxBmp = System.Drawing.Graphics.FromImage(bmp))
-            {
-                IntPtr hdcBitmap = gfxBmp.GetHdc();
-                IntPtr hdcWindow = GetWindowDC(hWnd);
-
-                BitBlt(hdcBitmap, 0, 0, width, height, hdcWindow, 0, 0, 0x00CC0020); // SRCCOPY
-
-                ReleaseDC(hWnd, hdcWindow);
-                gfxBmp.ReleaseHdc(hdcBitmap);
-            }
-
-            return bmp;
-        }
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetWindowDC(IntPtr hWnd);
-
-        [DllImport("user32.dll")]
-        private static extern bool ReleaseDC(IntPtr hWnd, IntPtr hDC);
-
-        [DllImport("gdi32.dll")]
-        private static extern bool BitBlt(IntPtr hdcDest, int xDest, int yDest, int w, int h,
-                                          IntPtr hdcSrc, int xSrc, int ySrc, int rop);
-
-        [DllImport("user32.dll")]
-        private static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct RECT
-        {
-            public int Left;
-            public int Top;
-            public int Right;
-            public int Bottom;
-        }
-
-        [DllImport("user32.dll")]
-        private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
-
-        [DllImport("user32.dll")]
-        private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
-
-        [DllImport("user32.dll")]
-        private static extern bool IsWindow(IntPtr hWnd);
-
-        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
-
-        public static IntPtr FindWindowByPartialTitle(string partialTitle)
-        {
-            IntPtr result = FindWindow(null, partialTitle);
-
-            if (result != IntPtr.Zero)
-                return result;
-
-            EnumWindows((hWnd, lParam) =>
-            {
-                StringBuilder sb = new StringBuilder(256);
-                GetWindowText(hWnd, sb, sb.Capacity);
-
-                if (sb.ToString().Contains(partialTitle))
-                {
-                    result = hWnd;
-                    return false; // 停止遍历
-                }
-
-                return true;
-            }, IntPtr.Zero);
-
-            return result;
-        }
-
-        #endregion
     }
 }
