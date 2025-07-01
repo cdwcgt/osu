@@ -10,14 +10,13 @@ using System.Runtime.Versioning;
 namespace osu.Game.Tournament.IPC.MemoryIPC
 {
     [SupportedOSPlatform("windows")]
-    public class MemoryReader
+    public class MemoryReader : IDisposable
     {
-        private IntPtr processHandle;
-        private Process? process;
+        public IntPtr ProcessHandle { get; private set; }
 
-        public Process? Process => process;
+        public Process? Process { get; private set; }
 
-        public bool IsAttached => process != null && !process.HasExited;
+        public bool IsAttached => Process != null && !Process.HasExited;
 
         public bool AttachToProcess(string processName)
         {
@@ -31,11 +30,11 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
             return p != null && AttachToProcess(p);
         }
 
-        public bool AttachToProcess(Process process)
+        public virtual bool AttachToProcess(Process process)
         {
-            this.process = process;
-            processHandle = WindowsAPI.OpenProcess(WindowsAPI.ProcessAccessFlags.VMRead | WindowsAPI.ProcessAccessFlags.QueryInformation, false, process.Id);
-            return processHandle != IntPtr.Zero;
+            this.Process = process;
+            ProcessHandle = WindowsAPI.OpenProcess(WindowsAPI.ProcessAccessFlags.VMRead | WindowsAPI.ProcessAccessFlags.QueryInformation, false, process.Id);
+            return ProcessHandle != IntPtr.Zero;
         }
 
         #region Basic Method
@@ -46,7 +45,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                 throw new InvalidOperationException("Process is not attached or has exited.");
 
             byte[] buffer = new byte[4];
-            WindowsAPI.ReadProcessMemory(processHandle, address, buffer, buffer.Length, out _);
+            WindowsAPI.ReadProcessMemory(ProcessHandle, address, buffer, buffer.Length, out _);
             return BitConverter.ToInt32(buffer, 0);
         }
 
@@ -56,7 +55,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                 throw new InvalidOperationException("Process is not attached or has exited.");
 
             byte[] buffer = new byte[2];
-            WindowsAPI.ReadProcessMemory(processHandle, address, buffer, buffer.Length, out _);
+            WindowsAPI.ReadProcessMemory(ProcessHandle, address, buffer, buffer.Length, out _);
             return BitConverter.ToInt16(buffer, 0);
         }
 
@@ -66,7 +65,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                 throw new InvalidOperationException("Process is not attached or has exited.");
 
             byte[] buffer = new byte[4];
-            WindowsAPI.ReadProcessMemory(processHandle, address, buffer, buffer.Length, out _);
+            WindowsAPI.ReadProcessMemory(ProcessHandle, address, buffer, buffer.Length, out _);
             return BitConverter.ToSingle(buffer, 0);
         }
 
@@ -76,7 +75,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                 throw new InvalidOperationException("Process is not attached or has exited.");
 
             byte[] buffer = new byte[8];
-            WindowsAPI.ReadProcessMemory(processHandle, address, buffer, buffer.Length, out _);
+            WindowsAPI.ReadProcessMemory(ProcessHandle, address, buffer, buffer.Length, out _);
             return BitConverter.ToDouble(buffer, 0);
         }
 
@@ -86,7 +85,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                 throw new InvalidOperationException("Process is not attached or has exited.");
 
             byte[] buffer = new byte[length];
-            WindowsAPI.ReadProcessMemory(processHandle, address, buffer, length, out _);
+            WindowsAPI.ReadProcessMemory(ProcessHandle, address, buffer, length, out _);
             return buffer;
         }
 
@@ -108,7 +107,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
             byte[] buffer = new byte[ByteSize];
 
-            WindowsAPI.ReadProcessMemory(processHandle, address, buffer, buffer.Length, out _);
+            WindowsAPI.ReadProcessMemory(ProcessHandle, address, buffer, buffer.Length, out _);
 
             return ByteArrayToStructure<T>(buffer);
         }
@@ -118,7 +117,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
             if (!IsAttached)
                 throw new InvalidOperationException("Process is not attached or has exited.");
 
-            foreach (ProcessModule mod in process.Modules)
+            foreach (ProcessModule mod in Process.Modules)
             {
                 if (mod.ModuleName.Equals(moduleName, StringComparison.OrdinalIgnoreCase))
                 {
@@ -131,8 +130,14 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
         public void Dispose()
         {
-            if (processHandle != IntPtr.Zero)
-                WindowsAPI.CloseHandle(processHandle);
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (ProcessHandle != IntPtr.Zero)
+                WindowsAPI.CloseHandle(ProcessHandle);
         }
 
         #endregion
@@ -175,9 +180,11 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
         #region Pattern Scan
 
-        public IntPtr? ResolveFromPatternInfo(PatternInfo pattern)
+        public IntPtr? ResolveFromPatternInfo(PatternInfo pattern, IEnumerable<MemoryRegion>? regions = null)
         {
-            IntPtr? baseAddress = FindPattern(pattern.Pattern);
+            IntPtr? baseAddress = (regions != null)
+                ? FindPattern(regions, pattern.Pattern)
+                : FindPattern(pattern.Pattern);
 
             if (baseAddress == null)
                 return null;
@@ -188,7 +195,11 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
         public static IntPtr? FindPattern(IntPtr processHandle, byte?[] pattern)
         {
             var regions = QueryMemoryRegions(processHandle);
+            return FindPattern(regions, processHandle, pattern);
+        }
 
+        public static IntPtr? FindPattern(IEnumerable<MemoryRegion> regions, IntPtr processHandle, byte?[] pattern)
+        {
             foreach (var region in regions)
             {
                 int size = region.RegionSize.ToInt32();
@@ -220,7 +231,8 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
             return null;
         }
 
-        public IntPtr? FindPattern(byte?[] pattern) => FindPattern(processHandle, pattern);
+        public IntPtr? FindPattern(byte?[] pattern) => FindPattern(ProcessHandle, pattern);
+        public IntPtr? FindPattern(IEnumerable<MemoryRegion> regions, byte?[] pattern) => FindPattern(regions, ProcessHandle, pattern);
 
         public static List<MemoryRegion> QueryMemoryRegions(IntPtr processHandle)
         {
@@ -236,8 +248,8 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
                 bool isCommitted = (memInfo.State & 0x1000) != 0; // MEM_COMMIT
                 bool isReadable =
-                    (memInfo.Protect & 0x04) != 0 ||   // PAGE_READWRITE
-                    (memInfo.Protect & 0x40) != 0;     // PAGE_EXECUTE_READWRITE
+                    (memInfo.Protect & 0x04) != 0 || // PAGE_READWRITE
+                    (memInfo.Protect & 0x40) != 0; // PAGE_EXECUTE_READWRITE
 
                 if (isCommitted && isReadable)
                 {
@@ -254,13 +266,13 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
             return regions;
         }
 
-        public class MemoryRegion
-        {
-            public IntPtr BaseAddress;
-            public IntPtr RegionSize;
-        }
-
         #endregion
+    }
+
+    public class MemoryRegion
+    {
+        public IntPtr BaseAddress;
+        public IntPtr RegionSize;
     }
 
     public class PatternInfo
