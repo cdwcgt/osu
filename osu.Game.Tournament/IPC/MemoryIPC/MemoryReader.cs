@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -194,35 +195,82 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
         public static IntPtr? FindPattern(IEnumerable<MemoryRegion> regions, IntPtr processHandle, byte?[] pattern)
         {
-            foreach (var region in regions)
+            const int buffer_size = 64 * 1024;
+            int patternLength = pattern.Length;
+
+            // 保留该块到下一块
+            // 设置为 patternLength - 1 后总能让新块的第一个字节开始进行匹配
+            int headSize = patternLength - 1;
+
+            byte[] sharedBuffer = ArrayPool<byte>.Shared.Rent(buffer_size + headSize);
+
+            var handle = GCHandle.Alloc(sharedBuffer, GCHandleType.Pinned);
+
+            try
             {
-                int size = region.RegionSize.ToInt32();
-
-                byte[] buffer = new byte[size];
-                if (!WindowsAPI.ReadProcessMemory(processHandle, region.BaseAddress, buffer, size, out int _))
-                    continue;
-
-                for (int i = 0; i <= buffer.Length - pattern.Length; i++)
+                foreach (var region in regions)
                 {
-                    bool matched = true;
+                    IntPtr regionStart = region.BaseAddress;
+                    int regionSize = region.RegionSize.ToInt32();
 
-                    for (int j = 0; j < pattern.Length; j++)
+                    int copiedTail = 0;
+
+                    for (int offset = 0; offset < regionSize; offset += buffer_size)
                     {
-                        if (pattern[j] != null && buffer[i + j] != pattern[j])
+                        // 在跨块的时候复制保留的数据到数组前
+                        if (copiedTail > 0)
+                            Array.Copy(sharedBuffer, buffer_size, sharedBuffer, 0, copiedTail);
+
+                        int readSize = Math.Min(buffer_size + headSize - copiedTail, regionSize - offset);
+
+                        int bytesRead;
+
+                        IntPtr targetPtr = Marshal.UnsafeAddrOfPinnedArrayElement(sharedBuffer, copiedTail);
+                        if (!WindowsAPI.ReadProcessMemory(processHandle, regionStart + offset, targetPtr, readSize, out bytesRead)
+                            || bytesRead < patternLength - copiedTail)
+                            continue;
+
+                        int totalSize = bytesRead + copiedTail;
+                        int maxIndex = totalSize - patternLength + 1;
+
+                        // 滑动窗口查找
+                        for (int i = 0; i < maxIndex; i++)
                         {
-                            matched = false;
-                            break;
+                            bool matched = true;
+
+                            for (int j = 0; j < patternLength; j++)
+                            {
+                                if (pattern[j] != null && sharedBuffer[i + j] != pattern[j])
+                                {
+                                    matched = false;
+                                    break;
+                                }
+                            }
+
+                            if (matched)
+                                return new IntPtr(regionStart + offset + i - copiedTail);
+                        }
+
+                        // 实际逻辑上 bytesRead 不会小于 headSize
+                        if (bytesRead >= headSize)
+                        {
+                            Array.Copy(sharedBuffer, totalSize - headSize, sharedBuffer, buffer_size, headSize);
+                            copiedTail = headSize;
+                        }
+                        else
+                        {
+                            copiedTail = 0;
                         }
                     }
-
-                    if (matched)
-                    {
-                        return region.BaseAddress + i;
-                    }
                 }
-            }
 
-            return null;
+                return null;
+            }
+            finally
+            {
+                handle.Free();
+                ArrayPool<byte>.Shared.Return(sharedBuffer);
+            }
         }
 
         public IntPtr? FindPattern(byte?[] pattern) => FindPattern(ProcessHandle, pattern);

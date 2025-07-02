@@ -113,6 +113,9 @@ namespace osu.Game.Tournament
         [DllImport("kernel32.dll")]
         internal static extern bool ReadProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, byte[] lpBuffer, int dwSize, out int lpNumberOfBytesRead);
 
+        [DllImport("kernel32.dll", SetLastError = true)]
+        internal static extern bool ReadProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, IntPtr lpBuffer, int dwSize, out int lpNumberOfBytesRead);
+
         [DllImport("kernel32.dll")]
         internal static extern bool CloseHandle(IntPtr hObject);
 
