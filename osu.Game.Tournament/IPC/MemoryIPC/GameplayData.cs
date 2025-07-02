@@ -10,7 +10,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
         public string PlayerName = string.Empty;
         public LegacyMods Mods;
         public int RulesetId;
-        public long Score;
+        public int Score;
         public double PlayerHPSmooth;
         public double PlayerHP;
         public double Accuracy;

@@ -18,15 +18,9 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
         public bool IsAttached => Process != null && !Process.HasExited;
 
-        public bool AttachToProcess(string processName)
-        {
-            var processes = Process.GetProcessesByName(processName);
-            return processes.Length != 0 && AttachToProcess(processes[0]);
-        }
-
         public bool AttachToProcessByTitleName(string titleName)
         {
-            Process? p = WindowsAPI.GetProcessByWindowTitle(titleName);
+            Process? p = WindowsAPI.GetProcessByWindowTitle(titleName, false);
             return p != null && AttachToProcess(p);
         }
 

@@ -21,6 +21,7 @@ using osu.Game.Online;
 using osu.Game.Online.API.Requests;
 using osu.Game.Tournament.IO;
 using osu.Game.Tournament.IPC;
+using osu.Game.Tournament.IPC.MemoryIPC;
 using osu.Game.Tournament.Models;
 using osu.Game.Users;
 using osuTK.Input;
@@ -34,7 +35,7 @@ namespace osu.Game.Tournament
         private LadderInfo ladder = new LadderInfo();
         private TournamentStorage storage = null!;
         private DependencyContainer dependencies = null!;
-        private FileBasedIPC ipc = null!;
+        private MatchIPCInfo ipc = null!;
         private BeatmapLookupCache beatmapCache = null!;
 
         protected Task BracketLoadTask => bracketLoadTaskCompletionSource.Task;
@@ -204,7 +205,7 @@ namespace osu.Game.Tournament
                 Ruleset.BindTo(ladder.Ruleset);
 
                 dependencies.Cache(ladder);
-                dependencies.CacheAs<MatchIPCInfo>(ipc = new FileBasedIPC());
+                dependencies.CacheAs(ipc = OperatingSystem.IsWindows() ? new MemoryBasedIPC() : new FileBasedIPC());
                 Add(ipc);
 
                 bracketLoadTaskCompletionSource.SetResult(true);

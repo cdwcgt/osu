@@ -30,16 +30,16 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
         private int playTime;
 
-        private bool initialized;
+        public AttachStatus Status { get; private set; }
 
         public bool CheckInitialized()
         {
-            if (!initialized)
+            if (Status != AttachStatus.Attached)
                 return false;
 
             if (!IsAttached)
             {
-                initialized = false;
+                Status = AttachStatus.UnAttached;
                 return false;
             }
 
@@ -48,9 +48,11 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
         public Task<bool> AttachToProcessAsync(Process process) => Task.Run(() => AttachToProcess(process));
 
+        public Task<bool> AttachToProcessByTitleNameAsync(string titleName) => Task.Run(() => AttachToProcessByTitleName(titleName));
+
         public override bool AttachToProcess(Process process)
         {
-            initialized = false;
+            Status = AttachStatus.UnAttached;
 
             if (!base.AttachToProcess(process))
                 return false;
@@ -83,13 +85,15 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
             if (CheckInitialized())
                 return Task.FromResult(true);
 
-            if (initializeAddressTask != null && initializeAddressTask.IsCompleted)
+            if (initializeAddressTask != null && !initializeAddressTask.IsCompleted)
                 return initializeAddressTask;
 
             return initializeAddressTask = Task.Run(() =>
             {
                 try
                 {
+                    Status = AttachStatus.Initializing;
+
                     var regions = QueryMemoryRegions(ProcessHandle);
 
                     GameBaseAddress = ResolveFromPatternInfo(GameBasePattern, regions) ?? throw new InvalidOperationException("GameBase address not found");
@@ -97,13 +101,14 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                     PlayTimeAddress = ResolveFromPatternInfo(PlayTimePattern, regions) ?? throw new InvalidOperationException("PlayTime address not found");
                     SpectatingUser = ResolveFromPatternInfo(SpectatingUserPattern, regions) ?? throw new InvalidOperationException("Spectating user pattern not found");
 
-                    initialized = true;
+                    Status = AttachStatus.Attached;
                     return true;
                 }
                 catch (Exception ex)
                 {
                     Console.Error.WriteLine($"[InitializeAsync] Failed: {ex.Message}");
 
+                    Status = AttachStatus.UnAttached;
                     return false;
                 }
             }, cts.Token);
@@ -247,5 +252,12 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
             base.Dispose(disposing);
         }
+    }
+
+    public enum AttachStatus
+    {
+        UnAttached,
+        Initializing,
+        Attached,
     }
 }

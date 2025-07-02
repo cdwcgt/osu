@@ -147,9 +147,9 @@ namespace osu.Game.Tournament
         [DllImport("kernel32.dll")]
         internal static extern int VirtualQueryEx(IntPtr hProcess, IntPtr lpAddress, out MEMORY_BASIC_INFORMATION lpBuffer, uint dwLength);
 
-        internal static Process? GetProcessByWindowTitle(string windowTitle)
+        internal static Process? GetProcessByWindowTitle(string windowTitle, bool partial = true)
         {
-            IntPtr hWnd = FindWindow(null, windowTitle);
+            IntPtr hWnd = partial ? FindWindowByPartialTitle(windowTitle) : FindWindow(null, windowTitle);
             if (hWnd == IntPtr.Zero)
                 return null;
 
