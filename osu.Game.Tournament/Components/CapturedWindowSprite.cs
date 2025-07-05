@@ -63,12 +63,11 @@ namespace osu.Game.Tournament.Components
             sprite = new Sprite
             {
                 RelativeSizeAxes = Axes.Both,
-                FillMode = FillMode.Fit
+                FillMode = FillMode.Fit,
+                Alpha = 0
             };
 
             AddInternal(sprite);
-            texture = renderer.CreateTexture(1, 1);
-            sprite.Texture = texture;
 
             // 启动后台抓取线程
             running = true;
