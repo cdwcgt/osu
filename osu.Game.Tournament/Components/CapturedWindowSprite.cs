@@ -64,10 +64,11 @@ namespace osu.Game.Tournament.Components
             {
                 RelativeSizeAxes = Axes.Both,
                 FillMode = FillMode.Fit,
-                Alpha = 0
             };
 
             AddInternal(sprite);
+
+            AlwanysPresent = true;
 
             // 启动后台抓取线程
             running = true;

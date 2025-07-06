@@ -9,7 +9,7 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace osu.Game.Tournament.Components
 {
-    public partial class MemoryTextureUpload : ITextureUpload
+    public class MemoryTextureUpload : ITextureUpload
     {
         public readonly Rgba32[] PixelData;
 
