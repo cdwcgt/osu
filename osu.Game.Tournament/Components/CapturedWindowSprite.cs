@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Buffers;
 using System.Runtime.InteropServices;
 using osu.Framework.Graphics;
 using System.Drawing;
@@ -30,7 +31,7 @@ namespace osu.Game.Tournament.Components
         private Bitmap? bitmapPool;
         private System.Drawing.Graphics? graphicsPool;
         private byte[]? rawBufferPool;
-        private MemoryTextureUpload? uploadPool;
+        private ArrayPoolTextureUpload? uploadPool;
         private int poolWidth, poolHeight;
 
         // 同步信号
@@ -39,7 +40,7 @@ namespace osu.Game.Tournament.Components
 
         // 当前窗口尺寸 & 像素缓冲区
         private int currentWidth, currentHeight;
-        private MemoryTextureUpload? pixelBuffer;
+        private ArrayPoolTextureUpload? pixelBuffer;
         private readonly object bufferLock = new object();
 
         private Texture? texture;
@@ -60,6 +61,7 @@ namespace osu.Game.Tournament.Components
         [BackgroundDependencyLoader]
         private void load()
         {
+            Name = $"WindowCapture<{targetWindowTitle}>";
             sprite = new Sprite
             {
                 RelativeSizeAxes = Axes.Both,
@@ -136,14 +138,14 @@ namespace osu.Game.Tournament.Components
                         bitmapPool?.Dispose();
                         graphicsPool?.Dispose();
 
-                        bitmapPool = new Bitmap(w, h, PixelFormat.Format32bppArgb);
+                        bitmapPool = new Bitmap(w, h, PixelFormat.Format24bppRgb);
                         graphicsPool = System.Drawing.Graphics.FromImage(bitmapPool);
 
                         // 注意 LockBits 时的 stride 可能有行填充
                         var tmpData = bitmapPool.LockBits(
                             new Rectangle(0, 0, w, h),
                             ImageLockMode.ReadOnly,
-                            PixelFormat.Format32bppArgb);
+                            PixelFormat.Format24bppRgb);
                         int stride = Math.Abs(tmpData.Stride);
                         bitmapPool.UnlockBits(tmpData);
 
@@ -164,19 +166,14 @@ namespace osu.Game.Tournament.Components
                     var bmpData = bitmapPool.LockBits(
                         new Rectangle(0, 0, w, h),
                         ImageLockMode.ReadOnly,
-                        PixelFormat.Format32bppArgb);
+                        PixelFormat.Format24bppRgb);
 
                     Marshal.Copy(bmpData.Scan0, rawBufferPool, 0, rawBufferPool.Length);
                     bitmapPool.UnlockBits(bmpData);
 
-                    if (uploadPool == null || uploadPool.Bounds.Width != w || uploadPool.Bounds.Height != h)
-                    {
-                        uploadPool?.Dispose();
-                        uploadPool = new MemoryTextureUpload(w, h);
-                        // ctor 里只分配 new Rgba32[w*h]
-                    }
+                    uploadPool = new ArrayPoolTextureUpload(w, h);
 
-                    ConvertBgraToRgba32(rawBufferPool!, poolWidth, poolHeight, uploadPool!.PixelData);
+                    ConvertRgr24ToRgba32(rawBufferPool!, poolWidth, poolHeight, uploadPool!.RawData);
 
                     lock (bufferLock)
                     {
@@ -197,11 +194,11 @@ namespace osu.Game.Tournament.Components
             }
         }
 
-        private void ConvertBgraToRgba32(byte[] src, int width, int height, Span<Rgba32> dst)
+        private void ConvertRgr24ToRgba32(byte[] src, int width, int height, Span<Rgba32> dst)
         {
             int dstIdx = 0;
 
-            for (int i = 0; i < src.Length; i += 4)
+            for (int i = 0; i < src.Length; i += 3)
             {
                 byte b = src[i + 0];
                 byte g = src[i + 1];
@@ -252,7 +249,7 @@ namespace osu.Game.Tournament.Components
             this.FadeIn(100);
 
             // 3) 消费像素缓冲区
-            MemoryTextureUpload? frame;
+            ArrayPoolTextureUpload? frame;
             int w, h;
 
             lock (bufferLock)
