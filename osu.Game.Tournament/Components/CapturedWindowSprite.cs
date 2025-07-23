@@ -68,7 +68,7 @@ namespace osu.Game.Tournament.Components
 
             AddInternal(sprite);
 
-            AlwanysPresent = true;
+            AlwaysPresent = true;
 
             // 启动后台抓取线程
             running = true;
