@@ -38,6 +38,9 @@ namespace osu.Game.Tournament
         private MatchIPCInfo ipc = null!;
         private BeatmapLookupCache beatmapCache = null!;
 
+        [Resolved]
+        private GameHost host { get; set; } = null!;
+
         protected Task BracketLoadTask => bracketLoadTaskCompletionSource.Task;
 
         private readonly TaskCompletionSource<bool> bracketLoadTaskCompletionSource = new TaskCompletionSource<bool>();
@@ -193,6 +196,8 @@ namespace osu.Game.Tournament
 
                     SaveChanges();
                 });
+
+                ladder.FrameRate.BindValueChanged(f => host.MaximumInactiveHz = Math.Max(f.NewValue, 60), true);
             }
             catch (Exception e)
             {
