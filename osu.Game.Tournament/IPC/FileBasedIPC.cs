@@ -14,7 +14,6 @@ using osu.Game.Beatmaps.Legacy;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
 using osu.Game.Online.API.Requests.Responses;
-using osu.Game.Rulesets;
 using osu.Game.Tournament.Models;
 
 namespace osu.Game.Tournament.IPC
@@ -25,9 +24,6 @@ namespace osu.Game.Tournament.IPC
 
         [Resolved]
         protected IAPIProvider API { get; private set; } = null!;
-
-        [Resolved]
-        protected IRulesetStore Rulesets { get; private set; } = null!;
 
         [Resolved]
         private GameHost host { get; set; } = null!;
@@ -146,6 +142,8 @@ namespace osu.Game.Tournament.IPC
                         {
                             // file might be in use.
                         }
+
+                        if (ReadScoreFromFile) return;
 
                         try
                         {
