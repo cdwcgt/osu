@@ -340,7 +340,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
                     var lastPick = CurrentMatch.Value.PicksBans.LastOrDefault(p => p.Type == ChoiceType.Pick && p.BeatmapID == ipc.Beatmap.Value?.OnlineID);
 
-                    if (lastPick?.Winner != null)
+                    if (lastPick?.Winner.Value != null)
                         return;
 
                     if (ipc.Score1.Value > ipc.Score2.Value)
