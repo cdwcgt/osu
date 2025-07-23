@@ -32,7 +32,7 @@ namespace osu.Game.Tournament.Components
         private Bitmap? bitmapPool;
         private System.Drawing.Graphics? graphicsPool;
         private byte[]? rawBufferPool;
-        private MemoryTextureUpload? uploadPool;
+        private ArrayPoolTextureUpload? uploadPool;
         private int poolWidth, poolHeight;
 
         // 同步信号
@@ -41,7 +41,7 @@ namespace osu.Game.Tournament.Components
 
         // 当前窗口尺寸 & 像素缓冲区
         private int currentWidth, currentHeight;
-        private MemoryTextureUpload? pixelBuffer;
+        private ArrayPoolTextureUpload? pixelBuffer;
         private readonly object bufferLock = new object();
 
         private Texture? texture;
@@ -175,11 +175,11 @@ namespace osu.Game.Tournament.Components
                     if (uploadPool == null || uploadPool.Bounds.Width != w || uploadPool.Bounds.Height != h)
                     {
                         uploadPool?.Dispose();
-                        uploadPool = new MemoryTextureUpload(w, h);
+                        uploadPool = new ArrayPoolTextureUpload(w, h);
                         // ctor 里只分配 new Rgba32[w*h]
                     }
 
-                    ConvertBgraToRgba32(rawBufferPool!, poolWidth, poolHeight, uploadPool!.PixelData);
+                    ConvertBgraToRgba32(rawBufferPool!, poolWidth, poolHeight, uploadPool!.RawData);
 
                     lock (bufferLock)
                     {
@@ -255,7 +255,7 @@ namespace osu.Game.Tournament.Components
             this.FadeIn(100);
 
             // 3) 消费像素缓冲区
-            MemoryTextureUpload? frame;
+            ArrayPoolTextureUpload? frame;
             int w, h;
 
             lock (bufferLock)
