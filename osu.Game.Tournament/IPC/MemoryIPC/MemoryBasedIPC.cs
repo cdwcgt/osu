@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.Versioning;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Game.Beatmaps.Legacy;
 using osu.Game.Tournament.Models;
 
 namespace osu.Game.Tournament.IPC.MemoryIPC
@@ -15,11 +16,13 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
     [SupportedOSPlatform("windows")]
     public partial class MemoryBasedIPC : FileBasedIPC, IProvideAdditionalData
     {
+        public override bool ReadScoreFromFile => false;
+
         public SlotPlayerStatus[] SlotPlayers { get; } = Enumerable.Range(0, 8).Select(i => new SlotPlayerStatus()).ToArray();
         BindableList<TourneyChatItem> IProvideAdditionalData.TourneyChat => throw new NotImplementedException(); //= new BindableList<TourneyChatItem>();
 
         [Resolved]
-        private LadderInfo ladderInfo { get; set; } = null!;
+        private LadderInfo ladder { get; set; } = null!;
 
         private readonly BindableInt playersPerTeam = new BindableInt
         {
@@ -37,7 +40,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
         [BackgroundDependencyLoader]
         private void load()
         {
-            playersPerTeam.BindTo(ladderInfo.PlayersPerTeam);
+            playersPerTeam.BindTo(ladder.PlayersPerTeam);
         }
 
         protected override void Update()
@@ -84,6 +87,19 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                         continue;
                     }
                 }
+            }
+
+            int[] team1OnlineId = ladder.CurrentMatch.Value?.Team1.Value?.Players.Select(p => p.OnlineID).ToArray() ??
+                                  Array.Empty<int>();
+            int[] team2OnlineId = ladder.CurrentMatch.Value?.Team2.Value?.Players.Select(p => p.OnlineID).ToArray() ??
+                                  Array.Empty<int>();
+
+            Score1.Value = SlotPlayers.Where(s => team1OnlineId.Any(t => t == s.OnlineID.Value)).Sum(calculateModMultiplier);
+            Score2.Value = SlotPlayers.Where(s => team2OnlineId.Any(t => t == s.OnlineID.Value)).Sum(calculateModMultiplier);
+
+            long calculateModMultiplier(SlotPlayerStatus s)
+            {
+                return (long)(s.Score.Value * ladder.ModMultiplierSettings.FirstOrDefault(m => (m.Mods.Value & s.Mods.Value) > LegacyMods.None)?.Multiplier.Value ?? 1.0);
             }
         }
     }
