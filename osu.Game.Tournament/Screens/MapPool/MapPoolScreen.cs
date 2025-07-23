@@ -195,10 +195,7 @@ namespace osu.Game.Tournament.Screens.MapPool
             }
             else
             {
-                // Pick phase : switch teams every pick, except for the first pick which generally goes to the team that placed the last ban.
-                nextColour = pickType == ChoiceType.Pick
-                    ? getOppositeTeamColour(lastPickColour)
-                    : lastPickColour;
+                nextColour = getOppositeTeamColour(lastPickColour);
             }
 
             setMode(nextColour, hasAllBans ? ChoiceType.Pick : ChoiceType.Ban);
