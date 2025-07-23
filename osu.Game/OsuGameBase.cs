@@ -457,7 +457,10 @@ namespace osu.Game
         {
             AddFont(Resources, @"Fonts/osuFont");
 
-            AddFont(Resources, @"Fonts/Harmony");
+            AddFont(Resources, @"Fonts/Harmony/Regular/Harmony-Regular");
+            AddFont(Resources, @"Fonts/Harmony/Bold/Harmony-Bold");
+            AddFont(Resources, @"Fonts/Harmony/Light/Harmony-Light");
+
             AddFont(Resources, @"Fonts/Torus/Torus-Regular");
             AddFont(Resources, @"Fonts/Torus/Torus-Light");
             AddFont(Resources, @"Fonts/Torus/Torus-SemiBold");

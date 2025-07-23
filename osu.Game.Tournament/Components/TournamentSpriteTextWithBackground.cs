@@ -43,7 +43,7 @@ namespace osu.Game.Tournament.Components
                 Text = new TournamentSpriteText
                 {
                     Colour = TournamentGame.ELEMENT_FOREGROUND_COLOUR,
-                    Font = OsuFont.Torus.With(weight: FontWeight.SemiBold, size: 50),
+                    Font = OsuFont.Torus.With(weight: FontWeight.Regular, size: 50),
                     Padding = new MarginPadding { Horizontal = 10 },
                     Text = text,
                 }

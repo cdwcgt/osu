@@ -133,8 +133,8 @@ namespace osu.Game.Graphics
         /// <returns>The string representation of <paramref name="weight"/> in the specified <paramref name="family"/>.</returns>
         public static string GetWeightString(string family, FontWeight weight)
         {
-            if ((family == GetFamilyString(Typeface.Torus) || family == GetFamilyString(Typeface.TorusAlternate)) && weight == FontWeight.Medium)
-                // torus doesn't have a medium; fallback to regular.
+            if ((family == GetFamilyString(Typeface.Torus) || family == GetFamilyString(Typeface.TorusAlternate)) && (weight != FontWeight.Regular && weight != FontWeight.Bold && weight != FontWeight.Light))
+                // torus doesn't have; fallback to regular.
                 weight = FontWeight.Regular;
 
             return weight.ToString();
