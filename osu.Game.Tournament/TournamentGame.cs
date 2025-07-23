@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -31,6 +32,8 @@ namespace osu.Game.Tournament
         public static readonly Color4 ELEMENT_BACKGROUND_COLOUR = Color4Extensions.FromHex("#fff");
         public static readonly Color4 ELEMENT_FOREGROUND_COLOUR = Color4Extensions.FromHex("#000");
 
+        public const string TOURNAMENT_CLIENT_NAME = " Tournament Client ";
+
         public static readonly Color4 TEXT_COLOUR = Color4Extensions.FromHex("#fff");
         private Drawable heightWarning = null!;
 
@@ -55,6 +58,18 @@ namespace osu.Game.Tournament
                 Origin = Anchor.BottomRight,
                 Margin = new MarginPadding(40),
             });
+
+            if (!checkRender())
+            {
+                loadingSpinner.Hide();
+                loadingSpinner.Expire();
+
+                Add(new WarningBox($"此lazer直播端需要使用OpenGL渲染器\n你当前的渲染器不为OpenGL，已经更改你的渲染器设置，lazer将在10s后自动退出"));
+
+                Scheduler.AddDelayed(() => Environment.Exit(0), 10000);
+
+                return;
+            }
 
             // in order to have the OS mouse cursor visible, relative mode needs to be disabled.
             // can potentially be removed when https://github.com/ppy/osu-framework/issues/4309 is resolved.
@@ -114,6 +129,18 @@ namespace osu.Game.Tournament
                     }), true);
                 });
             }));
+        }
+
+        [Resolved]
+        private FrameworkConfigManager frameworkSetting { get; set; } = null!;
+
+        [Resolved]
+        private GameHost host { get; set; } = null!;
+
+        private bool checkRender()
+        {
+
+            return true;
         }
     }
 }

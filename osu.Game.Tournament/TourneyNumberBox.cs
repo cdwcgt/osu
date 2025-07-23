@@ -73,8 +73,6 @@ namespace osu.Game.Tournament
 
         private partial class OutlinedNumberBox : OutlinedTextBox
         {
-            protected override bool AllowIme => false;
-
             protected override bool CanAddCharacter(char character) => char.IsAsciiDigit(character) || character == '.';
 
             public new void NotifyInputError() => base.NotifyInputError();

@@ -16,7 +16,20 @@ namespace osu.Game.Tests.Visual.SongSelectV2
             base.SetUpSteps();
             AddStep("press enter", () => InputManager.Key(Key.Enter));
             AddWaitStep("wait", 5);
-            PushAndConfirm(() => new Screens.SelectV2.SongSelectV2());
+            PushAndConfirm(() => new Screens.SelectV2.SoloSongSelect());
+        }
+
+        [Test]
+        public void TestOpenSkinEditor()
+        {
+            AddStep("toggle skin editor", () =>
+            {
+                InputManager.PressKey(Key.ControlLeft);
+                InputManager.PressKey(Key.ShiftLeft);
+                InputManager.Key(Key.S);
+                InputManager.ReleaseKey(Key.ControlLeft);
+                InputManager.ReleaseKey(Key.ShiftLeft);
+            });
         }
 
         [Test]

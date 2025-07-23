@@ -12,6 +12,7 @@ using osu.Game.Graphics.Sprites;
 using osu.Game.Scoring;
 using osu.Game.Screens.OnlinePlay.Multiplayer.Spectate;
 using osu.Game.Screens.Play;
+using osu.Game.Screens.Ranking;
 
 namespace osu.Game.Screens.ReplayVs
 {
@@ -79,6 +80,12 @@ namespace osu.Game.Screens.ReplayVs
         }
 
         protected override Score CreateScore(IBeatmap beatmap) => score;
+
+        protected override ResultsScreen CreateResults(ScoreInfo score) => new SoloResultsScreen(score)
+        {
+            AllowRetry = true,
+            IsLocalPlay = true,
+        };
 
         protected override GameplayClockContainer CreateGameplayClockContainer(WorkingBeatmap beatmap, double gameplayStart)
         {

@@ -106,12 +106,10 @@ namespace osu.Game.Tournament.Components
 
         public void Contract() => this.FadeOut(200);
 
-        protected override ChatLine CreateMessage(Message message)
+        protected override ChatLine? CreateMessage(Message message)
         {
-            if (message.Content.StartsWith("!mp password", StringComparison.Ordinal))
-            {
-                message.Content = "!mp password [数据删除]";
-            }
+            if (message.Content.StartsWith("!mp", StringComparison.Ordinal))
+                return null;
 
             return new MatchMessage(message, ladderInfo);
         }

@@ -9,11 +9,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
-using osu.Framework.Graphics.Containers;
-using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Shapes;
-using osu.Framework.Graphics.Sprites;
-using osu.Game.Extensions;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
@@ -24,15 +20,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 {
     public partial class GameplaySongBar : SongBar
     {
-        private FillFlowContainer leftData = null!;
-        private Container beatmapPanel = null!;
-        private FillFlowContainer rightData = null!;
         private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
-        public new const float HEIGHT = 50;
 
-        private readonly Bindable<ColourInfo> arrowColor = new Bindable<ColourInfo>(Color4.White);
-        private SpriteIcon leftArrow = null!;
-        private SpriteIcon rightArrow = null!;
+        private TeamColour? pickTeamColour;
         private bool expanded;
         private Box background = null!;
         private LoadingSpinner loading = null!;
@@ -42,7 +32,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         [Resolved]
         private LadderInfo ladder { get; set; } = null!;
 
-        public override bool Expanded
+        public bool Expanded
         {
             get => expanded;
             set
@@ -56,187 +46,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private void load()
         {
             currentMatch.BindValueChanged(matchChanged);
-            currentMatch.BindTo(ladder.CurrentMatch);
+            currentMatch.BindTo(Ladder.CurrentMatch);
 
-            Anchor = Anchor.BottomCentre;
-            Origin = Anchor.BottomCentre;
-
-            RelativeSizeAxes = Axes.None;
-            AutoSizeAxes = Axes.X;
-            Height = HEIGHT + 7f;
-
-            Padding = new MarginPadding { Bottom = 7f };
-
-            InternalChildren = new Drawable[]
-            {
-                new Container
-                {
-                    Anchor = Anchor.BottomCentre,
-                    Origin = Anchor.BottomCentre,
-                    RelativeSizeAxes = Axes.Y,
-                    AutoSizeAxes = Axes.X,
-                    Children = new Drawable[]
-                    {
-                        new FillFlowContainer
-                        {
-                            Anchor = Anchor.BottomCentre,
-                            Origin = Anchor.BottomCentre,
-                            RelativeSizeAxes = Axes.Y,
-                            AutoSizeAxes = Axes.X,
-                            Direction = FillDirection.Horizontal,
-                            Children = new Drawable[]
-                            {
-                                new Container
-                                {
-                                    Name = "Left arrow",
-                                    AutoSizeAxes = Axes.Both,
-                                    Anchor = Anchor.CentreLeft,
-                                    Origin = Anchor.CentreLeft,
-                                    Child = leftArrow = new SpriteIcon
-                                    {
-                                        Anchor = Anchor.CentreRight,
-                                        Origin = Anchor.CentreRight,
-                                        Size = new Vector2(30),
-                                        Icon = FontAwesome.Solid.ChevronRight,
-                                        Shadow = true
-                                    },
-                                },
-                                new FillFlowContainer
-                                {
-                                    Anchor = Anchor.CentreLeft,
-                                    Origin = Anchor.CentreLeft,
-                                    AutoSizeAxes = Axes.X,
-                                    RelativeSizeAxes = Axes.Y,
-                                    Direction = FillDirection.Horizontal,
-                                    Masking = true,
-                                    EdgeEffect = new EdgeEffectParameters
-                                    {
-                                        Colour = new Color4(0f, 0f, 0f, 0.25f),
-                                        Type = EdgeEffectType.Shadow,
-                                        Radius = 8,
-                                        Offset = new Vector2(1, 1),
-                                        Hollow = true
-                                    },
-                                    Children = new Drawable[]
-                                    {
-                                        new Container
-                                        {
-                                            RelativeSizeAxes = Axes.Y,
-                                            Width = 240,
-                                            Name = "Left data",
-                                            Children = new Drawable[]
-                                            {
-                                                new Box
-                                                {
-                                                    RelativeSizeAxes = Axes.Both,
-                                                    Colour = Colour4.Black,
-                                                    Alpha = 0.55f,
-                                                },
-                                                leftData = new FillFlowContainer
-                                                {
-                                                    RelativeSizeAxes = Axes.X,
-                                                    AutoSizeAxes = Axes.Y,
-                                                    Anchor = Anchor.Centre,
-                                                    Origin = Anchor.Centre,
-                                                    Direction = FillDirection.Vertical,
-                                                }
-                                            },
-                                        },
-                                        beatmapPanel = new Container
-                                        {
-                                            RelativeSizeAxes = Axes.Y,
-                                            AutoSizeAxes = Axes.X,
-                                            Child = new TournamentBeatmapPanel(beatmap)
-                                            {
-                                                Width = 500,
-                                                CenterText = true
-                                            },
-                                        },
-                                        new Container
-                                        {
-                                            RelativeSizeAxes = Axes.Y,
-                                            Width = 240,
-                                            Name = "Right data",
-                                            Children = new Drawable[]
-                                            {
-                                                new Box
-                                                {
-                                                    RelativeSizeAxes = Axes.Both,
-                                                    Colour = Colour4.Black,
-                                                    Alpha = 0.55f,
-                                                },
-                                                rightData = new FillFlowContainer
-                                                {
-                                                    RelativeSizeAxes = Axes.X,
-                                                    AutoSizeAxes = Axes.Y,
-                                                    Anchor = Anchor.Centre,
-                                                    Origin = Anchor.Centre,
-                                                    Direction = FillDirection.Vertical,
-                                                }
-                                            },
-                                        },
-                                    }
-                                },
-                                new Container
-                                {
-                                    Name = "Right arrow",
-                                    AutoSizeAxes = Axes.Both,
-                                    Anchor = Anchor.CentreLeft,
-                                    Origin = Anchor.CentreLeft,
-                                    Child = rightArrow = new SpriteIcon
-                                    {
-                                        Size = new Vector2(30),
-                                        Icon = FontAwesome.Solid.ChevronLeft,
-                                        Anchor = Anchor.CentreLeft,
-                                        Origin = Anchor.CentreLeft,
-                                        Shadow = true
-                                    },
-                                }
-                            }
-                        },
-                        background = new Box
-                        {
-                            RelativeSizeAxes = Axes.Both,
-                            Alpha = 0f,
-                            Colour = Color4.Black
-                        },
-                    }
-                },
-                loading = new LoadingSpinner
-                {
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
-                    Scale = new Vector2(0.5f),
-                },
-            };
-
-            arrowColor.BindValueChanged(c =>
-            {
-                leftArrow.FadeColour(c.NewValue, 300);
-                rightArrow.FadeColour(c.NewValue, 300);
-            });
-
-            WaitForResult.BindValueChanged(s =>
-            {
-                if (s.NewValue)
-                {
-                    background.FadeTo(0.4f, 300);
-                    loading.Show();
-                }
-                else
-                {
-                    background.FadeOut(300);
-                    loading.Hide();
-                }
-            });
-        }
-
-        protected override void LoadComplete()
-        {
-            base.LoadComplete();
-
-            leftArrow.MoveToX(-25, 1500, Easing.Out).Then().MoveToX(0, 1500, Easing.In).Loop();
-            rightArrow.MoveToX(25, 1500, Easing.Out).Then().MoveToX(0, 1500, Easing.In).Loop();
+            Expanded = true;
         }
 
         private void matchChanged(ValueChangedEvent<TournamentMatch?> match)
@@ -254,15 +66,15 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private void updateState()
         {
-            BeatmapChoice? isChoice = currentMatch.Value?.PicksBans.FirstOrDefault(p => p.BeatmapID == beatmap?.OnlineID && p.Type == ChoiceType.Pick);
+            pickTeamColour = currentMatch.Value?.PicksBans.FirstOrDefault(p => p.BeatmapID == Beatmap?.OnlineID && p.Type == ChoiceType.Pick)?.Team;
 
-            if (isChoice == null)
+            if (pickTeamColour == null)
             {
-                arrowColor.Value = Color4.White;
+                ArrowColor.Value = Color4.White;
                 return;
             }
 
-            arrowColor.Value = getTeamColour(isChoice.Team);
+            ArrowColor.Value = getTeamColour(pickTeamColour.Value);
 
             static ColourInfo getTeamColour(TeamColour teamColour) => teamColour == TeamColour.Red ? Color4Extensions.FromHex("#D43030") : Color4Extensions.FromHex("#2A82E4");
         }
@@ -272,71 +84,25 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             this.MoveTo(expanded ? new Vector2(0, -25) : Vector2.Zero, 300, Easing.Out);
         }
 
-        private string? getBeatmapModPosition()
+        protected override Drawable[][] CreateLeftData()
         {
-            var roundBeatmap = ladder.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(roundMap => roundMap.ID == beatmap!.OnlineID);
+            var leftData = base.CreateLeftData();
 
-            if (roundBeatmap == null)
-                return null;
+            GetBeatmapInformation(Mods, out double bpm, out double _, out _, out _);
 
-            var modArray = ladder.CurrentMatch.Value!.Round.Value.Beatmaps.Where(b => b.Mods == roundBeatmap.Mods).ToArray();
-
-            int id = Array.FindIndex(modArray, b => b.ID == roundBeatmap?.ID) + 1;
-
-            return $"{roundBeatmap.Mods}{id}";
-        }
-
-        protected override void PostUpdate()
-        {
-            updateState();
-
-            GetBeatmapInformation(out double bpm, out double length, out string srExtra, out var stats);
-
-            (string, string)[] srAndModStats =
+            (string, string)[] bpmAndPickTeam =
             {
-                ("星级", $"{beatmap!.StarRating:0.00}{srExtra}")
+                ("选图方", pickTeamColour == null ? "第三方" : pickTeamColour.Value == TeamColour.Red ? "红队" : "蓝队"),
+                ("BPM", $"{bpm:0.#}")
             };
 
-            string? modPosition = getBeatmapModPosition();
-
-            if (modPosition != null)
+            leftData[0][0] = new DiffPiece(bpmAndPickTeam)
             {
-                srAndModStats = srAndModStats.Append(("谱面位置", modPosition)).ToArray();
-            }
-
-            leftData.Children = new Drawable[]
-            {
-                new DiffPiece(("BPM", $"{bpm:0.#}"))
-                {
-                    Origin = Anchor.Centre,
-                    Anchor = Anchor.Centre,
-                },
-                new DiffPiece(("谱面长度", length.ToFormattedDuration().ToString()))
-                {
-                    Origin = Anchor.Centre,
-                    Anchor = Anchor.Centre,
-                },
+                Origin = Anchor.CentreRight,
+                Anchor = Anchor.CentreRight,
             };
 
-            rightData.Children = new Drawable[]
-            {
-                new DiffPiece(stats)
-                {
-                    Origin = Anchor.Centre,
-                    Anchor = Anchor.Centre,
-                },
-                new DiffPiece(srAndModStats)
-                {
-                    Origin = Anchor.Centre,
-                    Anchor = Anchor.Centre,
-                }
-            };
-
-            beatmapPanel.Child = new TournamentBeatmapPanel(beatmap)
-            {
-                Width = 500,
-                CenterText = true,
-            };
+            return leftData;
         }
     }
 }

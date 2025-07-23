@@ -53,7 +53,7 @@ namespace osu.Game.Graphics.UserInterface
 
         #region OsuDropdownMenu
 
-        protected partial class OsuDropdownMenu : DropdownMenu
+        public partial class OsuDropdownMenu : DropdownMenu
         {
             public override bool HandleNonPositionalInput => State == MenuState.Open;
 
@@ -75,7 +75,7 @@ namespace osu.Game.Graphics.UserInterface
             [BackgroundDependencyLoader(true)]
             private void load(OverlayColourProvider? colourProvider, OsuColour colours, AudioManager audio)
             {
-                BackgroundColour = colourProvider?.Background5 ?? Color4.Black.Opacity(0.5f);
+                BackgroundColour = colourProvider?.Background5 ?? Color4.Black;
                 HoverColour = colourProvider?.Light4 ?? colours.PinkDarker;
                 SelectionColour = colourProvider?.Background3 ?? colours.PinkDarker.Opacity(0.5f);
 
@@ -252,6 +252,7 @@ namespace osu.Game.Graphics.UserInterface
                                 Size = new Vector2(8),
                                 Alpha = 0,
                                 X = chevron_offset,
+                                Y = 1,
                                 Margin = new MarginPadding { Left = 3, Right = 3 },
                                 Origin = Anchor.CentreLeft,
                                 Anchor = Anchor.CentreLeft,
@@ -397,7 +398,7 @@ namespace osu.Game.Graphics.UserInterface
             {
                 bool hovered = Enabled.Value && IsHovered;
                 var hoveredColour = colourProvider?.Light4 ?? colours.PinkDarker;
-                var unhoveredColour = colourProvider?.Background5 ?? Color4.Black.Opacity(0.5f);
+                var unhoveredColour = colourProvider?.Background5 ?? Color4.Black;
 
                 Colour = Color4.White;
                 Alpha = Enabled.Value ? 1 : 0.3f;

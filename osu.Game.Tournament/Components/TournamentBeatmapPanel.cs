@@ -78,25 +78,22 @@ namespace osu.Game.Tournament.Components
             : this(beatmap.Beatmap, beatmap.Mods, isMappool: isMappool)
         {
             this.id = id;
-            backgroundColor = beatmap.BackgroundColor;
-            textColor = beatmap.TextColor;
         }
 
         private readonly int? id;
         private readonly bool isMappool;
-        private readonly Colour4 textColor;
-        private readonly Colour4 backgroundColor;
-        private Container container = null!;
+        private Colour4 textColor;
+        private Colour4 backgroundColor;
+        protected Container MainContainer = null!;
 
-        public TournamentBeatmapPanel(IBeatmapInfo? beatmap, string mod = "", float cornerRadius = 0, bool isMappool = false)
+        public TournamentBeatmapPanel(IBeatmapInfo? beatmap, string mod = "", bool isMappool = false)
         {
             Beatmap = beatmap;
             this.mod = mod;
             this.isMappool = isMappool;
 
-            Width = mod == "TB" && id.HasValue ? 600 : 400;
+            Width = mod == "TB" && isMappool ? 600 : 400;
             Height = HEIGHT;
-            CornerRadius = cornerRadius;
         }
 
         [BackgroundDependencyLoader]
@@ -104,6 +101,12 @@ namespace osu.Game.Tournament.Components
         {
             currentMatch.BindValueChanged(matchChanged);
             currentMatch.BindTo(ladder.CurrentMatch);
+
+            if (!string.IsNullOrEmpty(mod))
+            {
+                backgroundColor = ladder.GetModColorByModName(mod).BackgroundColor;
+                textColor = ladder.GetModColorByModName(mod).TextColor;
+            }
 
             AddRangeInternal(new Drawable[]
             {
@@ -124,7 +127,7 @@ namespace osu.Game.Tournament.Components
                                 RelativeSizeAxes = Axes.Both,
                                 Children = new Drawable[]
                                 {
-                                    container = new Container
+                                    MainContainer = new Container
                                     {
                                         RelativeSizeAxes = Axes.Both,
                                         Masking = true,
@@ -148,45 +151,7 @@ namespace osu.Game.Tournament.Components
                                                 Origin = Anchor.CentreLeft,
                                                 Padding = new MarginPadding(15),
                                                 Direction = FillDirection.Vertical,
-                                                Children = new Drawable[]
-                                                {
-                                                    new TournamentSpriteText
-                                                    {
-                                                        Text = Beatmap?.GetDisplayTitleRomanisable(false, false) ?? (LocalisableString)@"未知",
-                                                        Font = OsuFont.Torus.With(weight: FontWeight.Bold),
-                                                    },
-                                                    new FillFlowContainer
-                                                    {
-                                                        AutoSizeAxes = Axes.Both,
-                                                        Direction = FillDirection.Horizontal,
-                                                        Children = new Drawable[]
-                                                        {
-                                                            new TournamentSpriteText
-                                                            {
-                                                                Text = "谱师",
-                                                                Padding = new MarginPadding { Right = 5 },
-                                                                Font = OsuFont.Torus.With(weight: FontWeight.Regular, size: 14)
-                                                            },
-                                                            new TournamentSpriteText
-                                                            {
-                                                                Text = Beatmap?.Metadata.Author.Username ?? "未知",
-                                                                Padding = new MarginPadding { Right = 20 },
-                                                                Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 14)
-                                                            },
-                                                            new TournamentSpriteText
-                                                            {
-                                                                Text = "难度",
-                                                                Padding = new MarginPadding { Right = 5 },
-                                                                Font = OsuFont.Torus.With(weight: FontWeight.Regular, size: 14)
-                                                            },
-                                                            new TournamentSpriteText
-                                                            {
-                                                                Text = Beatmap?.DifficultyName ?? "未知",
-                                                                Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 14)
-                                                            },
-                                                        }
-                                                    },
-                                                },
+                                                Children = CreateInformation()
                                             },
                                             flash = new Box
                                             {
@@ -271,17 +236,58 @@ namespace osu.Game.Tournament.Components
             if (match.NewValue != null)
                 match.NewValue.PicksBans.CollectionChanged += picksBansOnCollectionChanged;
 
-            Scheduler.AddOnce(updateState);
+            Scheduler.AddOnce(UpdateState);
         }
 
+        protected virtual Drawable[] CreateInformation() =>
+            new Drawable[]
+            {
+                new TournamentSpriteText
+                {
+                    Text = Beatmap?.GetDisplayTitleRomanisable(false, false) ?? (LocalisableString)@"未知",
+                    Font = OsuFont.Torus.With(weight: FontWeight.Bold),
+                },
+                new FillFlowContainer
+                {
+                    AutoSizeAxes = Axes.Both,
+                    Direction = FillDirection.Horizontal,
+                    Children = new Drawable[]
+                    {
+                        new TournamentSpriteText
+                        {
+                            Text = "谱师",
+                            Padding = new MarginPadding { Right = 5 },
+                            Font = OsuFont.Torus.With(weight: FontWeight.Regular, size: 14)
+                        },
+                        new TournamentSpriteText
+                        {
+                            Text = Beatmap?.Metadata.Author.Username ?? "未知",
+                            Padding = new MarginPadding { Right = 20 },
+                            Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 14)
+                        },
+                        new TournamentSpriteText
+                        {
+                            Text = "难度",
+                            Padding = new MarginPadding { Right = 5 },
+                            Font = OsuFont.Torus.With(weight: FontWeight.Regular, size: 14)
+                        },
+                        new TournamentSpriteText
+                        {
+                            Text = Beatmap?.DifficultyName ?? "未知",
+                            Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 14)
+                        },
+                    }
+                },
+            };
+
         private void picksBansOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-            => Scheduler.AddOnce(updateState);
+            => Scheduler.AddOnce(UpdateState);
 
         private BeatmapChoice? choice;
         private bool centerText = false;
         private FillFlowContainer information = null!;
 
-        private void updateState()
+        protected virtual void UpdateState()
         {
             if (currentMatch.Value == null)
             {
@@ -309,18 +315,18 @@ namespace osu.Game.Tournament.Components
                 if (shouldFlash)
                     flash.FadeOutFromOne(500).Loop(0, 10);
 
-                container.BorderThickness = 6;
+                MainContainer.BorderThickness = 6;
 
-                container.BorderColour = TournamentGame.GetTeamColour(lastFound.Team);
+                MainContainer.BorderColour = TournamentGame.GetTeamColour(lastFound.Team);
 
                 switch (lastFound.Type)
                 {
                     case ChoiceType.Pick:
-                        container.Colour = Color4.White;
+                        MainContainer.Colour = Color4.White;
 
                         if (CornerRadius > 0)
                         {
-                            container.EdgeEffect = new EdgeEffectParameters
+                            MainContainer.EdgeEffect = new EdgeEffectParameters
                             {
                                 Type = EdgeEffectType.Glow,
                                 Colour = BorderColour,
@@ -328,30 +334,30 @@ namespace osu.Game.Tournament.Components
                                 Radius = 15
                             };
 
-                            container.Alpha = 1;
+                            MainContainer.Alpha = 1;
                         }
 
                         break;
 
                     case ChoiceType.Ban:
-                        container.Colour = Color4.Gray;
-                        container.Alpha = 0.5f;
+                        MainContainer.Colour = Color4.Gray;
+                        MainContainer.Alpha = 0.5f;
                         bannedSprite.Texture = textures.Get($"Ban/ban-{lastFound.Team.ToString().ToLowerInvariant()}");
                         bannedSprite.Show();
                         break;
 
                     case ChoiceType.Protected:
-                        container.Alpha = 1;
-                        container.BorderThickness = 0;
+                        MainContainer.Alpha = 1;
+                        MainContainer.BorderThickness = 0;
                         break;
                 }
             }
             else
             {
-                container.EdgeEffect = new EdgeEffectParameters();
-                container.Colour = Color4.White;
-                container.BorderThickness = 0;
-                container.Alpha = 1;
+                MainContainer.EdgeEffect = new EdgeEffectParameters();
+                MainContainer.Colour = Color4.White;
+                MainContainer.BorderThickness = 0;
+                MainContainer.Alpha = 1;
                 bannedSprite.Hide();
             }
 

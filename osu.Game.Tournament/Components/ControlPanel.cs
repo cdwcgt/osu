@@ -5,6 +5,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Game.Graphics;
+using osu.Game.Graphics.Containers;
 using osuTK;
 using osuTK.Graphics;
 
@@ -38,20 +39,28 @@ namespace osu.Game.Tournament.Components
                 {
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
-                    Text = "Control Panel",
+                    Text = "控制面板",
                     Font = OsuFont.GetFont(weight: FontWeight.Bold, size: 22)
                 },
-                buttons = new FillFlowContainer
+                new OsuScrollContainer
                 {
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
                     RelativeSizeAxes = Axes.X,
-                    AutoSizeAxes = Axes.Y,
                     Position = new Vector2(0, 35f),
                     Padding = new MarginPadding(5),
-                    Direction = FillDirection.Vertical,
-                    Spacing = new Vector2(0, 5f),
-                },
+                    Height = TournamentSceneManager.STREAM_AREA_HEIGHT - 35 - 100,
+                    ScrollbarVisible = false,
+                    Child = buttons = new FillFlowContainer
+                    {
+                        Anchor = Anchor.TopCentre,
+                        Origin = Anchor.TopCentre,
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Direction = FillDirection.Vertical,
+                        Spacing = new Vector2(0, 5f),
+                    },
+                }
             };
         }
 

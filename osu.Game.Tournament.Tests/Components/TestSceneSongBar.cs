@@ -63,8 +63,6 @@ namespace osu.Game.Tournament.Tests.Components
             AddStep("set mods to DT", () => songBar.Mods = LegacyMods.DoubleTime);
             AddStep("unset mods", () => songBar.Mods = LegacyMods.None);
 
-            AddToggleStep("toggle expanded", expanded => songBar.Expanded = expanded);
-
             AddStep("set null beatmap", () => songBar.Beatmap = null);
         }
     }

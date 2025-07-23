@@ -419,8 +419,8 @@ namespace osu.Game.Overlays.Comments
 
         private void copyUrl()
         {
-            clipboard.SetText($@"{api.APIEndpointUrl}/comments/{Comment.Id}");
-            onScreenDisplay?.Display(new CopyUrlToast());
+            clipboard.SetText($@"{api.Endpoints.APIUrl}/comments/{Comment.Id}");
+            onScreenDisplay?.Display(new CopiedToClipboardToast());
         }
 
         private void toggleReply()
@@ -428,7 +428,7 @@ namespace osu.Game.Overlays.Comments
             if (replyEditorContainer.Count == 0)
             {
                 replyEditorContainer.Show();
-                replyEditorContainer.Add(new ReplyCommentEditor(Comment)
+                replyEditorContainer.Add(new ReplyCommentEditor(Comment, Meta)
                 {
                     OnPost = comments =>
                     {

@@ -26,6 +26,7 @@ namespace osu.Game.Tournament.Screens.Editors
 
         public partial class RoundRow : CompositeDrawable, IModelBacked<TournamentRound>
         {
+            private readonly TournamentScreen parent;
             public TournamentRound Model { get; }
 
             [Resolved]
@@ -34,8 +35,12 @@ namespace osu.Game.Tournament.Screens.Editors
             [Resolved]
             private IDialogOverlay? dialogOverlay { get; set; }
 
-            public RoundRow(TournamentRound round)
+            [Resolved]
+            private TournamentSceneManager? sceneManager { get; set; }
+
+            public RoundRow(TournamentRound round, TournamentScreen parent)
             {
+                this.parent = parent;
                 Model = round;
 
                 Masking = true;
@@ -100,6 +105,16 @@ namespace osu.Game.Tournament.Screens.Editors
                                 Text = "Add beatmap",
                                 Action = () => beatmapEditor.CreateNew()
                             },
+                            new SettingsButton
+                            {
+                                Width = 0.2f,
+                                Margin = new MarginPadding(10),
+                                Text = "Edit ban pick flow",
+                                Action = () =>
+                                {
+                                    sceneManager?.SetScreen(new BanPickGroupFlowEditor(round, parent));
+                                }
+                            },
                             beatmapEditor
                         }
                     },
@@ -163,10 +178,6 @@ namespace osu.Game.Tournament.Screens.Editors
 
                     private readonly Bindable<string> mods = new Bindable<string>(string.Empty);
 
-                    private readonly Bindable<string> textColor = new Bindable<string>("#FFFFFF");
-
-                    private readonly Bindable<string> backgroundColor = new Bindable<string>("#000000");
-
                     private readonly Container drawableContainer;
 
                     public RoundBeatmapRow(TournamentRound team, RoundBeatmap beatmap)
@@ -211,20 +222,6 @@ namespace osu.Game.Tournament.Screens.Editors
                                         Width = 200,
                                         Current = mods,
                                     },
-                                    new SettingsTextBox
-                                    {
-                                        LabelText = "文本颜色",
-                                        RelativeSizeAxes = Axes.None,
-                                        Width = 120,
-                                        Current = textColor
-                                    },
-                                    new SettingsTextBox
-                                    {
-                                        LabelText = "背景色",
-                                        RelativeSizeAxes = Axes.None,
-                                        Width = 120,
-                                        Current = backgroundColor
-                                    },
                                     drawableContainer = new Container
                                     {
                                         Size = new Vector2(100, 70),
@@ -248,7 +245,7 @@ namespace osu.Game.Tournament.Screens.Editors
                     }
 
                     [BackgroundDependencyLoader]
-                    private void load()
+                    private void load(TournamentGameBase gameBase)
                     {
                         beatmapId.Value = Model.ID;
                         beatmapId.BindValueChanged(id =>
@@ -269,6 +266,12 @@ namespace osu.Game.Tournament.Screens.Editors
                             req.Success += res =>
                             {
                                 Model.Beatmap = new TournamentBeatmap(res);
+
+                                if (Model.Mods == "FM")
+                                {
+                                    gameBase.PopulateFmBeatmapStarRating(Model.Beatmap);
+                                }
+
                                 updatePanel();
                             };
 
@@ -282,21 +285,13 @@ namespace osu.Game.Tournament.Screens.Editors
                         }, true);
 
                         mods.Value = Model.Mods;
-                        mods.BindValueChanged(modString => Model.Mods = modString.NewValue);
-                        textColor.Value = Model.TextColor.ToHex();
-                        backgroundColor.Value = Model.BackgroundColor.ToHex();
-                        textColor.BindValueChanged(c =>
+                        mods.BindValueChanged(modString =>
                         {
-                            if (Colour4.TryParseHex(c.NewValue, out var colour))
+                            Model.Mods = modString.NewValue;
+
+                            if (Model.Beatmap != null && modString.NewValue == "FM")
                             {
-                                Model.TextColor = colour;
-                            }
-                        });
-                        backgroundColor.BindValueChanged(c =>
-                        {
-                            if (Colour4.TryParseHex(c.NewValue, out var colour))
-                            {
-                                Model.BackgroundColor = colour;
+                                gameBase.PopulateFmBeatmapStarRating(Model.Beatmap);
                             }
                         });
                     }
@@ -319,6 +314,6 @@ namespace osu.Game.Tournament.Screens.Editors
             }
         }
 
-        protected override RoundRow CreateDrawable(TournamentRound model) => new RoundRow(model);
+        protected override RoundRow CreateDrawable(TournamentRound model) => new RoundRow(model, this);
     }
 }

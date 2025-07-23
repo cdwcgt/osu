@@ -4,7 +4,7 @@
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Game.Graphics;
-using osu.Game.Tournament.Screens.Gameplay.Components;
+using osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader;
 using osuTK;
 
 namespace osu.Game.Tournament.Tests.Components
@@ -23,7 +23,7 @@ namespace osu.Game.Tournament.Tests.Components
                     new TournamentSpriteText { Text = "with logo", Font = OsuFont.Torus.With(size: 30) },
                     new MatchHeader(),
                     new TournamentSpriteText { Text = "without logo", Font = OsuFont.Torus.With(size: 30) },
-                    new MatchHeader { ShowLogo = false },
+                    new MatchHeader(),
                     new TournamentSpriteText { Text = "without scores", Font = OsuFont.Torus.With(size: 30) },
                     new MatchHeader { ShowScores = false },
                 }

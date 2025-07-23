@@ -263,7 +263,6 @@ namespace osu.Game.Screens.Select
                             },
                             new BeatmapSetOnlineStatusPill
                             {
-                                AutoSizeAxes = Axes.Both,
                                 Anchor = Anchor.TopRight,
                                 Origin = Anchor.TopRight,
                                 Shear = -wedged_container_shear,
@@ -401,7 +400,6 @@ namespace osu.Game.Screens.Select
                 if (beatmap == null || bpmLabelContainer == null)
                     return;
 
-                // this doesn't consider mods which apply variable rates, yet.
                 double rate = ModUtils.CalculateRateWithMods(mods.Value);
 
                 int bpmMax = FormatUtils.RoundBPM(beatmap.ControlPointInfo.BPMMaximum, rate);

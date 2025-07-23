@@ -9,6 +9,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Graphics.Textures;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
@@ -121,7 +122,9 @@ namespace osu.Game.Screens.Play.HUD
             Team2Score.BindValueChanged(_ => updateScores(), true);
         }
 
-        private void updateScores()
+        private long previousDiffScore = 0;
+
+        private void updateScores() => Scheduler.AddOnce(() =>
         {
             Score1Text.Current.Value = Team1Score.Value;
             Score2Text.Current.Value = Team2Score.Value;
@@ -154,8 +157,25 @@ namespace osu.Game.Screens.Play.HUD
 
             ScoreDiffText.Alpha = diff != 0 ? 1 : 0;
             ScoreDiffText.Current.Value = -diff;
-            ScoreDiffText.Origin = Team1Score.Value > Team2Score.Value ? Anchor.TopLeft : Anchor.TopRight;
-        }
+            ScoreDiffText.SetAnchor(Team1Score.Value > Team2Score.Value ? Anchor.TopLeft : Anchor.TopRight);
+
+            if (previousDiffScore > diff)
+            {
+                ScoreDiffText.ArrowIcon.Alpha = 1;
+                ScoreDiffText.ArrowIcon.Rotation = Team1Score.Value > Team2Score.Value ? 90 : -90;
+            }
+            else if (previousDiffScore < diff)
+            {
+                ScoreDiffText.ArrowIcon.Alpha = 1;
+                ScoreDiffText.ArrowIcon.Rotation = Team1Score.Value > Team2Score.Value ? -90 : 90;
+            }
+            else
+            {
+                ScoreDiffText.ArrowIcon.Alpha = 0;
+            }
+
+            previousDiffScore = diff;
+        });
 
         protected override void UpdateAfterChildren()
         {
@@ -213,8 +233,11 @@ namespace osu.Game.Screens.Play.HUD
 
         protected partial class MatchScoreDiffCounter : CommaSeparatedScoreCounter
         {
-            public Box Background { get; }
-            public SpriteIcon SuccessIcon { get; }
+            public Box Background { get; set; }
+            public SpriteIcon SuccessIcon { get; set; }
+            private FillFlowContainer fillFlow = null!;
+
+            public Sprite ArrowIcon { get; private set; } = null!;
 
             protected override Container<Drawable> Content { get; } = new Container
             {
@@ -223,7 +246,8 @@ namespace osu.Game.Screens.Play.HUD
                 Origin = Anchor.CentreLeft
             };
 
-            public MatchScoreDiffCounter()
+            [BackgroundDependencyLoader]
+            private void load(TextureStore textures)
             {
                 AutoSizeAxes = Axes.Both;
                 InternalChild = new Container
@@ -242,7 +266,7 @@ namespace osu.Game.Screens.Play.HUD
                                 Colour = Color4Extensions.FromHex("#FFC300"),
                             },
                         },
-                        new FillFlowContainer
+                        fillFlow = new FillFlowContainer
                         {
                             AutoSizeAxes = Axes.Both,
                             Direction = FillDirection.Horizontal,
@@ -256,19 +280,47 @@ namespace osu.Game.Screens.Play.HUD
                                     Anchor = Anchor.CentreLeft,
                                     Origin = Anchor.CentreLeft,
                                     Padding = new MarginPadding { Horizontal = 4f },
-                                    Child = SuccessIcon = new SpriteIcon
+                                    Children = new Drawable[]
                                     {
-                                        Size = new Vector2(12),
-                                        Icon = FontAwesome.Solid.Check,
-                                        Anchor = Anchor.CentreLeft,
-                                        Origin = Anchor.CentreLeft,
-                                        Colour = Color4Extensions.FromHex("383838"),
+                                        SuccessIcon = new SpriteIcon
+                                        {
+                                            Size = new Vector2(12),
+                                            Icon = FontAwesome.Solid.Check,
+                                            Anchor = Anchor.CentreLeft,
+                                            Origin = Anchor.CentreLeft,
+                                            Colour = Color4Extensions.FromHex("383838"),
+                                        },
+                                        ArrowIcon = new Sprite
+                                        {
+                                            Width = 16f,
+                                            Height = 10f,
+                                            Anchor = Anchor.Centre,
+                                            Origin = Anchor.Centre,
+                                            FillMode = FillMode.Fit,
+                                            Texture = textures.Get("triangle"),
+                                            Rotation = -90,
+                                            EdgeSmoothness = Vector2.Zero,
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 };
+            }
+
+            public void SetAnchor(Anchor anchor)
+            {
+                foreach (var drawable in fillFlow)
+                {
+                    if (drawable != null)
+                    {
+                        drawable.Anchor = anchor;
+                        drawable.Origin = anchor;
+                    }
+                }
+
+                Origin = anchor;
             }
 
             protected override OsuSpriteText CreateSpriteText() => base.CreateSpriteText().With(s =>

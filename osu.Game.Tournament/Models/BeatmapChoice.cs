@@ -4,6 +4,7 @@
 using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using osu.Framework.Bindables;
 
 namespace osu.Game.Tournament.Models
 {
@@ -18,6 +19,8 @@ namespace osu.Game.Tournament.Models
 
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
         public ChoiceType Type;
+
+        public Bindable<TeamColour?> Winner = new Bindable<TeamColour?>();
 
         public int BeatmapID;
 
@@ -37,5 +40,10 @@ namespace osu.Game.Tournament.Models
         Pick,
         Ban,
         Protected,
+    }
+
+    public static class BeatmapChoiceExtensions
+    {
+        public static bool IsConsumed(this BeatmapChoice choice) => choice.Type == ChoiceType.Pick || choice.Type == ChoiceType.Ban;
     }
 }

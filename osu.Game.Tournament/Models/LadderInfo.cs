@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 using osu.Framework.Bindables;
 using osu.Game.Rulesets;
@@ -33,9 +34,16 @@ namespace osu.Game.Tournament.Models
             MaxValue = 1366,
         };
 
+        public BindableInt FrameRate = new BindableInt(60)
+        {
+            MinValue = 30,
+            MaxValue = 360,
+            Default = 60,
+        };
+
         public Bindable<int> PlayersPerTeam = new BindableInt(4)
         {
-            MinValue = 3,
+            MinValue = 1,
             MaxValue = 4,
         };
 
@@ -48,5 +56,13 @@ namespace osu.Game.Tournament.Models
         public Bindable<bool> InvertScoreColour = new BindableBool();
 
         public Bindable<bool> UseAlternateChatSource = new BindableBool();
+
+        public BindableList<ModColor> ModColors = new BindableList<ModColor>();
+
+        public ModColor GetModColorByModName(string mod) => ModColors.FirstOrDefault(m => m.ModName == mod) ?? new ModColor();
+
+        public ShowcaseSettings ShowcaseSettings = new ShowcaseSettings();
+
+        public BindableList<ModMultiplierSetting> ModMultiplierSettings { get; } = new BindableList<ModMultiplierSetting>();
     }
 }

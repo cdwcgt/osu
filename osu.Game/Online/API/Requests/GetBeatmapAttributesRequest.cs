@@ -10,14 +10,14 @@ namespace osu.Game.Online.API.Requests
     public class GetBeatmapAttributesRequest : APIRequest<APIBeatmapDifficultyAttributesResponse>
     {
         public readonly int BeatmapId;
-        public readonly string? Ruleset;
+        public readonly int? RulesetId;
         public readonly string? Mods;
 
-        public GetBeatmapAttributesRequest(int beatmapId, string? mods = null, string? ruleset = null)
+        public GetBeatmapAttributesRequest(int beatmapId, string? mods = null, int? rulesetId = null)
         {
             BeatmapId = beatmapId;
             Mods = mods;
-            Ruleset = ruleset;
+            RulesetId = rulesetId;
         }
 
         protected override WebRequest CreateWebRequest()
@@ -30,9 +30,9 @@ namespace osu.Game.Online.API.Requests
                 request.AddParameter("mods", Mods);
             }
 
-            if (Ruleset != null)
+            if (RulesetId != null)
             {
-                request.AddParameter("ruleset", Ruleset);
+                request.AddParameter("ruleset_id", RulesetId.ToString());
             }
 
             return request;

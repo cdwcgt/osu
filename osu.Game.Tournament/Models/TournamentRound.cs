@@ -20,6 +20,8 @@ namespace osu.Game.Tournament.Models
         public readonly BindableInt BestOf = new BindableInt(9) { Default = 9, MinValue = 3, MaxValue = 23 };
         public readonly BindableInt BanCount = new BindableInt(1) { Default = 1, MinValue = 0, MaxValue = 5 };
 
+        public readonly BindableList<BanPickFlowGroup> BanPickFlowGroups = new BindableList<BanPickFlowGroup>();
+
         [JsonProperty]
         public readonly BindableList<RoundBeatmap> Beatmaps = new BindableList<RoundBeatmap>();
 

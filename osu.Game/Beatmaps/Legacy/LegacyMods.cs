@@ -6,7 +6,7 @@ using System;
 namespace osu.Game.Beatmaps.Legacy
 {
     [Flags]
-    public enum LegacyMods
+    public enum LegacyMods : ulong
     {
         None = 0,
         NoFail = 1,
@@ -40,5 +40,6 @@ namespace osu.Game.Beatmaps.Legacy
         Key2 = 1 << 28,
         ScoreV2 = 1 << 29,
         Mirror = 1 << 30,
+        FreeMod = 1L << 31,
     }
 }
