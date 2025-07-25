@@ -37,9 +37,12 @@ namespace osu.Game.Tournament.Components
         private PadLock padLock = null!;
 
         protected Container ModIconContainer = null!;
+        protected Container ExContainer = null!;
 
         [Resolved]
-        private LadderInfo ladderInfo { get; set; } = null!;
+        protected LadderInfo LadderInfo { get; private set; } = null!;
+
+        protected bool? Ex;
 
         protected virtual bool TranslucentProtectedAfterPick => true;
 
@@ -52,14 +55,16 @@ namespace osu.Game.Tournament.Components
         }
 
         [BackgroundDependencyLoader]
-        private void load(LadderInfo ladder)
+        private void load(TextureStore textures)
         {
             currentMatch.BindValueChanged(matchChanged);
-            currentMatch.BindTo(ladder.CurrentMatch);
+            currentMatch.BindTo(LadderInfo.CurrentMatch);
 
             Masking = true;
 
-            mod = ladderInfo.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(b => b.Beatmap?.OnlineID == Beatmap?.OnlineID)?.Mods;
+            mod = LadderInfo.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(b => b.Beatmap?.OnlineID == Beatmap?.OnlineID)?.Mods;
+
+            Ex = currentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(b => b.Beatmap?.OnlineID == Beatmap?.OnlineID)?.Ex;
 
             AddRangeInternal(new Drawable[]
             {
@@ -155,6 +160,26 @@ namespace osu.Game.Tournament.Components
                 ModIconContainer.Add(new TournamentModIcon(mod)
                 {
                     RelativeSizeAxes = Axes.Both,
+                });
+            }
+
+            if (Ex == true)
+            {
+                AddInternal(ExContainer = new Container
+                {
+                    RelativeSizeAxes = Axes.Y,
+                    Width = 60,
+                    Anchor = Anchor.TopRight,
+                    Origin = Anchor.Centre,
+                    Margin = new MarginPadding { Right = 20 },
+                    Child = new Sprite
+                    {
+                        FillMode = FillMode.Fit,
+                        RelativeSizeAxes = Axes.Both,
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
+                        Texture = textures.Get("Mods/ex")
+                    }
                 });
             }
         }

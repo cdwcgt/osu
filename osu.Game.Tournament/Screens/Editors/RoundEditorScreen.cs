@@ -163,6 +163,8 @@ namespace osu.Game.Tournament.Screens.Editors
 
                     private readonly Bindable<string> mods = new Bindable<string>(string.Empty);
 
+                    private readonly BindableBool ex = new BindableBool();
+
                     private readonly Container drawableContainer;
 
                     public RoundBeatmapRow(TournamentRound team, RoundBeatmap beatmap)
@@ -206,6 +208,13 @@ namespace osu.Game.Tournament.Screens.Editors
                                         RelativeSizeAxes = Axes.None,
                                         Width = 200,
                                         Current = mods,
+                                    },
+                                    new SettingsCheckbox
+                                    {
+                                        LabelText = "EX",
+                                        RelativeSizeAxes = Axes.None,
+                                        Width = 110,
+                                        Current = ex,
                                     },
                                     drawableContainer = new Container
                                     {
@@ -265,6 +274,9 @@ namespace osu.Game.Tournament.Screens.Editors
 
                         mods.Value = Model.Mods;
                         mods.BindValueChanged(modString => Model.Mods = modString.NewValue);
+
+                        ex.Value = Model.Ex;
+                        ex.BindValueChanged(e => Model.Ex = e.NewValue);
                     }
 
                     private void updatePanel() => Schedule(() =>

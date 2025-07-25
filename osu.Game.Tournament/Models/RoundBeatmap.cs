@@ -12,5 +12,7 @@ namespace osu.Game.Tournament.Models
 
         [JsonProperty("BeatmapInfo")]
         public TournamentBeatmap? Beatmap;
+
+        public bool Ex;
     }
 }
