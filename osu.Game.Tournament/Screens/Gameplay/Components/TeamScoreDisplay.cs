@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -18,6 +19,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
         private readonly Bindable<TournamentTeam?> currentTeam = new Bindable<TournamentTeam?>();
         private readonly Bindable<int?> currentTeamScore = new Bindable<int?>();
+        private readonly Bindable<bool> scoreMode = new Bindable<bool>();
 
         private TeamDisplay? teamDisplay;
 
@@ -29,6 +31,18 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 if (teamDisplay != null)
                 {
                     teamDisplay.ShowScore = value;
+                }
+            }
+        }
+
+        public bool ScoreMode
+        {
+            get => teamDisplay?.ScoreMode ?? false;
+            set
+            {
+                if (teamDisplay != null)
+                {
+                    teamDisplay.ScoreMode = value;
                 }
             }
         }
@@ -48,6 +62,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             currentMatch.BindValueChanged(matchChanged);
 
             currentTeam.BindValueChanged(teamChanged);
+            scoreMode.BindValueChanged(s => ScoreMode = s.NewValue, true);
 
             updateMatch();
         }
@@ -56,6 +71,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         {
             currentTeamScore.UnbindBindings();
             currentTeam.UnbindBindings();
+            scoreMode.UnbindBindings();
 
             Scheduler.AddOnce(updateMatch);
         }
@@ -70,6 +86,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
                 currentTeamScore.BindTo(teamColour == TeamColour.Red ? match.Team1Score : match.Team2Score);
                 currentTeam.BindTo(teamColour == TeamColour.Red ? match.Team1 : match.Team2);
+                scoreMode.BindTo(match.ScoreMode);
             }
 
             // team may change to same team, which means score is not in a good state.
@@ -79,6 +96,22 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         protected override bool OnMouseDown(MouseDownEvent e)
         {
+            if (scoreMode.Value)
+            {
+                switch (e.Button)
+                {
+                    case MouseButton.Left:
+                        currentTeamScore.Value += 3000;
+                        return true;
+
+                    case MouseButton.Right:
+                        currentTeamScore.Value = Math.Max(0, (currentTeamScore.Value ?? 0) - 3000);
+                        return true;
+                }
+
+                return base.OnMouseDown(e);
+            }
+
             switch (e.Button)
             {
                 case MouseButton.Left:
@@ -105,6 +138,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             };
 
             teamDisplay.ShowScore = wasShowingScores;
+            teamDisplay.ScoreMode = scoreMode.Value;
         }
     }
 }

@@ -76,6 +76,7 @@ namespace osu.Game.Tournament.Models
         {
             Team1.BindValueChanged(t => Team1Acronym = t.NewValue?.Acronym.Value, true);
             Team2.BindValueChanged(t => Team2Acronym = t.NewValue?.Acronym.Value, true);
+            ScoreMode.BindValueChanged(_ => Team1Score.Value = Team2Score.Value = 0);
         }
 
         public TournamentMatch(TournamentTeam? team1 = null, TournamentTeam? team2 = null)
@@ -93,7 +94,14 @@ namespace osu.Game.Tournament.Models
 
         public TeamColour WinnerColour => Winner == Team1.Value ? TeamColour.Red : TeamColour.Blue;
 
-        public int PointsToWin => Round.Value?.BestOf.Value / 2 + 1 ?? 0;
+        public int PointsToWin => !ScoreMode.Value
+            ? Round.Value?.BestOf.Value / 2 + 1 ?? 0
+            : int.MaxValue;
+
+        /// <summary>
+        /// Special scoring mode.
+        /// </summary>
+        public readonly BindableBool ScoreMode = new BindableBool();
 
         /// <summary>
         /// Remove scores from the match, in case of a false click or false start.

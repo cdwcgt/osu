@@ -26,6 +26,9 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
         private DateTextBox dateTimeBox = null!;
         private SettingsTeamDropdown team1Dropdown = null!;
         private SettingsTeamDropdown team2Dropdown = null!;
+        private SettingsCheckbox scoreModeCheckbox = null!;
+        private SettingsNumberBox redScoreNumbox = null!;
+        private SettingsNumberBox blueScoreNumbox = null!;
 
         [Resolved]
         private LadderEditorInfo editorInfo { get; set; } = null!;
@@ -52,6 +55,9 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
                     roundDropdown = new SettingsRoundDropdown(ladderInfo.Rounds) { LabelText = "Round" },
                     losersCheckbox = new PlayerCheckbox { LabelText = "Losers Bracket" },
                     dateTimeBox = new DateTextBox { LabelText = "Match Time" },
+                    scoreModeCheckbox = new SettingsCheckbox { LabelText = "Score Mode" },
+                    redScoreNumbox = new SettingsNumberBox { LabelText = "Red score" },
+                    blueScoreNumbox = new SettingsNumberBox { LabelText = "Blue score" },
                 },
             };
 
@@ -70,6 +76,10 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
 
                 team1Dropdown.Current = selection.NewValue.Team1;
                 team2Dropdown.Current = selection.NewValue.Team2;
+
+                scoreModeCheckbox.Current = selection.NewValue.ScoreMode;
+                redScoreNumbox.Current = selection.NewValue.Team1Score;
+                blueScoreNumbox.Current = selection.NewValue.Team2Score;
 
                 roundDropdown.Current.ValueChanged += roundDropdownChanged;
             };

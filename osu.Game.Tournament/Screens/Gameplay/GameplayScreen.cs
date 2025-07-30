@@ -15,6 +15,7 @@ using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Gameplay.Components;
 using osu.Game.Tournament.Screens.MapPool;
 using osu.Game.Tournament.Screens.TeamWin;
+using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Screens.Gameplay
@@ -26,6 +27,15 @@ namespace osu.Game.Tournament.Screens.Gameplay
         public readonly Bindable<TourneyState> State = new Bindable<TourneyState>();
         private OsuButton warmupButton = null!;
         private MatchIPCInfo ipc = null!;
+
+        private readonly BindableBool scoreMode = new BindableBool();
+        private readonly BindableBool autoScoreMode = new BindableBool();
+        private readonly Bindable<int?> team1Score = new Bindable<int?>();
+        private readonly Bindable<int?> team2Score = new Bindable<int?>();
+
+        private FillFlowContainer scoreModeControl = null!;
+        private SettingsNumberBox redScoreInput = null!;
+        private SettingsNumberBox blueScoreInput = null!;
 
         [Resolved]
         private TournamentSceneManager? sceneManager { get; set; }
@@ -119,6 +129,46 @@ namespace osu.Game.Tournament.Screens.Gameplay
                             Current = LadderInfo.PlayersPerTeam,
                             KeyboardStep = 1,
                         },
+                        new SettingsCheckbox
+                        {
+                            LabelText = "toggle score Mode",
+                            Current = scoreMode
+                        },
+                        scoreModeControl = new FillFlowContainer
+                        {
+                            AutoSizeAxes = Axes.None,
+                            RelativeSizeAxes = Axes.X,
+                            Masking = true,
+                            Direction = FillDirection.Vertical,
+                            AutoSizeDuration = 200,
+                            AutoSizeEasing = Easing.OutQuint,
+                            Spacing = new Vector2(0, 10),
+                            Children = new Drawable[]
+                            {
+                                new SettingsCheckbox
+                                {
+                                    LabelText = "Auto Score Mode",
+                                    Current = autoScoreMode
+                                },
+                                redScoreInput = new SettingsNumberBox
+                                {
+                                    LabelText = "Red Score",
+                                },
+                                blueScoreInput = new SettingsNumberBox
+                                {
+                                    LabelText = "Blue Score",
+                                },
+                                new SettingsButton
+                                {
+                                    Text = "Apply",
+                                    Action = () =>
+                                    {
+                                        team1Score.Value = redScoreInput.Current.Value;
+                                        team2Score.Value = blueScoreInput.Current.Value;
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             });
@@ -129,6 +179,18 @@ namespace osu.Game.Tournament.Screens.Gameplay
             {
                 warmupButton.Alpha = !w.NewValue ? 0.5f : 1;
                 header.ShowScores = !w.NewValue;
+            }, true);
+
+            team1Score.BindValueChanged(s =>
+                redScoreInput.Current.Value = s.NewValue, true);
+            team2Score.BindValueChanged(s =>
+                blueScoreInput.Current.Value = s.NewValue, true);
+            scoreMode.BindValueChanged(s =>
+            {
+                scoreModeControl.AutoSizeAxes = s.NewValue ? Axes.Y : Axes.None;
+
+                if (!s.NewValue)
+                    scoreModeControl.ResizeHeightTo(0, 200, Easing.OutQuint);
             }, true);
         }
 
@@ -146,6 +208,17 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
             if (match.NewValue == null)
                 return;
+
+            if (match.OldValue != null)
+            {
+                scoreMode.UnbindFrom(match.OldValue.ScoreMode);
+                team1Score.UnbindFrom(match.OldValue.Team1Score);
+                team2Score.UnbindFrom(match.OldValue.Team2Score);
+            }
+
+            scoreMode.BindTo(match.NewValue.ScoreMode);
+            team1Score.BindTo(match.NewValue.Team1Score);
+            team2Score.BindTo(match.NewValue.Team2Score);
 
             warmup.Value = match.NewValue.Team1Score.Value + match.NewValue.Team2Score.Value == 0;
             scheduledScreenChange?.Cancel();
@@ -198,10 +271,20 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 {
                     if (warmup.Value || CurrentMatch.Value == null) return;
 
-                    if (ipc.Score1.Value > ipc.Score2.Value)
-                        CurrentMatch.Value.Team1Score.Value++;
-                    else
-                        CurrentMatch.Value.Team2Score.Value++;
+                    if (CurrentMatch.Value.ScoreMode.Value && autoScoreMode.Value)
+                    {
+                        if (ipc.Score1.Value > ipc.Score2.Value)
+                            CurrentMatch.Value.Team1Score.Value += 3000;
+                        else
+                            CurrentMatch.Value.Team2Score.Value += 3000;
+                    }
+                    else if (!CurrentMatch.Value.ScoreMode.Value || !autoScoreMode.Value)
+                    {
+                        if (ipc.Score1.Value > ipc.Score2.Value)
+                            CurrentMatch.Value.Team1Score.Value++;
+                        else
+                            CurrentMatch.Value.Team2Score.Value++;
+                    }
                 }
 
                 switch (State.Value)

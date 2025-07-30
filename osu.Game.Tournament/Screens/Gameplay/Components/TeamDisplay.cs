@@ -12,13 +12,14 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 {
     public partial class TeamDisplay : DrawableTournamentTeam
     {
-        private readonly TeamScore score;
+        private readonly Container score;
 
         private readonly TournamentSpriteTextWithBackground teamNameText;
 
         private readonly Bindable<string> teamName = new Bindable<string>("???");
 
         private bool showScore;
+        private bool scoreMode;
 
         public bool ShowScore
         {
@@ -35,14 +36,36 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             }
         }
 
+        public bool ScoreMode
+        {
+            get => scoreMode;
+            set
+            {
+                if (scoreMode == value)
+                    return;
+
+                scoreMode = value;
+
+                updateScoreMode();
+            }
+        }
+
+        private readonly Anchor anchor;
+        private readonly TeamColour colour;
+        private readonly Bindable<int?> currentTeamScore = new Bindable<int?>();
+        private readonly int pointsToWin;
+
         public TeamDisplay(TournamentTeam? team, TeamColour colour, Bindable<int?> currentTeamScore, int pointsToWin)
             : base(team)
         {
+            this.colour = colour;
+            this.currentTeamScore.BindTo(currentTeamScore);
+            this.pointsToWin = pointsToWin;
             AutoSizeAxes = Axes.Both;
 
             bool flip = colour == TeamColour.Red;
 
-            var anchor = flip ? Anchor.TopLeft : Anchor.TopRight;
+            anchor = flip ? Anchor.TopLeft : Anchor.TopRight;
 
             Flag.RelativeSizeAxes = Axes.None;
             Flag.Scale = new Vector2(0.8f);
@@ -88,8 +111,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                                                 Origin = anchor,
                                                 Anchor = anchor,
                                             },
-                                            score = new TeamScore(currentTeamScore, colour, pointsToWin)
+                                            score = new Container
                                             {
+                                                AutoSizeAxes = Axes.Both,
                                                 Origin = anchor,
                                                 Anchor = anchor,
                                             }
@@ -120,6 +144,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             base.LoadComplete();
 
             updateDisplay();
+            updateScoreMode();
             FinishTransforms(true);
 
             if (Team != null)
@@ -131,6 +156,22 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private void updateDisplay()
         {
             score.FadeTo(ShowScore ? 1 : 0, 200);
+        }
+
+        private void updateScoreMode()
+        {
+            if (scoreMode)
+            {
+                score.Child = new ScoreModeTeamScore(currentTeamScore, colour);
+            }
+            else
+            {
+                score.Child = new TeamScore(currentTeamScore, colour, pointsToWin)
+                {
+                    Origin = anchor,
+                    Anchor = anchor,
+                };
+            }
         }
     }
 }
