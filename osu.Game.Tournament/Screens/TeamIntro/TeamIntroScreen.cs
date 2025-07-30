@@ -43,9 +43,9 @@ namespace osu.Game.Tournament.Screens.TeamIntro
             if (match.NewValue == null)
                 return;
 
-            const float y_flag_offset = 292;
+            const float y_flag_offset = 267;
 
-            const float y_offset = 460;
+            const float y_offset = 420;
 
             mainContainer.Children = new Drawable[]
             {
