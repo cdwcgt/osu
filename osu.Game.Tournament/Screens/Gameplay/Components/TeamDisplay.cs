@@ -1,6 +1,7 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -53,9 +54,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private readonly Anchor anchor;
         private readonly TeamColour colour;
         private readonly Bindable<int?> currentTeamScore = new Bindable<int?>();
-        private readonly int pointsToWin;
+        private readonly Func<int> pointsToWin;
 
-        public TeamDisplay(TournamentTeam? team, TeamColour colour, Bindable<int?> currentTeamScore, int pointsToWin)
+        public TeamDisplay(TournamentTeam? team, TeamColour colour, Bindable<int?> currentTeamScore, Func<int> pointsToWin)
             : base(team)
         {
             this.colour = colour;
@@ -166,7 +167,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             }
             else
             {
-                score.Child = new TeamScore(currentTeamScore, colour, pointsToWin)
+                score.Child = new TeamScore(currentTeamScore, colour, pointsToWin())
                 {
                     Origin = anchor,
                     Anchor = anchor,

@@ -187,6 +187,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 blueScoreInput.Current.Value = s.NewValue, true);
             scoreMode.BindValueChanged(s =>
             {
+                scoreModeControl.ClearTransforms();
+
                 scoreModeControl.AutoSizeAxes = s.NewValue ? Axes.Y : Axes.None;
 
                 if (!s.NewValue)
