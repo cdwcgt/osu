@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
@@ -221,7 +222,11 @@ namespace osu.Game.Tournament.Screens.Schedule
                                             {
                                                 new ScheduleMatchDate(currentMatch.Value.Date.Value)
                                                 {
-                                                    Font = OsuFont.Torus.With(size: 24, weight: FontWeight.Regular)
+                                                    Font = OsuFont.Torus.With(size: 30f),
+                                                    Colour = Color4Extensions.FromHex("#48291D"),
+                                                    Shadow = true,
+                                                    ShadowColour = Color4Extensions.FromHex("#F8DEC3"),
+                                                    ShadowOffset = new Vector2(0, 0.06f),
                                                 }
                                             }
                                         },
@@ -232,7 +237,11 @@ namespace osu.Game.Tournament.Screens.Schedule
                                     Anchor = Anchor.CentreLeft,
                                     Origin = Anchor.CentreLeft,
                                     Text = currentMatch.Value.Team1.Value?.FullName + " vs " + currentMatch.Value.Team2.Value?.FullName,
-                                    Font = OsuFont.Torus.With(size: 24, weight: FontWeight.SemiBold)
+                                    Font = OsuFont.Torus.With(size: 30f),
+                                    Colour = Color4Extensions.FromHex("#48291D"),
+                                    Shadow = true,
+                                    ShadowColour = Color4Extensions.FromHex("#F8DEC3"),
+                                    ShadowOffset = new Vector2(0, 0.06f),
                                 },
                             }
                         }

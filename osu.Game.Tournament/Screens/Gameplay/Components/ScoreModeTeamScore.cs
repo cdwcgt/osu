@@ -2,17 +2,19 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Tournament.Models;
+using osuTK;
 
 namespace osu.Game.Tournament.Screens.Gameplay.Components
 {
     public partial class ScoreModeTeamScore : RollingCounter<int>
     {
-        private readonly Bindable<int?> score =  new Bindable<int?>();
+        private readonly Bindable<int?> score = new Bindable<int?>();
         protected override double RollingDuration => 0;
 
         public ScoreModeTeamScore(Bindable<int?> score, TeamColour colour)
@@ -36,6 +38,10 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         protected override OsuSpriteText CreateSpriteText() => new OsuSpriteText
         {
             Font = OsuFont.Torus.With(size: 30f),
+            Colour = Color4Extensions.FromHex("#48291D"),
+            Shadow = true,
+            ShadowColour = Color4Extensions.FromHex("#F8DEC3"),
+            ShadowOffset = new Vector2(0, 0.06f),
         };
     }
 }
