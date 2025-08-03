@@ -46,11 +46,13 @@ namespace osu.Game.Tournament.Components
             (flag = team.FlagName.GetBoundCopy()).BindValueChanged(_ =>
             {
                 var texture = textures.Get($@"Flags/{team.FlagName}");
+                Size = new Vector2(75, 54);
 
                 if (texture == null && team.Players.Count > 0)
                 {
                     var player = team.Players[0];
                     texture = textures.Get($"https://a.ppy.sh/{player.OnlineID}");
+                    Size = new Vector2(75, 75);
                 }
 
                 flagSprite.Texture = texture;
