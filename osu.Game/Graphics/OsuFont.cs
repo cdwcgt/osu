@@ -69,7 +69,7 @@ namespace osu.Game.Graphics
         /// <summary>
         /// Default font face for UI and game elements.
         /// </summary>
-        public static FontUsage Torus => GetFont(Typeface.Torus, weight: FontWeight.Regular);
+        public static FontUsage Torus => GetFont(Typeface.Torus, weight: FontWeight.Bold);
 
         /// <summary>
         /// Default font face with alternate character set for headings and flair text.
