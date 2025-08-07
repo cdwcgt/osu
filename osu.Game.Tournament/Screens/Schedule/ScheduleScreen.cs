@@ -222,11 +222,7 @@ namespace osu.Game.Tournament.Screens.Schedule
                                             {
                                                 new ScheduleMatchDate(currentMatch.Value.Date.Value)
                                                 {
-                                                    Font = OsuFont.Torus.With(size: 30f),
-                                                    Colour = Color4Extensions.FromHex("#48291D"),
-                                                    Shadow = true,
-                                                    ShadowColour = Color4Extensions.FromHex("#F8DEC3"),
-                                                    ShadowOffset = new Vector2(0, 0.06f),
+                                                    Font = OsuFont.Torus.With(size: 24, weight: FontWeight.Regular)
                                                 }
                                             }
                                         },
@@ -237,7 +233,7 @@ namespace osu.Game.Tournament.Screens.Schedule
                                     Anchor = Anchor.CentreLeft,
                                     Origin = Anchor.CentreLeft,
                                     Text = currentMatch.Value.Team1.Value?.FullName + " vs " + currentMatch.Value.Team2.Value?.FullName,
-                                    Font = OsuFont.Torus.With(size: 30f),
+                                    Font = OsuFont.Torus.With(size: 24, weight: FontWeight.SemiBold),
                                     Colour = Color4Extensions.FromHex("#48291D"),
                                     Shadow = true,
                                     ShadowColour = Color4Extensions.FromHex("#F8DEC3"),
@@ -275,19 +271,25 @@ namespace osu.Game.Tournament.Screens.Schedule
                     {
                         Anchor = Anchor.TopRight,
                         Origin = Anchor.TopLeft,
-                        Colour = OsuColour.Gray(0.7f),
                         Alpha = conditional ? 0.6f : 1,
                         Font = OsuFont.Torus,
                         Margin = new MarginPadding { Horizontal = 10, Vertical = 5 },
+                        Colour = Color4Extensions.FromHex("#48291D"),
+                        Shadow = true,
+                        ShadowColour = Color4Extensions.FromHex("#F8DEC3"),
+                        ShadowOffset = new Vector2(0, 0.06f),
                     });
                     AddInternal(new TournamentSpriteText
                     {
                         Anchor = Anchor.BottomRight,
                         Origin = Anchor.BottomLeft,
-                        Colour = OsuColour.Gray(0.7f),
                         Alpha = conditional ? 0.6f : 1,
                         Margin = new MarginPadding { Horizontal = 10, Vertical = 5 },
-                        Text = match.Date.Value.ToUniversalTime().ToString("HH:mm UTC") + (conditional ? " (conditional)" : "")
+                        Text = match.Date.Value.ToUniversalTime().ToString("HH:mm UTC") + (conditional ? " (conditional)" : ""),
+                        Colour = Color4Extensions.FromHex("#48291D"),
+                        Shadow = true,
+                        ShadowColour = Color4Extensions.FromHex("#F8DEC3"),
+                        ShadowOffset = new Vector2(0, 0.06f),
                     });
                 }
             }
@@ -298,6 +300,10 @@ namespace osu.Game.Tournament.Screens.Schedule
             public ScheduleMatchDate(DateTimeOffset date, float textSize = OsuFont.DEFAULT_FONT_SIZE, bool italic = true)
                 : base(date, textSize, italic)
             {
+                Colour = Color4Extensions.FromHex("#48291D");
+                Shadow = true;
+                ShadowColour = Color4Extensions.FromHex("#F8DEC3");
+                ShadowOffset = new Vector2(0, 0.06f);
             }
 
             protected override string Format() => Date < DateTimeOffset.Now

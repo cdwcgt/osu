@@ -15,7 +15,7 @@ namespace osu.Game.Tournament.Components
 {
     public partial class DrawableTeamWithPlayers : CompositeDrawable
     {
-        public DrawableTeamWithPlayers(TournamentTeam? team, TeamColour colour)
+        public DrawableTeamWithPlayers(TournamentTeam? team, TeamColour colour, Action<TournamentSpriteText>? fontAction = null)
         {
             AutoSizeAxes = Axes.Both;
 
@@ -60,13 +60,18 @@ namespace osu.Game.Tournament.Components
                 },
             };
 
-            TournamentSpriteText createPlayerText(TournamentUser p) =>
-                new TournamentSpriteText
+            TournamentSpriteText createPlayerText(TournamentUser p)
+            {
+                var text = new TournamentSpriteText
                 {
                     Text = p.Username,
                     Font = OsuFont.Torus.With(size: 24, weight: FontWeight.SemiBold),
                     Colour = Color4.White,
                 };
+
+                fontAction?.Invoke(text);
+                return text;
+            }
         }
     }
 }

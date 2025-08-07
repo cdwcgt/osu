@@ -3,6 +3,7 @@
 
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Game.Graphics;
@@ -113,6 +114,10 @@ namespace osu.Game.Tournament.Screens.TeamWin
                             Text = "WINNER",
                             Font = OsuFont.Torus.With(size: 100, weight: FontWeight.Bold),
                             Margin = new MarginPadding { Bottom = 50 },
+                            Colour = Color4Extensions.FromHex("#48291D"),
+                            Shadow = true,
+                            ShadowColour = Color4Extensions.FromHex("#F8DEC3"),
+                            ShadowOffset = new Vector2(0, 0.06f),
                         },
                         new DrawableTeamWithPlayers(match.Winner, match.WinnerColour)
                     }

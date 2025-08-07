@@ -1,10 +1,12 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Game.Graphics;
 using osu.Game.Tournament.Models;
+using osuTK;
 
 namespace osu.Game.Tournament.Components
 {
@@ -34,7 +36,11 @@ namespace osu.Game.Tournament.Components
                             Anchor = Anchor.TopLeft,
                             Origin = Anchor.TopLeft,
                             Text = match.Round.Value?.Name.Value ?? "Unknown Round",
-                            Font = OsuFont.Torus.With(size: 26, weight: FontWeight.SemiBold)
+                            Font = OsuFont.Torus.With(size: 26, weight: FontWeight.SemiBold),
+                            Colour = Color4Extensions.FromHex("#48291D"),
+                            Shadow = true,
+                            ShadowColour = Color4Extensions.FromHex("#F8DEC3"),
+                            ShadowOffset = new Vector2(0, 0.06f),
                         },
                     }
                 }
