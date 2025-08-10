@@ -30,6 +30,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         private readonly BindableBool scoreMode = new BindableBool();
         private readonly BindableBool autoScoreMode = new BindableBool();
+        private readonly BindableBool matchFinished = new BindableBool();
         private readonly Bindable<int?> team1Score = new Bindable<int?>();
         private readonly Bindable<int?> team2Score = new Bindable<int?>();
 
@@ -166,6 +167,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
                                         team1Score.Value = redScoreInput.Current.Value;
                                         team2Score.Value = blueScoreInput.Current.Value;
                                     }
+                                },
+                                new SettingsCheckbox
+                                {
+                                    LabelText = "Match finished",
+                                    Current = matchFinished
                                 }
                             }
                         }
@@ -216,11 +222,13 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 scoreMode.UnbindFrom(match.OldValue.ScoreMode);
                 team1Score.UnbindFrom(match.OldValue.Team1Score);
                 team2Score.UnbindFrom(match.OldValue.Team2Score);
+                matchFinished.UnbindFrom(match.OldValue.Completed);
             }
 
             scoreMode.BindTo(match.NewValue.ScoreMode);
             team1Score.BindTo(match.NewValue.Team1Score);
             team2Score.BindTo(match.NewValue.Team2Score);
+            matchFinished.BindTo(match.NewValue.Completed);
 
             warmup.Value = match.NewValue.Team1Score.Value + match.NewValue.Team2Score.Value == 0;
             scheduledScreenChange?.Cancel();
