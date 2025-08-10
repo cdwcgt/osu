@@ -10,6 +10,7 @@ using osu.Game.Graphics;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osuTK;
+using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Screens.TeamWin
 {
@@ -115,9 +116,7 @@ namespace osu.Game.Tournament.Screens.TeamWin
                             Font = OsuFont.Torus.With(size: 100, weight: FontWeight.Bold),
                             Margin = new MarginPadding { Bottom = 50 },
                             Colour = Color4Extensions.FromHex("#48291D"),
-                            Shadow = true,
-                            ShadowColour = Color4Extensions.FromHex("#F8DEC3"),
-                            ShadowOffset = new Vector2(0, 0.06f),
+                            ShadowColour = new Color4(0, 0, 0, 2f)
                         },
                         new DrawableTeamWithPlayers(match.Winner, match.WinnerColour)
                     }
