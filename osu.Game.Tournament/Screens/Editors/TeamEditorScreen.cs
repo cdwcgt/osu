@@ -10,9 +10,11 @@ using osu.Framework.Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Input;
 using osu.Framework.Localisation;
 using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Settings;
 using osu.Game.Tournament.Models;
@@ -245,7 +247,7 @@ namespace osu.Game.Tournament.Screens.Editors
                     private readonly Bindable<int?> playerId = new Bindable<int?>();
 
                     private readonly Container userPanelContainer;
-                    private readonly OsuNumberBox playerMultiplierTextBox;
+                    private readonly LabelledDecimalBox playerMultiplierTextBox;
 
                     public PlayerRow(TournamentTeam team, TournamentUser user)
                     {
@@ -276,6 +278,8 @@ namespace osu.Game.Tournament.Screens.Editors
                                 {
                                     new SettingsNumberBox
                                     {
+                                        Anchor = Anchor.BottomLeft,
+                                        Origin = Anchor.BottomLeft,
                                         LabelText = "User ID",
                                         RelativeSizeAxes = Axes.None,
                                         Width = 200,
@@ -283,13 +287,18 @@ namespace osu.Game.Tournament.Screens.Editors
                                     },
                                     userPanelContainer = new Container
                                     {
+                                        Anchor = Anchor.BottomLeft,
+                                        Origin = Anchor.BottomLeft,
                                         Width = 400,
                                         RelativeSizeAxes = Axes.Y,
                                     },
-                                    playerMultiplierTextBox = new OsuNumberBox
+                                    playerMultiplierTextBox = new LabelledDecimalBox
                                     {
+                                        Anchor = Anchor.BottomLeft,
+                                        Origin = Anchor.BottomLeft,
+                                        Label = "Player multiplier",
                                         Width = 400,
-                                        RelativeSizeAxes = Axes.Y,
+                                        RelativeSizeAxes = Axes.None,
                                     }
                                 }
                             },
@@ -351,6 +360,14 @@ namespace osu.Game.Tournament.Screens.Editors
                     });
                 }
             }
+        }
+
+        private partial class LabelledDecimalBox : LabelledTextBox
+        {
+            protected override OsuTextBox CreateTextBox() => new OsuNumberBox
+            {
+                InputProperties = new TextInputProperties(TextInputType.Decimal, false)
+            };
         }
     }
 }
