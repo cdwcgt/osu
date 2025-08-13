@@ -99,7 +99,12 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
             long calculateModMultiplier(SlotPlayerStatus s)
             {
-                return (long)(s.Score.Value * (ladder.ModMultiplierSettings.FirstOrDefault(m => (m.Mods.Value & s.Mods.Value) > LegacyMods.None)?.Multiplier.Value ?? 1.0));
+                return (long)(s.Score.Value * getModMultiplier(s.Mods.Value));
+            }
+
+            double getModMultiplier(LegacyMods mods)
+            {
+                return ladder.ModMultiplierSettings.Where(m => (m.Mods.Value & mods) > LegacyMods.None).Aggregate(1.0, (i, v) => i * v.Multiplier.Value);
             }
         }
     }
