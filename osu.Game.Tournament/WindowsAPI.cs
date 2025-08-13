@@ -3,8 +3,6 @@
 
 using System;
 using System.Diagnostics;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text;
@@ -14,28 +12,6 @@ namespace osu.Game.Tournament
     [SupportedOSPlatform("windows")]
     public static class WindowsAPI
     {
-        internal static Bitmap CaptureWindowFromBitbit(IntPtr hWnd)
-        {
-            GetWindowRect(hWnd, out RECT rect);
-            int width = rect.Right - rect.Left;
-            int height = rect.Bottom - rect.Top;
-
-            Bitmap bmp = new Bitmap(width, height, PixelFormat.Format32bppArgb);
-
-            using (System.Drawing.Graphics gfxBmp = System.Drawing.Graphics.FromImage(bmp))
-            {
-                IntPtr hdcBitmap = gfxBmp.GetHdc();
-                IntPtr hdcWindow = GetWindowDC(hWnd);
-
-                BitBlt(hdcBitmap, 0, 0, width, height, hdcWindow, 0, 0, 0x00CC0020); // SRCCOPY
-
-                ReleaseDC(hWnd, hdcWindow);
-                gfxBmp.ReleaseHdc(hdcBitmap);
-            }
-
-            return bmp;
-        }
-
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         internal static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
 
