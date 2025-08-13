@@ -245,6 +245,7 @@ namespace osu.Game.Tournament.Screens.Editors
                     private readonly Bindable<int?> playerId = new Bindable<int?>();
 
                     private readonly Container userPanelContainer;
+                    private readonly OsuNumberBox playerMultiplierTextBox;
 
                     public PlayerRow(TournamentTeam team, TournamentUser user)
                     {
@@ -285,6 +286,11 @@ namespace osu.Game.Tournament.Screens.Editors
                                         Width = 400,
                                         RelativeSizeAxes = Axes.Y,
                                     },
+                                    playerMultiplierTextBox = new OsuNumberBox
+                                    {
+                                        Width = 400,
+                                        RelativeSizeAxes = Axes.Y,
+                                    }
                                 }
                             },
                             new DangerousSettingsButton
@@ -322,6 +328,16 @@ namespace osu.Game.Tournament.Screens.Editors
 
                             game.PopulatePlayer(user, updatePanel, updatePanel);
                         }, true);
+
+                        playerMultiplierTextBox.Current.Value = user.PlayerMultiplier.ToString();
+
+                        playerMultiplierTextBox.Current.BindValueChanged(s =>
+                        {
+                            if (double.TryParse(s.NewValue, out double mul))
+                            {
+                                user.PlayerMultiplier = mul;
+                            }
+                        });
                     }
 
                     private void updatePanel() => Scheduler.AddOnce(() =>

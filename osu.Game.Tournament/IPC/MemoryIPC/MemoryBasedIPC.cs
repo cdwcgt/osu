@@ -2,10 +2,13 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Versioning;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.EnumExtensions;
+using osu.Framework.Logging;
 using osu.Game.Beatmaps.Legacy;
 using osu.Game.Tournament.Models;
 
@@ -89,23 +92,53 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                 }
             }
 
-            int[] team1OnlineId = ladder.CurrentMatch.Value?.Team1.Value?.Players.Select(p => p.OnlineID).ToArray() ??
-                                  Array.Empty<int>();
-            int[] team2OnlineId = ladder.CurrentMatch.Value?.Team2.Value?.Players.Select(p => p.OnlineID).ToArray() ??
-                                  Array.Empty<int>();
+            var team1ById = (ladder.CurrentMatch.Value?.Team1.Value?.Players ?? Enumerable.Empty<TournamentUser>())
+                            .DistinctBy(u => u.OnlineID)
+                            .ToDictionary(u => u.OnlineID);
 
-            Score1.Value = SlotPlayers.Where(s => team1OnlineId.Any(t => t == s.OnlineID.Value)).Sum(calculateModMultiplier);
-            Score2.Value = SlotPlayers.Where(s => team2OnlineId.Any(t => t == s.OnlineID.Value)).Sum(calculateModMultiplier);
+            var team2ById = (ladder.CurrentMatch.Value?.Team2.Value?.Players ?? Enumerable.Empty<TournamentUser>())
+                            .DistinctBy(u => u.OnlineID)
+                            .ToDictionary(u => u.OnlineID);
 
-            long calculateModMultiplier(SlotPlayerStatus s)
-            {
-                return (long)(s.Score.Value * getModMultiplier(s.Mods.Value));
-            }
+            Score1.Value = SlotPlayers.Sum(s => team1ById.TryGetValue(s.OnlineID.Value, out var u)
+                ? calculateFinalScore(s, u)
+                : 0);
+            Score2.Value = SlotPlayers.Sum(s => team2ById.TryGetValue(s.OnlineID.Value, out var u)
+                ? calculateFinalScore(s, u)
+                : 0);
 
-            double getModMultiplier(LegacyMods mods)
-            {
-                return ladder.ModMultiplierSettings.Where(m => (m.Mods.Value & mods) > LegacyMods.None).Aggregate(1.0, (i, v) => i * v.Multiplier.Value);
-            }
+            long calculateFinalScore(SlotPlayerStatus s, TournamentUser u) =>
+                Math.Min(getMaxScore(s.Mods.Value),
+                    (long)(s.Score.Value * getModMultiplier(s.Mods.Value) * u.PlayerMultiplier));
+
+            double getModMultiplier(LegacyMods mods) => ladder.ModMultiplierSettings.Where(m => (m.Mods.Value & mods) > LegacyMods.None).Aggregate(1.0, (i, v) => i * v.Multiplier.Value);
+
+            long getMaxScore(LegacyMods mods) => (long)(1_000_000 * GetOriginalModMultiplier(mods));
+        }
+
+        public static double GetOriginalModMultiplier(LegacyMods mods)
+        {
+            double multiplier = 1;
+
+            if (mods.HasFlagFast(LegacyMods.Hidden))
+                multiplier *= 1.06;
+
+            if (mods.HasFlagFast(LegacyMods.HardRock))
+                multiplier *= 1.1;
+
+            if (mods.HasFlagFast(LegacyMods.DoubleTime))
+                multiplier *= 1.2;
+
+            if (mods.HasFlagFast(LegacyMods.Flashlight))
+                multiplier *= 1.12;
+
+            if (mods.HasFlagFast(LegacyMods.SpunOut))
+                multiplier *= 0.9;
+
+            if (mods.HasFlagFast(LegacyMods.Easy))
+                multiplier *= 0.5;
+
+            return multiplier;
         }
     }
 }

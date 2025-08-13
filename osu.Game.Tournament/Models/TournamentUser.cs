@@ -55,5 +55,7 @@ namespace osu.Game.Tournament.Models
         }
 
         bool IUser.IsBot => false;
+
+        public double PlayerMultiplier { get; set; } = 1;
     }
 }
