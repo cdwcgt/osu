@@ -5,11 +5,9 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
-using osu.Game.Beatmaps.Legacy;
 using osu.Game.Screens.Play.HUD;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
-using osu.Game.Tournament.IPC.MemoryIPC;
 using osu.Game.Tournament.Models;
 
 namespace osu.Game.Tournament.Screens.Gameplay.Components
@@ -30,12 +28,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         [Resolved]
         private MatchIPCInfo ipc { get; set; } = null!;
 
-        private readonly BindableInt playersPerTeam = new BindableInt
-        {
-            MinValue = 1,
-            MaxValue = 4,
-        };
-
         public bool InvertTextColor
         {
             get => invertTextColor;
@@ -49,55 +41,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         [BackgroundDependencyLoader]
         private void load()
         {
-            Team1Score.BindTo(roundInfo.Score1);
-            Team2Score.BindTo(roundInfo.Score2);
 
-            ShowSuccess.BindValueChanged(_ => updateColor());
-
-            if (ipc is IProvideAdditionalData)
-            {
-                playersPerTeam.BindTo(ladderInfo.PlayersPerTeam);
-                return;
-            }
-        }
-
-        protected override void Update()
-        {
-            base.Update();
-
-            if (ipc is not IProvideAdditionalData memoryIPC)
-                return;
-
-            int team1Score = 0;
-
-            for (int i = 0; i < playersPerTeam.Value; i++)
-            {
-                var player = memoryIPC.SlotPlayers[i];
-                team1Score += (int)(player.Score.Value * customModMultiplier(player.Mods.Value));
-            }
-
-            int team2Score = 0;
-
-            for (int i = playersPerTeam.Value; i < playersPerTeam.Value * 2; i++)
-            {
-                var player = memoryIPC.SlotPlayers[i];
-                team2Score += (int)(player.Score.Value * customModMultiplier(player.Mods.Value));
-            }
-
-            Team1Score.Value = team1Score;
-            Team2Score.Value = team2Score;
-        }
-
-        private double customModMultiplier(LegacyMods mods)
-        {
-            double multiplier = 1;
-
-            if (mods.HasFlag(LegacyMods.Easy))
-            {
-                multiplier *= 1.8;
-            }
-
-            return multiplier;
+            Team1Score.BindTo(ipc.Score1);
+            Team2Score.BindTo(ipc.Score2);
         }
 
         private void updateColor()
