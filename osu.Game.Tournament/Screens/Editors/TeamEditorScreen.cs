@@ -216,6 +216,12 @@ namespace osu.Game.Tournament.Screens.Editors
                                     sceneManager?.SetScreen(new SeedingEditorScreen(team, parent));
                                 }
                             },
+                            new LabelledTextBox
+                            {
+                                Label = "Team note",
+                                RelativeSizeAxes = Axes.X,
+                                Current = Model.Note,
+                            },
                             playerEditor,
                             new SettingsButton
                             {

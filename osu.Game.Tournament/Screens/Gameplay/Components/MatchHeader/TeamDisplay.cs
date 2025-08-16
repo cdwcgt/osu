@@ -67,13 +67,14 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                             },
                             new FillFlowContainer
                             {
-                                AutoSizeAxes = Axes.Both,
+                                Height = 24f,
+                                AutoSizeAxes = Axes.X,
                                 Direction = FillDirection.Horizontal,
                                 Origin = anchor,
                                 Anchor = anchor,
                                 Children = new Drawable[]
                                 {
-                                    new DrawableTeamDisplayTitle(team, colour)
+                                    new TeamDisplayTitle(team, colour)
                                     {
                                         RelativeSizeAxes = Axes.Y,
                                         Origin = anchor,
