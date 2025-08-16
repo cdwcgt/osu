@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
-using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Game.Tests.Visual;
 using osu.Game.Tournament.Components;
@@ -107,7 +106,7 @@ namespace osu.Game.Tournament.Tests.Components
             Cell(i).AddRange(new Drawable[]
             {
                 new TournamentSpriteText { Text = "TeamDisplay" },
-                new TeamDisplay(team, TeamColour.Red, new Bindable<double?>(2), 6)
+                new TeamDisplay(team, TeamColour.Red)
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,

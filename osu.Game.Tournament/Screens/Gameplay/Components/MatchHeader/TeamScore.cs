@@ -15,7 +15,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 {
     public partial class TeamScore : CompositeDrawable
     {
-        private const float side_width = 6;
+        public const float SIDE_WIDTH = 6;
         private readonly TeamColour colour;
         private readonly int pointToWin;
         private readonly Bindable<int?> currentTeamScore = new Bindable<int?>();
@@ -44,7 +44,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
             this.colour = colour;
             this.pointToWin = pointToWin;
 
-            Width = 50 + 2 * side_width;
+            Width = 50 + 2 * SIDE_WIDTH;
             Height = 24;
 
             InternalChildren = new Drawable[]
@@ -52,7 +52,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                 new Box
                 {
                     RelativeSizeAxes = Axes.Y,
-                    Width = side_width,
+                    Width = SIDE_WIDTH,
                     Anchor = Anchor.CentreLeft,
                     Origin = Anchor.CentreLeft,
                     Colour = TournamentGame.GetTeamColour(colour)
@@ -60,7 +60,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                 new Box
                 {
                     RelativeSizeAxes = Axes.Y,
-                    Width = side_width,
+                    Width = SIDE_WIDTH,
                     Anchor = Anchor.CentreRight,
                     Origin = Anchor.CentreRight,
                     Colour = TournamentGame.GetTeamColour(colour)
@@ -70,7 +70,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                     RelativeSizeAxes = Axes.Both,
                     Child = background = new Container
                     {
-                        Padding = new MarginPadding { Horizontal = side_width },
+                        Padding = new MarginPadding { Horizontal = SIDE_WIDTH },
                         Colour = Color4Extensions.FromHex("#383838"),
                         RelativeSizeAxes = Axes.Both,
                         Masking = true,

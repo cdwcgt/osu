@@ -9,7 +9,6 @@ using osu.Framework.Testing;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Screens.Gameplay;
-using osu.Game.Tournament.Screens.Gameplay.Components;
 using osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader;
 
 namespace osu.Game.Tournament.Tests.Screens

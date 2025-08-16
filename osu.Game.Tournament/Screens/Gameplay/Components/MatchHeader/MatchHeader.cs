@@ -90,8 +90,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
         private void updateDisplay()
         {
-            teamDisplay1.ShowScore = showScores;
-            teamDisplay2.ShowScore = showScores;
             roundStage.WarmUp.Value = !showScores;
         }
     }

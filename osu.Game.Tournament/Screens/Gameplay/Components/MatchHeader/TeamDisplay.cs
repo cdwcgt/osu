@@ -1,10 +1,9 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using osu.Framework.Allocation;
-using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Shapes;
 using osu.Game.Graphics;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
@@ -14,29 +13,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 {
     public partial class TeamDisplay : DrawableTournamentTeam
     {
-        private readonly TeamMultCoin score;
-
-        private readonly Bindable<string> teamName = new Bindable<string>("???");
-
-        private bool showScore;
-        private readonly TeamCoinDIffDisplay coinDiff;
-
-        [Resolved]
-        private LadderInfo ladderInfo { get; set; } = null!;
-
-        public bool ShowScore
-        {
-            get => showScore;
-            set
-            {
-                showScore = value;
-
-                if (IsLoaded)
-                    updateDisplay();
-            }
-        }
-
-        public TeamDisplay(TournamentTeam? team, TeamColour colour, Bindable<double?> currentTeamCoin, int pointsToWin)
+        public TeamDisplay(TournamentTeam? team, TeamColour colour)
             : base(team)
         {
             AutoSizeAxes = Axes.Both;
@@ -63,31 +40,36 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                         Spacing = new Vector2(10, 0),
                         Children = new Drawable[]
                         {
-                            new FillFlowContainer
+                            Flag,
+                            new DrawableTeamHeader(colour)
                             {
-                                Direction = FillDirection.Vertical,
                                 Origin = anchor,
                                 Anchor = anchor,
-                                AutoSizeAxes = Axes.Both,
-                                Spacing = new Vector2(0, 3),
-                                Children = new Drawable[]
-                                {
-                                    Flag.With(f =>
-                                    {
-                                        f.Anchor = Anchor.TopCentre;
-                                        f.Origin = Anchor.TopCentre;
-                                    }),
-                                    coinDiff = new TeamCoinDIffDisplay(colour)
-                                }
+                                Text = { Font = OsuFont.Torus.With(size: 24) }
                             },
                             new FillFlowContainer
                             {
-                                AutoSizeAxes = Axes.Both,
+                                Height = 24f,
+                                AutoSizeAxes = Axes.X,
                                 Direction = FillDirection.Horizontal,
                                 Origin = anchor,
                                 Anchor = anchor,
                                 Children = new Drawable[]
                                 {
+                                    new TeamDisplayTitle(team, colour)
+                                    {
+                                        RelativeSizeAxes = Axes.Y,
+                                        Origin = anchor,
+                                        Anchor = anchor,
+                                    },
+                                    new Box
+                                    {
+                                        RelativeSizeAxes = Axes.Y,
+                                        Width = TeamScore.SIDE_WIDTH,
+                                        Origin = anchor,
+                                        Anchor = anchor,
+                                        Colour = TournamentGame.GetTeamColour(colour)
+                                    },
                                 }
                             },
                         }
@@ -100,18 +82,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
         {
             base.LoadComplete();
 
-            updateDisplay();
-
             FinishTransforms(true);
-
-            if (Team != null)
-                teamName.BindTo(Team.FullName);
-        }
-
-        private void updateDisplay()
-        {
-            //score.FadeTo(ShowScore ? 1 : 0, 200);
-            coinDiff.FadeTo(ShowScore ? 1 : 0, 200);
         }
     }
 }

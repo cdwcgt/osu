@@ -31,6 +31,8 @@ namespace osu.Game.Tournament.Models
 
         public BindableList<SeedingResult> SeedingResults = new BindableList<SeedingResult>();
 
+        public Bindable<string> Note = new Bindable<string>(string.Empty);
+
         public double AverageRank
         {
             get
