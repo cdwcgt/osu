@@ -34,7 +34,7 @@ namespace osu.Game.Tournament.Components
 
             Size = new Vector2(75, 54);
             Masking = true;
-            CornerRadius = 5;
+            //CornerRadius = 5;
             Child = flagSprite = new Sprite
             {
                 RelativeSizeAxes = Axes.Both,
