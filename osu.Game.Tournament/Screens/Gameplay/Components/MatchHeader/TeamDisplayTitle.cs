@@ -119,8 +119,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                 },
                 teamNote = new TeamDisplayNote(teamColour)
                 {
-                    Anchor = Anchor.TopCentre,
-                    Origin = Anchor.BottomLeft
+                    Anchor = teamColour == TeamColour.Red ? Anchor.TopRight : Anchor.TopLeft,
+                    Origin = teamColour == TeamColour.Red ? Anchor.BottomRight : Anchor.BottomLeft
                 }
             };
 

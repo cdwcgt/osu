@@ -3,7 +3,6 @@
 
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Framework.Graphics.Shapes;
 using osu.Game.Graphics;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
@@ -40,16 +39,12 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                         Spacing = new Vector2(10, 0),
                         Children = new Drawable[]
                         {
-                            new Container
+                            Flag.With(c =>
                             {
-                                Origin = anchor,
-                                Anchor = anchor,
-                                AutoSizeAxes = Axes.Both,
-                                Masking = true,
-                                BorderThickness = 2,
-                                BorderColour = TournamentGame.GetTeamColour(colour),
-                                Child = Flag
-                            },
+                                c.Masking = true;
+                                c.BorderThickness = 5;
+                                c.BorderColour = TournamentGame.GetTeamColour(colour);
+                            }),
                             new DrawableTeamHeader(colour)
                             {
                                 Origin = anchor,
@@ -70,14 +65,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                                         RelativeSizeAxes = Axes.Y,
                                         Origin = anchor,
                                         Anchor = anchor,
-                                    },
-                                    new Box
-                                    {
-                                        RelativeSizeAxes = Axes.Y,
-                                        Width = TeamScore.SIDE_WIDTH,
-                                        Origin = anchor,
-                                        Anchor = anchor,
-                                        Colour = TournamentGame.GetTeamColour(colour)
                                     },
                                 }
                             },

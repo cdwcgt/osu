@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Game.Screens.Menu;
@@ -32,23 +33,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
             }
         }
 
-        private bool showPoint = true;
-
-        public bool ShowRound
-        {
-            get => showPoint;
-            set
-            {
-                if (value == showPoint)
-                    return;
-
-                showPoint = value;
-
-                if (IsLoaded)
-                    updateDisplay();
-            }
-        }
-
         [BackgroundDependencyLoader]
         private void load()
         {
@@ -63,7 +47,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                 roundStage = new RoundStage
                 {
                     Anchor = Anchor.BottomCentre,
-                    Origin = Anchor.TopCentre,
+                    Origin = Anchor.BottomCentre,
                 },
                 new FlowContainerWithOrigin
                 {
@@ -80,6 +64,13 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                     }
                 },
             };
+
+            currentMatch.BindTo(ladder.CurrentMatch);
+            currentMatch.BindValueChanged(matchChanged);
+            WarmUp.BindValueChanged(_ => updateDisplay());
+            banPicks.BindCollectionChanged((_, _) => updateDisplay());
+
+            updateMatch();
         }
 
         protected override void LoadComplete()
@@ -91,6 +82,41 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
         private void updateDisplay()
         {
             roundStage.WarmUp.Value = !showScores;
+        }
+
+        [Resolved]
+        private LadderInfo ladder { get; set; } = null!;
+
+        private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
+        private readonly Bindable<int?> team1Score = new Bindable<int?>();
+        private readonly Bindable<int?> team2Score = new Bindable<int?>();
+
+        private readonly BindableList<BeatmapChoice> banPicks = new BindableList<BeatmapChoice>();
+        public BindableBool WarmUp { get; } = new BindableBool();
+
+        private void matchChanged(ValueChangedEvent<TournamentMatch?> match)
+        {
+            team1Score.UnbindBindings();
+            team2Score.UnbindBindings();
+            banPicks.UnbindBindings();
+            WarmUp.UnbindBindings();
+
+            Scheduler.AddOnce(updateMatch);
+        }
+
+        private void updateMatch()
+        {
+            var match = currentMatch.Value;
+
+            if (match == null) return;
+
+            match.StartMatch();
+
+            team1Score.BindTo(match.Team1Score);
+            team2Score.BindTo(match.Team2Score);
+            banPicks.BindTo(match.PicksBans);
+
+            updateDisplay();
         }
     }
 }

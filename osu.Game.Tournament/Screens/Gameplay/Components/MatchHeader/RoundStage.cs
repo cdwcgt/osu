@@ -150,13 +150,13 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
         private void retract()
         {
             isExtend = false;
-            this.MoveToY(-16, 400, Easing.InElastic);
+            this.MoveToY(0, 400, Easing.InElastic);
         }
 
         private void extend()
         {
             isExtend = true;
-            this.MoveToY(5, 400, Easing.OutElastic);
+            this.MoveToY(30, 400, Easing.OutElastic);
         }
     }
 }
