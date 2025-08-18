@@ -69,15 +69,15 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                             {
                                 teamText = new TournamentSpriteText
                                 {
-                                    Anchor = Anchor.BottomLeft,
-                                    Origin = Anchor.BottomLeft,
+                                    Anchor = anchor,
+                                    Origin = anchor,
                                     Font = OsuFont.GetFont(size: 20, weight: FontWeight.Bold),
                                     Colour = Color4.Black,
                                 },
                                 new FillFlowContainer
                                 {
-                                    Anchor = Anchor.BottomLeft,
-                                    Origin = Anchor.BottomLeft,
+                                    Anchor = anchor,
+                                    Origin = anchor,
                                     RelativeSizeAxes = Axes.Y,
                                     AutoSizeAxes = Axes.X,
                                     Direction = FillDirection.Vertical,
