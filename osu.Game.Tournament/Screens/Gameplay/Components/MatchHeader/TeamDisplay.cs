@@ -58,7 +58,16 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                         Spacing = new Vector2(10, 0),
                         Children = new Drawable[]
                         {
-                            Flag,
+                            new Container
+                            {
+                                Origin = anchor,
+                                Anchor = anchor,
+                                AutoSizeAxes = Axes.Both,
+                                Masking = true,
+                                BorderThickness = 2,
+                                BorderColour = TournamentGame.GetTeamColour(colour),
+                                Child = Flag
+                            },
                             new DrawableTeamHeader(colour)
                             {
                                 Origin = anchor,
