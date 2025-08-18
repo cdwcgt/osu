@@ -144,7 +144,10 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                 team.Note.BindValueChanged(note =>
                 {
                     if (string.IsNullOrEmpty(note.NewValue))
+                    {
                         teamNote.FadeOut();
+                        return;
+                    }
 
                     teamNote.FadeIn();
                     teamNote.Text = note.NewValue;
