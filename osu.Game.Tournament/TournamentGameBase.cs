@@ -213,7 +213,7 @@ namespace osu.Game.Tournament
                 Ruleset.BindTo(ladder.Ruleset);
 
                 dependencies.Cache(ladder);
-                dependencies.CacheAs(ipc = OperatingSystem.IsWindows() ? new MemoryBasedIPC() : new FileBasedIPC());
+                dependencies.CacheAs(ipc = OperatingSystem.IsWindows() ? new MemoryBasedIPCWithMatchListener() : new FileBasedIPC());
                 Add(ipc);
 
                 dependencies.Cache(listener = new MatchListener());
