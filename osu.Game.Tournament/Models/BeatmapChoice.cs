@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using osu.Framework.Bindables;
@@ -25,6 +26,12 @@ namespace osu.Game.Tournament.Models
         public int BeatmapID;
 
         public bool CalculatedByApi;
+
+        public Dictionary<TeamColour, long> Scores = new Dictionary<TeamColour, long>
+        {
+            [TeamColour.Red] = 0,
+            [TeamColour.Blue] = 0,
+        };
     }
 
     [JsonConverter(typeof(StringEnumConverter))]
