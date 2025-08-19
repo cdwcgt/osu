@@ -7,7 +7,6 @@ using osu.Framework.Bindables;
 using osu.Framework.Configuration;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
-using osu.Framework.Graphics.Colour;
 using osu.Framework.Input.Handlers.Mouse;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
@@ -23,7 +22,7 @@ namespace osu.Game.Tournament
     [Cached]
     public partial class TournamentGame : TournamentGameBase
     {
-        public static ColourInfo GetTeamColour(TeamColour teamColour) => teamColour == TeamColour.Red ? COLOUR_RED : COLOUR_BLUE;
+        public static Color4 GetTeamColour(TeamColour teamColour) => teamColour == TeamColour.Red ? COLOUR_RED : COLOUR_BLUE;
 
         public static readonly Color4 COLOUR_RED = new OsuColour().TeamColourRed;
         public static readonly Color4 COLOUR_BLUE = new OsuColour().TeamColourBlue;
@@ -34,6 +33,10 @@ namespace osu.Game.Tournament
         public const string TOURNAMENT_CLIENT_NAME = " Tournament Client ";
 
         public static readonly Color4 TEXT_COLOUR = Color4Extensions.FromHex("#fff");
+
+        public const double WINNER_BONUS = 100;
+        public const double EXTRA_WINNER_BONUS_TB = 40;
+
         private Drawable heightWarning = null!;
 
         private Bindable<WindowMode> windowMode = null!;

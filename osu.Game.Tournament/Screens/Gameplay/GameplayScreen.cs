@@ -17,6 +17,7 @@ using osu.Game.Graphics.UserInterface;
 using osu.Game.Overlays.Settings;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
+using osu.Game.Tournament.IPC.MemoryIPC;
 using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Gameplay.Components;
 using osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader;
@@ -33,7 +34,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         public readonly Bindable<TourneyState> State = new Bindable<TourneyState>();
         private OsuButton warmupButton = null!;
-        private MatchIPCInfo ipc = null!;
+        private MemoryBasedIPCWithMatchListener ipc = null!;
         private Sprite slotSprite = null!;
 
         private MatchHeader header = null!;
@@ -47,12 +48,6 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         [Resolved]
         private TournamentMatchChatDisplay chat { get; set; } = null!;
-
-        [Resolved]
-        private MatchListener listener { get; set; } = null!;
-
-        [Resolved]
-        private RoundInfo roundInfo { get; set; } = null!;
 
         private Drawable chroma = null!;
 
@@ -71,9 +66,9 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private bool switchFromMappool;
 
         [BackgroundDependencyLoader]
-        private void load(MatchIPCInfo ipc, TextureStore store)
+        private void load(MatchIPCInfo matchIpc, TextureStore store)
         {
-            this.ipc = ipc;
+            this.ipc = (matchIpc as MemoryBasedIPCWithMatchListener)!;
 
             AddRangeInternal(new Drawable[]
             {
@@ -88,7 +83,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     Texture = store.Get("Videos/gameplay"),
                     FillMode = FillMode.Fit,
                 },
-                drawTextContainer = new Container
+                header = new MatchHeader(),
+                withdrawTextContainer = new Container
                 {
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
@@ -105,7 +101,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     Alpha = 0f,
                     Child = new TournamentSpriteText
                     {
-                        Text = "回合进行中获取的分数在提现模式中无法参考，结束后将会自动获取分数。",
+                        Text = "回合进行中获取的分数在提现模式中无法参考，结束后将会自动(?)获取分数。",
                         Font = OsuFont.Torus.With(size: 17f)
                     }
                 },
@@ -261,6 +257,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
             warmup.BindValueChanged(w =>
             {
                 warmupButton.Alpha = !w.NewValue ? 0.5f : 1;
+                warmupButton.BackgroundColour = w.NewValue ? Color4.Red : Color4Extensions.FromHex(@"44aadd");
+                header.ShowScores = !w.NewValue;
             }, true);
 
             sceneManager?.CurrentScreen.BindValueChanged(s =>
@@ -269,39 +267,28 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     switchFromMappool = true;
             });
 
-            listener.CurrentlyListening.BindValueChanged(s =>
+            ipc.CurrentlyListening.BindValueChanged(s =>
             {
                 if (s.NewValue)
                 {
                     listeningButton.Text = "Stop Listening";
-                    listeningButton.Action = listener.StopListening;
+                    listeningButton.Action = ipc.StopListening;
                 }
                 else
                 {
                     listeningButton.Text = "Start Listening";
-                    listeningButton.Action = () => listener.StartListening(matchID.Current.Value);
+                    listeningButton.Action = () => ipc.StartListening(matchID.Current.Value);
                 }
             }, true);
 
-            roundInfo.ConfirmedByApi.BindValueChanged(c =>
-            {
-                if (c.NewValue)
-                {
-                    getResult();
-                }
-            });
-
             ((GameplaySongBar)SongBar).WaitForResult.BindTo(waitForResult);
 
-            warmup.BindValueChanged(w =>
-            {
-                warmupButton.BackgroundColour = w.NewValue ? Color4.Red : Color4Extensions.FromHex(@"44aadd");
-            });
-
-            listener.CurrentlyPlaying.BindValueChanged(p =>
+            ipc.CurrentlyPlaying.BindValueChanged(p =>
             {
                 updateState();
             });
+
+            ipc.MatchFinished += getResult;
         }
 
         private bool roundPreviewShow;
@@ -408,7 +395,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private TourneyState lastState;
         private TourneyNumberBox team1CoinText = null!;
         private TourneyNumberBox team2CoinText = null!;
-        private Container drawTextContainer = null!;
+        private Container withdrawTextContainer = null!;
         private SettingsNumberBox matchID = null!;
         private TourneyButton listeningButton = null!;
         private Container scoreWarningContainer = null!;
@@ -461,34 +448,29 @@ namespace osu.Game.Tournament.Screens.Gameplay
             }
         }
 
-        public const double WINNER_BONUS = 110;
-        public const double EXTRA_WINNER_BONUS_TB = 40;
-
         private void showDraw(TeamColour colour)
         {
-            drawTextContainer.Clear();
-            drawTextContainer.Width = 352;
-            drawTextContainer.Add(new Sprite
+            withdrawTextContainer.Clear();
+            withdrawTextContainer.Width = 352;
+            withdrawTextContainer.Add(new Sprite
             {
                 RelativeSizeAxes = Axes.Both,
                 Texture = colour == TeamColour.Red ? textures.Get("RCB") : textures.Get("BCB")
             });
 
-            drawTextContainer.FadeIn(100);
-            drawTextContainer.ResizeWidthTo(200, 150, Easing.Out);
+            withdrawTextContainer.FadeIn(100);
+            withdrawTextContainer.ResizeWidthTo(200, 150, Easing.Out);
 
             using (BeginDelayedSequence(12000))
             {
-                drawTextContainer.FadeOut(100);
+                withdrawTextContainer.FadeOut(100);
             }
         }
 
         private readonly BindableBool waitForResult = new BindableBool();
 
-        private void getResult()
+        private void getResult(bool fromApi)
         {
-            if (!waitForResult.Value || !roundInfo.ConfirmedByApi.Value) return;
-
             if (CurrentMatch.Value == null)
                 return;
 
@@ -496,38 +478,34 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
             scoreWarningContainer.FadeOut(100);
 
-            if (roundInfo.Score1.Value > roundInfo.Score2.Value)
+            if (ipc.Score1.Value > ipc.Score2.Value)
             {
                 // 黄金加成
-                CurrentMatch.Value.Team1Coin.Value += WINNER_BONUS + (isTB ? EXTRA_WINNER_BONUS_TB : 0);
-                CurrentMatch.Value.Team2Coin.Value += Math.Round((double)roundInfo.Score2.Value / Math.Max(roundInfo.Score1.Value, 1) * 100, 2, MidpointRounding.AwayFromZero);
+                CurrentMatch.Value.Team1Coin.Value += TournamentGame.WINNER_BONUS + (isTB ? TournamentGame.EXTRA_WINNER_BONUS_TB : 0);
+                CurrentMatch.Value.Team2Coin.Value +=
+                    Math.Min(Math.Round((double)ipc.Score2.Value / Math.Max(ipc.Score1.Value, 1) * 100, 2, MidpointRounding.AwayFromZero),
+                        93.5);
                 showDraw(TeamColour.Red);
             }
             else
             {
-                CurrentMatch.Value.Team2Coin.Value += WINNER_BONUS + (isTB ? EXTRA_WINNER_BONUS_TB : 0);
-                CurrentMatch.Value.Team1Coin.Value += Math.Round((double)roundInfo.Score1.Value / Math.Max(roundInfo.Score2.Value, 1) * 100, 2, MidpointRounding.AwayFromZero);;
+                CurrentMatch.Value.Team2Coin.Value += TournamentGame.WINNER_BONUS + (isTB ? TournamentGame.EXTRA_WINNER_BONUS_TB : 0);
+                CurrentMatch.Value.Team1Coin.Value +=
+                    Math.Min(Math.Round((double)ipc.Score1.Value / Math.Max(ipc.Score2.Value, 1) * 100, 2, MidpointRounding.AwayFromZero),
+                        93.5);
                 showDraw(TeamColour.Blue);
             }
 
             scoreDisplay.ShowSuccess.Value = true;
             var lastPick = CurrentMatch.Value.PicksBans.LastOrDefault(p => p.Type == ChoiceType.Pick);
-
-            if (lastPick != null)
-            {
-                lastPick.CalculatedByApi = true;
-            }
         }
 
         private void attemptGetResult()
         {
-            var lastPick = CurrentMatch.Value?.PicksBans.LastOrDefault(p => p.Type == ChoiceType.Pick);
-            if (warmup.Value || CurrentMatch.Value == null || lastPick?.CalculatedByApi != false) return;
+            if (warmup.Value || CurrentMatch.Value == null) return;
 
             waitForResult.Value = true;
-            listener.FetchMatch();
-            roundInfo.CanShowResult.Value = true;
-            getResult();
+            ipc.RequestCurrentRoundResultFromApi();
         }
 
         private void updateState()
@@ -538,8 +516,9 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
                 if (State.Value == TourneyState.Ranking && lastState == TourneyState.Playing)
                 {
-                    attemptGetResult();
                     if (warmup.Value || CurrentMatch.Value == null) return;
+
+                    attemptGetResult();
 
                     var lastPick = CurrentMatch.Value.PicksBans.LastOrDefault(p => p.Type == ChoiceType.Pick && p.BeatmapID == ipc.Beatmap.Value?.OnlineID);
 
@@ -587,10 +566,17 @@ namespace osu.Game.Tournament.Screens.Gameplay
                         scheduledContract = Scheduler.AddDelayed(contract, 10000);
                         break;
 
+                    case TourneyState.WaitingForClients:
+                    case TourneyState.Playing:
+                        var lastPick = CurrentMatch.Value?.PicksBans.LastOrDefault(p => p.Type == ChoiceType.Pick);
+                        ipc.BindChoiceToNextOrCurrentMatch(lastPick);
+                        HideRoundPreview();
+                        expand();
+                        break;
+
                     default:
-                        listener.FetchMatch();
-                        if (listener.CurrentlyPlaying.Value)
-                            MatchStarted();
+                        HideRoundPreview();
+                        expand();
                         break;
                 }
             }
@@ -598,12 +584,6 @@ namespace osu.Game.Tournament.Screens.Gameplay
             {
                 lastState = State.Value;
             }
-        }
-
-        public void MatchStarted()
-        {
-            HideRoundPreview();
-            expand();
         }
 
         public override void Hide()

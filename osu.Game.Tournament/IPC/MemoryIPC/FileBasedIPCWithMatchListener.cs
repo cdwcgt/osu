@@ -140,7 +140,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
             FetchMatch();
         }
 
-        public void BindChoiceToNextOrCurrentMatch(BeatmapChoice choice)
+        public void BindChoiceToNextOrCurrentMatch(BeatmapChoice? choice)
         {
             pendingBindChoice = choice;
         }

@@ -25,8 +25,6 @@ namespace osu.Game.Tournament.Models
 
         public int BeatmapID;
 
-        public bool CalculatedByApi;
-
         public Dictionary<TeamColour, long> Scores = new Dictionary<TeamColour, long>
         {
             [TeamColour.Red] = 0,
