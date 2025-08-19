@@ -38,8 +38,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                 {
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
-                    Y = 3,
-                    Font = OsuFont.Torus.With(size: 16, weight: FontWeight.Bold),
+                    Font = OsuFont.Torus.With(size: 22, weight: FontWeight.Bold),
                     Colour = Color4.Black,
                 },
                 roundInfo = new TournamentSpriteText
@@ -47,7 +46,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                     Anchor = Anchor.BottomCentre,
                     Origin = Anchor.TopCentre,
                     Y = -3,
-                    Font = OsuFont.Torus.With(size: 11),
+                    Font = OsuFont.Torus.With(size: 11, weight: FontWeight.Regular),
                     Colour = Color4Extensions.FromHex("#808080"),
                 },
             };
