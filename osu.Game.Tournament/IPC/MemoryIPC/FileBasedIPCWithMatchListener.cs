@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.Versioning;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Threading;
 using osu.Game.Beatmaps.Legacy;
 using osu.Game.Online.API;
 using osu.Game.Tournament.Models;
@@ -19,6 +20,16 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
     public partial class MemoryBasedIPCWithMatchListener : MemoryBasedIPC
     {
         private int currentMatch = -1;
+        private long abortedEventId = 0;
+        private long currentGameID = -1;
+
+        private double waitTime;
+
+        public event Action<bool>? MatchFinished;
+        public event Action? FetchFailed;
+        public event Action? MatchAborted;
+
+        private BeatmapChoice? pendingBindChoice;
 
         // we just need fetch when game finished.
         private const int refresh_interval = 3000;
@@ -38,20 +49,22 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
         private readonly BindableBool currentlyPlaying = new BindableBool();
 
-        private long abortedEventId = 0;
-        private long currentGameID = -1;
         public bool Aborted => abortedEventId == currentGameID;
         private APIMatchEvent? currentMatchEvent => Events.LastOrDefault(e => e.Id == currentMatch);
 
         public APIMatchEvent? LatestMatchEvent => Events.MaxBy(e => e.Id);
         public long LatestMatchEventID => LatestMatchEvent?.Id ?? 0;
 
-        private double waitTime;
+        public MemoryBasedIPCWithMatchListener()
+        {
+            State.BindValueChanged(s =>
+            {
+                if (s.NewValue != TourneyState.Ranking || s.OldValue != TourneyState.Playing)
+                    return;
 
-        public event Action? MatchFinished;
-        public event Action? FetchFailed;
-
-        private BeatmapChoice? pendingBindChoice;
+                RequestCurrentRoundResultFromApi();
+            });
+        }
 
         public void StartListening()
         {
@@ -77,6 +90,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
             currentMatch = -1;
             abortedEventId = 0;
             currentGameID = -1;
+            pendingBindChoice = null;
             currentMatchFinished = false;
             currentlyPlaying.Value = false;
             currentlyListening.Value = false;
@@ -84,11 +98,46 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
         public void CurrentRoundAborted()
         {
-            if (!currentlyPlaying.Value || LatestMatchEvent?.Game == null || State.Value != TourneyState.Idle)
+            if (!currentlyPlaying.Value
+                || LatestMatchEvent?.Game == null
+                || State.Value != TourneyState.Idle
+                || abortedEventId == currentGameID)
                 return;
 
             currentlyPlaying.Value = false;
             abortedEventId = currentGameID;
+            MatchAborted?.Invoke();
+        }
+
+        private ScheduledDelegate? fetchTimeOutScheduleDelegate;
+
+        /// <summary>
+        /// set timeout to fetch result
+        /// </summary>
+        public void RequestCurrentRoundResultFromApi()
+        {
+            if (!currentlyListening.Value || !currentlyPlaying.Value || currentMatchFinished)
+                return;
+
+            if (fetchTimeOutScheduleDelegate?.Completed == false)
+                return;
+
+            fetchTimeOutScheduleDelegate?.Cancel();
+
+            fetchTimeOutScheduleDelegate = Scheduler.AddDelayed(() =>
+            {
+                if (pendingBindChoice != null)
+                {
+                    pendingBindChoice.Scores[TeamColour.Red] = getTeamScore(TeamColour.Red, true).Sum(CalculateModMultiplier);
+                    pendingBindChoice.Scores[TeamColour.Blue] = getTeamScore(TeamColour.Blue, true).Sum(CalculateModMultiplier);
+                    pendingBindChoice = null;
+                }
+
+                currentlyPlaying.Value = false;
+                MatchFinished?.Invoke(false);
+            }, 10_000);
+
+            FetchMatch();
         }
 
         public void BindChoiceToNextOrCurrentMatch(BeatmapChoice choice)
@@ -137,7 +186,10 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                 }
 
                 currentlyPlaying.Value = false;
-                MatchFinished?.Invoke();
+
+                fetchTimeOutScheduleDelegate?.Cancel();
+                fetchTimeOutScheduleDelegate = null;
+                MatchFinished?.Invoke(true);
             }
         }
 
