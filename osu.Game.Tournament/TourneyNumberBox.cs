@@ -66,7 +66,7 @@ namespace osu.Game.Tournament
 
                 Current.BindValueChanged(e =>
                 {
-                    numberBox.Current.Value = e.NewValue?.ToString("0.#####");
+                    numberBox.Current.Value = e.NewValue?.ToString("0.##");
                 });
             }
         }
