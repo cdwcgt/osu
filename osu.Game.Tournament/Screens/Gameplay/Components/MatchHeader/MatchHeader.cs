@@ -44,6 +44,12 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
             Children = new Drawable[]
             {
+                new TeamCoinDIffDisplay
+                {
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.BottomCentre,
+                    Margin = new MarginPadding { Bottom = 5f }
+                },
                 roundStage = new RoundStage
                 {
                     Anchor = Anchor.BottomCentre,

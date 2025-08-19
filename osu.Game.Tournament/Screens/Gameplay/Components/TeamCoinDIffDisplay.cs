@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
@@ -9,8 +10,10 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
-using osu.Framework.Threading;
-using osu.Game.Tournament.Components;
+using osu.Framework.Localisation;
+using osu.Game.Graphics;
+using osu.Game.Graphics.Sprites;
+using osu.Game.Graphics.UserInterface;
 using osu.Game.Tournament.Models;
 using osu.Game.Utils;
 using osuTK;
@@ -20,68 +23,89 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 {
     public partial class TeamCoinDIffDisplay : CompositeDrawable
     {
-        private readonly TeamColour teamColour;
-
-        private readonly Bindable<double?> currentTeamCoin = new Bindable<double?>();
-        private readonly Bindable<double?> opponentTeamCoin = new Bindable<double?>();
-        private readonly RollingSignNumberContainer coinDiffContainer;
+        private readonly Bindable<double?> team1TeamCoin = new Bindable<double?>();
+        private readonly Bindable<double?> team2TeamCoin = new Bindable<double?>();
+        private readonly RollingMultDiffNumberContainer coinDiffContainer;
         private readonly Box background;
-        private readonly Container iconContainer;
+
+        private readonly Container leftIconContainer;
+        private readonly Container rightIconContainer;
 
         [Resolved]
         private TextureStore store { get; set; } = null!;
 
-        public TeamCoinDIffDisplay(TeamColour colour)
+        public TeamCoinDIffDisplay()
         {
-            teamColour = colour;
+            AutoSizeAxes = Axes.Both;
 
-            RelativeSizeAxes = Axes.X;
-            AutoSizeAxes = Axes.Y;
-
-            InternalChild = new FillFlowContainer
+            InternalChild = new Container
             {
-                Anchor = Anchor.TopCentre,
-                Origin = Anchor.TopCentre,
-                RelativeSizeAxes = Axes.X,
-                AutoSizeAxes = Axes.Y,
-                Direction = FillDirection.Vertical,
+                CornerRadius = 10f,
+                Size = new Vector2(60, 15),
+                Masking = true,
                 Children = new Drawable[]
                 {
-                    new Container
+                    background = new Box
                     {
-                        Anchor = Anchor.TopCentre,
-                        Origin = Anchor.TopCentre,
-                        CornerRadius = 10f,
-                        Size = new Vector2(60, 20),
-                        Masking = true,
+                        RelativeSizeAxes = Axes.Both,
+                        Colour = Color4Extensions.FromHex("383838")
+                    },
+                    new FillFlowContainer
+                    {
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
+                        RelativeSizeAxes = Axes.Both,
+                        Direction = FillDirection.Horizontal,
+                        LayoutDuration = 200,
+                        LayoutEasing = Easing.InOutQuint,
                         Children = new Drawable[]
                         {
-                            background = new Box
+                            leftIconContainer = new Container
                             {
-                                RelativeSizeAxes = Axes.Both,
-                                Colour = Color4Extensions.FromHex("919191")
+                                Masking = true,
+                                AutoSizeAxes = Axes.X,
+                                RelativeSizeAxes = Axes.Y,
+                                AutoSizeDuration = 200,
+                                AutoSizeEasing = Easing.InOutQuint,
+                                Child = new SpriteIcon
+                                {
+                                    Size = new Vector2(11),
+                                    Icon = FontAwesome.Solid.CaretLeft
+                                }
                             },
-                            coinDiffContainer = new RollingMultDiffNumberContainer
+                            coinDiffContainer = new RollingMultDiffNumberContainer(),
+                            rightIconContainer = new Container
                             {
-                                Anchor = Anchor.Centre,
-                                Origin = Anchor.Centre
+                                Masking = true,
+                                AutoSizeAxes = Axes.X,
+                                RelativeSizeAxes = Axes.Y,
+                                AutoSizeDuration = 200,
+                                AutoSizeEasing = Easing.InOutQuint,
+                                Child = new SpriteIcon
+                                {
+                                    Size = new Vector2(11),
+                                    Icon = FontAwesome.Solid.CaretLeft
+                                },
                             }
                         }
                     },
-                    iconContainer = new Container
-                    {
-                        Anchor = Anchor.TopCentre,
-                        Origin = Anchor.TopCentre,
-                        Height = 25f,
-                        AutoSizeAxes = Axes.Both,
-                    }
                 }
             };
         }
 
-        private partial class RollingMultDiffNumberContainer : RollingSignNumberContainer
+        private partial class RollingMultDiffNumberContainer : RollingCounter<double>
         {
             protected override double RollingDuration => 1000;
+
+            protected override OsuSpriteText CreateSpriteText() => new OsuSpriteText
+            {
+                Font = OsuFont.Torus.With(size: 20),
+            };
+
+            protected override LocalisableString FormatCount(double count)
+            {
+                return $"{Math.Abs(count):N2}";
+            }
         }
 
         [BackgroundDependencyLoader]
@@ -92,15 +116,12 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             if (currentMatch == null)
                 return;
 
-            currentTeamCoin.BindTo(teamColour == TeamColour.Red ? currentMatch.Team1Coin : currentMatch.Team2Coin);
-            opponentTeamCoin.BindTo(teamColour == TeamColour.Blue ? currentMatch.Team1Coin : currentMatch.Team2Coin);
+            team1TeamCoin.BindTo(currentMatch.Team1Coin);
+            team2TeamCoin.BindTo(currentMatch.Team2Coin);
 
-            currentTeamCoin.BindValueChanged(_ => updateDisplay(), true);
-            opponentTeamCoin.BindValueChanged(_ => updateDisplay(), true);
+            team1TeamCoin.BindValueChanged(_ => updateDisplay(), true);
+            team2TeamCoin.BindValueChanged(_ => updateDisplay(), true);
         }
-
-        private ScheduledDelegate? blinkScheduledDelegate;
-        private ScheduledDelegate? changeIconScheduledDelegate;
 
         private const double first_warning_coin = -22.5;
         private const double second_warning_coin = -45;
@@ -108,57 +129,23 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private void updateDisplay() => Scheduler.AddOnce(() =>
         {
-            coinDiffContainer.FinishTransforms();
+            FinishTransforms(true);
 
-            double diff = (currentTeamCoin.Value ?? 0) - (opponentTeamCoin.Value ?? 0);
+            double diff = (team1TeamCoin.Value ?? 0) - (team2TeamCoin.Value ?? 0);
 
-            using (BeginDelayedSequence(2000))
+            if (diff < 0)
             {
-                coinDiffContainer.Current.Value = diff;
-                background.FadeColour(getColor(diff), 500, Easing.OutQuint);
+                leftIconContainer.AutoSizeAxes = Axes.None;
+                rightIconContainer.AutoSizeAxes = Axes.X;
+            }
+            else
+            {
+                leftIconContainer.AutoSizeAxes = Axes.X;
+                rightIconContainer.AutoSizeAxes = Axes.None;
             }
 
-            changeIconScheduledDelegate?.Cancel();
-            changeIconScheduledDelegate = Scheduler.AddDelayed(() =>
-            {
-                if (diff > first_warning_coin)
-                {
-                    iconContainer.FadeOut(200, Easing.OutQuint);
-                }
-
-                iconContainer.Clear();
-                iconContainer.Child = getIconByDiff(diff);
-
-                blinkScheduledDelegate?.Cancel();
-
-                if (diff > first_warning_coin)
-                {
-                    return;
-                }
-
-                int blinkTime = getBlinkTime(diff);
-
-                blinkOnce(blinkTime);
-
-                blinkScheduledDelegate = Scheduler.AddDelayed(() =>
-                {
-                    blinkOnce(blinkTime);
-                }, blinkTime * 2, true);
-            }, 2500);
+            coinDiffContainer.Current.Value = Math.Abs(diff);
         });
-
-        private void blinkOnce(int timeInMs)
-        {
-            using (BeginDelayedSequence(0))
-            {
-                iconContainer.FadeOut(timeInMs, Easing.OutQuint);
-            }
-
-            using (BeginDelayedSequence(timeInMs))
-            {
-                iconContainer.FadeIn(timeInMs, Easing.OutQuint);
-            }
-        }
 
         private int getBlinkTime(double diff)
         {
