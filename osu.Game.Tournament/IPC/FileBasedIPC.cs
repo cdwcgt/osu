@@ -143,7 +143,7 @@ namespace osu.Game.Tournament.IPC
                             // file might be in use.
                         }
 
-                        if (ReadScoreFromFile) return;
+                        if (!ReadScoreFromFile) return;
 
                         try
                         {
