@@ -132,5 +132,7 @@ namespace osu.Game.Tournament.Models
             Completed.Value = false;
             PicksBans.Clear();
         }
+
+        public TournamentTeam? GetTeamByColor(TeamColour colour) => colour == TeamColour.Red ? Team1.Value : Team2.Value;
     }
 }
