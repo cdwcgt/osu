@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.Versioning;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Logging;
 using osu.Game.Beatmaps.Legacy;
 using osu.Game.Tournament.Models;
 
@@ -64,28 +65,41 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
                     case AttachStatus.Attached:
                     {
-                        var user = reader.GetTournamentUser();
-                        if (user == null)
+                        try
+                        {
+                            var user = reader.GetTournamentUser();
+                            if (user == null)
+                                continue;
+
+                            player.OnlineID.Value = user.OnlineID;
+
+                            var gameplayData = reader.GetGameplayData();
+                            if (gameplayData == null)
+                                continue;
+
+                            player.Accuracy.Value = gameplayData.Accuracy / 100;
+                            player.Combo.Value = gameplayData.Combo;
+                            player.MaxCombo.Value = gameplayData.MaxCombo;
+                            player.Hit50.Value = gameplayData.Hit50;
+                            player.Hit100.Value = gameplayData.Hit100;
+                            player.Hit300.Value = gameplayData.Hit300;
+                            player.HitGeki.Value = gameplayData.HitGeki;
+                            player.HitKatu.Value = gameplayData.HitKatu;
+                            player.HitMiss.Value = gameplayData.HitMiss;
+                            player.Mods.Value = gameplayData.Mods;
+                            player.Score.Value = gameplayData.Score;
                             continue;
+                        }
+                        catch (InvalidOperationException e)
+                        {
+                            if (reader.Status == AttachStatus.UnAttached)
+                            {
+                                Logger.Log($"Attempt fetch data when Unattached. {TournamentGame.TOURNAMENT_CLIENT_NAME}{i}");
+                                continue;
+                            }
 
-                        player.OnlineID.Value = user.OnlineID;
-
-                        var gameplayData = reader.GetGameplayData();
-                        if (gameplayData == null)
-                            continue;
-
-                        player.Accuracy.Value = gameplayData.Accuracy / 100;
-                        player.Combo.Value = gameplayData.Combo;
-                        player.MaxCombo.Value = gameplayData.MaxCombo;
-                        player.Hit50.Value = gameplayData.Hit50;
-                        player.Hit100.Value = gameplayData.Hit100;
-                        player.Hit300.Value = gameplayData.Hit300;
-                        player.HitGeki.Value = gameplayData.HitGeki;
-                        player.HitKatu.Value = gameplayData.HitKatu;
-                        player.HitMiss.Value = gameplayData.HitMiss;
-                        player.Mods.Value = gameplayData.Mods;
-                        player.Score.Value = gameplayData.Score;
-                        continue;
+                            throw;
+                        }
                     }
                 }
             }
