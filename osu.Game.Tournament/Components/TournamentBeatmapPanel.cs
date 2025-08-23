@@ -7,6 +7,7 @@ using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Effects;
 using osu.Framework.Graphics.Shapes;
@@ -135,6 +136,10 @@ namespace osu.Game.Tournament.Components
                                 RelativeSizeAxes = Axes.Both,
                                 Children = new Drawable[]
                                 {
+                                    //particleBorder = new ParticleBorder
+                                    //{
+                                    //    Alpha = HiddenInformationBeforePicked ? 1 : 0,
+                                    //},
                                     MainContainer = new Container
                                     {
                                         RelativeSizeAxes = Axes.Both,
@@ -144,12 +149,13 @@ namespace osu.Game.Tournament.Components
                                             new Box
                                             {
                                                 RelativeSizeAxes = Axes.Both,
-                                                Colour = Color4.Black,
+                                                Colour = OsuColour.Gray(0.2f)
                                             },
                                             beatmapCover = new NoUnloadBeatmapSetCover
                                             {
                                                 RelativeSizeAxes = Axes.Both,
-                                                Colour = HiddenInformationBeforePicked ? Color4.Black : OsuColour.Gray(0.5f),
+                                                Colour = OsuColour.Gray(0.5f),
+                                                Alpha = HiddenInformationBeforePicked ? 0 : 1,
                                                 OnlineInfo = (Beatmap as IBeatmapSetOnlineInfo),
                                             },
                                             information = new FillFlowContainer
@@ -299,6 +305,7 @@ namespace osu.Game.Tournament.Components
         private bool centerText = false;
         private FillFlowContainer information = null!;
         private NoUnloadBeatmapSetCover beatmapCover;
+        private ParticleBorder particleBorder;
 
         protected virtual void UpdateState()
         {
@@ -376,13 +383,15 @@ namespace osu.Game.Tournament.Components
 
             if (HiddenInformationBeforePicked && lastFound?.Type == ChoiceType.Pick)
             {
-                beatmapCover.Colour = OsuColour.Gray(0.5f);
+                beatmapCover.FadeIn(100);
                 information.Children = CreateInformation();
+                //particleBorder.FadeOut();
             }
             else if (HiddenInformationBeforePicked)
             {
-                beatmapCover.Colour = Color4.Black;
+                beatmapCover.FadeOut(50);
                 information.Children = CreateInformation(HiddenBeatmap);
+                //particleBorder.FadeIn();
             }
 
             choice = lastFound;
