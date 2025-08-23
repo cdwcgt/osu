@@ -16,9 +16,6 @@ namespace osu.Game.Tournament.Components
 
         protected override Easing RollingEasing => Easing.Out;
 
-        protected override double GetProportionalDuration(double currentValue, double newValue) =>
-            currentValue > newValue ? currentValue - newValue : newValue - currentValue;
-
         protected override OsuSpriteText CreateSpriteText() => new OsuSpriteText
         {
             Font = OsuFont.Torus.With(size: 20),

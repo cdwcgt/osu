@@ -82,12 +82,13 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                                     AutoSizeAxes = Axes.X,
                                     Direction = FillDirection.Vertical,
                                     Margin = new MarginPadding { Bottom = 2f },
+                                    Spacing = new Vector2(0, 2),
                                     Children = new Drawable[]
                                     {
                                         new Container
                                         {
-                                            Anchor = Anchor.BottomLeft,
-                                            Origin = Anchor.BottomLeft,
+                                            Anchor = Anchor.BottomCentre,
+                                            Origin = Anchor.BottomCentre,
                                             Size = new Vector2(16, 11),
                                             Children = new Drawable[]
                                             {
@@ -107,9 +108,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                                         },
                                         stateIconContainer = new Container
                                         {
-                                            Height = 10f,
-                                            Anchor = Anchor.BottomLeft,
-                                            Origin = Anchor.BottomLeft,
+                                            AutoSizeAxes = Axes.Both,
+                                            Anchor = Anchor.BottomCentre,
+                                            Origin = Anchor.BottomCentre,
                                         },
                                     }
                                 },
@@ -172,9 +173,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
         private Drawable getIconByDiff(double diff)
         {
-            return diff <= third_warning_coin ? getIcon("MC") :
-                diff <= second_warning_coin ? getIcon("MB") :
-                diff <= first_warning_coin ? getIcon("MA") : Empty();
+            return getIcon("WEB");
         }
 
         private void updateDisplay() => Scheduler.AddOnce(() =>
@@ -185,7 +184,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
         private Drawable getIcon(string icon) => new Container
         {
-            Size = new Vector2(60, 20),
+            Size = new Vector2(10, 8),
             Child = new Sprite
             {
                 RelativeSizeAxes = Axes.Both,

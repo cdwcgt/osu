@@ -13,6 +13,7 @@ using osu.Game.Rulesets;
 using osu.Game.Tests.Visual;
 using osu.Game.Tournament.IO;
 using osu.Game.Tournament.IPC;
+using osu.Game.Tournament.IPC.MemoryIPC;
 using osu.Game.Tournament.Models;
 
 namespace osu.Game.Tournament.Tests
@@ -26,7 +27,7 @@ namespace osu.Game.Tournament.Tests
         protected LadderInfo Ladder { get; private set; } = new LadderInfo();
 
         [Cached]
-        protected MatchIPCInfo IPCInfo { get; private set; } = new MatchIPCInfo();
+        protected MatchIPCInfo IPCInfo { get; private set; } = new MemoryBasedIPCWithMatchListener();
 
         [Resolved]
         private RulesetStore rulesetStore { get; set; } = null!;
@@ -162,8 +163,16 @@ namespace osu.Game.Tournament.Tests
                         {
                             Mods = "DT"
                         }
-                    }
+                    },
                 },
+            },
+            Team1Coin =
+            {
+                Value = 0f
+            },
+            Team2Coin =
+            {
+                Value = 200f
             }
         };
 

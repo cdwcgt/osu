@@ -33,12 +33,34 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
             InternalChildren = new Drawable[]
             {
+                new Container
+                {
+                    Name = "multCoin",
+                    Anchor = Anchor.BottomLeft,
+                    Height = 1,
+                    Padding = new MarginPadding { Horizontal = 30f, Bottom = 3f },
+                    RelativeSizeAxes = Axes.X,
+                    Children = new Drawable[]
+                    {
+                        new TeamMultCoin(TeamColour.Red)
+                        {
+                            Anchor = Anchor.CentreLeft,
+                            Origin = Anchor.CentreRight,
+                        },
+                        new TeamMultCoin(TeamColour.Blue)
+                        {
+                            Anchor = Anchor.CentreRight,
+                            Origin = Anchor.CentreLeft,
+                        },
+                    }
+                },
                 new MatchHeaderBackground(),
                 roundName = new TournamentSpriteText
                 {
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
                     Font = OsuFont.Torus.With(size: 22, weight: FontWeight.Bold),
+                    Padding = new MarginPadding { Bottom = 2f },
                     Colour = Color4.Black,
                 },
                 roundInfo = new TournamentSpriteText

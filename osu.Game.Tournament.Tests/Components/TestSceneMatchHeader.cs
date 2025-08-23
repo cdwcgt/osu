@@ -29,5 +29,19 @@ namespace osu.Game.Tournament.Tests.Components
                 }
             };
         }
+
+        public override void SetUpSteps()
+        {
+            base.SetUpSteps();
+
+            AddSliderStep("red coin", 0f, 500f, 0f, t =>
+            {
+                if (Ladder.CurrentMatch.Value != null) Ladder.CurrentMatch.Value.Team1Coin.Value = t;
+            });
+            AddSliderStep("blue size", 0f, 500f, 0f, t =>
+            {
+                if (Ladder.CurrentMatch.Value != null) Ladder.CurrentMatch.Value.Team2Coin.Value = t;
+            });
+        }
     }
 }

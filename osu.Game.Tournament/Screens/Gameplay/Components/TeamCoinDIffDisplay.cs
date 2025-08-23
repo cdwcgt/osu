@@ -23,6 +23,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 {
     public partial class TeamCoinDIffDisplay : CompositeDrawable
     {
+        private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
         private readonly Bindable<double?> team1TeamCoin = new Bindable<double?>();
         private readonly Bindable<double?> team2TeamCoin = new Bindable<double?>();
         private readonly RollingMultDiffNumberContainer coinDiffContainer;
@@ -41,7 +42,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             InternalChild = new Container
             {
                 CornerRadius = 10f,
-                Size = new Vector2(60, 15),
+                Size = new Vector2(80, 15),
                 Masking = true,
                 Children = new Drawable[]
                 {
@@ -54,14 +55,16 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     {
                         Anchor = Anchor.Centre,
                         Origin = Anchor.Centre,
-                        RelativeSizeAxes = Axes.Both,
+                        RelativeSizeAxes = Axes.Y,
+                        AutoSizeAxes = Axes.X,
+                        LayoutDuration = 50,
                         Direction = FillDirection.Horizontal,
-                        LayoutDuration = 200,
-                        LayoutEasing = Easing.InOutQuint,
                         Children = new Drawable[]
                         {
                             leftIconContainer = new Container
                             {
+                                Anchor = Anchor.CentreLeft,
+                                Origin = Anchor.CentreLeft,
                                 Masking = true,
                                 AutoSizeAxes = Axes.X,
                                 RelativeSizeAxes = Axes.Y,
@@ -69,13 +72,22 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                                 AutoSizeEasing = Easing.InOutQuint,
                                 Child = new SpriteIcon
                                 {
+                                    Anchor = Anchor.Centre,
+                                    Origin = Anchor.Centre,
                                     Size = new Vector2(11),
-                                    Icon = FontAwesome.Solid.CaretLeft
+                                    Icon = FontAwesome.Solid.CaretLeft,
+                                    Margin = new MarginPadding { Horizontal = 1 },
                                 }
                             },
-                            coinDiffContainer = new RollingMultDiffNumberContainer(),
+                            coinDiffContainer = new RollingMultDiffNumberContainer
+                            {
+                                Anchor = Anchor.CentreLeft,
+                                Origin = Anchor.CentreLeft,
+                            },
                             rightIconContainer = new Container
                             {
+                                Anchor = Anchor.CentreLeft,
+                                Origin = Anchor.CentreLeft,
                                 Masking = true,
                                 AutoSizeAxes = Axes.X,
                                 RelativeSizeAxes = Axes.Y,
@@ -83,8 +95,10 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                                 AutoSizeEasing = Easing.InOutQuint,
                                 Child = new SpriteIcon
                                 {
+                                    Anchor = Anchor.Centre,
+                                    Origin = Anchor.Centre,
                                     Size = new Vector2(11),
-                                    Icon = FontAwesome.Solid.CaretLeft
+                                    Icon = FontAwesome.Solid.CaretRight,
                                 },
                             }
                         }
@@ -111,16 +125,27 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         [BackgroundDependencyLoader]
         private void load(LadderInfo ladder)
         {
-            var currentMatch = ladder.CurrentMatch.Value;
-
-            if (currentMatch == null)
-                return;
-
-            team1TeamCoin.BindTo(currentMatch.Team1Coin);
-            team2TeamCoin.BindTo(currentMatch.Team2Coin);
+            currentMatch.BindValueChanged(matchChanged);
+            currentMatch.BindTo(ladder.CurrentMatch);
 
             team1TeamCoin.BindValueChanged(_ => updateDisplay(), true);
             team2TeamCoin.BindValueChanged(_ => updateDisplay(), true);
+        }
+
+        private void matchChanged(ValueChangedEvent<TournamentMatch?> match)
+        {
+            team1TeamCoin.UnbindBindings();
+            team2TeamCoin.UnbindBindings();
+
+            Scheduler.AddOnce(updateMatch);
+        }
+
+        private void updateMatch()
+        {
+            if (currentMatch.Value == null) return;
+
+            team1TeamCoin.BindTo(currentMatch.Value.Team1Coin);
+            team2TeamCoin.BindTo(currentMatch.Value.Team2Coin);
         }
 
         private const double first_warning_coin = -22.5;
@@ -135,13 +160,13 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             if (diff < 0)
             {
-                leftIconContainer.AutoSizeAxes = Axes.None;
-                rightIconContainer.AutoSizeAxes = Axes.X;
+                leftIconContainer.FadeOut(100);
+                rightIconContainer.FadeIn(100);
             }
             else
             {
-                leftIconContainer.AutoSizeAxes = Axes.X;
-                rightIconContainer.AutoSizeAxes = Axes.None;
+                leftIconContainer.FadeIn(100);
+                rightIconContainer.FadeOut(100);
             }
 
             coinDiffContainer.Current.Value = Math.Abs(diff);

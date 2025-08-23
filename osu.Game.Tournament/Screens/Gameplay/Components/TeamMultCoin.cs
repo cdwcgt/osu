@@ -7,10 +7,12 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Localisation;
+using osu.Framework.Utils;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
@@ -79,7 +81,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             {
                 new FillFlowContainer
                 {
-                    Height = 10f,
+                    Height = 5f,
                     AutoSizeAxes = Axes.X,
                     Direction = FillDirection.Horizontal,
                     Anchor = anchor,
@@ -94,6 +96,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                             AutoSizeAxes = Axes.X,
                             Anchor = anchor,
                             Origin = anchor,
+                            Spacing = new Vector2(-3, 0),
                             Children = new Drawable[]
                             {
                                 multCoinBar = new Box
@@ -101,7 +104,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                                     RelativeSizeAxes = Axes.Y,
                                     Anchor = anchor,
                                     Origin = anchor,
-                                    Shear = new Vector2((flip ? -1 : 1) * bar_steepness, 0),
+                                    Shear = new Vector2((flip ? 1 : -1) * bar_steepness, 0),
                                     Colour = TournamentGame.GetTeamColour(colour),
                                 },
                                 diffBar = new Box
@@ -109,7 +112,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                                     RelativeSizeAxes = Axes.Y,
                                     Anchor = anchor,
                                     Origin = anchor,
-                                    Shear = new Vector2((flip ? -1 : 1) * bar_steepness, 0),
+                                    Shear = new Vector2((flip ? 1 : -1) * bar_steepness, 0),
                                     Colour = TournamentGame.GetTeamColour(colour).Lighten(0.3f),
                                 }
                             }
@@ -124,9 +127,10 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                             {
                                 new Container
                                 {
-                                    Anchor = flip ? Anchor.CentreRight : Anchor.CentreLeft,
-                                    Origin = Anchor = flip ? Anchor.CentreRight : Anchor.CentreLeft,
+                                    Anchor = flip ? Anchor.TopLeft : Anchor.TopRight,
+                                    Origin = flip ? Anchor.TopLeft : Anchor.TopRight,
                                     AutoSizeAxes = Axes.Both,
+                                    Y = -2,
                                     Children = new Drawable[]
                                     {
                                         multCounter = new RollingMultCoinContainer
@@ -145,12 +149,13 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     Anchor = anchor,
                     Origin = anchor,
                     RelativeSizeAxes = Axes.X,
-                    Height = 20,
-
+                    AutoSizeAxes = Axes.Y,
                     Child = diffCounter = new RollingMultDiffNumberContainer
                     {
+                        Y = 20,
                         Anchor = anchor,
                         Origin = anchor,
+                        Colour = TournamentGame.GetTeamColour(colour).Lighten(0.3f),
                     }
                 }
             };
@@ -177,6 +182,14 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             ipc.MatchAborted += () => triggerAnimationWhenMatchFinished(coin.Value ?? 0, coin.Value ?? 0);
             ipc.MatchFinished += _ => triggerAnimationWhenMatchFinished(coin.Value ?? 0, coin.Value ?? 0);
+
+            Scheduler.AddDelayed(() =>
+            {
+                var leftColor = Color4Extensions.FromHSV(RNG.NextSingle(0, 360), 1, 1);
+                var rightColor = Color4Extensions.FromHSV(RNG.NextSingle(0, 360), 1, 1);
+
+                diffBar.FadeColour(ColourInfo.GradientHorizontal(leftColor, rightColor), 1000);
+            }, 1000, true);
         }
 
         #region match update
@@ -215,7 +228,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             base.Update();
 
             if (ipc.State.Value == TourneyState.Playing)
-                updateDiff();
+                updateDiff(true);
         }
 
         private void updateScore(bool animate, double? score = null)
@@ -234,15 +247,20 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             multCoinBar.ResizeWidthTo(calculateBarWidth(score.Value));
         }
 
-        private void updateDiff(double? diff = null)
+        private void updateDiff(bool animate, double? diff = null)
         {
             diff ??= calculateDiffFromIpc();
 
-            diffCounter.Current.Value = diff.Value;
+            if (animate)
+            {
+                diffCounter.Current.Value = diff.Value;
+                diffBar.ResizeWidthTo(calculateBarWidth(diff.Value), 400, Easing.OutQuint);
+                return;
+            }
 
-            diffBar.ResizeWidthTo(calculateBarWidth(diff.Value), 400, Easing.OutQuint);
-
+            diffCounter.DisplayedCount = diff.Value;
             diffCounter.Current.Value = diff.Value;
+            diffBar.ResizeWidthTo(calculateBarWidth(diff.Value));
         }
 
         private static float calculateBarWidth(double coin) => (float)coin / 1000 * bar_width_when_1000_coin;
@@ -263,14 +281,17 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private void triggerAnimationWhenMatchFinished(double oldAmount, double newAmount) => Scheduler.AddOnce(() =>
         {
+            FinishTransforms(true);
+
             double diff = newAmount - oldAmount;
 
             updateScore(false, oldAmount);
-            updateDiff(diff);
+            updateDiff(false, diff);
 
             using (BeginDelayedSequence(2000))
             {
                 updateScore(true);
+                updateDiff(true, 0);
             }
         });
 
@@ -278,7 +299,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         {
             base.UpdateAfterChildren();
 
-            diffCounter.X = Math.Max(5, barContainer.DrawWidth - multCounter.DrawWidth) * (flip ? 1 : -1);
+            diffCounter.MoveToY(diffCounter.DrawWidth > barContainer.DrawWidth - 5 ? 20 : 12, 60);
+
+            diffCounter.X = Math.Abs(Math.Max(10, barContainer.DrawWidth - diffCounter.DrawWidth)) * (flip ? 1 : -1);
         }
 
         private partial class RollingMultDiffNumberContainer : RollingCounter<double>
@@ -289,12 +312,14 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             protected override LocalisableString FormatCount(double count)
             {
-                return $"+${Math.Abs(count):N2}";
+                char sign = Math.Sign(count) == -1 ? '-' : '+';
+
+                return $"{sign}${Math.Abs(count):N2}";
             }
 
             protected override OsuSpriteText CreateSpriteText() => base.CreateSpriteText().With(t =>
             {
-                t.Font = OsuFont.Torus.With(size: 10);
+                t.Font = OsuFont.Torus.With(size: 10, weight: FontWeight.Regular);
             });
         }
 
