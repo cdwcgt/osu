@@ -59,12 +59,15 @@ namespace osu.Game.Tournament.Components
             MainContainer.BorderColour = songBarColour.Value.Value;
         }
 
-        protected override Drawable[] CreateInformation() =>
-            new Drawable[]
+        protected override Drawable[] CreateInformation(IBeatmapInfo? beatmap = null)
+        {
+            beatmap ??= Beatmap;
+
+            return new Drawable[]
             {
                 new TournamentSpriteText
                 {
-                    Text = Beatmap?.GetDisplayTitleRomanisable(false, false) ?? (LocalisableString)@"未知",
+                    Text = beatmap?.GetDisplayTitleRomanisable(false, false) ?? (LocalisableString)@"未知",
                     Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 20),
                     Origin = Anchor.Centre,
                     Anchor = Anchor.Centre,
@@ -97,7 +100,7 @@ namespace osu.Game.Tournament.Components
                                 },
                                 new TournamentSpriteText
                                 {
-                                    Text = Beatmap?.Metadata.Author.Username ?? "未知",
+                                    Text = beatmap?.Metadata.Author.Username ?? "未知",
                                     Padding = new MarginPadding { Right = 5 },
                                     Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 15)
                                 },
@@ -119,7 +122,7 @@ namespace osu.Game.Tournament.Components
                                 },
                                 new TournamentSpriteText
                                 {
-                                    Text = Beatmap?.DifficultyName ?? "未知",
+                                    Text = beatmap?.DifficultyName ?? "未知",
                                     Padding = new MarginPadding { Left = 5 },
                                     Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 15)
                                 },
@@ -128,5 +131,6 @@ namespace osu.Game.Tournament.Components
                     },
                 },
             };
+        }
     }
 }

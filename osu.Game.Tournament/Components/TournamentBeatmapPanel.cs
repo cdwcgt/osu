@@ -16,6 +16,7 @@ using osu.Framework.Localisation;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Drawables;
 using osu.Game.Graphics;
+using osu.Game.Models;
 using osu.Game.Tournament.Models;
 using osuTK;
 using osuTK.Graphics;
@@ -50,6 +51,8 @@ namespace osu.Game.Tournament.Components
             }
         }
 
+        public bool HiddenInformationBeforePicked { get; set; }
+
         private void updateIsCenter()
         {
             setAnchor(information, centerText);
@@ -78,6 +81,11 @@ namespace osu.Game.Tournament.Components
             : this(beatmap.Beatmap, beatmap.Mods, isMappool: isMappool)
         {
             this.id = id;
+
+            if (beatmap.IsRandom)
+            {
+                HiddenInformationBeforePicked = true;
+            }
         }
 
         private readonly int? id;
@@ -138,10 +146,10 @@ namespace osu.Game.Tournament.Components
                                                 RelativeSizeAxes = Axes.Both,
                                                 Colour = Color4.Black,
                                             },
-                                            new NoUnloadBeatmapSetCover
+                                            beatmapCover = new NoUnloadBeatmapSetCover
                                             {
                                                 RelativeSizeAxes = Axes.Both,
-                                                Colour = OsuColour.Gray(0.5f),
+                                                Colour = HiddenInformationBeforePicked ? Color4.Black : OsuColour.Gray(0.5f),
                                                 OnlineInfo = (Beatmap as IBeatmapSetOnlineInfo),
                                             },
                                             information = new FillFlowContainer
@@ -151,7 +159,7 @@ namespace osu.Game.Tournament.Components
                                                 Origin = Anchor.CentreLeft,
                                                 Padding = new MarginPadding(15),
                                                 Direction = FillDirection.Vertical,
-                                                Children = CreateInformation()
+                                                Children = CreateInformation(HiddenInformationBeforePicked ? new BeatmapInfo() : Beatmap)
                                             },
                                             flash = new Box
                                             {
@@ -239,12 +247,15 @@ namespace osu.Game.Tournament.Components
             Scheduler.AddOnce(UpdateState);
         }
 
-        protected virtual Drawable[] CreateInformation() =>
-            new Drawable[]
+        protected virtual Drawable[] CreateInformation(IBeatmapInfo? beatmapInfo = null)
+        {
+            beatmapInfo ??= Beatmap;
+
+            return new Drawable[]
             {
                 new TournamentSpriteText
                 {
-                    Text = Beatmap?.GetDisplayTitleRomanisable(false, false) ?? (LocalisableString)@"未知",
+                    Text = beatmapInfo?.GetDisplayTitleRomanisable(false, false) ?? (LocalisableString)@"未知",
                     Font = OsuFont.Torus.With(weight: FontWeight.Bold),
                 },
                 new FillFlowContainer
@@ -261,7 +272,7 @@ namespace osu.Game.Tournament.Components
                         },
                         new TournamentSpriteText
                         {
-                            Text = Beatmap?.Metadata.Author.Username ?? "未知",
+                            Text = beatmapInfo?.Metadata.Author.Username ?? "未知",
                             Padding = new MarginPadding { Right = 20 },
                             Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 14)
                         },
@@ -273,12 +284,13 @@ namespace osu.Game.Tournament.Components
                         },
                         new TournamentSpriteText
                         {
-                            Text = Beatmap?.DifficultyName ?? "未知",
+                            Text = beatmapInfo?.DifficultyName ?? "未知",
                             Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 14)
                         },
                     }
                 },
             };
+        }
 
         private void picksBansOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
             => Scheduler.AddOnce(UpdateState);
@@ -286,6 +298,7 @@ namespace osu.Game.Tournament.Components
         private BeatmapChoice? choice;
         private bool centerText = false;
         private FillFlowContainer information = null!;
+        private NoUnloadBeatmapSetCover beatmapCover;
 
         protected virtual void UpdateState()
         {
@@ -361,8 +374,33 @@ namespace osu.Game.Tournament.Components
                 bannedSprite.Hide();
             }
 
+            if (HiddenInformationBeforePicked && lastFound?.Type == ChoiceType.Pick)
+            {
+                beatmapCover.Colour = OsuColour.Gray(0.5f);
+                information.Children = CreateInformation();
+            }
+            else if (HiddenInformationBeforePicked)
+            {
+                beatmapCover.Colour = Color4.Black;
+                information.Children = CreateInformation(HiddenBeatmap);
+            }
+
             choice = lastFound;
         }
+
+        protected static BeatmapInfo HiddenBeatmap => new BeatmapInfo
+        {
+            Metadata = new BeatmapMetadata
+            {
+                Artist = @"?????",
+                Title = @"?????????",
+                Author = new RealmUser
+                {
+                    Username = @"????"
+                },
+            },
+            DifficultyName = @"?????"
+        };
 
         private partial class NoUnloadBeatmapSetCover : UpdateableOnlineBeatmapSetCover
         {

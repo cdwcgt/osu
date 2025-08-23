@@ -9,6 +9,7 @@ namespace osu.Game.Tournament.Models
     {
         public int ID;
         public string Mods = string.Empty;
+        public bool IsRandom;
 
         [JsonProperty("BeatmapInfo")]
         public TournamentBeatmap? Beatmap;

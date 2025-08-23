@@ -178,6 +178,8 @@ namespace osu.Game.Tournament.Screens.Editors
 
                     private readonly Bindable<string> mods = new Bindable<string>(string.Empty);
 
+                    private readonly BindableBool isRandom = new BindableBool();
+
                     private readonly Container drawableContainer;
 
                     public RoundBeatmapRow(TournamentRound team, RoundBeatmap beatmap)
@@ -221,6 +223,14 @@ namespace osu.Game.Tournament.Screens.Editors
                                         RelativeSizeAxes = Axes.None,
                                         Width = 200,
                                         Current = mods,
+                                    },
+                                    new SettingsCheckbox
+                                    {
+                                        LabelText = "Random",
+                                        RelativeSizeAxes = Axes.None,
+                                        AutoSizeAxes = Axes.Y,
+                                        Width = 200,
+                                        Current = isRandom,
                                     },
                                     drawableContainer = new Container
                                     {
@@ -293,6 +303,12 @@ namespace osu.Game.Tournament.Screens.Editors
                             {
                                 gameBase.PopulateFmBeatmapStarRating(Model.Beatmap);
                             }
+                        });
+
+                        isRandom.Value = Model.IsRandom;
+                        isRandom.BindValueChanged(r =>
+                        {
+                            Model.IsRandom = r.NewValue;
                         });
                     }
 
