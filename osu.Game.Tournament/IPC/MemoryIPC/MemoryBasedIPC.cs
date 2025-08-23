@@ -45,9 +45,19 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
             playersPerTeam.BindTo(Ladder.PlayersPerTeam);
         }
 
+        private const int update_hz = 5;
+        private double lastUpdateTime;
+
         protected override void Update()
         {
             base.Update();
+
+            lastUpdateTime += Time.Elapsed;
+
+            if (lastUpdateTime < 1000.0 / update_hz)
+                return;
+
+            lastUpdateTime = 0;
 
             for (int i = 0; i < playersPerTeam.Value * 2; i++)
             {
