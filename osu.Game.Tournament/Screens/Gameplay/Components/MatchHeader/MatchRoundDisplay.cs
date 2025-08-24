@@ -112,7 +112,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
             roundName.Text = currentRoundName.Value ?? "Unknown Round";
 
-            roundInfo.Text = $"BO{currentRound.Value.BestOf} 回合{banPicks.Count(p => p.Type == ChoiceType.Pick)}";
+            roundInfo.Text = $"Track {currentRound.Value.BestOf.Value - 1} + 1 回合{banPicks.Count(p => p.Type == ChoiceType.Pick)}";
         }
 
         public partial class MatchHeaderBackground : CompositeDrawable
