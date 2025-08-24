@@ -6,6 +6,7 @@ using System.Collections.Specialized;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
@@ -14,6 +15,7 @@ using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
 using osu.Framework.Localisation;
+using osu.Framework.Utils;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Drawables;
 using osu.Game.Graphics;
@@ -149,7 +151,12 @@ namespace osu.Game.Tournament.Components
                                             new Box
                                             {
                                                 RelativeSizeAxes = Axes.Both,
-                                                Colour = OsuColour.Gray(0.2f)
+                                                Colour = Color4.Black,
+                                            },
+                                            randomBackground = new Box
+                                            {
+                                                RelativeSizeAxes = Axes.Both,
+                                                Alpha = HiddenInformationBeforePicked ? 1 : 0,
                                             },
                                             beatmapCover = new NoUnloadBeatmapSetCover
                                             {
@@ -241,6 +248,14 @@ namespace osu.Game.Tournament.Components
             }
 
             updateIsCenter();
+
+            Scheduler.AddDelayed(() =>
+            {
+                var leftColor = Color4Extensions.FromHSV(RNG.NextSingle(0, 360), 1, 1);
+                var rightColor = Color4Extensions.FromHSV(RNG.NextSingle(0, 360), 1, 1);
+
+                randomBackground.FadeColour(ColourInfo.GradientHorizontal(leftColor, rightColor), 1000);
+            }, 1000, true);
         }
 
         private void matchChanged(ValueChangedEvent<TournamentMatch?> match)
@@ -304,8 +319,8 @@ namespace osu.Game.Tournament.Components
         private BeatmapChoice? choice;
         private bool centerText = false;
         private FillFlowContainer information = null!;
-        private NoUnloadBeatmapSetCover beatmapCover;
-        private ParticleBorder particleBorder;
+        private NoUnloadBeatmapSetCover beatmapCover = null!;
+        private Box randomBackground;
 
         protected virtual void UpdateState()
         {
@@ -385,12 +400,14 @@ namespace osu.Game.Tournament.Components
             {
                 beatmapCover.FadeIn(100);
                 information.Children = CreateInformation();
+                randomBackground.FadeOut(100);
                 //particleBorder.FadeOut();
             }
             else if (HiddenInformationBeforePicked)
             {
                 beatmapCover.FadeOut(50);
                 information.Children = CreateInformation(HiddenBeatmap);
+                randomBackground.FadeIn(50);
                 //particleBorder.FadeIn();
             }
 
