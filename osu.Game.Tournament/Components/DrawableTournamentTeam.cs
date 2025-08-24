@@ -14,7 +14,7 @@ namespace osu.Game.Tournament.Components
     {
         public readonly TournamentTeam? Team;
 
-        protected readonly Container Flag;
+        protected readonly DrawableTeamFlag Flag;
         protected readonly TournamentSpriteText AcronymText;
 
         [UsedImplicitly]

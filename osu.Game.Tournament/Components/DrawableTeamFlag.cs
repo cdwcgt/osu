@@ -20,7 +20,7 @@ namespace osu.Game.Tournament.Components
         [UsedImplicitly]
         private Bindable<string>? flag;
 
-        private Sprite? flagSprite;
+        public Sprite? FlagSprite;
 
         public DrawableTeamFlag(TournamentTeam? team)
         {
@@ -35,7 +35,7 @@ namespace osu.Game.Tournament.Components
             Size = new Vector2(75, 54);
             Masking = true;
             //CornerRadius = 5;
-            Child = flagSprite = new Sprite
+            Child = FlagSprite = new Sprite
             {
                 RelativeSizeAxes = Axes.Both,
                 Anchor = Anchor.Centre,
@@ -55,7 +55,7 @@ namespace osu.Game.Tournament.Components
                     Size = new Vector2(75, 75);
                 }
 
-                flagSprite.Texture = texture;
+                FlagSprite.Texture = texture;
             }, true);
         }
     }

@@ -173,7 +173,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
         private Drawable getIconByDiff(double diff)
         {
-            return getIcon("WEB");
+            return diff < -60 ? getIcon("WEB") : Empty();
         }
 
         private void updateDisplay() => Scheduler.AddOnce(() =>
@@ -182,14 +182,10 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
             stateIconContainer.Child = getIconByDiff(diff);
         });
 
-        private Drawable getIcon(string icon) => new Container
+        private Drawable getIcon(string icon) => new Sprite
         {
             Size = new Vector2(10, 8),
-            Child = new Sprite
-            {
-                RelativeSizeAxes = Axes.Both,
-                Texture = store.Get(icon)
-            },
+            Texture = store.Get(icon)
         };
     }
 }

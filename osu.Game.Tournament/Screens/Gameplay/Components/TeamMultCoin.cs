@@ -11,6 +11,7 @@ using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Graphics.Textures;
 using osu.Framework.Localisation;
 using osu.Framework.Utils;
 using osu.Game.Graphics;
@@ -25,14 +26,14 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 {
     public partial class TeamMultCoin : CompositeDrawable
     {
-        private readonly Bindable<double?> coin = new Bindable<double?>();
         private readonly TeamColour colour;
         private readonly bool flip;
-        private readonly Box multCoinBar;
-        private readonly Box diffBar;
-        private readonly RollingMultDiffNumberContainer diffCounter;
-        private readonly RollingMultCoinContainer multCounter;
-        private readonly FillFlowContainer barContainer;
+        private Box multCoinBar = null!;
+        private Box diffBar = null!;
+        private RollingMultDiffNumberContainer diffCounter = null!;
+        private RollingMultCoinContainer multCounter = null!;
+        private FillFlowContainer barContainer = null!;
+        private Sprite pigIcon = null!;
 
         private const float bar_width_when_1000_coin = 230f;
         private const float bar_steepness = 0.6f;
@@ -50,9 +51,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         [Resolved]
         private LadderInfo ladderInfo { get; set; } = null!;
-
-        private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
-        private readonly Bindable<TournamentTeam?> currentTeam = new Bindable<TournamentTeam?>();
 
         private bool isTB
         {
@@ -72,6 +70,21 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         {
             this.colour = colour;
             flip = colour == TeamColour.Blue;
+
+            coin.BindValueChanged(d =>
+            {
+                updatePigIconState();
+                triggerAnimationWhenMatchFinished(d.OldValue ?? 0, d.NewValue ?? 0);
+            }, true);
+            oppoCoin.BindValueChanged(_ =>
+            {
+                updatePigIconState();
+            });
+        }
+
+        [BackgroundDependencyLoader]
+        private void load(TextureStore textures)
+        {
             var anchor = flip ? Anchor.BottomLeft : Anchor.BottomRight;
 
             Height = 22.5f;
@@ -125,18 +138,29 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                             Origin = anchor,
                             Children = new Drawable[]
                             {
-                                new Container
+                                new FillFlowContainer
                                 {
                                     Anchor = flip ? Anchor.TopLeft : Anchor.TopRight,
                                     Origin = flip ? Anchor.TopLeft : Anchor.TopRight,
                                     AutoSizeAxes = Axes.Both,
                                     Y = -2,
+                                    Direction = FillDirection.Horizontal,
                                     Children = new Drawable[]
                                     {
                                         multCounter = new RollingMultCoinContainer
                                         {
+                                            Anchor = flip ? Anchor.CentreLeft : Anchor.CentreRight,
+                                            Origin = flip ? Anchor.CentreLeft : Anchor.CentreRight,
                                             Margin = new MarginPadding { Horizontal = 3f },
                                         },
+                                        pigIcon = new Sprite
+                                        {
+                                            Anchor = flip ? Anchor.CentreLeft : Anchor.CentreRight,
+                                            Origin = flip ? Anchor.CentreLeft : Anchor.CentreRight,
+                                            Texture = textures.Get("pig"),
+                                            Size = new Vector2(13),
+                                            Alpha = 0,
+                                        }
                                     }
                                 }
                             }
@@ -160,15 +184,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 }
             };
 
-            coin.BindValueChanged(d =>
-            {
-                triggerAnimationWhenMatchFinished(d.OldValue ?? 0, d.NewValue ?? 0);
-            }, true);
-        }
-
-        [BackgroundDependencyLoader]
-        private void load()
-        {
             if (colour == TeamColour.Red)
             {
                 ourScore.BindTo(ipc.Score1);
@@ -194,9 +209,15 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         #region match update
 
+        private readonly Bindable<double?> coin = new Bindable<double?>();
+        private readonly Bindable<double?> oppoCoin = new Bindable<double?>();
+        private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
+        private readonly Bindable<TournamentTeam?> currentTeam = new Bindable<TournamentTeam?>();
+
         private void matchChanged(ValueChangedEvent<TournamentMatch?> match)
         {
             coin.UnbindBindings();
+            oppoCoin.UnbindBindings();
             currentTeam.UnbindBindings();
 
             Scheduler.AddOnce(updateMatch);
@@ -209,6 +230,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             if (match != null)
             {
                 coin.BindTo(colour == TeamColour.Red ? match.Team1Coin : match.Team2Coin);
+                oppoCoin.BindTo(colour == TeamColour.Blue ? match.Team1Coin : match.Team2Coin);
                 currentTeam.BindTo(colour == TeamColour.Red ? match.Team1 : match.Team2);
             }
         }
@@ -292,6 +314,20 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             {
                 updateScore(true);
                 updateDiff(true, 0);
+            }
+        });
+
+        private void updatePigIconState() => Scheduler.AddOnce(() =>
+        {
+            double diff = coin.Value - oppoCoin.Value ?? 0;
+
+            if (diff < -35)
+            {
+                pigIcon.FadeIn();
+            }
+            else
+            {
+                pigIcon.FadeOut();
             }
         });
 
