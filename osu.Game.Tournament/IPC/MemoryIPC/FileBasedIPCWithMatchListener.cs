@@ -79,8 +79,8 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
             if (!matchID.HasValue)
                 return;
 
-            currentMatch = matchID.Value;
             StopListening();
+            currentMatch = matchID.Value;
             StartListening();
         }
 
@@ -167,14 +167,8 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
         private void updateStatue()
         {
-            if (Aborted || currentGameID == -1)
+            if (!CurrentlyListening.Value || !CurrentlyPlaying.Value || Aborted || State.Value == TourneyState.Playing || currentGameID == -1)
                 return;
-
-            if (currentMatchEvent == null)
-            {
-                currentlyPlaying.Value = true;
-                return;
-            }
 
             if (currentMatchFinished)
             {
@@ -195,10 +189,10 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
         private IEnumerable<PlayerScore> getTeamScore(TeamColour colour, bool forceApi = false)
         {
-            if (!forceApi && (!currentMatchFinished || Aborted || currentlyPlaying.Value))
+            if (!forceApi && (!currentMatchFinished || Aborted || currentlyPlaying.Value || State.Value == TourneyState.Playing))
                 return base.GetTeamScore(colour);
 
-            var gameResult = Events.LastOrDefault(e => e.Id == currentGameID)?.Game;
+            var gameResult = Events.LastOrDefault(e => e.Game?.Id == currentGameID)?.Game;
 
             if (gameResult == null)
                 return base.GetTeamScore(colour);
@@ -220,9 +214,9 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
             {
                 LegacyMods playerMods = mods;
 
-                foreach (string mod in s.Mods)
+                foreach (APIMod mod in s.Mods)
                 {
-                    playerMods |= GetLegacyModFromString(mod);
+                    playerMods |= GetLegacyModFromString(mod.Acronym);
                 }
 
                 return new PlayerScore
@@ -232,6 +226,47 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                     Mods = playerMods
                 };
             });
+        }
+
+        public void AddFakeEvent(long redScore, long blueScore)
+        {
+            if (!CurrentlyListening.Value)
+                return;
+
+            if (!currentlyPlaying.Value || currentMatchFinished || Aborted)
+                return;
+
+            if (currentGameID == -1)
+                return;
+
+            int redOnlineId = Ladder.CurrentMatch.Value?.GetTeamByColor(TeamColour.Red)?.Players.FirstOrDefault()?.OnlineID ?? -1;
+            int blueOnlineId = Ladder.CurrentMatch.Value?.GetTeamByColor(TeamColour.Red)?.Players.FirstOrDefault()?.OnlineID ?? -1;
+
+            events.Add(new APIMatchEvent
+            {
+                Id = currentGameID,
+                Timestamp = DateTime.Now,
+                Game = new APIMatchGame
+                {
+                    BeatmapId = -1,
+                    Id = (int)currentGameID,
+                    Scores = new List<MatchScore>
+                    {
+                        new MatchScore
+                        {
+                            Score = redScore,
+                            UserID = redOnlineId,
+                        },
+                        new MatchScore
+                        {
+                            Score = blueScore,
+                            UserID = blueOnlineId,
+                        }
+                    }
+                }
+            });
+
+            currentMatchFinished = true;
         }
 
         protected override IEnumerable<PlayerScore> GetTeamScore(TeamColour colour) => getTeamScore(colour);
@@ -255,7 +290,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                 if (content.CurrentGameID == null)
                 {
                     // 理论上永远为true
-                    currentMatchFinished = Events.Concat(newEvents).Any(e => e.Id == currentGameID && e.Game?.Scores.Count != 0);
+                    currentMatchFinished = Events.Concat(newEvents).Any(e => e.Game?.Id == currentGameID && e.Game?.Scores.Count != 0);
                 }
                 else if (content.CurrentGameID != currentGameID)
                 {

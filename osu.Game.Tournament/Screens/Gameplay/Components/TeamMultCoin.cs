@@ -303,18 +303,16 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private void triggerAnimationWhenMatchFinished(double oldAmount, double newAmount) => Scheduler.AddOnce(() =>
         {
-            FinishTransforms(true);
-
             double diff = newAmount - oldAmount;
 
             updateScore(false, oldAmount);
             updateDiff(true, diff);
 
-            using (BeginDelayedSequence(2000))
+            Scheduler.AddDelayed(() =>
             {
                 updateScore(true);
                 updateDiff(true, 0);
-            }
+            }, 2000);
         });
 
         private void updatePigIconState() => Scheduler.AddOnce(() =>

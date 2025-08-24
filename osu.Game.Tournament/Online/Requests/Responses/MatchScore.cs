@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using osu.Game.Online.API;
 
 namespace osu.Game.Tournament.Online.Requests.Responses
 {
@@ -18,7 +19,7 @@ namespace osu.Game.Tournament.Online.Requests.Responses
         public long Score { get; set; }
 
         [JsonProperty("mods")]
-        public List<string> Mods { get; set; } = new List<string>();
+        public List<APIMod> Mods { get; set; } = new List<APIMod>();
     }
 
     public class MatchSlotInfo

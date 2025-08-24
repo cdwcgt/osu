@@ -91,7 +91,7 @@ namespace osu.Game.Tournament.IPC
 
                                         var mod = ruleset!.CreateModFromAcronym(modStr);
 
-                                        Mods.Value = mod != null ? ruleset.ConvertToLegacyMods(new[] { mod }) : 0;
+                                        Mods.Value = mod != null ? ruleset.ConvertToLegacyMods(new[] { mod }) : (LegacyMods)mods;
                                     }
                                     else
                                     {

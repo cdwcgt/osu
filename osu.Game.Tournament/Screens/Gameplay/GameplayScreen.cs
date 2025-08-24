@@ -255,6 +255,30 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 },
                 new TourneyButton
                 {
+                    Text = "Abort",
+                    Action = () =>
+                    {
+                        ipc.CurrentRoundAborted();
+                    }
+                },
+                team1Score = new SettingsNumberBox
+                {
+                    LabelText = "Team1 Score",
+                },
+                team2Score = new SettingsNumberBox
+                {
+                    LabelText = "Team2 Score",
+                },
+                new TourneyButton
+                {
+                    Text = "应用分数",
+                    Action = () =>
+                    {
+                        ipc.AddFakeEvent(team1Score.Current.Value ?? 0, team2Score.Current.Value ?? 0);
+                    }
+                },
+                new TourneyButton
+                {
                     Text = "Red fly",
                     Action = redArea.Launch
                 },
@@ -335,7 +359,9 @@ namespace osu.Game.Tournament.Screens.Gameplay
             chat.Contract();
 
             using (roundPreview.BeginDelayedSequence(200))
+            {
                 roundPreview.FadeIn(200);
+            }
 
             roundPreviewShow = true;
             return true;
@@ -353,7 +379,14 @@ namespace osu.Game.Tournament.Screens.Gameplay
             roundPreview.FadeOut(100);
 
             using (SongBar.BeginDelayedSequence(200))
+            {
                 SongBar.FadeIn(200);
+            }
+
+            using (chat.BeginDelayedSequence(200))
+            {
+                chat.Expand();
+            }
 
             roundPreviewShow = false;
         }
@@ -490,10 +523,15 @@ namespace osu.Game.Tournament.Screens.Gameplay
         }
 
         private readonly BindableBool waitForResult = new BindableBool();
+        private SettingsNumberBox team1Score;
+        private SettingsNumberBox team2Score;
 
         private void getResult(bool fromApi)
         {
             if (CurrentMatch.Value == null)
+                return;
+
+            if (ipc.State.Value == TourneyState.Playing)
                 return;
 
             waitForResult.Value = false;
@@ -547,16 +585,16 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     if (lastPick?.Winner.Value != null)
                         return;
 
-                    if (ipc.Score1.Value > ipc.Score2.Value)
-                    {
-                        CurrentMatch.Value.Team1Score.Value++;
-                        if (lastPick != null) lastPick.Winner.Value = TeamColour.Red;
-                    }
-                    else
-                    {
-                        CurrentMatch.Value.Team2Score.Value++;
-                        if (lastPick != null) lastPick.Winner.Value = TeamColour.Blue;
-                    }
+                    // if (ipc.Score1.Value > ipc.Score2.Value)
+                    // {
+                    //     CurrentMatch.Value.Team1Score.Value++;
+                    //     if (lastPick != null) lastPick.Winner.Value = TeamColour.Red;
+                    // }
+                    // else
+                    // {
+                    //     CurrentMatch.Value.Team2Score.Value++;
+                    //     if (lastPick != null) lastPick.Winner.Value = TeamColour.Blue;
+                    // }
                 }
 
                 switch (State.Value)
