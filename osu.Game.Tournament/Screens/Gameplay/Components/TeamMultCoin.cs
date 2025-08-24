@@ -219,8 +219,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         {
             base.LoadComplete();
 
-            currentMatch.BindTo(ladderInfo.CurrentMatch);
             currentMatch.BindValueChanged(matchChanged);
+            currentMatch.BindTo(ladderInfo.CurrentMatch);
         }
 
         protected override void Update()
@@ -286,7 +286,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             double diff = newAmount - oldAmount;
 
             updateScore(false, oldAmount);
-            updateDiff(false, diff);
+            updateDiff(true, diff);
 
             using (BeginDelayedSequence(2000))
             {
