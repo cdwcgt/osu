@@ -557,12 +557,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
             }
 
             scoreDisplay.ShowSuccess.Value = true;
-            var lastPick = CurrentMatch.Value.PicksBans.LastOrDefault(p => p.Type == ChoiceType.Pick);
         }
 
         private void attemptGetResult()
         {
-            if (warmup.Value || CurrentMatch.Value == null) return;
+            if (warmup.Value || CurrentMatch.Value == null || !ipc.CurrentlyPlaying.Value) return;
 
             waitForResult.Value = true;
             ipc.RequestCurrentRoundResultFromApi();

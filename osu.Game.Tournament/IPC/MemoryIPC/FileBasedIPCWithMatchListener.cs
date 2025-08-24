@@ -116,7 +116,20 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
         /// </summary>
         public void RequestCurrentRoundResultFromApi()
         {
-            if (!currentlyListening.Value || !currentlyPlaying.Value || currentMatchFinished)
+            if (!currentlyListening.Value)
+            {
+                if (pendingBindChoice != null)
+                {
+                    pendingBindChoice.Scores[TeamColour.Red] = getTeamScore(TeamColour.Red, true).Sum(CalculateModMultiplier);
+                    pendingBindChoice.Scores[TeamColour.Blue] = getTeamScore(TeamColour.Blue, true).Sum(CalculateModMultiplier);
+                    pendingBindChoice = null;
+                }
+
+                currentlyPlaying.Value = false;
+                MatchFinished?.Invoke(false);
+            }
+
+            if (!currentlyPlaying.Value || currentMatchFinished)
                 return;
 
             if (fetchTimeOutScheduleDelegate?.Completed == false)
