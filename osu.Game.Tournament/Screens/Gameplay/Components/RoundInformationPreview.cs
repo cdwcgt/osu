@@ -234,19 +234,22 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             var remainChoices = ladderInfo.CurrentMatch.Value.PicksBans.Except(banChoices);
             banChoices = banChoices.Concat(Enumerable.Repeat((BeatmapChoice?)null, (ladderInfo.CurrentMatch.Value.Round.Value?.BanCount.Value ?? 2) * 2 - banChoices.Length)).ToArray();
 
-            var pickDetail = new MapDetailContent("选图");
+            var firstHalfPickDetail = new MapDetailContent("上半场");
+            var secondHalfPickDetail = new MapDetailContent("下半场");
 
-            int pickMapCount = ladderInfo.CurrentMatch.Value.Round.Value.BestOf.Value - 1;
+            int halfMapCount = (ladderInfo.CurrentMatch.Value.Round.Value?.BestOf.Value - 1) / 2 ?? 99;
 
-            var pickChoice = remainChoices.Take(pickMapCount)
-                                          // 往后面填充null
-                                          .Concat(Enumerable.Repeat((BeatmapChoice?)null, pickMapCount - remainChoices.Take(pickMapCount).Count()));
+            var firstHalfPickChoice = remainChoices.Take(halfMapCount).Concat(Enumerable.Repeat((BeatmapChoice?)null, halfMapCount - remainChoices.Take(halfMapCount).Count()));
+            var secondHalfPickChoice = remainChoices.Skip(halfMapCount).Take(halfMapCount)
+                                                    .Concat(Enumerable.Repeat((BeatmapChoice?)null, halfMapCount - remainChoices.Skip(halfMapCount).Take(halfMapCount).Count()));
 
             mapContentContainer.Add(banMapDetail);
             mapContentContainer.Add(createDivideLine());
-            mapContentContainer.Add(pickDetail);
+            mapContentContainer.Add(firstHalfPickDetail);
             mapContentContainer.Add(createDivideLine());
+            mapContentContainer.Add(secondHalfPickDetail);
             mapContentContainer.Add(createDivideLine());
+
             var TBMap = ladderInfo.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(map => map.Mods == "TB");
 
             if (TBMap != null)
@@ -263,7 +266,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             Scheduler.Add(() =>
             {
                 banMapDetail.UpdateBeatmap(banChoices);
-                pickDetail.UpdateBeatmap(pickChoice);
+                firstHalfPickDetail.UpdateBeatmap(firstHalfPickChoice);
+                secondHalfPickDetail.UpdateBeatmap(secondHalfPickChoice);
 
                 Scheduler.Add(() =>
                 {
