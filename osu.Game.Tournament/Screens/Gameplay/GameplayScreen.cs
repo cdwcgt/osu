@@ -656,17 +656,33 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
             public void Launch()
             {
+                double delayTime = 0;
+                bool clockWise = true;
+
                 foreach (var player in InternalChildren.OfType<PlayerWindow>())
                 {
-                    player.FlyingLaunch();
+                    using (player.BeginDelayedSequence(delayTime))
+                    {
+                        player.FlyingLaunch(clockWise);
+                    }
+
+                    delayTime += 300;
+                    clockWise = !clockWise;
                 }
             }
 
             public void Reset()
             {
+                double delayTime = 0;
+
                 foreach (var player in InternalChildren.OfType<PlayerWindow>())
                 {
-                    player.Reset();
+                    using (player.BeginDelayedSequence(delayTime))
+                    {
+                        player.Reset();
+                    }
+
+                    delayTime += 300;
                 }
             }
 
@@ -717,6 +733,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
                         {
                             new PlayerWindow($"{TournamentGame.TOURNAMENT_CLIENT_NAME}{clientIndex}")
                             {
+                                Anchor = Anchor.Centre,
+                                Origin = Anchor.Centre,
                                 RelativeSizeAxes = Axes.Both,
                             }
                         };
@@ -729,15 +747,15 @@ namespace osu.Game.Tournament.Screens.Gameplay
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Height = 0.5f,
-                                Anchor = Anchor.TopCentre,
-                                Origin = Anchor.TopCentre,
+                                RelativeAnchorPosition = new Vector2(0.25f, 0.5f),
+                                Origin = Anchor.Centre,
                             },
                             new PlayerWindow($"{TournamentGame.TOURNAMENT_CLIENT_NAME}{clientIndex}")
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Height = 0.5f,
-                                Anchor = Anchor.BottomCentre,
-                                Origin = Anchor.BottomCentre,
+                                RelativeAnchorPosition = new Vector2(0.75f, 0.5f),
+                                Origin = Anchor.Centre,
                             }
                         };
                         break;
@@ -750,24 +768,24 @@ namespace osu.Game.Tournament.Screens.Gameplay
                                 RelativeSizeAxes = Axes.Both,
                                 Width = 0.5f,
                                 Height = 0.5f,
-                                Anchor = Anchor.TopCentre,
-                                Origin = Anchor.TopCentre,
+                                RelativeAnchorPosition = new Vector2(0.5f, 0.25f),
+                                Origin = Anchor.Centre,
                             },
                             new PlayerWindow($"{TournamentGame.TOURNAMENT_CLIENT_NAME}{clientIndex++}")
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Width = 0.5f,
                                 Height = 0.5f,
-                                Anchor = Anchor.BottomLeft,
-                                Origin = Anchor.BottomLeft,
+                                RelativeAnchorPosition = new Vector2(0.25f, 0.75f),
+                                Origin = Anchor.Centre,
                             },
                             new PlayerWindow($"{TournamentGame.TOURNAMENT_CLIENT_NAME}{clientIndex}")
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Width = 0.5f,
                                 Height = 0.5f,
-                                Anchor = Anchor.BottomRight,
-                                Origin = Anchor.BottomRight,
+                                RelativeAnchorPosition = new Vector2(0.75f, 0.75f),
+                                Origin = Anchor.Centre,
                             },
                         };
                         break;
@@ -780,32 +798,32 @@ namespace osu.Game.Tournament.Screens.Gameplay
                                 RelativeSizeAxes = Axes.Both,
                                 Width = 0.5f,
                                 Height = 0.5f,
-                                Anchor = Anchor.TopLeft,
-                                Origin = Anchor.TopLeft,
+                                RelativeAnchorPosition = new Vector2(0.25f, 0.25f),
+                                Origin = Anchor.Centre,
                             },
                             new PlayerWindow($"{TournamentGame.TOURNAMENT_CLIENT_NAME}{clientIndex++}")
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Width = 0.5f,
                                 Height = 0.5f,
-                                Anchor = Anchor.TopRight,
-                                Origin = Anchor.TopRight,
+                                RelativeAnchorPosition = new Vector2(0.75f, 0.25f),
+                                Origin = Anchor.Centre,
                             },
                             new PlayerWindow($"{TournamentGame.TOURNAMENT_CLIENT_NAME}{clientIndex++}")
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Width = 0.5f,
                                 Height = 0.5f,
-                                Anchor = Anchor.BottomLeft,
-                                Origin = Anchor.BottomLeft,
+                                RelativeAnchorPosition = new Vector2(0.25f, 0.75f),
+                                Origin = Anchor.Centre,
                             },
                             new PlayerWindow($"{TournamentGame.TOURNAMENT_CLIENT_NAME}{clientIndex}")
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Width = 0.5f,
                                 Height = 0.5f,
-                                Anchor = Anchor.BottomRight,
-                                Origin = Anchor.BottomRight,
+                                RelativeAnchorPosition = new Vector2(0.75f, 0.75f),
+                                Origin = Anchor.Centre,
                             },
                         };
                         break;

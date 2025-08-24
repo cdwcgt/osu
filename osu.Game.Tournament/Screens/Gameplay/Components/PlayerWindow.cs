@@ -14,11 +14,15 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         {
         }
 
-        public void FlyingLaunch()
+        public void FlyingLaunch(bool clockWise)
         {
-            this.ScaleTo(0.2f, 5000, Easing.InOutSine);
-            this.MoveToOffset(new Vector2(0, -DrawHeight * 4), 5000, Easing.InOutSine);
-            this.RotateTo(720, 5000, Easing.InOutSine);
+            this.ScaleTo(0.9f, 1200, Easing.InQuint)
+                .RotateTo(180f * (clockWise ? 1 : -1), 1200, Easing.InQuint)
+                .MoveToOffset(new Vector2(0, -50), 1200, Easing.InQuint);
+
+            this.Delay(1200f)
+                .RotateTo(720f * (clockWise ? 1 : -1), 5000, Easing.OutQuint)
+                .MoveToOffset(new Vector2(0, -DrawHeight * 4), 5000, Easing.OutQuint);
         }
 
         public void Reset()
