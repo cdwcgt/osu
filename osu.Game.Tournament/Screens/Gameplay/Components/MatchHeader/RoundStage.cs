@@ -1,7 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System;
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
@@ -94,13 +94,11 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                 return;
             }
 
-            int pointToWin = currentMatch.Value.PointsToWin;
-            int score1 = team1Score.Value ?? 0;
-            int score2 = team2Score.Value ?? 0;
+            int beatOf = currentMatch.Value.Round.Value?.BestOf.Value ?? 0;
 
-            bool matchPoint = Math.Max(score1, score2) >= pointToWin - 1;
+            bool isTiebreaker = banPicks.Count(p => p.Type == ChoiceType.Pick) == beatOf;
 
-            if (!matchPoint)
+            if (!isTiebreaker)
             {
                 retract();
                 return;
@@ -108,18 +106,11 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
             extend();
 
-            bool isTiebreaker = score1 + score2 >= pointToWin * 2 - 2 && Math.Max(score1, score2) != pointToWin;
-
             if (isTiebreaker)
             {
                 fadeBackgroundColour(Color4Extensions.FromHex("#FFC300"));
                 fadeTextColour(Color4.Black);
-                Text.Text = "决 胜 局";
-            }
-            else
-            {
-                fadeBackgroundColour(TournamentGame.GetTeamColour(score1 > score2 ? TeamColour.Red : TeamColour.Blue));
-                Text.Text = "赛 点";
+                Text.Text = "加 时 赛";
             }
         }
 
