@@ -39,7 +39,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
         {
             RelativeSizeAxes = Axes.X;
             Height = 24;
-            Margin = new MarginPadding { Top = 60 };
+            Margin = new MarginPadding { Top = 55 };
 
             MatchRoundDisplay matchRoundDisplay = new MatchRoundDisplay();
 
