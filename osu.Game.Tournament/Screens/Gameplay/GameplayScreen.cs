@@ -181,12 +181,22 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     Text = "Toggle warmup",
                     Action = () => warmup.Toggle()
                 },
-                //new TourneyButton
-                //{
-                //    RelativeSizeAxes = Axes.X,
-                //    Text = "Toggle chat",
-                //    Action = () => { State.Value = State.Value == TourneyState.Idle ? TourneyState.Playing : TourneyState.Idle; }
-                //},
+                new TourneyButton
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Text = "Toggle chat",
+                    Action = () =>
+                    {
+                        if (!chat.IsPresent)
+                        {
+                            chat.Expand();
+                        }
+                        else
+                        {
+                            chat.Contract();
+                        }
+                    }
+                },
                 new SettingsSlider<int>
                 {
                     LabelText = $"{(OperatingSystem.IsWindows() ? "Player Area" : "Chroma")} width",
