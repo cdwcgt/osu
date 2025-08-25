@@ -33,7 +33,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
         [BackgroundDependencyLoader]
         private void load(TextureStore textures)
         {
-            AutoSizeAxes = Axes.Both;
+            AutoSizeAxes = Axes.X;
+            RelativeSizeAxes = Axes.Y;
 
             Anchor = Anchor.CentreLeft;
             Origin = Anchor.CentreLeft;
@@ -47,20 +48,22 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
             InternalChild = new Container
             {
-                AutoSizeAxes = Axes.Both,
+                AutoSizeAxes = Axes.X,
+                RelativeSizeAxes = Axes.Y,
                 Children = new Drawable[]
                 {
                     new FillFlowContainer
                     {
-                        AutoSizeAxes = Axes.Both,
+                        AutoSizeAxes = Axes.X,
+                        RelativeSizeAxes = Axes.Y,
                         Direction = FillDirection.Horizontal,
                         Spacing = new Vector2(10, 0),
                         Children = new Drawable[]
                         {
                             new Container
                             {
-                                Origin = anchor,
-                                Anchor = anchor,
+                                Origin = colour == TeamColour.Red ? Anchor.BottomLeft : Anchor.BottomRight,
+                                Anchor = colour == TeamColour.Red ? Anchor.BottomLeft : Anchor.BottomRight,
                                 AutoSizeAxes = Axes.Both,
                                 Children = new Drawable[]
                                 {

@@ -91,7 +91,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             {
                 new FillFlowContainer
                 {
-                    Height = 5f,
+                    Height = 7f,
                     AutoSizeAxes = Axes.X,
                     Direction = FillDirection.Horizontal,
                     Anchor = anchor,
