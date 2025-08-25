@@ -67,10 +67,6 @@ namespace osu.Game.Tournament.Screens.MapPool
                     Texture = store.Get("Videos/mappool"),
                     FillMode = FillMode.Fit,
                 },
-                new MatchHeader
-                {
-                    ShowScores = true,
-                },
                 mapFlows = new FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>>
                 {
                     Y = 160,

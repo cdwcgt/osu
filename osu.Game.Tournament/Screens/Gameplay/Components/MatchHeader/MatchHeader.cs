@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -124,5 +125,53 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
             updateDisplay();
         }
+
+        #region Proxy
+
+        private Container? defaultProxyTarget;
+        private Container? currentProxyTarget;
+        private Drawable? proxy;
+
+        public Drawable ProxyToContainer(Container c)
+        {
+            if (currentProxyTarget != null)
+                throw new InvalidOperationException("Previous proxy usage was not returned");
+
+            if (defaultProxyTarget == null || proxy == null)
+                throw new InvalidOperationException($"{nameof(SetupDefaultContainer)} must be called first");
+
+            currentProxyTarget = c;
+
+            defaultProxyTarget.Remove(proxy, false);
+            currentProxyTarget.Add(proxy);
+            return proxy;
+        }
+
+        public void ReturnProxy()
+        {
+            if (currentProxyTarget == null)
+                return;
+
+            if (defaultProxyTarget == null)
+                return;
+
+            if (proxy == null)
+                return;
+
+            currentProxyTarget.Remove(proxy, false);
+            currentProxyTarget = null;
+
+            defaultProxyTarget.Add(proxy);
+        }
+
+        public void SetupDefaultContainer(Container container)
+        {
+            defaultProxyTarget = container;
+
+            defaultProxyTarget.Add(this);
+            defaultProxyTarget.Add(proxy = CreateProxy());
+        }
+
+        #endregion
     }
 }

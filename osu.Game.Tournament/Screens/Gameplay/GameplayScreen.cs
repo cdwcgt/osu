@@ -28,7 +28,7 @@ using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Screens.Gameplay
 {
-    public partial class GameplayScreen : BeatmapInfoScreen
+    public partial class GameplayScreen : BeatmapInfoScreen, IScreenNeedHideBeforeAction
     {
         private readonly BindableBool warmup = new BindableBool();
 
@@ -40,7 +40,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private PlayerArea redArea;
         private PlayerArea blueArea;
 
-        private MatchHeader header = null!;
+        private Container matchHeaderContainer = null!;
         private RoundInformationPreview roundPreview = null!;
 
         [Resolved]
@@ -51,6 +51,9 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         [Resolved]
         private TournamentMatchChatDisplay chat { get; set; } = null!;
+
+        [Resolved]
+        private MatchHeader header { get; set; } = null!;
 
         private Drawable chroma = null!;
 
@@ -86,7 +89,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     Texture = store.Get("Videos/gameplay"),
                     FillMode = FillMode.Fit,
                 },
-                header = new MatchHeader(),
+                matchHeaderContainer = new Container(),
                 withdrawTextContainer = new Container
                 {
                     Anchor = Anchor.TopCentre,
@@ -655,6 +658,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
             }
         }
 
+        public void BeforeHide()
+        {
+            header.ReturnProxy();
+        }
+
         public override void Hide()
         {
             if (roundPreviewShow)
@@ -664,6 +672,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
             scheduledScreenChange?.Cancel();
             scheduledShowRoundPreview?.Cancel();
+
             base.Hide();
         }
 
@@ -679,6 +688,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
                         scheduledHideRoundPreview = Scheduler.AddDelayed(HideRoundPreview, 30000);
                 }, 5000);
             }
+
+            header.ProxyToContainer(matchHeaderContainer);
 
             base.Show();
         }

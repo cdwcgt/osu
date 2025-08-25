@@ -19,6 +19,7 @@ using osu.Game.Tournament.Screens;
 using osu.Game.Tournament.Screens.Drawings;
 using osu.Game.Tournament.Screens.Editors;
 using osu.Game.Tournament.Screens.Gameplay;
+using osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader;
 using osu.Game.Tournament.Screens.Ladder;
 using osu.Game.Tournament.Screens.MapPool;
 using osu.Game.Tournament.Screens.Schedule;
@@ -50,6 +51,9 @@ namespace osu.Game.Tournament
         [Cached]
         private TournamentMatchChatDisplay chat = new TournamentMatchChatDisplay();
 
+        [Cached]
+        private MatchHeader matchHeader = new MatchHeader();
+
         private Container chatContainer = null!;
         private FillFlowContainer buttons = null!;
 
@@ -61,12 +65,13 @@ namespace osu.Game.Tournament
         [BackgroundDependencyLoader]
         private void load()
         {
+            Container mainConatiner;
             InternalChild = new RefCountedBackbufferProvider
             {
                 RelativeSizeAxes = Axes.Both,
                 Children = new Drawable[]
                 {
-                    new Container
+                    mainConatiner = new Container
                     {
                         RelativeSizeAxes = Axes.Y,
                         X = CONTROL_AREA_WIDTH,
@@ -181,6 +186,8 @@ namespace osu.Game.Tournament
                 drawable.Hide();
 
             SetScreen(typeof(SetupScreen));
+
+            matchHeader.SetupDefaultContainer(mainConatiner);
         }
 
         private float depth;
@@ -221,6 +228,11 @@ namespace osu.Game.Tournament
             var lastScreen = currentScreen;
             currentScreen = target;
 
+            if (lastScreen is IScreenNeedHideBeforeAction beforeHideScreen)
+            {
+                beforeHideScreen.BeforeHide();
+            }
+
             if (currentScreen.ChildrenOfType<TourneyVideo>().FirstOrDefault()?.VideoAvailable == true)
             {
                 video.FadeOut(200);
@@ -242,15 +254,18 @@ namespace osu.Game.Tournament
                 case MapPoolScreen:
                     chatContainer.FadeIn(TournamentScreen.FADE_DELAY);
                     chatContainer.ResizeHeightTo(142, TournamentScreen.FADE_DELAY, Easing.In);
+                    matchHeader.FadeIn(TournamentScreen.FADE_DELAY);
                     break;
 
                 case GameplayScreen:
                     chatContainer.FadeIn(TournamentScreen.FADE_DELAY);
                     chatContainer.ResizeHeightTo(82, TournamentScreen.FADE_DELAY, Easing.In);
+                    matchHeader.FadeIn(TournamentScreen.FADE_DELAY);
                     break;
 
                 default:
                     chatContainer.FadeOut(TournamentScreen.FADE_DELAY);
+                    matchHeader.FadeOut(TournamentScreen.FADE_DELAY);
                     break;
             }
 
