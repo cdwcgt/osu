@@ -700,6 +700,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
             private LadderInfo ladder { get; set; } = null!;
 
             private TeamColour teamColour;
+            private Container? loseTextContainer;
 
             public PlayerArea(TeamColour teamColour)
             {
@@ -727,6 +728,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     delayTime += 300;
                     clockWise = !clockWise;
                 }
+
+                loseTextContainer?.RotateTo(150).Delay(delayTime + 1200).FadeIn(1000).RotateTo(0, 1000, Easing.OutCubic);
             }
 
             public void Reset()
@@ -742,6 +745,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
                     delayTime += 300;
                 }
+
+                loseTextContainer?.Delay(delayTime + 1200).FadeOut(300);
             }
 
             private void performLayout(ValueChangedEvent<int> playerCount)
@@ -779,6 +784,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                             break;
                     }
 
+                    AddInternal(loseTextSprite());
                     return;
                 }
 
@@ -889,7 +895,35 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     default:
                         throw new ArgumentException("Not Support this player count");
                 }
+
+                AddInternal(loseTextSprite());
             }
+
+            private Container loseTextSprite() => loseTextContainer = new Container
+            {
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
+                RelativeSizeAxes = Axes.Both,
+                Alpha = 0,
+                Children = new Drawable[]
+                {
+                    new TournamentSpriteText
+                    {
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
+                        Font = OsuFont.Torus.With(size: 187, weight: FontWeight.Bold),
+                        Text = "输了...",
+                        Colour = TournamentGame.GetTeamColour(teamColour)
+                    },
+                    new TournamentSpriteText
+                    {
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
+                        Font = OsuFont.Torus.With(size: 175, weight: FontWeight.Bold),
+                        Text = "输了...",
+                    },
+                }
+            };
         }
     }
 }

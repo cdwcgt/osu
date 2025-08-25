@@ -1,6 +1,7 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -20,6 +21,7 @@ namespace osu.Game.Tournament.Screens
 
         private Sprite supporterSprite = null!;
         private Sprite logoSprite = null!;
+        private Sprite redPig = null!;
 
         protected virtual bool ShowLogo => false;
 
@@ -102,11 +104,22 @@ namespace osu.Game.Tournament.Screens
                         Alpha = 0,
                         Depth = float.MinValue,
                     },
+                    redPig = new Sprite
+                    {
+                        Name = "red pig",
+                        RelativeSizeAxes = Axes.Both,
+                        Texture = store.Get("传奇红猪嗜灭警告"),
+                        FillMode = FillMode.Fit,
+                        Alpha = 0,
+                        Depth = float.MinValue,
+                    }
                 ]);
 
                 supporterSprite.FadeIn(200).Then(10000).FadeOut(200).Then(10000).Loop();
                 logoSprite.FadeOut(200).Then(10000).FadeIn(200).Then(10000).Loop();
             }
+
+            banPicks.BindCollectionChanged((_, _) => updateDisplay());
         }
 
         private void setMods(LegacyMods mods, string acronym)
@@ -114,6 +127,51 @@ namespace osu.Game.Tournament.Screens
             SongBar.Mods = mods;
             SetModAcronym(acronym);
         }
+
+        private readonly BindableList<BeatmapChoice> banPicks = new BindableList<BeatmapChoice>();
+
+        protected override void CurrentMatchChanged(ValueChangedEvent<TournamentMatch?> match)
+        {
+            base.CurrentMatchChanged(match);
+
+            if (!ShowLogo)
+                return;
+
+            if (match.OldValue != null)
+            {
+                banPicks.UnbindFrom(match.OldValue.PicksBans);
+            }
+
+            if (match.NewValue != null)
+            {
+                banPicks.BindTo(match.NewValue.PicksBans);
+            }
+        }
+
+        private void updateDisplay() => Scheduler.AddOnce(() =>
+        {
+            if (!ShowLogo)
+                return;
+
+            int beatOf = CurrentMatch.Value?.Round.Value?.BestOf.Value ?? -1;
+
+            if (beatOf == -1)
+            {
+                hideRedPig();
+                return;
+            }
+
+            if (banPicks.Count(p => p.Type == ChoiceType.Pick) > (beatOf - 1) / 2)
+            {
+                redPig.FadeIn(100);
+            }
+            else
+            {
+                redPig.FadeOut(100);
+            }
+
+            void hideRedPig() => redPig.FadeOut(100);
+        });
 
         protected virtual void SetModAcronym(string acronym) { }
 

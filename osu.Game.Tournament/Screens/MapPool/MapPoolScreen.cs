@@ -51,7 +51,7 @@ namespace osu.Game.Tournament.Screens.MapPool
         [BackgroundDependencyLoader]
         private void load(MatchIPCInfo ipc, TextureStore store)
         {
-            InternalChildren = new Drawable[]
+            AddRangeInternal(new Drawable[]
             {
                 new TourneyVideo("mappool")
                 {
@@ -161,7 +161,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                         },
                     },
                 }
-            };
+            });
 
             ipc.Beatmap.BindValueChanged(beatmapChanged);
 
@@ -193,6 +193,9 @@ namespace osu.Game.Tournament.Screens.MapPool
             //         modifyWinnerMapText.Text = $"当前选择的地图为: {beatmapInformation}";
             //     }
             // });
+
+            RemoveInternal(ControlPanel, true);
+            RemoveInternal(SongBar, true);
         }
 
         private Bindable<bool>? splitMapPoolByMods;
