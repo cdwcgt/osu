@@ -67,6 +67,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                             Spacing = new Vector2(2, 0),
                             Children = new Drawable[]
                             {
+                                
                                 teamText = new TournamentSpriteText
                                 {
                                     Anchor = anchor,
@@ -180,6 +181,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
         {
             double diff = (currentTeamCoin.Value ?? 0) - (opponentTeamCoin.Value ?? 0);
             stateIconContainer.Child = getIconByDiff(diff);
+            stateIconContainer.FadeIn(500).Then().FadeOut(500).Loop();
         });
 
         private Drawable getIcon(string icon) => new Sprite
