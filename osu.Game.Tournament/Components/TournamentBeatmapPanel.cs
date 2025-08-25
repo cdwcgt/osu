@@ -320,7 +320,7 @@ namespace osu.Game.Tournament.Components
         private bool centerText = false;
         private FillFlowContainer information = null!;
         private NoUnloadBeatmapSetCover beatmapCover = null!;
-        private Box randomBackground;
+        private Box randomBackground = null!;
 
         protected virtual void UpdateState()
         {

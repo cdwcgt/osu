@@ -185,6 +185,9 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
             if (currentMatchFinished)
             {
+                // other component use Score but no getTeamScore.
+                updateScoreFromApi();
+
                 if (pendingBindChoice != null)
                 {
                     pendingBindChoice.Scores[TeamColour.Red] = getTeamScore(TeamColour.Red, true).Sum(CalculateModMultiplier);
@@ -280,6 +283,12 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
             });
 
             currentMatchFinished = true;
+        }
+
+        private void updateScoreFromApi()
+        {
+            Score1.Value = getTeamScore(TeamColour.Red, true).Sum(CalculateModMultiplier);
+            Score2.Value = getTeamScore(TeamColour.Blue, true).Sum(CalculateModMultiplier);
         }
 
         protected override IEnumerable<PlayerScore> GetTeamScore(TeamColour colour) => getTeamScore(colour);

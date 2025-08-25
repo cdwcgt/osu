@@ -15,7 +15,7 @@ namespace osu.Game.Tournament.Online.Requests.Responses
         [JsonProperty("match")]
         public MatchSlotInfo SlotInfo { get; set; } = null!;
 
-        [JsonProperty("score")]
+        [JsonProperty("total_score")]
         public long Score { get; set; }
 
         [JsonProperty("mods")]
