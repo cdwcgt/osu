@@ -152,9 +152,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                                         },
                                         diffCounter = new RollingMultDiffNumberContainer
                                         {
-                                            Anchor = anchor,
-                                            Origin = anchor,
-                                            Colour = TournamentGame.GetTeamColour(colour).Lighten(0.3f),
+                                            Anchor = flip ? Anchor.CentreLeft : Anchor.CentreRight,
+                                            Origin = flip ? Anchor.CentreLeft : Anchor.CentreRight,
+                                            Colour = TournamentGame.GetTeamColour(colour).Lighten(0.5f),
                                         }
                                     }
                                 }
@@ -260,10 +260,20 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         {
             diff ??= calculateDiffFromIpc();
 
+            if (diff == 0)
+            {
+                diffCounter.FadeOut(100);
+            }
+            else
+            {
+                diffCounter.FadeIn(100);
+            }
+
             if (animate && AllowAnimation)
             {
                 diffCounter.Current.Value = diff.Value;
                 diffBar.ResizeWidthTo(calculateBarWidth(diff.Value), 400, Easing.OutQuint);
+
                 return;
             }
 
@@ -318,7 +328,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             protected override OsuSpriteText CreateSpriteText() => base.CreateSpriteText().With(t =>
             {
-                t.Font = OsuFont.Torus.With(size: 18, weight: FontWeight.Regular);
+                t.Font = OsuFont.Torus.With(size: 19);
             });
         }
 
@@ -329,7 +339,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             protected override Easing RollingEasing => Easing.Out;
 
             protected override OsuSpriteText CreateSpriteText() => base.CreateSpriteText()
-                                                                       .With(s => s.Font = OsuFont.Torus.With(size: 23));
+                                                                       .With(s => s.Font = OsuFont.Torus.With(size: 24));
 
             protected override LocalisableString FormatCount(double count) => $"${count:N2}";
         }
