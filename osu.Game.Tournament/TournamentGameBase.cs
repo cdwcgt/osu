@@ -39,7 +39,6 @@ namespace osu.Game.Tournament
         private MatchIPCInfo ipc = null!;
         private BeatmapLookupCache beatmapCache = null!;
         private MatchListener listener = null!;
-        private RoundInfo roundInfo = null!;
 
         [Resolved]
         private GameHost host { get; set; } = null!;
@@ -218,9 +217,6 @@ namespace osu.Game.Tournament
 
                 dependencies.Cache(listener = new MatchListener());
                 Add(listener);
-
-                dependencies.Cache(roundInfo = new RoundInfo());
-                Add(roundInfo);
 
                 bracketLoadTaskCompletionSource.SetResult(true);
 

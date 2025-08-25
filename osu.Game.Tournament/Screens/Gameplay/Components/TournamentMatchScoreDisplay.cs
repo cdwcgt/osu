@@ -17,9 +17,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private bool invertTextColor;
         private readonly Colour4 black = Colour4.FromHex("1f1f1f");
 
-        [Resolved]
-        private RoundInfo roundInfo { get; set; } = null!;
-
         public readonly BindableBool ShowSuccess = new BindableBool();
 
         [Resolved]

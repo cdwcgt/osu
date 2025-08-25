@@ -238,7 +238,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                 return new PlayerScore
                 {
                     OnlineId = s.UserID,
-                    Score = s.Score,
+                    Score = s.TotalScore,
                     Mods = playerMods
                 };
             });
@@ -270,12 +270,12 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                     {
                         new MatchScore
                         {
-                            Score = redScore,
+                            TotalScore = redScore,
                             UserID = redOnlineId,
                         },
                         new MatchScore
                         {
-                            Score = blueScore,
+                            TotalScore = blueScore,
                             UserID = blueOnlineId,
                         }
                     }
