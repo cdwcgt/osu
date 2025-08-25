@@ -6,10 +6,9 @@ using System.Linq;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Game.Graphics;
 using osu.Game.Tournament.Models;
+using osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader;
 using osuTK;
-using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Components
 {
@@ -30,10 +29,16 @@ namespace osu.Game.Tournament.Components
                 {
                     AutoSizeAxes = Axes.Both,
                     Direction = FillDirection.Vertical,
-                    Spacing = new Vector2(15),
+                    Spacing = new Vector2(10),
                     Children = new Drawable[]
                     {
                         new DrawableTeamTitleWithHeader(team, colour),
+                        new TeamDisplayNote(TeamColour.Blue)
+                        {
+                            Text = team?.Note.Value ?? string.Empty,
+                            Scale = new Vector2(2f),
+                            ShareAnchor = Anchor.TopLeft,
+                        },
                         new FillFlowContainer
                         {
                             AutoSizeAxes = Axes.Both,
@@ -46,13 +51,15 @@ namespace osu.Game.Tournament.Components
                                 {
                                     Direction = FillDirection.Vertical,
                                     AutoSizeAxes = Axes.Both,
-                                    ChildrenEnumerable = players.Take(split).Select(createPlayerText),
+                                    Spacing = new Vector2(5),
+                                    ChildrenEnumerable = players.Take(split).Select(createPlayerCard),
                                 },
                                 new FillFlowContainer
                                 {
                                     Direction = FillDirection.Vertical,
                                     AutoSizeAxes = Axes.Both,
-                                    ChildrenEnumerable = players.Skip(split).Select(createPlayerText),
+                                    Spacing = new Vector2(5),
+                                    ChildrenEnumerable = players.Skip(split).Select(createPlayerCard),
                                 },
                             }
                         },
@@ -60,13 +67,8 @@ namespace osu.Game.Tournament.Components
                 },
             };
 
-            TournamentSpriteText createPlayerText(TournamentUser p) =>
-                new TournamentSpriteText
-                {
-                    Text = p.Username,
-                    Font = OsuFont.Torus.With(size: 24, weight: FontWeight.SemiBold),
-                    Colour = Color4.White,
-                };
+            TeamPlayerCard createPlayerCard(TournamentUser p) =>
+                new TeamPlayerCard(p.ToAPIUser());
         }
     }
 }
