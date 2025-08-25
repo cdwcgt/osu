@@ -172,7 +172,7 @@ namespace osu.Game.Tournament.Tests
             },
             Team2Coin =
             {
-                Value = 200f
+                Value = 0f
             }
         };
 

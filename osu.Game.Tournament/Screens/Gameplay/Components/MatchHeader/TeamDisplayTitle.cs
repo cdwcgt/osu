@@ -19,18 +19,30 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
     {
         private readonly TournamentTeam? team;
         private readonly TeamColour teamColour;
-        private readonly TournamentSpriteText teamText;
 
-        private readonly Container stateIconContainer;
-        private readonly TournamentSpriteText teamIdText;
-        private readonly Box teamIdBackground;
+        private TournamentSpriteText teamText = null!;
+        private Container stateIconContainer = null!;
+        private TournamentSpriteText teamIdText = null!;
+        private Box teamIdBackground = null!;
+        private Sprite pigIcon = null!;
 
         [Resolved]
         private TextureStore store { get; set; } = null!;
 
         public TeamDisplayTitle(TournamentTeam? team, TeamColour teamColour)
         {
-            var anchor = teamColour == TeamColour.Blue ? Anchor.CentreRight : Anchor.CentreLeft;
+            this.team = team;
+            this.teamColour = teamColour;
+        }
+
+        private readonly Bindable<double?> currentTeamCoin = new Bindable<double?>();
+        private readonly Bindable<double?> opponentTeamCoin = new Bindable<double?>();
+        private TeamDisplayNote teamNote = null!;
+
+        [BackgroundDependencyLoader]
+        private void load(LadderInfo ladder, TextureStore store)
+        {
+            var anchor = teamColour == TeamColour.Blue ? Anchor.CentreLeft : Anchor.CentreRight;
 
             AutoSizeAxes = Axes.X;
 
@@ -49,8 +61,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                         },
                         new Box
                         {
-                            Anchor = anchor,
-                            Origin = anchor,
+                            Anchor = teamColour == TeamColour.Blue ? Anchor.CentreRight : Anchor.CentreLeft,
+                            Origin = teamColour == TeamColour.Blue ? Anchor.CentreRight : Anchor.CentreLeft,
                             RelativeSizeAxes = Axes.Y,
                             Width = 10,
                             Colour = TournamentGame.GetTeamColour(teamColour)
@@ -59,6 +71,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                         {
                             Anchor = anchor,
                             Origin = anchor,
+                            LayoutDuration = 100,
                             AutoSizeAxes = Axes.Both,
                             Direction = FillDirection.Horizontal,
                             Margin = teamColour == TeamColour.Blue
@@ -67,14 +80,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                             Spacing = new Vector2(2, 0),
                             Children = new Drawable[]
                             {
-                                
-                                teamText = new TournamentSpriteText
-                                {
-                                    Anchor = anchor,
-                                    Origin = anchor,
-                                    Font = OsuFont.GetFont(size: 20, weight: FontWeight.Bold),
-                                    Colour = Color4.Black,
-                                },
                                 new FillFlowContainer
                                 {
                                     Anchor = anchor,
@@ -115,8 +120,23 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                                         },
                                     }
                                 },
+                                teamText = new TournamentSpriteText
+                                {
+                                    Anchor = anchor,
+                                    Origin = anchor,
+                                    Font = OsuFont.GetFont(size: 20, weight: FontWeight.Bold),
+                                    Colour = Color4.Black,
+                                },
+                                pigIcon = new Sprite
+                                {
+                                    Anchor = anchor,
+                                    Origin = anchor,
+                                    Texture = store.Get("pig"),
+                                    Size = new Vector2(13),
+                                    Alpha = 0,
+                                },
                             }
-                        }
+                        },
                     }
                 },
                 teamNote = new TeamDisplayNote(teamColour)
@@ -126,17 +146,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                 }
             };
 
-            this.team = team;
-            this.teamColour = teamColour;
-        }
-
-        private readonly Bindable<double?> currentTeamCoin = new Bindable<double?>();
-        private readonly Bindable<double?> opponentTeamCoin = new Bindable<double?>();
-        private readonly TeamDisplayNote teamNote;
-
-        [BackgroundDependencyLoader]
-        private void load(LadderInfo ladder)
-        {
             if (team != null)
             {
                 team.FullName.BindValueChanged(name => teamText.Text = name.NewValue, true);
@@ -182,6 +191,15 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
             double diff = (currentTeamCoin.Value ?? 0) - (opponentTeamCoin.Value ?? 0);
             stateIconContainer.Child = getIconByDiff(diff);
             stateIconContainer.FadeIn(500).Then().FadeOut(500).Loop();
+
+            if (diff < -35)
+            {
+                pigIcon.FadeIn();
+            }
+            else
+            {
+                pigIcon.FadeOut();
+            }
         });
 
         private Drawable getIcon(string icon) => new Sprite
