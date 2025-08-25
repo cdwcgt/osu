@@ -14,11 +14,22 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
     public partial class TeamDisplayNote : CompositeDrawable
     {
         private readonly TournamentSpriteText text;
+        private readonly Container shareContainer;
 
         public LocalisableString Text
         {
             get => text.Text;
             set => text.Text = value;
+        }
+
+        public Anchor ShareAnchor
+        {
+            get => shareContainer.Anchor;
+            set
+            {
+                shareContainer.Anchor = value;
+                shareContainer.Origin = value;
+            }
         }
 
         public TeamDisplayNote(TeamColour colour)
@@ -27,7 +38,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
             InternalChildren = new Drawable[]
             {
-                new Container
+                shareContainer = new Container
                 {
                     Anchor = colour == TeamColour.Red ? Anchor.BottomLeft : Anchor.BottomRight,
                     Origin = colour == TeamColour.Red ? Anchor.BottomLeft : Anchor.BottomRight,
@@ -49,6 +60,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                     Origin = colour == TeamColour.Red ? Anchor.TopRight : Anchor.TopLeft,
                     Margin = new MarginPadding
                     {
+                        Top = 4f,
                         Left = colour == TeamColour.Red ? 2f : 0f,
                         Bottom = 4f,
                         Right = colour == TeamColour.Red ? 0 : 2f,
