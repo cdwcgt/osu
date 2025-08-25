@@ -71,7 +71,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
         [BackgroundDependencyLoader]
         private void load(MatchIPCInfo matchIpc, TextureStore store)
         {
-            this.ipc = (matchIpc as MemoryBasedIPCWithMatchListener)!;
+            ipc = (matchIpc as MemoryBasedIPCWithMatchListener)!;
 
             AddRangeInternal(new Drawable[]
             {

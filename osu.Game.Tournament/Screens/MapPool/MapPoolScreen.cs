@@ -54,8 +54,6 @@ namespace osu.Game.Tournament.Screens.MapPool
         [BackgroundDependencyLoader]
         private void load(MatchIPCInfo ipc, TextureStore store)
         {
-            AlwaysPresent = true;
-
             InternalChildren = new Drawable[]
             {
                 new TourneyVideo("mappool")
@@ -303,11 +301,6 @@ namespace osu.Game.Tournament.Screens.MapPool
 
         protected override bool OnMouseDown(MouseDownEvent e)
         {
-            if (Alpha == 0)
-            {
-                return false;
-            }
-
             var maps = mapFlows.Select(f => f.FirstOrDefault(m => m.ReceivePositionalInputAt(e.ScreenSpaceMousePosition)));
             var map = maps.FirstOrDefault(m => m != null);
 

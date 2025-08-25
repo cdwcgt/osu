@@ -296,11 +296,11 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             updateScore(false, oldAmount);
             updateDiff(true, diff);
 
-            Scheduler.AddDelayed(() =>
+            using (BeginDelayedSequence(2000))
             {
                 updateScore(true);
                 updateDiff(true, 0);
-            }, 2000);
+            }
         });
 
         private partial class RollingMultDiffNumberContainer : RollingCounter<double>
