@@ -34,7 +34,7 @@ namespace osu.Game.Tournament
         public static readonly Color4 TEXT_COLOUR = Color4Extensions.FromHex("#fff");
 
         public const double WINNER_BONUS = 100;
-        public const double EXTRA_WINNER_BONUS_TB = 40;
+        public const double EXTRA_WINNER_BONUS_TB = 50;
 
         private Drawable heightWarning = null!;
 
