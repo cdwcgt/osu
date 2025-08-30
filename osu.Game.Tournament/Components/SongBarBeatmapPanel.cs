@@ -18,7 +18,7 @@ namespace osu.Game.Tournament.Components
         [Resolved]
         private SongBar songBar { get; set; } = null!;
 
-        private Bindable<ColourInfo?> songBarColour = new Bindable<ColourInfo?>();
+        private readonly Bindable<ColourInfo?> songBarColour = new Bindable<ColourInfo?>();
 
         public SongBarBeatmapPanel(RoundBeatmap beatmap, int? id = null, bool isMappool = false)
             : base(beatmap, id, isMappool)
