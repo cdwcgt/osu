@@ -23,6 +23,7 @@ using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
 using osu.Game.Rulesets;
 using osu.Game.Tournament.Models;
+using osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader;
 using osuTK;
 using osuTK.Graphics;
 
@@ -40,6 +41,7 @@ namespace osu.Game.Tournament.Components
         private SpriteIcon leftArrow = null!;
         private SpriteIcon rightArrow = null!;
         private Container modContainer = null!;
+        private Container noteContainer = null!;
 
         public Bindable<ColourInfo?> SongBarColour { get; } = new Bindable<ColourInfo?>();
 
@@ -90,6 +92,7 @@ namespace osu.Game.Tournament.Components
         protected FillFlowContainer Flow = null!;
 
         private string? modString;
+        private string? noteString;
 
         // Todo: This is a hack for https://github.com/ppy/osu-framework/issues/3617 since this container is at the very edge of the screen and potentially initially masked away.
         protected override bool ComputeIsMaskedAway(RectangleF maskingBounds) => false;
@@ -165,7 +168,6 @@ namespace osu.Game.Tournament.Components
                                 AutoSizeAxes = Axes.X,
                                 RelativeSizeAxes = Axes.Y,
                                 Direction = FillDirection.Horizontal,
-                                Masking = true,
 
                                 Children = new Drawable[]
                                 {
@@ -182,7 +184,12 @@ namespace osu.Game.Tournament.Components
                                                 Origin = Anchor.CentreLeft,
                                                 AutoSizeAxes = Axes.X,
                                                 RelativeSizeAxes = Axes.Y,
-                                                Padding = new MarginPadding { Left = 17f }
+                                                Margin = new MarginPadding { Left = 17f }
+                                            },
+                                            noteContainer = new Container
+                                            {
+                                                Anchor = Anchor.TopLeft,
+                                                Margin = new MarginPadding { Top = 13f, Left = 5f }
                                             },
                                             LeftDataContainer = new FillFlowContainer
                                             {
@@ -346,6 +353,21 @@ namespace osu.Game.Tournament.Components
                     Origin = Anchor.Centre,
                     RelativeSizeAxes = Axes.Y,
                     Width = 44f,
+                });
+            }
+
+            noteContainer.Clear();
+
+            noteString = Ladder.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(b => b.ID == beatmap?.OnlineID)?.Note;
+
+            if (!string.IsNullOrEmpty(noteString))
+            {
+                // 笑了
+                noteContainer.Add(new TeamDisplayNote(TeamColour.Blue)
+                {
+                    Text = noteString,
+                    Anchor = Anchor.BottomRight,
+                    Origin = Anchor.BottomRight,
                 });
             }
 

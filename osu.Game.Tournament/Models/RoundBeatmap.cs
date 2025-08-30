@@ -10,6 +10,8 @@ namespace osu.Game.Tournament.Models
         public int ID;
         public string Mods = string.Empty;
 
+        public string Note = string.Empty;
+
         [JsonProperty("BeatmapInfo")]
         public TournamentBeatmap? Beatmap;
     }

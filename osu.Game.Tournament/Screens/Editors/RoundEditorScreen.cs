@@ -8,6 +8,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Game.Graphics;
+using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
 using osu.Game.Online.API.Requests.Responses;
@@ -178,6 +179,7 @@ namespace osu.Game.Tournament.Screens.Editors
 
                     private readonly Bindable<string> mods = new Bindable<string>(string.Empty);
 
+                    private readonly Bindable<string> note = new Bindable<string>();
                     private readonly Container drawableContainer;
 
                     public RoundBeatmapRow(TournamentRound team, RoundBeatmap beatmap)
@@ -204,8 +206,9 @@ namespace osu.Game.Tournament.Screens.Editors
                                 Margin = new MarginPadding(5),
                                 Padding = new MarginPadding { Right = 160 },
                                 Spacing = new Vector2(1),
-                                Direction = FillDirection.Horizontal,
-                                AutoSizeAxes = Axes.Both,
+                                Direction = FillDirection.Full,
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
                                 Children = new Drawable[]
                                 {
                                     new SettingsNumberBox
@@ -225,6 +228,13 @@ namespace osu.Game.Tournament.Screens.Editors
                                     drawableContainer = new Container
                                     {
                                         Size = new Vector2(100, 70),
+                                    },
+                                    new LabelledTextBox
+                                    {
+                                        Label = "Note",
+                                        RelativeSizeAxes = Axes.X,
+                                        Margin = new MarginPadding { Horizontal = 5 },
+                                        Current = note,
                                     },
                                 }
                             },
@@ -293,6 +303,12 @@ namespace osu.Game.Tournament.Screens.Editors
                             {
                                 gameBase.PopulateFmBeatmapStarRating(Model.Beatmap);
                             }
+                        });
+
+                        note.Value = Model.Note;
+                        note.BindValueChanged(n =>
+                        {
+                            Model.Note = n.NewValue;
                         });
                     }
 
