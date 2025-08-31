@@ -26,6 +26,8 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
         [Resolved]
         protected LadderInfo Ladder { get; private set; } = null!;
 
+        public bool FetchDataFromMemory { get; set; }
+
         private readonly BindableInt playersPerTeam = new BindableInt
         {
             MinValue = 1,
@@ -75,6 +77,9 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
                     case AttachStatus.Attached:
                     {
+                        if (!FetchDataFromMemory)
+                            return;
+
                         try
                         {
                             var user = reader.GetTournamentUser();
@@ -100,7 +105,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                             player.Score.Value = gameplayData.Score;
                             continue;
                         }
-                        catch (InvalidOperationException e)
+                        catch (InvalidOperationException)
                         {
                             if (reader.Status == AttachStatus.UnAttached)
                             {

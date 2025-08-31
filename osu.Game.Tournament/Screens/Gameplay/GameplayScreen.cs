@@ -65,6 +65,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
             Depth = float.MinValue,
         };
 
+        protected override bool FetchDataFromMemoryThisScreen => true;
+
         private GameplaySongBar gameplaySongBar => (GameplaySongBar)SongBar;
 
         protected override bool ShowLogo => true;
