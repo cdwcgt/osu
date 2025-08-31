@@ -1,9 +1,12 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Game.Tournament.IPC;
+using osu.Game.Tournament.IPC.MemoryIPC;
 using osu.Game.Tournament.Models;
 
 namespace osu.Game.Tournament.Screens
@@ -12,8 +15,15 @@ namespace osu.Game.Tournament.Screens
     {
         public const double FADE_DELAY = 200;
 
+        protected virtual bool FetchDataFromMemoryThisScreen => false;
+
         [Resolved]
         protected LadderInfo LadderInfo { get; private set; } = null!;
+
+        [Resolved]
+        protected MatchIPCInfo ipc { get; private set; } = null!;
+
+        private MemoryBasedIPC? memoryIpc;
 
         protected TournamentScreen()
         {
@@ -23,8 +33,24 @@ namespace osu.Game.Tournament.Screens
             FillAspectRatio = 16 / 9f;
         }
 
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            if (ipc is MemoryBasedIPC memoryIpc)
+            {
+                this.memoryIpc = memoryIpc;
+            }
+        }
+
         public override void Hide() => this.FadeOut(FADE_DELAY);
 
-        public override void Show() => this.FadeIn(FADE_DELAY);
+        public override void Show()
+        {
+            if (OperatingSystem.IsWindows() && memoryIpc != null)
+                memoryIpc.FetchDataFromMemory = FetchDataFromMemoryThisScreen;
+
+            this.FadeIn(FADE_DELAY);
+        }
     }
 }
