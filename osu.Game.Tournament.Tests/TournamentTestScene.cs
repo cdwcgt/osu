@@ -68,6 +68,7 @@ namespace osu.Game.Tournament.Tests
                     FullName = { Value = "Japan" },
                     LastYearPlacing = { Value = 10 },
                     Seed = { Value = "#12" },
+                    Note = { Value = "super veryyyyy loooooooooooooooong note" },
                     SeedingResults =
                     {
                         new SeedingResult
