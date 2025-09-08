@@ -48,25 +48,27 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
             InternalChildren = new Drawable[]
             {
+                new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Colour = Color4.White
+                },
+                new Box
+                {
+                    Anchor = teamColour == TeamColour.Blue ? Anchor.CentreRight : Anchor.CentreLeft,
+                    Origin = teamColour == TeamColour.Blue ? Anchor.CentreRight : Anchor.CentreLeft,
+                    RelativeSizeAxes = Axes.Y,
+                    Width = 10,
+                    Colour = TournamentGame.GetTeamColour(teamColour)
+                },
                 new Container
                 {
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
                     AutoSizeAxes = Axes.X,
                     RelativeSizeAxes = Axes.Y,
                     Children = new Drawable[]
                     {
-                        new Box
-                        {
-                            RelativeSizeAxes = Axes.Both,
-                            Colour = Color4.White
-                        },
-                        new Box
-                        {
-                            Anchor = teamColour == TeamColour.Blue ? Anchor.CentreRight : Anchor.CentreLeft,
-                            Origin = teamColour == TeamColour.Blue ? Anchor.CentreRight : Anchor.CentreLeft,
-                            RelativeSizeAxes = Axes.Y,
-                            Width = 10,
-                            Colour = TournamentGame.GetTeamColour(teamColour)
-                        },
                         new FillFlowContainer
                         {
                             Anchor = anchor,
@@ -141,8 +143,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                 },
                 teamNote = new TeamDisplayNote(teamColour)
                 {
-                    Anchor = teamColour == TeamColour.Red ? Anchor.TopRight : Anchor.TopLeft,
-                    Origin = teamColour == TeamColour.Red ? Anchor.BottomRight : Anchor.BottomLeft
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.BottomCentre,
                 }
             };
 
