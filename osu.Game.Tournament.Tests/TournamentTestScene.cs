@@ -142,6 +142,7 @@ namespace osu.Game.Tournament.Tests
                     FlagName = { Value = "US" },
                     FullName = { Value = "United States" },
                     Seed = { Value = "#3" },
+                    Note = { Value = "Anothor veryyyyyyyy loooong note" },
                     Players =
                     {
                         new TournamentUser { Username = "Hello" },
