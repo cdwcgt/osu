@@ -586,8 +586,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
             if (!fromApi)
             {
-                fetchFailedWarning.FadeIn(100).RotateTo(365, 500, Easing.OutQuint).Then()
-                                  .RotateTo(360, 50, Easing.OutQuint).Then(10_000).FadeOut(100);
+                fetchFailedWarning.ScaleTo(1).FadeIn(100).RotateTo(365, 500, Easing.OutQuint).Then()
+                                  .RotateTo(360, 50, Easing.OutQuint).Then(10_000).ScaleTo(0, 100).FadeOut(100);
             }
         }
 
