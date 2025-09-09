@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.Versioning;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Logging;
 using osu.Framework.Threading;
 using osu.Game.Beatmaps.Legacy;
 using osu.Game.Online.API;
@@ -71,6 +72,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
             if (currentMatch == -1) return;
 
             currentlyListening.Value = true;
+            Logger.Log($"MatchListener:Listening to match {currentMatch}");
             FetchMatch();
         }
 
@@ -104,6 +106,8 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                 || abortedEventId == currentGameID)
                 return;
 
+            Logger.Log($"MatchListener:Match {currentMatch} aborted");
+
             currentlyPlaying.Value = false;
             abortedEventId = currentGameID;
             MatchAborted?.Invoke();
@@ -127,6 +131,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
                 currentlyPlaying.Value = false;
                 MatchFinished?.Invoke(false);
+                return;
             }
 
             if (!currentlyPlaying.Value || currentMatchFinished)
@@ -139,6 +144,8 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
             fetchTimeOutScheduleDelegate = Scheduler.AddDelayed(() =>
             {
+                Logger.Log($"MatchListener:Match {currentMatch} finished, timeout from api");
+
                 if (pendingBindChoice != null)
                 {
                     pendingBindChoice.Scores[TeamColour.Red] = getTeamScore(TeamColour.Red, true).Sum(CalculateModMultiplier);
@@ -313,9 +320,11 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                 {
                     // 理论上永远为true
                     currentMatchFinished = Events.Concat(newEvents).Any(e => e.Game?.Id == currentGameID && e.Game?.Scores.Count != 0);
+                    Logger.Log($"MatchListener: Match Finished event currentGameId {currentGameID}, currentMatchFinished {currentMatchFinished}");
                 }
                 else if (content.CurrentGameID != currentGameID)
                 {
+                    Logger.Log($"MatchListener: New Match started, GameID {content.CurrentGameID}, currentMatchFinished {currentMatchFinished}, currentlyPlaying {currentlyPlaying}");
                     currentMatchFinished = false;
                     currentlyPlaying.Value = true;
                     currentGameID = content.CurrentGameID.Value;
