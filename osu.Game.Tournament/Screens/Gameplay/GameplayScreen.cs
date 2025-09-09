@@ -36,6 +36,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private OsuButton warmupButton = null!;
         private MemoryBasedIPCWithMatchListener ipc = null!;
         private Sprite slotSprite = null!;
+        private Sprite fetchFailedWarning;
 
         private PlayerArea redArea;
         private PlayerArea blueArea;
@@ -175,6 +176,16 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     Anchor = Anchor.BottomCentre,
                     Origin = Anchor.BottomCentre,
                     Margin = new MarginPadding(13)
+                },
+                fetchFailedWarning = new Sprite
+                {
+                    Width = 370,
+                    Alpha = 0f,
+                    Margin = new MarginPadding { Bottom = 20 },
+                    Anchor = Anchor.BottomCentre,
+                    Origin = Anchor.BottomCentre,
+                    Texture = store.Get("fetch-failed"),
+                    FillMode = FillMode.Fit,
                 }
             });
 
@@ -572,6 +583,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
             }
 
             scoreDisplay.ShowSuccess.Value = true;
+
+            if (!fromApi)
+            {
+                fetchFailedWarning.FadeIn(100).RotateTo(365, 500, Easing.OutQuint).Then()
+                                  .RotateTo(360, 50, Easing.OutQuint).Then(10_000).FadeOut(100);
+            }
         }
 
         private void attemptGetResult()
