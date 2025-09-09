@@ -22,8 +22,26 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
         private readonly Bindable<string> currentRoundName = new Bindable<string>();
         private TournamentSpriteText roundName = null!;
         private TournamentSpriteText roundInfo = null!;
+        private Container coinContainer = null!;
 
         private readonly BindableList<BeatmapChoice> banPicks = new BindableList<BeatmapChoice>();
+
+        private bool showScores = true;
+
+        public bool ShowScores
+        {
+            get => showScores;
+            set
+            {
+                if (value == showScores)
+                    return;
+
+                showScores = value;
+
+                if (IsLoaded)
+                    updateDisplay();
+            }
+        }
 
         [BackgroundDependencyLoader]
         private void load(LadderInfo ladder)
@@ -33,7 +51,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
             InternalChildren = new Drawable[]
             {
-                new Container
+                coinContainer = new Container
                 {
                     Name = "multCoin",
                     Anchor = Anchor.BottomLeft,
@@ -113,6 +131,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
             roundName.Text = currentRoundName.Value ?? "Unknown Round";
 
             roundInfo.Text = $"Track {currentRound.Value.BestOf.Value - 1} + 1 回合{banPicks.Count(p => p.Type == ChoiceType.Pick)}";
+
+            coinContainer.FadeTo(ShowScores ? 1 : 0, 200);
         }
 
         public partial class MatchHeaderBackground : CompositeDrawable

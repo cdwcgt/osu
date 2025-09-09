@@ -16,6 +16,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
         private TeamScoreDisplay teamDisplay1 = null!;
         private TeamScoreDisplay teamDisplay2 = null!;
         private RoundStage roundStage = null!;
+        private MatchRoundDisplay matchRoundDisplay = null!;
 
         private bool showScores = true;
 
@@ -41,7 +42,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
             Height = 24;
             Margin = new MarginPadding { Top = 55 };
 
-            MatchRoundDisplay matchRoundDisplay = new MatchRoundDisplay();
+            matchRoundDisplay = new MatchRoundDisplay();
 
             Children = new Drawable[]
             {
@@ -89,6 +90,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
         private void updateDisplay()
         {
             roundStage.WarmUp.Value = !showScores;
+            matchRoundDisplay.ShowScores = showScores;
         }
 
         [Resolved]
