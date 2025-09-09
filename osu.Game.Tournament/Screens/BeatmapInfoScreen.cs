@@ -153,15 +153,17 @@ namespace osu.Game.Tournament.Screens
             if (!ShowLogo)
                 return;
 
-            int beatOf = CurrentMatch.Value?.Round.Value?.BestOf.Value ?? -1;
+            int bestOf = CurrentMatch.Value?.Round.Value?.BestOf.Value ?? -1;
 
-            if (beatOf == -1)
+            if (bestOf == -1)
             {
                 hideRedPig();
                 return;
             }
 
-            if (banPicks.Count(p => p.Type == ChoiceType.Pick) > (beatOf - 1) / 2)
+            int half = (bestOf - 1) / 2 % 2 == 0 ? bestOf : bestOf + 1;
+
+            if (banPicks.Count(p => p.Type == ChoiceType.Pick) > bestOf)
             {
                 redPig.FadeIn(100);
             }

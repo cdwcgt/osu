@@ -237,7 +237,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             var firstHalfPickDetail = new MapDetailContent("上半场");
             var secondHalfPickDetail = new MapDetailContent("下半场");
 
-            int halfMapCount = (ladderInfo.CurrentMatch.Value.Round.Value?.BestOf.Value - 1) / 2 ?? 99;
+            int? bestOf = ladderInfo.CurrentMatch.Value.Round.Value?.BestOf.Value - 1;
+
+            int halfMapCount = ((bestOf - 1) / 2 % 2 == 0 ? bestOf : bestOf + 1) ?? 99;
 
             var firstHalfPickChoice = remainChoices.Take(halfMapCount).Concat(Enumerable.Repeat((BeatmapChoice?)null, halfMapCount - remainChoices.Take(halfMapCount).Count()));
             var secondHalfPickChoice = remainChoices.Skip(halfMapCount).Take(halfMapCount)
