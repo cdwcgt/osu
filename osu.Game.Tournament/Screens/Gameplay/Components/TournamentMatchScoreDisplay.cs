@@ -6,7 +6,6 @@ using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Game.Screens.Play.HUD;
-using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
 
@@ -38,7 +37,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         [BackgroundDependencyLoader]
         private void load()
         {
-
             Team1Score.BindTo(ipc.Score1);
             Team2Score.BindTo(ipc.Score2);
         }

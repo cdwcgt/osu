@@ -48,6 +48,36 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             currentMatch.BindTo(Ladder.CurrentMatch);
 
             Expanded = true;
+
+            AddRangeInternal(new Drawable[]
+            {
+                background = new Box
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Alpha = 0f,
+                    Colour = Color4.Black
+                },
+                loading = new LoadingSpinner
+                {
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    Scale = new Vector2(0.5f),
+                },
+            });
+
+            WaitForResult.BindValueChanged(s =>
+            {
+                if (s.NewValue)
+                {
+                    background.FadeTo(0.4f, 300);
+                    loading.Show();
+                }
+                else
+                {
+                    background.FadeOut(300);
+                    loading.Hide();
+                }
+            });
         }
 
         private void matchChanged(ValueChangedEvent<TournamentMatch?> match)
