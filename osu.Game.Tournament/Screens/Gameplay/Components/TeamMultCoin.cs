@@ -176,7 +176,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             }
 
             ipc.MatchAborted += () => triggerAnimationWhenMatchFinished(coin.Value ?? 0, coin.Value ?? 0);
-            ipc.MatchFinished += _ => triggerAnimationWhenMatchFinished(coin.Value ?? 0, coin.Value ?? 0);
+            //ipc.MatchFinished += _ => triggerAnimationWhenMatchFinished(coin.Value ?? 0, coin.Value ?? 0);
 
             Scheduler.AddDelayed(() =>
             {
