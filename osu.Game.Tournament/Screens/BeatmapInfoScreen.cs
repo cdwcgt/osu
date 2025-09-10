@@ -161,9 +161,9 @@ namespace osu.Game.Tournament.Screens
                 return;
             }
 
-            int half = (bestOf - 1) / 2 % 2 == 0 ? bestOf : bestOf + 1;
+            int half = (bestOf - 1) / 2 % 2 == 0 ? bestOf / 2 : bestOf / 2 + 1;
 
-            if (banPicks.Count(p => p.Type == ChoiceType.Pick) > bestOf)
+            if (banPicks.Count(p => p.Type == ChoiceType.Pick) > half)
             {
                 redPig.FadeIn(100);
             }

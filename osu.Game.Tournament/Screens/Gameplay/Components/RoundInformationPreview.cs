@@ -239,11 +239,12 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             int? bestOf = ladderInfo.CurrentMatch.Value.Round.Value?.BestOf.Value - 1;
 
-            int halfMapCount = ((bestOf - 1) / 2 % 2 == 0 ? bestOf : bestOf + 1) ?? 99;
+            int firstHalfMapCount = (bestOf / 2 % 2 == 0 ? bestOf / 2 : bestOf / 2 + 1) ?? 99;
+            int secondHalfMapCount = bestOf - firstHalfMapCount ?? 0;
 
-            var firstHalfPickChoice = remainChoices.Take(halfMapCount).Concat(Enumerable.Repeat((BeatmapChoice?)null, halfMapCount - remainChoices.Take(halfMapCount).Count()));
-            var secondHalfPickChoice = remainChoices.Skip(halfMapCount).Take(halfMapCount)
-                                                    .Concat(Enumerable.Repeat((BeatmapChoice?)null, halfMapCount - remainChoices.Skip(halfMapCount).Take(halfMapCount).Count()));
+            var firstHalfPickChoice = remainChoices.Take(firstHalfMapCount).Concat(Enumerable.Repeat((BeatmapChoice?)null, firstHalfMapCount - remainChoices.Take(firstHalfMapCount).Count()));
+            var secondHalfPickChoice = remainChoices.Skip(firstHalfMapCount).Take(secondHalfMapCount)
+                                                    .Concat(Enumerable.Repeat((BeatmapChoice?)null, secondHalfMapCount - remainChoices.Skip(firstHalfMapCount).Take(secondHalfMapCount).Count()));
 
             mapContentContainer.Add(banMapDetail);
             mapContentContainer.Add(createDivideLine());
