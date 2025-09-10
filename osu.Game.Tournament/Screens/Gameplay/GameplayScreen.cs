@@ -36,10 +36,10 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private OsuButton warmupButton = null!;
         private MemoryBasedIPCWithMatchListener ipc = null!;
         private Sprite slotSprite = null!;
-        private Sprite fetchFailedWarning;
+        private Sprite fetchFailedWarning = null!;
 
-        private PlayerArea redArea;
-        private PlayerArea blueArea;
+        private PlayerArea redArea = null!;
+        private PlayerArea blueArea = null!;
 
         private Container matchHeaderContainer = null!;
         private RoundInformationPreview roundPreview = null!;
