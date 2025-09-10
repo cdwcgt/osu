@@ -554,7 +554,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         private void getResult(bool fromApi)
         {
-            if (CurrentMatch.Value == null)
+            if (warmup.Value || CurrentMatch.Value == null)
                 return;
 
             if (ipc.State.Value == TourneyState.Playing)
