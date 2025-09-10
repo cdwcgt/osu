@@ -194,13 +194,13 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 warmupButton = new TourneyButton
                 {
                     RelativeSizeAxes = Axes.X,
-                    Text = "Toggle warmup",
+                    Text = "切换热手",
                     Action = () => warmup.Toggle()
                 },
                 new TourneyButton
                 {
                     RelativeSizeAxes = Axes.X,
-                    Text = "Toggle chat",
+                    Text = "切换聊天",
                     Action = () =>
                     {
                         if (!chat.IsPresent)
@@ -215,21 +215,21 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 },
                 new SettingsSlider<int>
                 {
-                    LabelText = $"{(OperatingSystem.IsWindows() ? "Player Area" : "Chroma")} width",
+                    LabelText = $"{(OperatingSystem.IsWindows() ? "玩家区域" : "绿幕")} width",
                     Current = LadderInfo.ChromaKeyWidth,
                     KeyboardStep = 1,
                 },
                 OperatingSystem.IsWindows()
                     ? new SettingsSlider<int>
                     {
-                        LabelText = "Frame rate",
+                        LabelText = "抓取帧数限制",
                         Current = LadderInfo.FrameRate,
                         KeyboardStep = 1,
                     }
                     : Empty(),
                 new SettingsSlider<int>
                 {
-                    LabelText = "Players per team",
+                    LabelText = "每队玩家数",
                     Current = LadderInfo.PlayersPerTeam,
                     KeyboardStep = 1,
                 },
@@ -241,7 +241,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 new TourneyButton
                 {
                     RelativeSizeAxes = Axes.X,
-                    Text = "Toggle map detail",
+                    Text = "切换选图信息",
                     Action = () =>
                     {
                         if (roundPreviewShow)
@@ -256,15 +256,15 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 },
                 team1CoinText = new TourneyNumberBox
                 {
-                    LabelText = "Team1 Coin"
+                    LabelText = "Team1 币"
                 },
                 team2CoinText = new TourneyNumberBox
                 {
-                    LabelText = "Team2 Coin"
+                    LabelText = "Team2 币"
                 },
                 new TourneyButton
                 {
-                    Text = "Apply coin",
+                    Text = "应用币修改",
                     Action = () =>
                     {
                         team1Coin.Value = team1CoinText.Current.Value;
@@ -273,15 +273,15 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 },
                 matchID = new SettingsNumberBox
                 {
-                    LabelText = "Match ID",
+                    LabelText = "Mplink ID",
                 },
                 listeningButton = new TourneyButton
                 {
-                    Text = "Start Listening",
+                    Text = "开始监听",
                 },
                 new TourneyButton
                 {
-                    Text = "Abort",
+                    Text = "红猪",
                     Action = () =>
                     {
                         ipc.CurrentRoundAborted();
@@ -289,11 +289,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 },
                 team1Score = new SettingsNumberBox
                 {
-                    LabelText = "Team1 Score",
+                    LabelText = "队伍1分数",
                 },
                 team2Score = new SettingsNumberBox
                 {
-                    LabelText = "Team2 Score",
+                    LabelText = "队伍2分数",
                 },
                 new TourneyButton
                 {
@@ -305,17 +305,17 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 },
                 new TourneyButton
                 {
-                    Text = "Red fly",
+                    Text = "红飞",
                     Action = redArea.Launch
                 },
                 new TourneyButton
                 {
-                    Text = "Blue fly",
+                    Text = "蓝飞",
                     Action = blueArea.Launch
                 },
                 new TourneyButton
                 {
-                    Text = "fly reset",
+                    Text = "飞重置",
                     Action = () =>
                     {
                         redArea.Reset();
@@ -343,12 +343,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
             {
                 if (s.NewValue)
                 {
-                    listeningButton.Text = "Stop Listening";
+                    listeningButton.Text = "停止监听";
                     listeningButton.Action = ipc.StopListening;
                 }
                 else
                 {
-                    listeningButton.Text = "Start Listening";
+                    listeningButton.Text = "开始监听";
                     listeningButton.Action = () => ipc.StartListening(matchID.Current.Value);
                 }
             }, true);

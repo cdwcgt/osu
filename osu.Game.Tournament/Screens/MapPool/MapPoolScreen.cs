@@ -78,7 +78,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                     {
                         new TournamentSpriteText
                         {
-                            Text = "Current Mode"
+                            Text = "当前模式"
                         },
                         // buttonRedProtected = new TourneyButton
                         // {
