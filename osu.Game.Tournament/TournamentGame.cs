@@ -51,6 +51,9 @@ namespace osu.Game.Tournament
         {
             frameworkConfig.BindWith(FrameworkSetting.WindowedSize, windowSize);
 
+            var version = AssemblyVersion;
+            host.Window.Title = $"超酷炫无敌重金属HSC直播端 {version.Major}.{version.Minor}.{version.Build}";
+
             windowMode = frameworkConfig.GetBindable<WindowMode>(FrameworkSetting.WindowMode);
 
             Add(loadingSpinner = new LoadingSpinner(true, true)

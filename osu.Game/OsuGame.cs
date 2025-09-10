@@ -917,30 +917,6 @@ namespace osu.Game
 
         private void updateWindowTitle()
         {
-            if (Host.Window == null)
-                return;
-
-            string newTitle;
-
-            switch (configUserActivity.Value)
-            {
-                default:
-                    newTitle = Name;
-                    break;
-
-                case UserActivity.InGame:
-                case UserActivity.TestingBeatmap:
-                case UserActivity.WatchingReplay:
-                    newTitle = $"{Name} - {Beatmap.Value.BeatmapInfo.GetDisplayTitleRomanisable(true, false)}";
-                    break;
-
-                case UserActivity.EditingBeatmap:
-                    newTitle = $"{Name} - {Beatmap.Value.BeatmapInfo.Path ?? "new beatmap"}";
-                    break;
-            }
-
-            if (newTitle != Host.Window.Title)
-                Host.Window.Title = newTitle;
         }
 
         private void modsChanged(ValueChangedEvent<IReadOnlyList<Mod>> mods)
