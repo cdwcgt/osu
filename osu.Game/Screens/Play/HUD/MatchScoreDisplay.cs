@@ -192,6 +192,18 @@ namespace osu.Game.Screens.Play.HUD
                 Margin = new MarginPadding { Top = bar_height - 3, Horizontal = 10 };
             }
 
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+
+                AddInternal(CustomContent);
+            }
+
+            public Container CustomContent { get; } = new Container
+            {
+                AutoSizeAxes = Axes.Both,
+            };
+
             public bool Winning
             {
                 set => updateFont(value);

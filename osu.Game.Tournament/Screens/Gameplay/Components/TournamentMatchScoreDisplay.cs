@@ -3,8 +3,11 @@
 
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
+using osu.Framework.Localisation;
+using osu.Game.Graphics.Sprites;
 using osu.Game.Screens.Play.HUD;
 using osu.Game.Tournament.IPC;
+using osu.Game.Tournament.IPC.MemoryIPC;
 using osu.Game.Tournament.Models;
 
 namespace osu.Game.Tournament.Screens.Gameplay.Components
@@ -12,6 +15,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
     public partial class TournamentMatchScoreDisplay : MatchScoreDisplay
     {
         private bool invertTextColor;
+        private ComboCounter team1MaxCombo;
+        private ComboCounter team2MaxCombo;
         private readonly Colour4 black = Colour4.FromHex("1f1f1f");
 
         [Resolved]
@@ -35,12 +40,40 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         {
             Team1Score.BindTo(ipc.Score1);
             Team2Score.BindTo(ipc.Score2);
+
+            if (ipc is not IProvideAdditionalData additionalData)
+                return;
+
+            team1MaxCombo = new TournamentComboCounter();
+            team2MaxCombo = new TournamentComboCounter();
+
+            Score1Text.CustomContent.Anchor = Anchor.BottomRight;
+            Score1Text.CustomContent.Origin = Anchor.TopRight;
+            Score1Text.CustomContent.Child = team1MaxCombo;
+
+            Score2Text.CustomContent.Anchor = Anchor.BottomLeft;
+            Score2Text.CustomContent.Origin = Anchor.TopLeft;
+            Score2Text.CustomContent.Child = team2MaxCombo;
+
+            team1MaxCombo.Current.BindTo(additionalData.Team1Combo);
+            team2MaxCombo.Current.BindTo(additionalData.Team2Combo);
         }
 
         private void updateColor()
         {
             var color = invertTextColor ? black : Colour4.White;
             Score1Text.Colour = Score2Text.Colour = ScoreDiffText.Colour = color;
+        }
+
+        private partial class TournamentComboCounter : ComboCounter
+        {
+            protected override OsuSpriteText CreateSpriteText()
+                => base.CreateSpriteText().With(s => s.Font = s.Font.With(size: 20f));
+
+            protected override LocalisableString FormatCount(int count)
+            {
+                return $@"{count}x";
+            }
         }
     }
 }

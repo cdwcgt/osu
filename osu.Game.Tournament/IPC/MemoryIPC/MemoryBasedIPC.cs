@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Versioning;
 using osu.Framework.Allocation;
@@ -28,7 +29,10 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
         public Bindable<Channel> TourneyChatChannel { get; } = new Bindable<Channel>();
 
         [Resolved]
-        private LadderInfo ladder { get; set; } = null!;
+        protected LadderInfo Ladder { get; private set; } = null!;
+
+        public BindableInt Team1Combo { get; } = new BindableInt();
+        public BindableInt Team2Combo { get; } = new BindableInt();
 
         [Resolved]
         protected IAPIProvider API { get; private set; } = null!;
@@ -63,7 +67,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
         [BackgroundDependencyLoader]
         private void load()
         {
-            playersPerTeam.BindTo(ladder.PlayersPerTeam);
+            playersPerTeam.BindTo(Ladder.PlayersPerTeam);
         }
 
         private const int update_hz = 5;
@@ -225,18 +229,53 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                 }
             }
 
-            int[] team1OnlineId = ladder.CurrentMatch.Value?.Team1.Value?.Players.Select(p => p.OnlineID).ToArray() ??
-                                  Array.Empty<int>();
-            int[] team2OnlineId = ladder.CurrentMatch.Value?.Team2.Value?.Players.Select(p => p.OnlineID).ToArray() ??
-                                  Array.Empty<int>();
-
-            Score1.Value = SlotPlayers.Where(s => team1OnlineId.Any(t => t == s.OnlineID.Value)).Sum(calculateModMultiplier);
-            Score2.Value = SlotPlayers.Where(s => team2OnlineId.Any(t => t == s.OnlineID.Value)).Sum(calculateModMultiplier);
-
-            long calculateModMultiplier(SlotPlayerStatus s)
-            {
-                return (long)(s.Score.Value * (ladder.ModMultiplierSettings.FirstOrDefault(m => (m.Mods.Value & s.Mods.Value) > LegacyMods.None)?.Multiplier.Value ?? 1.0));
-            }
+            UpdateScore();
         }
+
+        protected void UpdateScore()
+        {
+            Score1.Value = GetTeamScore(TeamColour.Red).Sum(CalculateModMultiplier);
+            Score2.Value = GetTeamScore(TeamColour.Blue).Sum(CalculateModMultiplier);
+
+            Team1Combo.Value = getCombo(TeamColour.Red);
+            Team2Combo.Value = getCombo(TeamColour.Red);
+        }
+
+        protected long CalculateModMultiplier(PlayerScore s)
+        {
+            return (long)(s.Score * (Ladder.ModMultiplierSettings.FirstOrDefault(m => (m.Mods.Value & s.Mods) > LegacyMods.None)?.Multiplier.Value ?? 1.0));
+        }
+
+        protected virtual IEnumerable<PlayerScore> GetTeamScore(TeamColour colour)
+        {
+            int[] teamIds = GetTeamIds(colour);
+
+            return SlotPlayers.Where(s => teamIds.Any(t => t == s.OnlineID.Value)).Select(s => new PlayerScore
+            {
+                OnlineId = s.OnlineID.Value,
+                Score = s.Score.Value,
+                Mods = s.Mods.Value
+            });
+        }
+
+        protected int[] GetTeamIds(TeamColour colour)
+        {
+            return Ladder.CurrentMatch.Value?.GetTeamByColor(colour)?.Players.Select(p => p.OnlineID).ToArray() ??
+                   Array.Empty<int>();
+        }
+
+        private int getCombo(TeamColour colour)
+        {
+            int[] teamIds = GetTeamIds(colour);
+
+            return SlotPlayers.Where(s => teamIds.Any(t => t == s.OnlineID.Value)).Select(s => s.Combo.Value).Sum();
+        }
+    }
+
+    public struct PlayerScore
+    {
+        public int OnlineId;
+        public long Score;
+        public LegacyMods Mods;
     }
 }
