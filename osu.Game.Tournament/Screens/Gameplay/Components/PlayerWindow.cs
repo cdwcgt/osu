@@ -27,6 +27,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         [Resolved]
         private TournamentStorage storage { get; set; } = null!;
 
+        [Resolved]
+        private MatchIPCInfo matchIpc { get; set; } = null!;
+
         public PlayerWindow(int clientIndex)
             : base($"{TournamentGame.TOURNAMENT_CLIENT_NAME}{clientIndex}")
         {
@@ -34,7 +37,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         }
 
         [BackgroundDependencyLoader]
-        private void load(MatchIPCInfo matchIpc)
+        private void load()
         {
             player = ((MemoryBasedIPCWithMatchListener)matchIpc).SlotPlayers[clientIndex];
 
@@ -72,6 +75,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private void initSamples()
         {
+            if (matchIpc.State.Value != TourneyState.Playing)
+                return;
+
             var samplePaths = storage.GetDirectories("Funny");
 
             foreach (string? path in samplePaths)
@@ -95,6 +101,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private void comboChanged(ValueChangedEvent<int> combo)
         {
+            if (matchIpc.State.Value != TourneyState.Playing)
+                return;
+
             if (combo.NewValue > combo.OldValue)
                 return;
 
