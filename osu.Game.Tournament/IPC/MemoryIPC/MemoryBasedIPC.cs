@@ -23,6 +23,9 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
         public SlotPlayerStatus[] SlotPlayers { get; } = Enumerable.Range(0, 8).Select(i => new SlotPlayerStatus()).ToArray();
         BindableList<TourneyChatItem> IProvideAdditionalData.TourneyChat => throw new NotImplementedException(); //= new BindableList<TourneyChatItem>();
 
+        public BindableInt Team1Combo { get; } = new BindableInt();
+        public BindableInt Team2Combo { get; } = new BindableInt();
+
         [Resolved]
         protected LadderInfo Ladder { get; private set; } = null!;
 
@@ -126,6 +129,9 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
         {
             Score1.Value = GetTeamScore(TeamColour.Red).Sum(CalculateModMultiplier);
             Score2.Value = GetTeamScore(TeamColour.Blue).Sum(CalculateModMultiplier);
+
+            Team1Combo.Value = getCombo(TeamColour.Red);
+            Team2Combo.Value = getCombo(TeamColour.Red);
         }
 
         protected long CalculateModMultiplier(PlayerScore s)
@@ -135,8 +141,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
         protected virtual IEnumerable<PlayerScore> GetTeamScore(TeamColour colour)
         {
-            int[] teamIds = Ladder.CurrentMatch.Value?.GetTeamByColor(colour)?.Players.Select(p => p.OnlineID).ToArray() ??
-                            Array.Empty<int>();
+            int[] teamIds = GetTeamIds(colour);
 
             return SlotPlayers.Where(s => teamIds.Any(t => t == s.OnlineID.Value)).Select(s => new PlayerScore
             {
@@ -144,6 +149,19 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                 Score = s.Score.Value,
                 Mods = s.Mods.Value
             });
+        }
+
+        protected int[] GetTeamIds(TeamColour colour)
+        {
+            return Ladder.CurrentMatch.Value?.GetTeamByColor(colour)?.Players.Select(p => p.OnlineID).ToArray() ??
+                   Array.Empty<int>();
+        }
+
+        private int getCombo(TeamColour colour)
+        {
+            int[] teamIds = GetTeamIds(colour);
+
+            return SlotPlayers.Where(s => teamIds.Any(t => t == s.OnlineID.Value)).Select(s => s.Combo.Value).Sum();
         }
     }
 

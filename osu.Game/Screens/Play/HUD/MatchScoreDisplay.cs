@@ -211,7 +211,14 @@ namespace osu.Game.Screens.Play.HUD
                     Padding = new MarginPadding { Top = 6f },
                     Child = Background
                 });
+
+                AddInternal(CustomContent);
             }
+
+            public Container CustomContent { get; } = new Container
+            {
+                AutoSizeAxes = Axes.Both,
+            };
 
             public bool Winning
             {

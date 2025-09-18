@@ -10,5 +10,9 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
         public SlotPlayerStatus[] SlotPlayers { get; }
 
         public BindableList<TourneyChatItem> TourneyChat { get; }
+
+        public BindableInt Team1Combo { get; }
+
+        public BindableInt Team2Combo { get; }
     }
 }
