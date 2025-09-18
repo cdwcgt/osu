@@ -582,8 +582,6 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 showDraw(TeamColour.Blue);
             }
 
-            scoreDisplay.ShowSuccess.Value = true;
-
             if (!fromApi)
             {
                 fetchFailedWarning.ScaleTo(1).FadeIn(100).RotateTo(365, 500, Easing.OutQuint).Then()
