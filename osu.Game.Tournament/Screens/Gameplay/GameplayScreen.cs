@@ -177,15 +177,23 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     Origin = Anchor.BottomCentre,
                     Margin = new MarginPadding(13)
                 },
-                fetchFailedWarning = new Sprite
+                new Container
                 {
-                    Width = 370,
-                    Alpha = 0f,
-                    Margin = new MarginPadding { Bottom = 20 },
                     Anchor = Anchor.BottomCentre,
                     Origin = Anchor.BottomCentre,
-                    Texture = store.Get("fetch-failed"),
-                    FillMode = FillMode.Fit,
+                    Padding = new MarginPadding { Vertical = 10 },
+                    Height = 150,
+                    Width = 370,
+                    Depth = float.NegativeInfinity,
+                    Child = fetchFailedWarning = new Sprite
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Alpha = 0f,
+                        Anchor = Anchor.BottomCentre,
+                        Origin = Anchor.BottomCentre,
+                        Texture = store.Get("fetch-failed"),
+                        FillMode = FillMode.Fit,
+                    }
                 }
             });
 
