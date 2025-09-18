@@ -820,7 +820,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     case 1:
                         InternalChildren = new Drawable[]
                         {
-                            new PlayerWindow($"{TournamentGame.TOURNAMENT_CLIENT_NAME}{clientIndex}")
+                            new PlayerWindow(clientIndex)
                             {
                                 Anchor = Anchor.Centre,
                                 Origin = Anchor.Centre,
@@ -832,14 +832,14 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     case 2:
                         InternalChildren = new Drawable[]
                         {
-                            new PlayerWindow($"{TournamentGame.TOURNAMENT_CLIENT_NAME}{clientIndex++}")
+                            new PlayerWindow(clientIndex++)
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Height = 0.5f,
                                 RelativeAnchorPosition = new Vector2(0.25f, 0.5f),
                                 Origin = Anchor.Centre,
                             },
-                            new PlayerWindow($"{TournamentGame.TOURNAMENT_CLIENT_NAME}{clientIndex}")
+                            new PlayerWindow(clientIndex)
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Height = 0.5f,
@@ -852,7 +852,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     case 3:
                         InternalChildren = new Drawable[]
                         {
-                            new PlayerWindow($"{TournamentGame.TOURNAMENT_CLIENT_NAME}{clientIndex++}")
+                            new PlayerWindow(clientIndex++)
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Width = 0.5f,
@@ -860,7 +860,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                                 RelativeAnchorPosition = new Vector2(0.5f, 0.25f),
                                 Origin = Anchor.Centre,
                             },
-                            new PlayerWindow($"{TournamentGame.TOURNAMENT_CLIENT_NAME}{clientIndex++}")
+                            new PlayerWindow(clientIndex++)
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Width = 0.5f,
@@ -868,7 +868,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                                 RelativeAnchorPosition = new Vector2(0.25f, 0.75f),
                                 Origin = Anchor.Centre,
                             },
-                            new PlayerWindow($"{TournamentGame.TOURNAMENT_CLIENT_NAME}{clientIndex}")
+                            new PlayerWindow(clientIndex)
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Width = 0.5f,
@@ -882,7 +882,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     case 4:
                         InternalChildren = new Drawable[]
                         {
-                            new PlayerWindow($"{TournamentGame.TOURNAMENT_CLIENT_NAME}{clientIndex++}")
+                            new PlayerWindow(clientIndex++)
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Width = 0.5f,
@@ -890,7 +890,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                                 RelativeAnchorPosition = new Vector2(0.25f, 0.25f),
                                 Origin = Anchor.Centre,
                             },
-                            new PlayerWindow($"{TournamentGame.TOURNAMENT_CLIENT_NAME}{clientIndex++}")
+                            new PlayerWindow(clientIndex++)
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Width = 0.5f,
@@ -898,7 +898,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                                 RelativeAnchorPosition = new Vector2(0.75f, 0.25f),
                                 Origin = Anchor.Centre,
                             },
-                            new PlayerWindow($"{TournamentGame.TOURNAMENT_CLIENT_NAME}{clientIndex++}")
+                            new PlayerWindow(clientIndex++)
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Width = 0.5f,
@@ -906,7 +906,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                                 RelativeAnchorPosition = new Vector2(0.25f, 0.75f),
                                 Origin = Anchor.Centre,
                             },
-                            new PlayerWindow($"{TournamentGame.TOURNAMENT_CLIENT_NAME}{clientIndex}")
+                            new PlayerWindow(clientIndex)
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Width = 0.5f,
