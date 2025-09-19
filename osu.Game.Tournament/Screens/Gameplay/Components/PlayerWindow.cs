@@ -78,7 +78,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             if (matchIpc.State.Value != TourneyState.Playing)
                 return;
 
-            var samplePaths = storage.GetDirectories("Funny");
+            var samplePaths = storage.GetDirectories("Lmao");
 
             foreach (string? path in samplePaths)
             {
