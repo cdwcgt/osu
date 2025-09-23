@@ -25,5 +25,7 @@ namespace osu.Game.Tournament.IPC
         public BindableInt MaxCombo { get; } = new BindableInt();
 
         public BindableInt Score { get; } = new BindableInt();
+
+        public BindableInt PlayTime { get; } = new BindableInt();
     }
 }

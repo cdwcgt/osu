@@ -28,7 +28,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
         #endregion
 
-        private int playTime;
+        public int PlayTime { get; private set; }
 
         public AttachStatus Status { get; private set; }
 
@@ -163,7 +163,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
             UpdatePlayTime();
 
-            if (playTime > 1000)
+            if (PlayTime > 1000)
             {
                 hit100 = ReadShort(scoreAddr + 0x88);
                 hit300 = ReadShort(scoreAddr + 0x8A);
@@ -224,7 +224,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
             try
             {
-                playTime = ReadInt32(ReadInt32(PlayTimeAddress));
+                PlayTime = ReadInt32(ReadInt32(PlayTimeAddress));
             }
             catch (Exception ex)
             {
