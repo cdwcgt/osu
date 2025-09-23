@@ -11,7 +11,6 @@ using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
-using osu.Framework.Graphics.Textures;
 using osu.Framework.Localisation;
 using osu.Framework.Utils;
 using osu.Game.Graphics;
@@ -30,7 +29,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private readonly TeamColour colour;
         private readonly bool flip;
         private Box multCoinBar = null!;
-        private Box diffBar = null!;
+        private DiffBar diffBar = null!;
         private RollingMultCoinContainer multCounter = null!;
         private FillFlowContainer barContainer = null!;
         private RollingMultDiffNumberContainer diffCounter = null!;
@@ -80,7 +79,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         }
 
         [BackgroundDependencyLoader]
-        private void load(TextureStore textures)
+        private void load()
         {
             var anchor = flip ? Anchor.BottomLeft : Anchor.BottomRight;
 
@@ -117,13 +116,13 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                                     Shear = new Vector2((flip ? 1 : -1) * bar_steepness, 0),
                                     Colour = TournamentGame.GetTeamColour(colour),
                                 },
-                                diffBar = new Box
+                                diffBar = new DiffBar
                                 {
                                     RelativeSizeAxes = Axes.Y,
                                     Anchor = anchor,
                                     Origin = anchor,
                                     Shear = new Vector2((flip ? 1 : -1) * bar_steepness, 0),
-                                    Colour = TournamentGame.GetTeamColour(colour).Lighten(0.3f),
+                                    BoxColor = TournamentGame.GetTeamColour(colour).Lighten(0.3f),
                                 }
                             }
                         },
@@ -183,7 +182,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 var leftColor = getRandomColour();
                 var rightColor = getRandomColour();
 
-                diffBar.FadeColour(ColourInfo.GradientHorizontal(leftColor, rightColor), 1000);
+                diffBar.Box.FadeColour(ColourInfo.GradientHorizontal(leftColor, rightColor), 1000);
             }, 1000, true);
         }
 
@@ -238,6 +237,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             if (ipc.State.Value == TourneyState.Playing)
                 updateDiff(true);
+
+            diffBar.Progress = (float)Math.Clamp(ipc.PlayTime / ipc.Beatmap.Value?.Length ?? 1, 0, 1);
         }
 
         private void updateScore(bool animate, double? score = null)
@@ -301,6 +302,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         // TODO: 动画效果是否需要FinishTransform
         private void triggerAnimationWhenMatchFinished(double oldAmount, double newAmount) => Scheduler.AddOnce(() =>
         {
+            diffBar.Progress = 1;
             double diff = newAmount - oldAmount;
 
             updateScore(false, oldAmount);
@@ -330,6 +332,37 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             {
                 t.Font = OsuFont.Torus.With(size: 19);
             });
+        }
+
+        private partial class DiffBar : CompositeDrawable
+        {
+            public Box Box { get; }
+
+            public float Progress
+            {
+                get => Box.Width;
+                set => Box.Width = value;
+            }
+
+            public ColourInfo BoxColor
+            {
+                get => Box.Colour;
+                set => Box.Colour = value;
+            }
+
+            public DiffBar()
+            {
+                InternalChild = new Container
+                {
+                    BorderColour = Colour4.Yellow,
+                    BorderThickness = 2,
+                    Masking = true,
+                    Child = Box = new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                    }
+                };
+            }
         }
 
         private partial class RollingMultCoinContainer : RollingCounter<double>
