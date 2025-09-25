@@ -2,11 +2,13 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Collections.Generic;
+using System.IO;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Audio.Sample;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
+using osu.Framework.IO.Stores;
 using osu.Framework.Utils;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IO;
@@ -75,16 +77,19 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private void initSamples()
         {
-            if (matchIpc.State.Value != TourneyState.Playing)
-                return;
+            var sampleStore = audioManager.GetSampleStore(new NamespacedResourceStore<byte[]>(new StorageBackedResourceStore(storage), "Lmao"));
+            string samplePath = storage.GetFullPath("Lmao");
 
-            var samplePaths = storage.GetDirectories("Lmao");
+            string[] files = Directory.GetFiles(samplePath);
 
-            foreach (string? path in samplePaths)
+            foreach (string file in files)
             {
-                var sample = audioManager.Samples.Get(path);
+                string name = Path.GetFileNameWithoutExtension(file);
 
-                samples.Add(sample);
+                var sample = sampleStore.Get(name);
+
+                if (sample != null)
+                    samples.Add(sample);
             }
 
             Scheduler.Add(() =>

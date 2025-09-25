@@ -240,8 +240,6 @@ namespace osu.Game.Screens.Play.HUD
 
         protected partial class MatchScoreDiffCounter : CommaSeparatedScoreCounter
         {
-            public Box Background { get; set; }
-            public SpriteIcon SuccessIcon { get; set; }
             private FillFlowContainer fillFlow = null!;
 
             public Sprite ArrowIcon { get; private set; } = null!;
@@ -266,12 +264,6 @@ namespace osu.Game.Screens.Play.HUD
                         {
                             RelativeSizeAxes = Axes.Both,
                             Padding = new MarginPadding { Vertical = 3f },
-                            Child = Background = new Box
-                            {
-                                RelativeSizeAxes = Axes.Both,
-                                Alpha = 0,
-                                Colour = Color4Extensions.FromHex("#FFC300"),
-                            },
                         },
                         fillFlow = new FillFlowContainer
                         {
@@ -289,14 +281,6 @@ namespace osu.Game.Screens.Play.HUD
                                     Padding = new MarginPadding { Horizontal = 4f },
                                     Children = new Drawable[]
                                     {
-                                        SuccessIcon = new SpriteIcon
-                                        {
-                                            Size = new Vector2(12),
-                                            Icon = FontAwesome.Solid.Check,
-                                            Anchor = Anchor.CentreLeft,
-                                            Origin = Anchor.CentreLeft,
-                                            Colour = Color4Extensions.FromHex("383838"),
-                                        },
                                         ArrowIcon = new Sprite
                                         {
                                             Width = 16f,

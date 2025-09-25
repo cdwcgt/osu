@@ -116,13 +116,12 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                                     Shear = new Vector2((flip ? 1 : -1) * bar_steepness, 0),
                                     Colour = TournamentGame.GetTeamColour(colour),
                                 },
-                                diffBar = new DiffBar
+                                diffBar = new DiffBar(colour)
                                 {
                                     RelativeSizeAxes = Axes.Y,
                                     Anchor = anchor,
                                     Origin = anchor,
                                     Shear = new Vector2((flip ? 1 : -1) * bar_steepness, 0),
-                                    BoxColor = TournamentGame.GetTeamColour(colour).Lighten(0.3f),
                                 }
                             }
                         },
@@ -350,16 +349,28 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 set => Box.Colour = value;
             }
 
-            public DiffBar()
+            public DiffBar(TeamColour team)
             {
                 InternalChild = new Container
                 {
                     BorderColour = Colour4.Yellow,
-                    BorderThickness = 2,
+                    BorderThickness = 2f,
                     Masking = true,
-                    Child = Box = new Box
+                    RelativeSizeAxes = Axes.Both,
+                    Children = new Drawable[]
                     {
-                        RelativeSizeAxes = Axes.Both,
+                        Box = new Box
+                        {
+                            Anchor = team == TeamColour.Red ? Anchor.CentreRight : Anchor.CentreLeft,
+                            Origin = team == TeamColour.Red ? Anchor.CentreRight : Anchor.CentreLeft,
+                            RelativeSizeAxes = Axes.Both,
+                        },
+                        new Box
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Alpha = 0,
+                            AlwaysPresent = true
+                        }
                     }
                 };
             }

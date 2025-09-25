@@ -200,9 +200,7 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
             }
             else
             {
-                Debug.Assert(Match.Winner != null);
                 transferProgression(Match.Progression.Value, Match.Winner);
-                Debug.Assert(Match.Loser != null);
                 transferProgression(Match.LosersProgression.Value, Match.Loser);
             }
 

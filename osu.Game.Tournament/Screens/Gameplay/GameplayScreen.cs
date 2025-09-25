@@ -431,7 +431,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
             State.BindTo(ipc.State);
             State.BindValueChanged(_ => updateState(), true);
-            LadderInfo.InvertScoreColour.BindValueChanged(v => scoreDisplay.InvertTextColor = v.NewValue, true);
+            //LadderInfo.InvertScoreColour.BindValueChanged(v => scoreDisplay.InvertTextColor = v.NewValue, true);
         }
 
         protected override void SetModAcronym(string acronym)
