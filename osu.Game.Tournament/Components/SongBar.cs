@@ -565,7 +565,7 @@ namespace osu.Game.Tournament.Components
                 return new[]
                 {
                     (createText("星级", true) as Drawable, createText($"{sr:0.00}", false) as Drawable),
-                    (createText("铺面位置", true) as Drawable, modSection as Drawable),
+                    (createText("谱面位置", true) as Drawable, modSection as Drawable),
                 };
             }
 
