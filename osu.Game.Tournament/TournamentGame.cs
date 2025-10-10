@@ -35,6 +35,7 @@ namespace osu.Game.Tournament
 
         public const double WINNER_BONUS = 100;
         public const double EXTRA_WINNER_BONUS_TB = 50;
+        public const double LOSS_MAX_OBTAINABLE = 91;
 
         private Drawable heightWarning = null!;
 

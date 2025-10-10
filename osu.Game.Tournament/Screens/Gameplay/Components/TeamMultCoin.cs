@@ -293,7 +293,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             double diff =
                 Math.Min(Math.Round((double)ourScore.Value / oppoScore.Value * 100, 2, MidpointRounding.AwayFromZero),
-                    93.5);
+                    TournamentGame.LOSS_MAX_OBTAINABLE);
 
             return double.IsNaN(diff) ? 0 : diff;
         }

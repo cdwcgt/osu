@@ -578,7 +578,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 CurrentMatch.Value.Team1Coin.Value += TournamentGame.WINNER_BONUS + (isTB ? TournamentGame.EXTRA_WINNER_BONUS_TB : 0);
                 CurrentMatch.Value.Team2Coin.Value +=
                     Math.Min(Math.Round((double)ipc.Score2.Value / Math.Max(ipc.Score1.Value, 1) * 100, 2, MidpointRounding.AwayFromZero),
-                        93.5);
+                        TournamentGame.LOSS_MAX_OBTAINABLE);
                 showDraw(TeamColour.Red);
             }
             else
@@ -586,7 +586,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 CurrentMatch.Value.Team2Coin.Value += TournamentGame.WINNER_BONUS + (isTB ? TournamentGame.EXTRA_WINNER_BONUS_TB : 0);
                 CurrentMatch.Value.Team1Coin.Value +=
                     Math.Min(Math.Round((double)ipc.Score1.Value / Math.Max(ipc.Score2.Value, 1) * 100, 2, MidpointRounding.AwayFromZero),
-                        93.5);
+                        TournamentGame.LOSS_MAX_OBTAINABLE);
                 showDraw(TeamColour.Blue);
             }
 
