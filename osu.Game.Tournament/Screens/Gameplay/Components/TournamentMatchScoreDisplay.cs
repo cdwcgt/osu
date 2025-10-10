@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
-using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Localisation;
 using osu.Game.Graphics;
@@ -63,6 +62,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private partial class TournamentComboCounter : ComboCounter
         {
+            protected override double RollingDuration => 1000;
+            protected override Easing RollingEasing => Easing.Out;
+
             protected override OsuSpriteText CreateSpriteText()
                 => base.CreateSpriteText().With(s => s.Font = OsuFont.Torus.With(size: 20f));
 
