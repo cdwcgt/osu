@@ -17,13 +17,15 @@ using osu.Game.Tournament.Models;
 
 namespace osu.Game.Tournament.IPC.MemoryIPC
 {
-    // 在未来应该完全脱离FileBased
-    // 但是先这样吧
     [SupportedOSPlatform("windows")]
     public partial class MemoryBasedIPC : MatchIPCInfo, IProvideAdditionalData
     {
         private int lastBeatmapId;
         private GetBeatmapRequest? beatmapLookupRequest;
+
+        public IBindable<bool> Available => available;
+
+        private readonly BindableBool available = new BindableBool();
 
         public SlotPlayerStatus[] SlotPlayers { get; } = Enumerable.Range(0, 8).Select(i => new SlotPlayerStatus()).ToArray();
         public Bindable<Channel> TourneyChatChannel { get; } = new Bindable<Channel>();
@@ -161,6 +163,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
             {
                 case AttachStatus.UnAttached:
                     tourneyManagerMemoryReader.AttachToProcessByTitleNameAsync(" Tournament Manager");
+                    available.Value = false;
                     break;
 
                 case AttachStatus.Initializing:
@@ -168,6 +171,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
                 case AttachStatus.Attached:
                     updateTourneyData();
+                    available.Value = true;
                     break;
             }
 

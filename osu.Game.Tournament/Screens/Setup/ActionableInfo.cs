@@ -43,6 +43,11 @@ namespace osu.Game.Tournament.Screens.Setup
             set => valueText.Colour = value ? Color4.Red : Color4.White;
         }
 
+        public bool HideButton
+        {
+            set => Button.FadeTo(value ? 0 : 1);
+        }
+
         protected override Drawable CreateComponent() => new Container
         {
             AutoSizeAxes = Axes.Y,

@@ -110,7 +110,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine($"[InitializeAsync] Failed: {ex.Message}");
+                    Logger.Error(ex, $"[StableMemoryReader] InitializeAddressAsync Failed: {ex.Message}");
 
                     Status = AttachStatus.UnAttached;
                     return false;

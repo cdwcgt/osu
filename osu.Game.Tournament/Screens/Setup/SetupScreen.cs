@@ -15,6 +15,7 @@ using osu.Game.Online.API;
 using osu.Game.Overlays;
 using osu.Game.Rulesets;
 using osu.Game.Tournament.IPC;
+using osu.Game.Tournament.IPC.MemoryIPC;
 using osu.Game.Tournament.Models;
 using osuTK;
 
@@ -71,24 +72,22 @@ namespace osu.Game.Tournament.Screens.Setup
             };
 
             api.LocalUser.BindValueChanged(_ => Schedule(reload));
-            stableInfo.OnStableInfoSaved += () => Schedule(reload);
+            var memoryBasedIPC = ipc as MemoryBasedIPC;
+            memoryBasedIPC?.Available.BindValueChanged(_ => Schedule(reload));
             reload();
         }
 
         private void reload()
         {
-            var fileBasedIpc = ipc as FileBasedIPC;
+            var memoryBasedIPC = ipc as MemoryBasedIPC;
             fillFlow.Children = new Drawable[]
             {
                 new ActionableInfo
                 {
-                    Label = "Current IPC source",
-                    ButtonText = "Change source",
-                    Action = () => sceneManager?.SetScreen(new StablePathSelectScreen()),
-                    Value = fileBasedIpc?.IPCStorage?.GetFullPath(string.Empty) ?? "Not found",
-                    Failing = fileBasedIpc?.IPCStorage == null,
-                    Description =
-                        "The osu!stable installation which is currently being used as a data source. If a source is not found, make sure you have created an empty ipc.txt in your stable cutting-edge installation."
+                    Label = "内存读取状态",
+                    Value = memoryBasedIPC?.Available.Value == true ? "已连接" : "未启动tourney或正在初始化",
+                    Failing = memoryBasedIPC?.Available.Value != true,
+                    HideButton = true
                 },
                 new ActionableInfo
                 {
