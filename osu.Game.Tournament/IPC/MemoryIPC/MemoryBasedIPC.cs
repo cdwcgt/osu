@@ -38,12 +38,14 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
         };
 
         private readonly StableMemoryReader[] readers;
+        private readonly TourneyManagerMemoryReader tourneyManagerMemoryReader;
 
         public int PlayTime => SlotPlayers.Max(s => s.PlayTime.Value);
 
         public MemoryBasedIPC()
         {
             readers = Enumerable.Range(0, 8).Select(i => new StableMemoryReader()).ToArray();
+            tourneyManagerMemoryReader = new TourneyManagerMemoryReader();
         }
 
         [BackgroundDependencyLoader]
@@ -65,6 +67,20 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                 return;
 
             lastUpdateTime = 0;
+
+            switch (tourneyManagerMemoryReader.Status)
+            {
+                case AttachStatus.UnAttached:
+                    tourneyManagerMemoryReader.AttachToProcessByTitleNameAsync(" Tournament Manager");
+                    break;
+
+                case AttachStatus.Initializing:
+                    break;
+
+                case AttachStatus.Attached:
+                    tourneyManagerMemoryReader.GetTourneyState();
+                    break;
+            }
 
             for (int i = 0; i < playersPerTeam.Value * 2; i++)
             {

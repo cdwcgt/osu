@@ -44,6 +44,16 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
             return BitConverter.ToInt32(buffer, 0);
         }
 
+        public long ReadInt64(IntPtr address)
+        {
+            if (!IsAttached)
+                throw new InvalidOperationException("Process is not attached or has exited.");
+
+            byte[] buffer = new byte[8];
+            WindowsAPI.ReadProcessMemory(ProcessHandle, address, buffer, buffer.Length, out _);
+            return BitConverter.ToInt64(buffer, 0);
+        }
+
         public short ReadShort(IntPtr address)
         {
             if (!IsAttached)
