@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
