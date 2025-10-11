@@ -122,7 +122,12 @@ namespace osu.Game.Tournament.IPC
                             using (var stream = IPCStorage.GetStream(file_ipc_channel_filename))
                             using (var sr = new StreamReader(stream))
                             {
-                                ChatChannel.Value = sr.ReadLine().AsNonNull();
+                                string channelStr = sr.ReadLine().AsNonNull();
+
+                                if (string.IsNullOrEmpty(channelStr))
+                                {
+                                    ChatChannel.Value = int.Parse(channelStr);
+                                }
                             }
                         }
                         catch (Exception)

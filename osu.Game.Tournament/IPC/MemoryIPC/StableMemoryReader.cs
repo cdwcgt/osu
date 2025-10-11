@@ -29,6 +29,8 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
         protected IntPtr SpectatingUser;
 
+        protected IntPtr ModsPointerAddress;
+
         #endregion
 
         public int PlayTime { get; private set; }
@@ -77,6 +79,8 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
         protected static readonly PatternInfo SPECTATING_USER_PATTERN = new PatternInfo("8B 0D ?? ?? ?? ?? 85 C0 74 05 8B 50 30", -0x4);
 
+        protected static readonly PatternInfo MODS_POINTER_PATTERN = new PatternInfo("C8 FF ?? ?? ?? ?? ?? 81 0D ?? ?? ?? ?? ?? 08 00 00", 0x9);
+
         private readonly CancellationTokenSource cts = new CancellationTokenSource();
         private Task<bool>? initializeAddressTask;
 
@@ -119,7 +123,8 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
             GameBaseAddress = ResolveFromPatternInfo(GAME_BASE_PATTERN, regions) ?? throw new InvalidOperationException("GameBase address not found");
             RulesetsAddress = ResolveFromPatternInfo(RULESETS_PATTERN, regions) ?? throw new InvalidOperationException("Ruleset address not found");
             PlayTimeAddress = ResolveFromPatternInfo(PLAY_TIME_PATTERN, regions) ?? throw new InvalidOperationException("PlayTime address not found");
-            SpectatingUser = ResolveFromPatternInfo(SPECTATING_USER_PATTERN, regions) ?? throw new InvalidOperationException("Spectating user pattern not found");
+            SpectatingUser = ResolveFromPatternInfo(SPECTATING_USER_PATTERN, regions) ?? throw new InvalidOperationException("Spectating user address not found");
+            ModsPointerAddress = ResolveFromPatternInfo(MODS_POINTER_PATTERN, regions) ?? throw new InvalidOperationException("Mods pointer address not found");
         }
 
         #endregion
@@ -238,6 +243,27 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
             {
                 Logger.Error(ex, "Failed to update playtime");
             }
+        }
+
+        public int GetBeatmapId()
+        {
+            if (!CheckInitialized())
+                return -1;
+
+            IntPtr beatmapAddr = ReadInt32(ReadInt32(GameBaseAddress - 0xc));
+
+            if (beatmapAddr == IntPtr.Zero)
+                return -1;
+
+            return ReadInt32(beatmapAddr + 0xc8);
+        }
+
+        public LegacyMods GetMods()
+        {
+            if (!CheckInitialized())
+                return LegacyMods.None;
+
+            return (LegacyMods)ReadInt32(ReadInt32(ModsPointerAddress));
         }
 
         public string? ReadSharpString(IntPtr objectAddress)

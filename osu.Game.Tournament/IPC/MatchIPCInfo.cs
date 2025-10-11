@@ -13,7 +13,7 @@ namespace osu.Game.Tournament.IPC
         public Bindable<TournamentBeatmap?> Beatmap { get; } = new Bindable<TournamentBeatmap?>();
         public Bindable<LegacyMods> Mods { get; } = new Bindable<LegacyMods>();
         public Bindable<TourneyState> State { get; } = new Bindable<TourneyState>();
-        public Bindable<string> ChatChannel { get; } = new Bindable<string>();
+        public Bindable<int> ChatChannel { get; } = new Bindable<int>();
         public BindableLong Score1 { get; } = new BindableLong();
         public BindableLong Score2 { get; } = new BindableLong();
 
