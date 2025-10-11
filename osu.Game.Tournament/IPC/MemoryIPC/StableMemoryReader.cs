@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using System.Text;
@@ -13,18 +14,20 @@ using osu.Game.Tournament.Models;
 
 namespace osu.Game.Tournament.IPC.MemoryIPC
 {
+    // Memory Pattern and Address are borrowed from tosu
+    // https://github.com/tosuapp/tosu
     [SupportedOSPlatform("windows")]
     public class StableMemoryReader : MemoryReader
     {
         #region Addresses
 
-        private IntPtr GameBaseAddress;
+        protected IntPtr GameBaseAddress;
 
-        private IntPtr RulesetsAddress;
+        protected IntPtr RulesetsAddress;
 
-        private IntPtr PlayTimeAddress;
+        protected IntPtr PlayTimeAddress;
 
-        private IntPtr SpectatingUser;
+        protected IntPtr SpectatingUser;
 
         #endregion
 
@@ -66,13 +69,13 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
         #region Pattern
 
-        private readonly PatternInfo GameBasePattern = new PatternInfo("F8 01 74 04 83 65");
+        protected static readonly PatternInfo GAME_BASE_PATTERN = new PatternInfo("F8 01 74 04 83 65");
 
-        private readonly PatternInfo RulesetsPattern = new PatternInfo("7D 15 A1 ?? ?? ?? ?? 85 C0");
+        protected static readonly PatternInfo RULESETS_PATTERN = new PatternInfo("7D 15 A1 ?? ?? ?? ?? 85 C0");
 
-        private readonly PatternInfo PlayTimePattern = new PatternInfo("5E 5F 5D C3 A1 ?? ?? ?? ?? 89 ?? 04", +0x5);
+        protected static readonly PatternInfo PLAY_TIME_PATTERN = new PatternInfo("5E 5F 5D C3 A1 ?? ?? ?? ?? 89 ?? 04", +0x5);
 
-        private readonly PatternInfo SpectatingUserPattern = new PatternInfo("8B 0D ?? ?? ?? ?? 85 C0 74 05 8B 50 30", -0x4);
+        protected static readonly PatternInfo SPECTATING_USER_PATTERN = new PatternInfo("8B 0D ?? ?? ?? ?? 85 C0 74 05 8B 50 30", -0x4);
 
         private readonly CancellationTokenSource cts = new CancellationTokenSource();
         private Task<bool>? initializeAddressTask;
@@ -96,10 +99,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
                     var regions = QueryMemoryRegions(ProcessHandle);
 
-                    GameBaseAddress = ResolveFromPatternInfo(GameBasePattern, regions) ?? throw new InvalidOperationException("GameBase address not found");
-                    RulesetsAddress = ResolveFromPatternInfo(RulesetsPattern, regions) ?? throw new InvalidOperationException("Ruleset address not found");
-                    PlayTimeAddress = ResolveFromPatternInfo(PlayTimePattern, regions) ?? throw new InvalidOperationException("PlayTime address not found");
-                    SpectatingUser = ResolveFromPatternInfo(SpectatingUserPattern, regions) ?? throw new InvalidOperationException("Spectating user pattern not found");
+                    InitializeAddressInternal(regions);
 
                     Status = AttachStatus.Attached;
                     return true;
@@ -112,6 +112,14 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                     return false;
                 }
             }, cts.Token);
+        }
+
+        protected virtual void InitializeAddressInternal(List<MemoryRegion> regions)
+        {
+            GameBaseAddress = ResolveFromPatternInfo(GAME_BASE_PATTERN, regions) ?? throw new InvalidOperationException("GameBase address not found");
+            RulesetsAddress = ResolveFromPatternInfo(RULESETS_PATTERN, regions) ?? throw new InvalidOperationException("Ruleset address not found");
+            PlayTimeAddress = ResolveFromPatternInfo(PLAY_TIME_PATTERN, regions) ?? throw new InvalidOperationException("PlayTime address not found");
+            SpectatingUser = ResolveFromPatternInfo(SPECTATING_USER_PATTERN, regions) ?? throw new InvalidOperationException("Spectating user pattern not found");
         }
 
         #endregion
