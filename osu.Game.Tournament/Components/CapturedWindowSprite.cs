@@ -113,8 +113,6 @@ namespace osu.Game.Tournament.Components
                 if (hWnd == IntPtr.Zero)
                 {
                     hWnd = WindowsAPI.FindWindowByPartialTitle(targetWindowTitle);
-
-                    Thread.Sleep(100);
                     continue;
                 }
 
