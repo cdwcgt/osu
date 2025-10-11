@@ -336,7 +336,11 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                     StopListening();
             };
 
-            req.Failure += _ => FetchFailed?.Invoke();
+            req.Failure += _ =>
+            {
+                Logger.Log("MatchListener: Occour network problem, match event fetch failed");
+                FetchFailed?.Invoke();
+            };
 
             api.Queue(req);
         }

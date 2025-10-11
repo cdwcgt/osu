@@ -18,6 +18,7 @@ using osu.Game.Overlays.Settings;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.IPC.MemoryIPC;
+using osu.Game.Tournament.IPC.MemoryIPC.Drawables;
 using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Gameplay.Components;
 using osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader;
@@ -295,6 +296,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                         ipc.CurrentRoundAborted();
                     }
                 },
+                new MatchListenerDetail(),
                 team1Score = new SettingsNumberBox
                 {
                     LabelText = "队伍1分数",
