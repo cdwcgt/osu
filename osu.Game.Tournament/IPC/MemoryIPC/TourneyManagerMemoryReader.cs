@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace osu.Game.Tournament.IPC.MemoryIPC
 {
@@ -13,13 +14,20 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
         // found with PercuDan54
         private static readonly PatternInfo channel_id_pattern = new PatternInfo("8B CE BA 07 00 00 00 E8 ?? ?? ?? ?? A3 ?? ?? ?? ?? 89 15 ?? ?? ?? ?? E8", 0xd);
 
-        private IntPtr channelAddress;
+        private IntPtr? channelAddress;
 
         protected override void InitializeAddressInternal(List<MemoryRegion> regions)
         {
             base.InitializeAddressInternal(regions);
 
-            channelAddress = ResolveFromPatternInfo(channel_id_pattern, regions) ?? throw new InvalidOperationException("Channel ID Address not found");
+            Task.Factory.StartNew(async () =>
+            {
+                while (channelAddress == null)
+                {
+                    channelAddress = ResolveFromPatternInfo(channel_id_pattern, regions);
+                    await Task.Delay(1000).ConfigureAwait(false);
+                }
+            }, TaskCreationOptions.LongRunning);
         }
 
         public TourneyState GetTourneyState()
@@ -36,10 +44,10 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
         public long GetChannelId()
         {
-            if (!CheckInitialized())
+            if (!CheckInitialized() || channelAddress == null)
                 return -1;
 
-            IntPtr channelIdAddress = ReadInt32(channelAddress);
+            IntPtr channelIdAddress = ReadInt32(channelAddress.Value);
 
             return ReadInt64(channelIdAddress);
         }
