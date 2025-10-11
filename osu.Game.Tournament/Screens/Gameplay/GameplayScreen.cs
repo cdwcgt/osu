@@ -329,6 +329,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
                         redArea.Reset();
                         blueArea.Reset();
                     }
+                },
+                new DangerousRoundedButton
+                {
+                    Text = "重置玩家区域",
+                    Action = LadderInfo.PlayersPerTeam.TriggerChange,
                 }
             });
 
