@@ -17,7 +17,7 @@ namespace osu.Game.Tournament.Components
 {
     public partial class TournamentMatchChatDisplay : StandAloneChatDisplay
     {
-        private readonly Bindable<string> chatChannel = new Bindable<string>();
+        private readonly Bindable<int> chatChannel = new Bindable<int>();
         private readonly BindableBool useAlternateChat = new BindableBool();
         private readonly APIChatClient apiChatClient = new APIChatClient();
 
@@ -47,11 +47,6 @@ namespace osu.Game.Tournament.Components
                 chatChannel.BindTo(ipc.ChatChannel);
                 chatChannel.BindValueChanged(c =>
                 {
-                    if (string.IsNullOrWhiteSpace(c.NewValue))
-                        return;
-
-                    channelId = int.Parse(c.NewValue);
-
                     if (channelId <= 0) return;
 
                     updateChat(false);

@@ -8,6 +8,9 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Logging;
 using osu.Game.Beatmaps.Legacy;
+using osu.Game.Online.API;
+using osu.Game.Online.API.Requests;
+using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Tournament.Models;
 
 namespace osu.Game.Tournament.IPC.MemoryIPC
@@ -15,15 +18,19 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
     // 在未来应该完全脱离FileBased
     // 但是先这样吧
     [SupportedOSPlatform("windows")]
-    public partial class MemoryBasedIPC : FileBasedIPC, IProvideAdditionalData
+    public partial class MemoryBasedIPC : MatchIPCInfo, IProvideAdditionalData
     {
-        public override bool ReadScoreFromFile => false;
+        private int lastBeatmapId;
+        private GetBeatmapRequest? beatmapLookupRequest;
 
         public SlotPlayerStatus[] SlotPlayers { get; } = Enumerable.Range(0, 8).Select(i => new SlotPlayerStatus()).ToArray();
         BindableList<TourneyChatItem> IProvideAdditionalData.TourneyChat => throw new NotImplementedException(); //= new BindableList<TourneyChatItem>();
 
         [Resolved]
         private LadderInfo ladder { get; set; } = null!;
+
+        [Resolved]
+        protected IAPIProvider API { get; private set; } = null!;
 
         public bool FetchDataFromMemory { get; set; }
 
@@ -51,6 +58,54 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
         private const int update_hz = 5;
         private double lastUpdateTime;
 
+        private void updateTourneyData()
+        {
+            var reader = tourneyManagerMemoryReader;
+
+            State.Value = reader.GetTourneyState();
+            LegacyMods mods = Mods.Value = reader.GetMods();
+
+            int beatmapId = reader.GetBeatmapId();
+
+            if (beatmapId > 0 && lastBeatmapId != beatmapId)
+            {
+                beatmapLookupRequest?.Cancel();
+
+                lastBeatmapId = beatmapId;
+
+                var existing = Ladder.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(b => b.ID == beatmapId);
+
+                if (existing != null)
+                {
+                    Beatmap.Value = existing.Beatmap;
+                    var ruleset = Ladder.Ruleset.Value?.CreateInstance();
+                    string modStr = existing.Mods;
+
+                    var mod = ruleset!.CreateModFromAcronym(modStr);
+
+                    Mods.Value = mod != null ? ruleset.ConvertToLegacyMods(new[] { mod }) : mods;
+                }
+                else
+                {
+                    beatmapLookupRequest = new GetBeatmapRequest(new APIBeatmap { OnlineID = beatmapId });
+                    beatmapLookupRequest.Success += b =>
+                    {
+                        if (lastBeatmapId == beatmapId)
+                            Beatmap.Value = new TournamentBeatmap(b);
+                    };
+                    beatmapLookupRequest.Failure += _ =>
+                    {
+                        if (lastBeatmapId == beatmapId)
+                            Beatmap.Value = null;
+                    };
+                    API.Queue(beatmapLookupRequest);
+                    Mods.Value = mods;
+                }
+            }
+
+            ChatChannel.Value = (int)reader.GetChannelId();
+        }
+
         protected override void Update()
         {
             base.Update();
@@ -72,7 +127,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                     break;
 
                 case AttachStatus.Attached:
-                    tourneyManagerMemoryReader.GetTourneyState();
+                    updateTourneyData();
                     break;
             }
 
