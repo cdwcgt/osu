@@ -11,12 +11,15 @@ using osu.Game.Tournament.Models;
 
 namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 {
-    public partial class MatchHeader : Container
+    [Cached]
+    public partial class MatchHeader : CompositeDrawable
     {
         private TeamScoreDisplay teamDisplay1 = null!;
         private TeamScoreDisplay teamDisplay2 = null!;
         private RoundStage roundStage = null!;
         private MatchRoundDisplay matchRoundDisplay = null!;
+
+        public BindableDictionary<TeamColour, float> TextWidthEachTeam = new BindableDictionary<TeamColour, float>();
 
         private bool showScores = true;
 
@@ -44,7 +47,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
             matchRoundDisplay = new MatchRoundDisplay();
 
-            Children = new Drawable[]
+            InternalChildren = new Drawable[]
             {
                 new TeamCoinDIffDisplay
                 {

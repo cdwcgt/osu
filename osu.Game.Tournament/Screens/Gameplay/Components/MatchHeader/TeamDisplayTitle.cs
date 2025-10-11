@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -38,9 +39,10 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
         private readonly Bindable<double?> currentTeamCoin = new Bindable<double?>();
         private readonly Bindable<double?> opponentTeamCoin = new Bindable<double?>();
         private TeamDisplayNote teamNote = null!;
+        private Container teamTextContainer = null!;
 
         [BackgroundDependencyLoader]
-        private void load(LadderInfo ladder, TextureStore store)
+        private void load(LadderInfo ladder, MatchHeader header)
         {
             var anchor = teamColour == TeamColour.Blue ? Anchor.CentreLeft : Anchor.CentreRight;
 
@@ -122,12 +124,17 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                                         },
                                     }
                                 },
-                                teamText = new TournamentSpriteText
+                                teamTextContainer = new Container
                                 {
                                     Anchor = anchor,
                                     Origin = anchor,
-                                    Font = OsuFont.GetFont(size: 20, weight: FontWeight.Bold),
-                                    Colour = Color4.Black,
+                                    Child = teamText = new TournamentSpriteText
+                                    {
+                                        Anchor = anchor,
+                                        Origin = anchor,
+                                        Font = OsuFont.GetFont(size: 20, weight: FontWeight.Bold),
+                                        Colour = Color4.Black,
+                                    },
                                 },
                                 pigIcon = new Sprite
                                 {
@@ -150,7 +157,12 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
             if (team != null)
             {
-                team.FullName.BindValueChanged(name => teamText.Text = name.NewValue, true);
+                team.FullName.BindValueChanged(name =>
+                {
+                    teamText.Text = name.NewValue;
+
+                    Scheduler.AddOnce(() => header.TextWidthEachTeam[teamColour] = teamText.Width);
+                }, true);
                 team.Seed.BindValueChanged(seed => teamIdText.Text = seed.NewValue, true);
                 team.Color.BindValueChanged(color => teamIdBackground.Colour = color.NewValue, true);
                 team.IdTextColor.BindValueChanged(color => teamIdText.Colour = color.NewValue, true);
@@ -165,6 +177,12 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                     teamNote.FadeIn();
                     teamNote.Text = note.NewValue;
                 }, true);
+
+                header.TextWidthEachTeam.BindCollectionChanged((_, _) =>
+                    teamTextContainer.Padding = new MarginPadding
+                    {
+                        Horizontal = (header.TextWidthEachTeam.Max(w => w.Value) - teamText.Width) / 2
+                    });
             }
 
             var currentMatch = ladder.CurrentMatch.Value;
