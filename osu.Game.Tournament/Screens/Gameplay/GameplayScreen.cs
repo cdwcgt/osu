@@ -336,6 +336,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 {
                     Text = "重置玩家区域",
                     Action = LadderInfo.PlayersPerTeam.TriggerChange,
+                },
+                new TourneyButton
+                {
+                    Text = "强制刷新聊天区域",
+                    Action = () => chat.UpdateChat(false)
                 }
             });
 
