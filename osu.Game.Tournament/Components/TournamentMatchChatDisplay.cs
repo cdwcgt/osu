@@ -6,6 +6,7 @@ using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
+using osu.Framework.Logging;
 using osu.Game.Online.API;
 using osu.Game.Online.Chat;
 using osu.Game.Overlays.Chat;
@@ -47,9 +48,12 @@ namespace osu.Game.Tournament.Components
                 chatChannel.BindTo(ipc.ChatChannel);
                 chatChannel.BindValueChanged(c =>
                 {
+                    channelId = c.NewValue;
+
                     if (channelId <= 0) return;
 
                     UpdateChat(false);
+                    Logger.Log($"Switch channel to {channelId}");
                 }, true);
             }
 
@@ -90,7 +94,7 @@ namespace osu.Game.Tournament.Components
             if (sourceChanged)
             {
                 Channel.UnbindFrom(manager.CurrentChannel);
-                Channel.BindTo(apiChatClient.CurrentChannel);
+                Channel.BindTo(apiChatClient.CurrentChannel!);
             }
 
             apiChatClient.MatchId = channelId;
