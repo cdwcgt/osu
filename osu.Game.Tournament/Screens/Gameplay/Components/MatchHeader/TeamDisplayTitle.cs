@@ -128,6 +128,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                                 {
                                     Anchor = anchor,
                                     Origin = anchor,
+                                    AutoSizeAxes = Axes.Both,
                                     Child = teamText = new TournamentSpriteText
                                     {
                                         Anchor = anchor,

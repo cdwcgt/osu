@@ -23,6 +23,8 @@ namespace osu.Game.Tournament.IPC.MemoryIPC.Drawables
 
         public MatchListenerDetail()
         {
+            AutoSizeAxes = Axes.Y;
+            RelativeSizeAxes = Axes.X;
             InternalChild = new FillFlowContainer
             {
                 AutoSizeAxes = Axes.Y,
