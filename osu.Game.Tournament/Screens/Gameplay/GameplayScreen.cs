@@ -198,6 +198,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
                             ShowRoundPreview();
                         }
                     }
+                },
+                new TourneyButton
+                {
+                    Text = "强制刷新聊天区域",
+                    Action = () => chat.UpdateChat(false)
                 }
             });
 

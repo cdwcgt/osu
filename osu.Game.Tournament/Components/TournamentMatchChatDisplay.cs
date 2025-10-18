@@ -49,16 +49,15 @@ namespace osu.Game.Tournament.Components
                 {
                     if (channelId <= 0) return;
 
-                    updateChat(false);
+                    UpdateChat(false);
                 }, true);
             }
 
             useAlternateChat.BindTo(ladderInfo.UseAlternateChatSource);
-            useAlternateChat.BindValueChanged(_ => updateChat(true));
-            updateChat(true);
+            useAlternateChat.BindValueChanged(_ => UpdateChat(true), true);
         }
 
-        private void updateChat(bool sourceChanged)
+        public void UpdateChat(bool sourceChanged)
         {
             if (manager == null)
             {
