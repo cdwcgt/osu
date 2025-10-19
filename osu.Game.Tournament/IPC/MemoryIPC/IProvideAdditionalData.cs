@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Bindables;
+using osu.Game.Online.Chat;
 
 namespace osu.Game.Tournament.IPC.MemoryIPC
 {
@@ -9,7 +10,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
     {
         public SlotPlayerStatus[] SlotPlayers { get; }
 
-        public BindableList<TourneyChatItem> TourneyChat { get; }
+        public Bindable<Channel> TourneyChatChannel { get; }
 
         public BindableInt Team1Combo { get; }
 

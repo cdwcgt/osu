@@ -10,8 +10,8 @@ using osu.Framework.Logging;
 using osu.Game.Online.API;
 using osu.Game.Online.Chat;
 using osu.Game.Overlays.Chat;
-using osu.Game.Tournament.Chat;
 using osu.Game.Tournament.IPC;
+using osu.Game.Tournament.IPC.MemoryIPC;
 using osu.Game.Tournament.Models;
 
 namespace osu.Game.Tournament.Components
@@ -20,7 +20,6 @@ namespace osu.Game.Tournament.Components
     {
         private readonly Bindable<int> chatChannel = new Bindable<int>();
         private readonly BindableBool useAlternateChat = new BindableBool();
-        private readonly APIChatClient apiChatClient = new APIChatClient();
 
         private ChannelManager? manager;
         private int channelId;
@@ -31,6 +30,11 @@ namespace osu.Game.Tournament.Components
         [Resolved]
         private IAPIProvider api { get; set; } = null!;
 
+        [Resolved]
+        private MatchIPCInfo? ipc { get; set; }
+
+        private IProvideAdditionalData? additionalData => ipc as MemoryBasedIPC;
+
         public TournamentMatchChatDisplay()
         {
             RelativeSizeAxes = Axes.Both;
@@ -39,10 +43,8 @@ namespace osu.Game.Tournament.Components
         }
 
         [BackgroundDependencyLoader]
-        private void load(MatchIPCInfo? ipc)
+        private void load()
         {
-            AddInternal(apiChatClient);
-
             if (ipc != null)
             {
                 chatChannel.BindTo(ipc.ChatChannel);
@@ -81,9 +83,9 @@ namespace osu.Game.Tournament.Components
 
                 manager.JoinChannel(channel);
 
-                if (sourceChanged)
+                if (sourceChanged && additionalData != null)
                 {
-                    Channel.UnbindFrom(apiChatClient.CurrentChannel);
+                    Channel.UnbindFrom(additionalData.TourneyChatChannel);
                     Channel.BindTo(manager.CurrentChannel);
                 }
 
@@ -91,13 +93,11 @@ namespace osu.Game.Tournament.Components
                 return;
             }
 
-            if (sourceChanged)
+            if (sourceChanged && additionalData != null)
             {
                 Channel.UnbindFrom(manager.CurrentChannel);
-                Channel.BindTo(apiChatClient.CurrentChannel!);
+                Channel.BindTo(additionalData.TourneyChatChannel!);
             }
-
-            apiChatClient.MatchId = channelId;
         }
 
         public void Expand() => this.FadeIn(300);
