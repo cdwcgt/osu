@@ -11,6 +11,7 @@ using osu.Game.Beatmaps.Legacy;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
 using osu.Game.Online.API.Requests.Responses;
+using osu.Game.Online.Chat;
 using osu.Game.Tournament.Models;
 
 namespace osu.Game.Tournament.IPC.MemoryIPC
@@ -24,7 +25,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
         private GetBeatmapRequest? beatmapLookupRequest;
 
         public SlotPlayerStatus[] SlotPlayers { get; } = Enumerable.Range(0, 8).Select(i => new SlotPlayerStatus()).ToArray();
-        BindableList<TourneyChatItem> IProvideAdditionalData.TourneyChat => throw new NotImplementedException(); //= new BindableList<TourneyChatItem>();
+        public Bindable<Channel> TourneyChatChannel { get; } = new Bindable<Channel>();
 
         [Resolved]
         private LadderInfo ladder { get; set; } = null!;
@@ -47,6 +48,16 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
         {
             readers = Enumerable.Range(0, 8).Select(i => new StableMemoryReader()).ToArray();
             tourneyManagerMemoryReader = new TourneyManagerMemoryReader();
+
+            ChatChannel.BindValueChanged(c =>
+            {
+                TourneyChatChannel.Value = new Channel
+                {
+                    Name = "mp",
+                    Id = c.NewValue,
+                    Type = ChannelType.Private
+                };
+            });
         }
 
         [BackgroundDependencyLoader]
@@ -62,48 +73,73 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
         {
             var reader = tourneyManagerMemoryReader;
 
-            State.Value = reader.GetTourneyState();
-            LegacyMods mods = Mods.Value = reader.GetMods();
-
-            int beatmapId = reader.GetBeatmapId();
-
-            if (beatmapId > 0 && lastBeatmapId != beatmapId)
+            try
             {
-                beatmapLookupRequest?.Cancel();
+                State.Value = reader.GetTourneyState();
+                LegacyMods mods = Mods.Value = reader.GetMods();
 
-                lastBeatmapId = beatmapId;
+                int beatmapId = reader.GetBeatmapId();
 
-                var existing = Ladder.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(b => b.ID == beatmapId);
-
-                if (existing != null)
+                if (beatmapId > 0 && lastBeatmapId != beatmapId)
                 {
-                    Beatmap.Value = existing.Beatmap;
-                    var ruleset = Ladder.Ruleset.Value?.CreateInstance();
-                    string modStr = existing.Mods;
+                    beatmapLookupRequest?.Cancel();
 
-                    var mod = ruleset!.CreateModFromAcronym(modStr);
+                    lastBeatmapId = beatmapId;
 
-                    Mods.Value = mod != null ? ruleset.ConvertToLegacyMods(new[] { mod }) : mods;
-                }
-                else
-                {
-                    beatmapLookupRequest = new GetBeatmapRequest(new APIBeatmap { OnlineID = beatmapId });
-                    beatmapLookupRequest.Success += b =>
+                    var existing = Ladder.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(b => b.ID == beatmapId);
+
+                    if (existing != null)
                     {
-                        if (lastBeatmapId == beatmapId)
-                            Beatmap.Value = new TournamentBeatmap(b);
-                    };
-                    beatmapLookupRequest.Failure += _ =>
+                        Beatmap.Value = existing.Beatmap;
+                        var ruleset = Ladder.Ruleset.Value?.CreateInstance();
+                        string modStr = existing.Mods;
+
+                        var mod = ruleset!.CreateModFromAcronym(modStr);
+
+                        Mods.Value = mod != null ? ruleset.ConvertToLegacyMods(new[] { mod }) : mods;
+                    }
+                    else
                     {
-                        if (lastBeatmapId == beatmapId)
-                            Beatmap.Value = null;
-                    };
-                    API.Queue(beatmapLookupRequest);
-                    Mods.Value = mods;
+                        beatmapLookupRequest = new GetBeatmapRequest(new APIBeatmap { OnlineID = beatmapId });
+                        beatmapLookupRequest.Success += b =>
+                        {
+                            if (lastBeatmapId == beatmapId)
+                                Beatmap.Value = new TournamentBeatmap(b);
+                        };
+                        beatmapLookupRequest.Failure += _ =>
+                        {
+                            if (lastBeatmapId == beatmapId)
+                                Beatmap.Value = null;
+                        };
+                        API.Queue(beatmapLookupRequest);
+                        Mods.Value = mods;
+                    }
                 }
+
+                ChatChannel.Value = (int)reader.GetChannelId();
+                updateMessageList(reader.GetTourneyChat() ?? new List<Message>());
             }
+            catch (InvalidOperationException)
+            {
+                if (reader.Status == AttachStatus.UnAttached)
+                {
+                    Logger.Log("Attempt fetch data when Unattached. Tourney Manager");
+                }
 
-            ChatChannel.Value = (int)reader.GetChannelId();
+                throw;
+            }
+        }
+
+        private void updateMessageList(List<Message> tourneyChatItems)
+        {
+            var channel = TourneyChatChannel.Value;
+
+            var toRemove = channel.Messages.Except(tourneyChatItems).ToList();
+            foreach (var item in toRemove)
+                channel.Messages.Remove(item);
+
+            var toAdd = tourneyChatItems.Except(channel.Messages).ToArray();
+            channel.AddNewMessages(toAdd);
         }
 
         protected override void Update()
