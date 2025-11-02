@@ -64,5 +64,7 @@ namespace osu.Game.Tournament.Models
         public ShowcaseSettings ShowcaseSettings = new ShowcaseSettings();
 
         public BindableList<ModMultiplierSetting> ModMultiplierSettings { get; } = new BindableList<ModMultiplierSetting>();
+
+        public Bindable<bool> EnableRoundPreview = new Bindable<bool>();
     }
 }
