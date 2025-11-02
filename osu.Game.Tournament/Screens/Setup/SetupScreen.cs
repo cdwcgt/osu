@@ -155,6 +155,11 @@ namespace osu.Game.Tournament.Screens.Setup
                     Label = "Use alternate chat source",
                     Current = LadderInfo.UseAlternateChatSource,
                 },
+                new LabelledSwitchButton
+                {
+                    Label = "启用回合预览",
+                    Current = LadderInfo.EnableRoundPreview,
+                },
             };
         }
 

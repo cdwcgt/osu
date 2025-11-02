@@ -392,6 +392,9 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
             scheduledShowRoundPreview?.Cancel();
 
+            if (!LadderInfo.EnableRoundPreview.Value)
+                return false;
+
             if (roundPreviewShow)
                 return false;
 
