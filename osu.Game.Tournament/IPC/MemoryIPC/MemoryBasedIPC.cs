@@ -238,7 +238,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
             Score2.Value = GetTeamScore(TeamColour.Blue).Sum(CalculateModMultiplier);
 
             Team1Combo.Value = getCombo(TeamColour.Red);
-            Team2Combo.Value = getCombo(TeamColour.Red);
+            Team2Combo.Value = getCombo(TeamColour.Blue);
         }
 
         protected long CalculateModMultiplier(PlayerScore s)

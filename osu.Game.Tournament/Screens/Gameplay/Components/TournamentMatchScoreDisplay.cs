@@ -4,6 +4,7 @@
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Localisation;
+using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Screens.Play.HUD;
 using osu.Game.Tournament.IPC;
@@ -68,7 +69,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private partial class TournamentComboCounter : ComboCounter
         {
             protected override OsuSpriteText CreateSpriteText()
-                => base.CreateSpriteText().With(s => s.Font = s.Font.With(size: 20f));
+                => base.CreateSpriteText().With(s => s.Font = OsuFont.Torus.With(size: 20f));
 
             protected override LocalisableString FormatCount(int count)
             {
