@@ -105,13 +105,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                 team.IdTextColor.BindValueChanged(color => teamIdText.Text.Colour = color.NewValue, true);
                 team.Note.BindValueChanged(note =>
                 {
-                    if (string.IsNullOrEmpty(note.NewValue))
-                    {
-                        teamNote.FadeOut();
-                        return;
-                    }
-
-                    teamNote.FadeIn();
                     teamNote.Text = note.NewValue;
                 }, true);
             }
