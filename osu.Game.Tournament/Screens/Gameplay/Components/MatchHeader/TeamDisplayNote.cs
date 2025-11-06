@@ -4,6 +4,7 @@
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
 using osu.Game.Graphics;
 using osu.Game.Tournament.Models;
@@ -19,7 +20,15 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
         public LocalisableString Text
         {
             get => text.Text;
-            set => text.Text = value;
+            set
+            {
+                text.Text = value;
+
+                if (IsLoaded)
+                {
+                    this.FadeTo(LocalisableString.IsNullOrEmpty(text.Text) ? 0 : 1);
+                }
+            }
         }
 
         public Anchor ShareAnchor
@@ -30,6 +39,13 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                 shareContainer.Anchor = value;
                 shareContainer.Origin = value;
             }
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            this.FadeTo(LocalisableString.IsNullOrEmpty(text.Text) ? 0 : 1);
         }
 
         public TeamDisplayNote(TeamColour colour)
