@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Linq;
 using JetBrains.Annotations;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -18,13 +19,23 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
     public partial class TeamDisplayTitle : CompositeDrawable
     {
         private readonly TournamentTeam? team;
-        private readonly TournamentSpriteText teamText;
-        private readonly TeamDisplayNote teamNote;
+        private readonly TeamColour? teamColour;
+
+        private TournamentSpriteText teamText = null!;
+        private TeamDisplayNote teamNote = null!;
+        private Container teamTextContainer = null!;
 
         [UsedImplicitly]
         private Bindable<string>? acronym;
 
-        public TeamDisplayTitle(TournamentTeam? team, TeamColour? teamColour = null)
+        public TeamDisplayTitle(TournamentTeam? team, TeamColour teamColour)
+        {
+            this.team = team;
+            this.teamColour = teamColour;
+        }
+
+        [BackgroundDependencyLoader]
+        private void load(LadderInfo ladder, MatchHeader header)
         {
             TournamentSpriteTextWithBackground teamIdText;
             var anchor = teamColour == TeamColour.Blue ? Anchor.CentreRight : Anchor.CentreLeft;
@@ -70,12 +81,18 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                             Spacing = new Vector2(2, 0),
                             Children = new Drawable[]
                             {
-                                teamText = new TournamentSpriteText
+                                teamTextContainer = new Container
                                 {
-                                    Anchor = Anchor.BottomLeft,
-                                    Origin = Anchor.BottomLeft,
-                                    Font = OsuFont.GetFont(size: 20, weight: FontWeight.Bold),
-                                    Colour = Color4.Black,
+                                    Anchor = anchor,
+                                    Origin = anchor,
+                                    AutoSizeAxes = Axes.Both,
+                                    Child = teamText = new TournamentSpriteText
+                                    {
+                                        Anchor = anchor,
+                                        Origin = anchor,
+                                        Font = OsuFont.GetFont(size: 20, weight: FontWeight.Bold),
+                                        Colour = Color4.Black,
+                                    },
                                 },
                                 teamIdText = new TournamentSpriteTextWithBackground
                                 {
@@ -99,7 +116,13 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
             if (team != null)
             {
-                team.FullName.BindValueChanged(name => teamText.Text = name.NewValue, true);
+                team.FullName.BindValueChanged(name =>
+                {
+                    teamText.Text = name.NewValue;
+
+                    if (teamColour != null)
+                        Scheduler.AddOnce(() => header.TextWidthEachTeam[teamColour.Value] = teamText.Width);
+                }, true);
                 team.Seed.BindValueChanged(seed => teamIdText.Text.Text = seed.NewValue, true);
                 team.Color.BindValueChanged(color => teamIdText.BackgroundColor = color.NewValue, true);
                 team.IdTextColor.BindValueChanged(color => teamIdText.Text.Colour = color.NewValue, true);
@@ -107,9 +130,16 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                 {
                     teamNote.Text = note.NewValue;
                 }, true);
-            }
 
-            this.team = team;
+                if (teamColour != null)
+                {
+                    header.TextWidthEachTeam.BindCollectionChanged((_, _) =>
+                        teamTextContainer.Padding = new MarginPadding
+                        {
+                            Horizontal = (header.TextWidthEachTeam.Max(w => w.Value) - teamText.Width) / 2
+                        });
+                }
+            }
         }
 
         [BackgroundDependencyLoader]

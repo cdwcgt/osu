@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Game.Screens.Menu;
@@ -9,13 +10,16 @@ using osu.Game.Tournament.Models;
 
 namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 {
-    public partial class MatchHeader : Container
+    [Cached]
+    public partial class MatchHeader : CompositeDrawable
     {
         private TeamScoreDisplay teamDisplay1 = null!;
         private TeamScoreDisplay teamDisplay2 = null!;
         private RoundStage roundStage = null!;
 
         private bool showScores = true;
+
+        public BindableDictionary<TeamColour, float> TextWidthEachTeam = new BindableDictionary<TeamColour, float>();
 
         public bool ShowScores
         {
@@ -58,7 +62,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
             MatchRoundDisplay matchRoundDisplay = new MatchRoundDisplay();
 
-            Children = new Drawable[]
+            InternalChildren = new Drawable[]
             {
                 roundStage = new RoundStage
                 {
