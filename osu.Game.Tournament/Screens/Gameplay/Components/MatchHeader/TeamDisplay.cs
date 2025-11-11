@@ -32,7 +32,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
         }
 
         public TeamDisplay(TournamentTeam? team, TeamColour colour, Bindable<int?> currentTeamScore, int pointsToWin)
-            : base(team)
+            : base(team, colour)
         {
             AutoSizeAxes = Axes.Both;
 

@@ -16,15 +16,17 @@ namespace osu.Game.Tournament.Components
     public partial class DrawableTeamFlag : Container
     {
         private readonly TournamentTeam? team;
+        private readonly TeamColour? colour;
 
         [UsedImplicitly]
         private Bindable<string>? flag;
 
         private Sprite? flagSprite;
 
-        public DrawableTeamFlag(TournamentTeam? team)
+        public DrawableTeamFlag(TournamentTeam? team, TeamColour? colour = null)
         {
             this.team = team;
+            this.colour = colour;
         }
 
         [BackgroundDependencyLoader]
@@ -42,6 +44,13 @@ namespace osu.Game.Tournament.Components
                 Origin = Anchor.Centre,
                 FillMode = FillMode.Stretch
             };
+
+            if (colour != null)
+            {
+                Masking = true;
+                BorderThickness = 5;
+                BorderColour = TournamentGame.GetTeamColour(colour.Value);
+            }
 
             (flag = team.FlagName.GetBoundCopy()).BindValueChanged(_ =>
             {

@@ -61,7 +61,7 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                 {
                     Position = new Vector2(100, 100)
                 },
-                new DrawableTeamFlag(match.NewValue.Team1.Value)
+                new DrawableTeamFlag(match.NewValue.Team1.Value, TeamColour.Red)
                 {
                     Position = new Vector2(165, y_flag_offset),
                 },
@@ -69,7 +69,7 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                 {
                     Position = new Vector2(165, y_offset),
                 },
-                new DrawableTeamFlag(match.NewValue.Team2.Value)
+                new DrawableTeamFlag(match.NewValue.Team2.Value, TeamColour.Blue)
                 {
                     Position = new Vector2(780, y_flag_offset),
                 },
