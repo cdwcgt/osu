@@ -2,12 +2,12 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Linq;
-using JetBrains.Annotations;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Graphics.Sprites;
 using osu.Game.Graphics;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
@@ -20,13 +20,12 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
     {
         private readonly TournamentTeam? team;
         private readonly TeamColour? teamColour;
+        private readonly BindableList<BeatmapChoice> picksBans = new BindableList<BeatmapChoice>();
 
         private TournamentSpriteText teamText = null!;
         private TeamDisplayNote teamNote = null!;
         private Container teamTextContainer = null!;
-
-        [UsedImplicitly]
-        private Bindable<string>? acronym;
+        private SpriteIcon arrowIcon = null!;
 
         public TeamDisplayTitle(TournamentTeam? team, TeamColour teamColour)
         {
@@ -81,6 +80,22 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                             Spacing = new Vector2(2, 0),
                             Children = new Drawable[]
                             {
+                                new Container
+                                {
+                                    AutoSizeAxes = Axes.Both,
+                                    Anchor = anchor,
+                                    Origin = anchor,
+                                    Child = arrowIcon = new SpriteIcon
+                                    {
+                                        Size = new Vector2(20),
+                                        Anchor = Anchor.Centre,
+                                        Origin = Anchor.Centre,
+                                        Icon = FontAwesome.Solid.Play,
+                                        Colour = Color4.Black,
+                                        Rotation = teamColour == TeamColour.Blue ? 180 : 0,
+                                        Alpha = 0,
+                                    },
+                                },
                                 teamTextContainer = new Container
                                 {
                                     Anchor = anchor,
@@ -96,8 +111,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                                 },
                                 teamIdText = new TournamentSpriteTextWithBackground
                                 {
-                                    Anchor = Anchor.BottomLeft,
-                                    Origin = Anchor.BottomLeft,
+                                    Anchor = teamColour == TeamColour.Blue ? Anchor.BottomRight : Anchor.BottomLeft,
+                                    Origin = teamColour == TeamColour.Blue ? Anchor.BottomRight : Anchor.BottomLeft,
                                     Text = { Font = OsuFont.GetFont(size: 13) },
                                     Margin = new MarginPadding { Bottom = 2f }
                                 },
@@ -139,15 +154,26 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                             Horizontal = (header.TextWidthEachTeam.Max(w => w.Value) - teamText.Width) / 2
                         });
                 }
+
+                picksBans.BindCollectionChanged((_, _) => updatePick());
+
+                if (ladder.CurrentMatch.Value != null)
+                    picksBans.BindTo(ladder.CurrentMatch.Value.PicksBans);
             }
         }
 
-        [BackgroundDependencyLoader]
-        private void load()
+        private void updatePick()
         {
-            if (team == null) return;
+            var lastPick = picksBans.LastOrDefault(p => p.Type == ChoiceType.Pick);
 
-            (acronym = team.Acronym.GetBoundCopy()).BindValueChanged(_ => teamText.Text = team?.FullName.Value ?? string.Empty, true);
+            if (lastPick?.Team == teamColour)
+            {
+                arrowIcon.FadeIn(100);
+            }
+            else
+            {
+                arrowIcon.FadeOut(100);
+            }
         }
     }
 }
