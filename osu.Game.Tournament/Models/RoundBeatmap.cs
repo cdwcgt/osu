@@ -12,7 +12,16 @@ namespace osu.Game.Tournament.Models
 
         public string Note = string.Empty;
 
+        public MapType MapType = MapType.Normal;
+
         [JsonProperty("BeatmapInfo")]
         public TournamentBeatmap? Beatmap;
+    }
+
+    public enum MapType
+    {
+        Normal,
+        Starter,
+        Counter
     }
 }

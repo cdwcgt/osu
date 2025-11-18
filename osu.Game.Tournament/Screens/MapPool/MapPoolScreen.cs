@@ -158,8 +158,8 @@ namespace osu.Game.Tournament.Screens.MapPool
                         new ControlPanel.Spacer(),
                         new OsuCheckbox
                         {
-                            LabelText = "Split display by mods",
-                            Current = LadderInfo.SplitMapPoolByMods,
+                            LabelText = "Split display by map type",
+                            Current = LadderInfo.SplitMapPoolByMapType,
                         },
                         new ControlPanel.Spacer(),
                         new MatchRoundNameTextBox
@@ -208,7 +208,7 @@ namespace osu.Game.Tournament.Screens.MapPool
         {
             base.LoadComplete();
 
-            splitMapPoolByMods = LadderInfo.SplitMapPoolByMods.GetBoundCopy();
+            splitMapPoolByMods = LadderInfo.SplitMapPoolByMapType.GetBoundCopy();
             splitMapPoolByMods.BindValueChanged(_ => updateDisplay());
         }
 
@@ -404,15 +404,15 @@ namespace osu.Game.Tournament.Screens.MapPool
             if (CurrentMatch.Value.Round.Value != null)
             {
                 FillFlowContainer<TournamentBeatmapPanel>? currentFlow = null;
-                string? currentMods = null;
+                MapType currentType = MapType.Normal;
                 int flowCount = 0;
-                int currentModCount = 1;
+                int currentMapTypeCount = 1;
 
-                var g = CurrentMatch.Value.Round.Value.Beatmaps.GroupBy(b => b.Mods).ToDictionary(f => f.Key, f => f.Count());
+                var g = CurrentMatch.Value.Round.Value.Beatmaps.GroupBy(b => b.MapType).ToDictionary(f => f.Key, f => f.Count());
 
                 foreach (var b in CurrentMatch.Value.Round.Value.Beatmaps)
                 {
-                    if (currentFlow == null || (LadderInfo.SplitMapPoolByMods.Value && currentMods != b.Mods))
+                    if (currentFlow == null || (LadderInfo.SplitMapPoolByMapType.Value && currentType != b.MapType))
                     {
                         mapFlows.Add(currentFlow = new FillFlowContainer<TournamentBeatmapPanel>
                         {
@@ -422,11 +422,11 @@ namespace osu.Game.Tournament.Screens.MapPool
                             AutoSizeAxes = Axes.Y
                         });
 
-                        currentMods = b.Mods;
+                        currentType = b.MapType;
 
                         totalRows++;
                         flowCount = 0;
-                        currentModCount = 0;
+                        currentMapTypeCount = 0;
                     }
 
                     if (++flowCount > 2)
@@ -434,7 +434,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                         totalRows++;
                         flowCount = 1;
 
-                        if (g[b.Mods] % 3 == 1)
+                        if (g[b.MapType] % 3 == 1)
                         {
                             mapFlows.Add(currentFlow = new FillFlowContainer<TournamentBeatmapPanel>
                             {
@@ -451,7 +451,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                         }
                     }
 
-                    currentFlow.Add(new TournamentBeatmapPanel(b, g[b.Mods] > 1 ? ++currentModCount : null, isMappool: true)
+                    currentFlow.Add(new TournamentBeatmapPanel(b, g[b.MapType] > 1 ? ++currentMapTypeCount : null, isMappool: true)
                     {
                         Anchor = Anchor.TopCentre,
                         Origin = Anchor.TopCentre,

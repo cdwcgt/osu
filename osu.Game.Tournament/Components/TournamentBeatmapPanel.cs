@@ -6,6 +6,7 @@ using System.Collections.Specialized;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Effects;
@@ -78,9 +79,11 @@ namespace osu.Game.Tournament.Components
             : this(beatmap.Beatmap, beatmap.Mods, isMappool: isMappool)
         {
             this.id = id;
+            mapType = beatmap.MapType;
         }
 
         private readonly int? id;
+        private readonly MapType mapType = MapType.Normal;
         private readonly bool isMappool;
         private Colour4 textColor;
         private Colour4 backgroundColor;
@@ -106,6 +109,17 @@ namespace osu.Game.Tournament.Components
             {
                 backgroundColor = ladder.GetModColorByModName(mod).BackgroundColor;
                 textColor = ladder.GetModColorByModName(mod).TextColor;
+            }
+
+            switch (mapType)
+            {
+                case MapType.Starter:
+                    backgroundColor = Color4Extensions.FromHex("#F5BB17");
+                    break;
+
+                case MapType.Counter:
+                    backgroundColor = Color4Extensions.FromHex("#25356E");
+                    break;
             }
 
             AddRangeInternal(new Drawable[]
@@ -195,18 +209,52 @@ namespace osu.Game.Tournament.Components
                                 Alpha = id.HasValue ? 1 : 0,
                                 Children = new Drawable[]
                                 {
-                                    new Box
+                                    new Container
                                     {
                                         RelativeSizeAxes = Axes.Both,
-                                        Colour = backgroundColor,
+                                        Height = mapType == MapType.Normal ? 0f : 0.5f,
+                                        Alpha = mapType == MapType.Normal ? 0f : 1f,
+                                        Anchor = Anchor.TopLeft,
+                                        Origin = Anchor.TopLeft,
+                                        Children = new Drawable[]
+                                        {
+                                            new Box
+                                            {
+                                                RelativeSizeAxes = Axes.Both,
+                                                Colour = new Color4(56, 56, 56, 255),
+                                            },
+                                            new TournamentSpriteText
+                                            {
+                                                Anchor = Anchor.Centre,
+                                                Origin = Anchor.Centre,
+                                                Text = mapType.ToString().Substring(0, 1),
+                                                Colour = textColor,
+                                                Font = OsuFont.Torus.With(size: 20)
+                                            }
+                                        }
                                     },
-                                    new TournamentSpriteText
+                                    new Container
                                     {
-                                        Anchor = Anchor.Centre,
-                                        Origin = Anchor.Centre,
-                                        Text = id.GetValueOrDefault().ToString(),
-                                        Colour = textColor,
-                                        Font = OsuFont.Torus.With(size: 30)
+                                        RelativeSizeAxes = Axes.Both,
+                                        Height = mapType == MapType.Normal ? 1f : 0.5f,
+                                        Anchor = Anchor.BottomLeft,
+                                        Origin = Anchor.BottomLeft,
+                                        Children = new Drawable[]
+                                        {
+                                            new Box
+                                            {
+                                                RelativeSizeAxes = Axes.Both,
+                                                Colour = backgroundColor,
+                                            },
+                                            new TournamentSpriteText
+                                            {
+                                                Anchor = Anchor.Centre,
+                                                Origin = Anchor.Centre,
+                                                Text = id.GetValueOrDefault().ToString(),
+                                                Colour = mapType == MapType.Starter ? new Color4(56, 56, 56, 255) : textColor,
+                                                Font = OsuFont.Torus.With(size: mapType == MapType.Normal ? 30 : 20)
+                                            }
+                                        }
                                     }
                                 }
                             }

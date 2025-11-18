@@ -32,7 +32,7 @@ namespace osu.Game.Tournament.Tests.Screens
 
         private void resetState()
         {
-            Ladder.SplitMapPoolByMods.Value = true;
+            Ladder.SplitMapPoolByMapType.Value = true;
 
             Ladder.CurrentMatch.Value = new TournamentMatch();
             Ladder.CurrentMatch.Value = Ladder.Matches.First();
@@ -144,7 +144,7 @@ namespace osu.Game.Tournament.Tests.Screens
                     addBeatmap(i > 4 ? Ruleset.Value.CreateInstance().AllMods.ElementAt(i).Acronym : "NM");
             });
 
-            AddStep("disable splitting map pool by mods", () => Ladder.SplitMapPoolByMods.Value = false);
+            AddStep("disable splitting map pool by mods", () => Ladder.SplitMapPoolByMapType.Value = false);
 
             AddStep("reset state", resetState);
         }
@@ -162,7 +162,7 @@ namespace osu.Game.Tournament.Tests.Screens
                     addBeatmap();
             });
 
-            AddStep("update displayed maps", () => Ladder.SplitMapPoolByMods.Value = false);
+            AddStep("update displayed maps", () => Ladder.SplitMapPoolByMapType.Value = false);
 
             AddStep("start bans from blue team", () => screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Blue Ban").TriggerClick());
 
@@ -200,7 +200,7 @@ namespace osu.Game.Tournament.Tests.Screens
                     addBeatmap();
             });
 
-            AddStep("update displayed maps", () => Ladder.SplitMapPoolByMods.Value = false);
+            AddStep("update displayed maps", () => Ladder.SplitMapPoolByMapType.Value = false);
 
             AddStep("start bans from blue team", () => screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Blue Ban").TriggerClick());
 
@@ -245,7 +245,7 @@ namespace osu.Game.Tournament.Tests.Screens
                     addBeatmap();
             });
 
-            AddStep("update displayed maps", () => Ladder.SplitMapPoolByMods.Value = false);
+            AddStep("update displayed maps", () => Ladder.SplitMapPoolByMapType.Value = false);
 
             AddStep("start bans with red team", () => screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Red Ban").TriggerClick());
 

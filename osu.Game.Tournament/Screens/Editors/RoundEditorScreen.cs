@@ -180,6 +180,9 @@ namespace osu.Game.Tournament.Screens.Editors
                     private readonly Bindable<string> mods = new Bindable<string>(string.Empty);
 
                     private readonly Bindable<string> note = new Bindable<string>();
+
+                    private readonly Bindable<MapType> mapType = new Bindable<MapType>();
+
                     private readonly Container drawableContainer;
 
                     public RoundBeatmapRow(TournamentRound team, RoundBeatmap beatmap)
@@ -224,6 +227,13 @@ namespace osu.Game.Tournament.Screens.Editors
                                         RelativeSizeAxes = Axes.None,
                                         Width = 200,
                                         Current = mods,
+                                    },
+                                    new SettingsEnumDropdown<MapType>
+                                    {
+                                        LabelText = "地图类型",
+                                        RelativeSizeAxes = Axes.None,
+                                        Width = 200,
+                                        Current = mapType
                                     },
                                     drawableContainer = new Container
                                     {
@@ -310,6 +320,9 @@ namespace osu.Game.Tournament.Screens.Editors
                         {
                             Model.Note = n.NewValue;
                         });
+
+                        mapType.Value = Model.MapType;
+                        mapType.BindValueChanged(t => Model.MapType = t.NewValue);
                     }
 
                     private void updatePanel() => Schedule(() =>

@@ -49,7 +49,7 @@ namespace osu.Game.Tournament.Models
 
         public Bindable<bool> AutoProgressScreens = new BindableBool(true);
 
-        public Bindable<bool> SplitMapPoolByMods = new BindableBool(true);
+        public Bindable<bool> SplitMapPoolByMapType = new BindableBool(true);
 
         public Bindable<bool> DisplayTeamSeeds = new BindableBool();
 
