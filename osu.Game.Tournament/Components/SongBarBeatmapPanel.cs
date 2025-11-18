@@ -20,13 +20,13 @@ namespace osu.Game.Tournament.Components
 
         private readonly Bindable<ColourInfo?> songBarColour = new Bindable<ColourInfo?>();
 
-        public SongBarBeatmapPanel(RoundBeatmap beatmap, int? id = null, bool isMappool = false)
-            : base(beatmap, id, isMappool)
+        public SongBarBeatmapPanel(RoundBeatmap beatmap, int? id = null)
+            : base(beatmap, id)
         {
         }
 
-        public SongBarBeatmapPanel(IBeatmapInfo? beatmap, string mod = "", bool isMappool = false)
-            : base(beatmap, mod, isMappool)
+        public SongBarBeatmapPanel(IBeatmapInfo? beatmap, string mod = "")
+            : base(beatmap, mod)
         {
         }
 
@@ -35,28 +35,25 @@ namespace osu.Game.Tournament.Components
             base.LoadComplete();
 
             songBarColour.BindTo(songBar.SongBarColour);
-            songBarColour.BindValueChanged(c =>
-            {
-                if (c.NewValue == null)
-                {
-                    MainContainer.BorderThickness = 0;
-                    return;
-                }
+            songBarColour.BindValueChanged(_ => updateColor(), true);
+        }
 
-                MainContainer.BorderThickness = 6;
-                MainContainer.BorderColour = c.NewValue.Value;
-            }, true);
+        private void updateColor()
+        {
+            if (songBarColour.Value == null)
+            {
+                MainContainer.BorderThickness = 0;
+                return;
+            }
+
+            MainContainer.BorderThickness = 6;
+            MainContainer.BorderColour = songBarColour.Value.Value;
         }
 
         protected override void UpdateState()
         {
             base.UpdateState();
-
-            if (songBarColour.Value == null)
-                return;
-
-            MainContainer.BorderThickness = 6;
-            MainContainer.BorderColour = songBarColour.Value.Value;
+            updateColor();
         }
 
         protected override Drawable[] CreateInformation() =>
