@@ -25,7 +25,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
         private TournamentSpriteText teamText = null!;
         private TeamDisplayNote teamNote = null!;
         private Container teamTextContainer = null!;
-        private SpriteIcon arrowIcon = null!;
+        private Triangle arrowIcon = null!;
 
         public TeamDisplayTitle(TournamentTeam? team, TeamColour teamColour)
         {
@@ -75,8 +75,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                             AutoSizeAxes = Axes.Both,
                             Direction = FillDirection.Horizontal,
                             Margin = teamColour == TeamColour.Blue
-                                ? new MarginPadding { Left = 10, Right = 10 + 5 }
-                                : new MarginPadding { Left = 10 + 5, Right = 10 },
+                                ? new MarginPadding { Left = 10 + 10, Right = 10 + 5 }
+                                : new MarginPadding { Left = 10 + 5, Right = 10 + 10 },
                             Spacing = new Vector2(2, 0),
                             Children = new Drawable[]
                             {
@@ -85,14 +85,13 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                                     AutoSizeAxes = Axes.Both,
                                     Anchor = anchor,
                                     Origin = anchor,
-                                    Child = arrowIcon = new SpriteIcon
+                                    Child = arrowIcon = new Triangle
                                     {
-                                        Size = new Vector2(20),
+                                        Size = new Vector2(20, 15),
                                         Anchor = Anchor.Centre,
                                         Origin = Anchor.Centre,
-                                        Icon = FontAwesome.Solid.Play,
                                         Colour = Color4.Black,
-                                        Rotation = teamColour == TeamColour.Blue ? 180 : 0,
+                                        Rotation = teamColour == TeamColour.Blue ? -90 : 90,
                                         Alpha = 0,
                                         AlwaysPresent = true,
                                     },
