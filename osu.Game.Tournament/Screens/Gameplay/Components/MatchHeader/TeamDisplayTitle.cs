@@ -94,6 +94,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
                                         Colour = Color4.Black,
                                         Rotation = teamColour == TeamColour.Blue ? 180 : 0,
                                         Alpha = 0,
+                                        AlwaysPresent = true,
                                     },
                                 },
                                 teamTextContainer = new Container
@@ -164,9 +165,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
         private void updatePick()
         {
-            var lastPick = picksBans.LastOrDefault(p => p.Type == ChoiceType.Pick);
+            var lastChoice = picksBans.LastOrDefault();
 
-            if (lastPick?.Team == teamColour)
+            if (lastChoice?.Team == teamColour && lastChoice?.Type == ChoiceType.Pick)
             {
                 arrowIcon.FadeIn(100);
             }
