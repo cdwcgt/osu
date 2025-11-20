@@ -434,10 +434,12 @@ namespace osu.Game.Tournament.Components
         {
             boarderRainbowSchedule?.Cancel();
 
+            MainContainer.TransformTo(nameof(MainContainer.BorderColour), ColourInfo.GradientHorizontal(getRandomColour(), getRandomColour()), 1000);
+
             boarderRainbowSchedule = Scheduler.AddDelayed(() =>
             {
-                MainContainer.TransformTo(nameof(MainContainer.BorderColour), ColourInfo.GradientHorizontal(getRandomColour(), getRandomColour()), 500);
-            }, 500, true);
+                MainContainer.TransformTo(nameof(MainContainer.BorderColour), ColourInfo.GradientHorizontal(getRandomColour(), getRandomColour()), 1000);
+            }, 1000, true);
 
             Color4 getRandomColour()
             {
