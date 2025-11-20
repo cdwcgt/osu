@@ -38,6 +38,7 @@ namespace osu.Game.Tournament.Models
         Pick,
         Ban,
         Protected,
+        Default,
     }
 
     public static class BeatmapChoiceExtensions

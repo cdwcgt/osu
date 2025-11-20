@@ -45,6 +45,7 @@ namespace osu.Game.Tournament.Screens.MapPool
         private OsuButton buttonBlueBan = null!;
         private OsuButton buttonRedPick = null!;
         private OsuButton buttonBluePick = null!;
+        private OsuButton buttonDefaultPick = null!;
         private ControlPanel controlPanel = null!;
 
         private AutoAdvancePrompt? scheduledScreenChange;
@@ -122,6 +123,12 @@ namespace osu.Game.Tournament.Screens.MapPool
                             RelativeSizeAxes = Axes.X,
                             Text = "Blue Pick",
                             Action = () => setMode(TeamColour.Blue, ChoiceType.Pick)
+                        },
+                        buttonDefaultPick = new TourneyButton
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Text = "Default Pick",
+                            Action = () => setMode(TeamColour.Red, ChoiceType.Default)
                         },
                         new ControlPanel.Spacer(),
                         new SettingsCheckbox
@@ -236,6 +243,7 @@ namespace osu.Game.Tournament.Screens.MapPool
             buttonBlueBan.Colour = setColour(pickColour == TeamColour.Blue && pickType == ChoiceType.Ban);
             buttonRedPick.Colour = setColour(pickColour == TeamColour.Red && pickType == ChoiceType.Pick);
             buttonBluePick.Colour = setColour(pickColour == TeamColour.Blue && pickType == ChoiceType.Pick);
+            buttonDefaultPick.Colour = setColour(pickType == ChoiceType.Default);
 
             static Color4 setColour(bool active) => active ? Color4.White : Color4.Gray;
         }
