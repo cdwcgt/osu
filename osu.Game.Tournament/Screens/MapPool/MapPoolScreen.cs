@@ -7,9 +7,11 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
 using osu.Framework.Input.Events;
+using osu.Framework.Testing;
 using osu.Game.Beatmaps;
 using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterface;
@@ -27,7 +29,7 @@ namespace osu.Game.Tournament.Screens.MapPool
 {
     public partial class MapPoolScreen : BeatmapInfoScreen
     {
-        private FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>> mapFlows = null!;
+        private FillFlowContainer mapFlows = null!;
 
         [Resolved]
         private TournamentSceneManager? sceneManager { get; set; }
@@ -72,7 +74,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                 {
                     ShowScores = true,
                 },
-                mapFlows = new FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>>
+                mapFlows = new FillFlowContainer
                 {
                     Y = 160,
                     Spacing = new Vector2(10, 10),
@@ -309,10 +311,9 @@ namespace osu.Game.Tournament.Screens.MapPool
 
         protected override bool OnMouseDown(MouseDownEvent e)
         {
-            var maps = mapFlows.Select(f => f.FirstOrDefault(m => m.ReceivePositionalInputAt(e.ScreenSpaceMousePosition)));
-            var map = maps.FirstOrDefault(m => m != null);
+            var maps = mapFlows.ChildrenOfType<TournamentBeatmapPanel>().Where(b => b.ReceivePositionalInputAt(e.ScreenSpaceMousePosition));
 
-            if (map != null)
+            if (maps.FirstOrDefault() is TournamentBeatmapPanel map)
             {
                 if (e.Button == MouseButton.Left && map.Beatmap?.OnlineID > 0)
                 {
@@ -411,7 +412,7 @@ namespace osu.Game.Tournament.Screens.MapPool
 
             if (CurrentMatch.Value.Round.Value != null)
             {
-                FillFlowContainer<TournamentBeatmapPanel>? currentFlow = null;
+                FillFlowContainer? currentFlow = null;
                 MapType currentType = MapType.Normal;
                 int flowCount = 0;
                 int currentMapTypeCount = 1;
@@ -422,12 +423,30 @@ namespace osu.Game.Tournament.Screens.MapPool
                 {
                     if (currentFlow == null || (LadderInfo.SplitMapPoolByMapType.Value && currentType != b.MapType))
                     {
-                        mapFlows.Add(currentFlow = new FillFlowContainer<TournamentBeatmapPanel>
+                        if (mapFlows.Any())
+                        {
+                            mapFlows.Add(new Circle
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                Width = 0.45f,
+                                Height = 2f,
+                                Anchor = Anchor.TopCentre,
+                                Origin = Anchor.TopCentre,
+                                Margin = new MarginPadding
+                                {
+                                    Vertical = 5f,
+                                }
+                            });
+                        }
+
+                        mapFlows.Add(currentFlow = new FillFlowContainer
                         {
                             Spacing = new Vector2(10, 5),
                             Direction = FillDirection.Full,
                             RelativeSizeAxes = Axes.X,
-                            AutoSizeAxes = Axes.Y
+                            AutoSizeAxes = Axes.Y,
+                            Anchor = Anchor.TopCentre,
+                            Origin = Anchor.TopCentre,
                         });
 
                         currentType = b.MapType;
@@ -444,12 +463,14 @@ namespace osu.Game.Tournament.Screens.MapPool
 
                         if (g[b.MapType] % 3 == 1)
                         {
-                            mapFlows.Add(currentFlow = new FillFlowContainer<TournamentBeatmapPanel>
+                            mapFlows.Add(currentFlow = new FillFlowContainer
                             {
                                 Spacing = new Vector2(10, 5),
                                 Direction = FillDirection.Full,
                                 RelativeSizeAxes = Axes.X,
                                 AutoSizeAxes = Axes.Y,
+                                Anchor = Anchor.TopCentre,
+                                Origin = Anchor.TopCentre,
                                 Padding = new MarginPadding
                                 {
                                     // remove horizontal padding to increase flow width to 3 panels
