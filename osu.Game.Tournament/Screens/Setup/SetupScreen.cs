@@ -16,7 +16,6 @@ using osu.Game.Overlays;
 using osu.Game.Rulesets;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.IPC.MemoryIPC;
-using osu.Game.Tournament.Models;
 using osuTK;
 
 namespace osu.Game.Tournament.Screens.Setup
@@ -30,9 +29,6 @@ namespace osu.Game.Tournament.Screens.Setup
 
         [Resolved]
         private MatchIPCInfo ipc { get; set; } = null!;
-
-        [Resolved]
-        private StableInfo stableInfo { get; set; } = null!;
 
         [Resolved]
         private IAPIProvider api { get; set; } = null!;

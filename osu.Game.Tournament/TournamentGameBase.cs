@@ -87,8 +87,6 @@ namespace osu.Game.Tournament
 
             Textures.AddTextureSource(new TextureLoaderStore(new StorageBackedResourceStore(storage)));
 
-            dependencies.CacheAs(new StableInfo(storage));
-
             beatmapCache = dependencies.Get<BeatmapLookupCache>();
         }
 
@@ -210,7 +208,7 @@ namespace osu.Game.Tournament
                 Ruleset.BindTo(ladder.Ruleset);
 
                 dependencies.Cache(ladder);
-                dependencies.CacheAs(ipc = OperatingSystem.IsWindows() ? new MemoryBasedIPC() : new FileBasedIPC());
+                dependencies.CacheAs(ipc = new MemoryBasedIPC());
                 Add(ipc);
 
                 bracketLoadTaskCompletionSource.SetResult(true);
