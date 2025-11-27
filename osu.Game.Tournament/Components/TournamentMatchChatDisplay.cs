@@ -100,9 +100,20 @@ namespace osu.Game.Tournament.Components
             }
         }
 
-        public void Expand() => this.FadeIn(300);
+        public void Expand()
+        {
+            this.FadeIn(300);
+            OnExpand?.Invoke();
+        }
 
-        public void Contract() => this.FadeOut(200);
+        public void Contract()
+        {
+            this.FadeOut(200);
+            OnContract?.Invoke();
+        }
+
+        public Action? OnExpand;
+        public Action? OnContract;
 
         protected override ChatLine? CreateMessage(Message message)
         {

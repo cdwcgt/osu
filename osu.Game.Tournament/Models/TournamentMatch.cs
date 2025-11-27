@@ -50,6 +50,8 @@ namespace osu.Game.Tournament.Models
 
         public readonly BindableList<BeatmapChoice> PicksBans = new BindableList<BeatmapChoice>();
 
+        public readonly Bindable<Rules> Rules = new Bindable<Rules>();
+
         [JsonIgnore]
         public readonly Bindable<TournamentRound?> Round = new Bindable<TournamentRound?>();
 

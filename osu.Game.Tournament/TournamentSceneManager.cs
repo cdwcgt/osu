@@ -8,6 +8,8 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Graphics.Sprites;
+using osu.Framework.Graphics.Textures;
 using osu.Framework.Input.Events;
 using osu.Framework.Testing;
 using osu.Framework.Threading;
@@ -15,6 +17,7 @@ using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Tournament.Components;
+using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens;
 using osu.Game.Tournament.Screens.Drawings;
 using osu.Game.Tournament.Screens.Editors;
@@ -50,8 +53,14 @@ namespace osu.Game.Tournament
         [Cached]
         private TournamentMatchChatDisplay chat = new TournamentMatchChatDisplay();
 
+        [Resolved]
+        private TextureStore store { get; set; } = null!;
+
         private Container chatContainer = null!;
         private FillFlowContainer buttons = null!;
+
+        private Container ruleContainer = null!;
+        private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
 
         public TournamentSceneManager()
         {
@@ -59,7 +68,7 @@ namespace osu.Game.Tournament
         }
 
         [BackgroundDependencyLoader]
-        private void load()
+        private void load(LadderInfo ladder)
         {
             InternalChild = new RefCountedBackbufferProvider
             {
@@ -119,7 +128,24 @@ namespace osu.Game.Tournament
                                 Width = 700,
                                 Anchor = Anchor.BottomLeft,
                                 Origin = Anchor.TopLeft,
-                                Child = chat
+                                Children = new Drawable[]
+                                {
+                                    chat.With(d => d.Width = 0.5f),
+                                    ruleContainer = new Container
+                                    {
+                                        RelativeSizeAxes = Axes.Both,
+                                        Width = 0.5f,
+                                        Anchor = Anchor.CentreRight,
+                                        Origin = Anchor.CentreRight,
+                                        Child = new Sprite
+                                        {
+                                            RelativeSizeAxes = Axes.Both,
+                                            Anchor = Anchor.CentreRight,
+                                            Origin = Anchor.CentreRight,
+                                            FillMode = FillMode.Fit,
+                                        }
+                                    }
+                                }
                             },
                         }
                     },
@@ -181,6 +207,23 @@ namespace osu.Game.Tournament
                 drawable.Hide();
 
             SetScreen(typeof(SetupScreen));
+
+            currentMatch.BindValueChanged(c =>
+            {
+                if (c.NewValue == null)
+                    return;
+
+                ruleContainer.Child = new Sprite
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    FillMode = FillMode.Fit,
+                    Texture = store.Get($"Rules/{c.NewValue.Rules.Value.ToString()}")
+                };
+            });
+            currentMatch.BindTo(ladder.CurrentMatch);
+
+            chat.OnExpand = () => ruleContainer.FadeIn(300);
+            chat.OnContract = () => ruleContainer.FadeOut(200);
         }
 
         private float depth;
