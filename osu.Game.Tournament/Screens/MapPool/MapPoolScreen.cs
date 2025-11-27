@@ -76,7 +76,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                 },
                 mapFlows = new FillFlowContainer
                 {
-                    Y = 160,
+                    Y = 120,
                     Spacing = new Vector2(10, 10),
                     Direction = FillDirection.Vertical,
                     RelativeSizeAxes = Axes.X,
