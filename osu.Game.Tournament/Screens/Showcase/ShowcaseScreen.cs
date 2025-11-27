@@ -242,7 +242,17 @@ namespace osu.Game.Tournament.Screens.Showcase
             if (existing != null)
             {
                 SongBar.Beatmap = existing.Beatmap;
-                SongBar.SongBarColour.Value = ladder.GetModColorByModName(existing.Mods).BackgroundColor;
+
+                switch (existing.MapType)
+                {
+                    case MapType.Starter:
+                        SongBar.SongBarColour.Value = Color4Extensions.FromHex("#F5BB17");
+                        break;
+
+                    case MapType.Counter:
+                        SongBar.SongBarColour.Value = Color4Extensions.FromHex("#25356E");
+                        break;
+                }
             }
             else
             {
