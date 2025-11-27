@@ -48,13 +48,13 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             if (match.NewValue != null)
                 match.NewValue.PicksBans.CollectionChanged += picksBansOnCollectionChanged;
 
-            Scheduler.AddOnce(updateState);
+            Scheduler.AddOnce(UpdateState);
         }
 
         private void picksBansOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-            => Scheduler.AddOnce(updateState);
+            => Scheduler.AddOnce(UpdateState);
 
-        private void updateState()
+        protected override void UpdateState()
         {
             pickTeamColour = currentMatch.Value?.PicksBans.FirstOrDefault(p => p.BeatmapID == Beatmap?.OnlineID && p.Type == ChoiceType.Pick)?.Team;
 
@@ -65,7 +65,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             }
 
             ArrowColor.Value = getTeamColour(pickTeamColour.Value);
-
+            Scheduler.AddOnce(PostUpdate);
             static ColourInfo getTeamColour(TeamColour teamColour) => teamColour == TeamColour.Red ? Color4Extensions.FromHex("#D43030") : Color4Extensions.FromHex("#2A82E4");
         }
 

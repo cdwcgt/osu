@@ -334,8 +334,12 @@ namespace osu.Game.Tournament.Components
             waitTime += Time.Elapsed;
         }
 
+        protected virtual void UpdateState() { }
+
         private void refreshContent() => Scheduler.AddOnce(() =>
         {
+            UpdateState();
+
             waitTime = 0;
 
             var modsForFetch = mods;
@@ -393,7 +397,7 @@ namespace osu.Game.Tournament.Components
                     },
                 };
 
-                Schedule(PostUpdate);
+                Scheduler.AddOnce(PostUpdate);
                 return;
             }
 
@@ -401,11 +405,11 @@ namespace osu.Game.Tournament.Components
             req.Success += res =>
             {
                 ((TournamentBeatmap)beatmap).StarRating = res.Attributes.StarRating;
-                Schedule(PostUpdate);
+                Scheduler.AddOnce(PostUpdate);
             };
             req.Failure += _ =>
             {
-                Schedule(PostUpdate);
+                Scheduler.AddOnce(PostUpdate);
             };
             api.Queue(req);
         });
