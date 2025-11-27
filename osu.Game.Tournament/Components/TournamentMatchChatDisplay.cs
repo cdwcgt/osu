@@ -21,7 +21,8 @@ namespace osu.Game.Tournament.Components
         private readonly Bindable<int> chatChannel = new Bindable<int>();
         private readonly BindableBool useAlternateChat = new BindableBool();
 
-        private ChannelManager? manager;
+        private ChannelManager manager = null!;
+        private int oldChannelId;
         private int channelId;
 
         [Resolved]
@@ -31,7 +32,7 @@ namespace osu.Game.Tournament.Components
         private IAPIProvider api { get; set; } = null!;
 
         [Resolved]
-        private MatchIPCInfo? ipc { get; set; }
+        private MatchIPCInfo ipc { get; set; } = null!;
 
         private IProvideAdditionalData? additionalData => ipc as MemoryBasedIPC;
 
@@ -45,19 +46,19 @@ namespace osu.Game.Tournament.Components
         [BackgroundDependencyLoader]
         private void load()
         {
-            if (ipc != null)
+            AddInternal(manager = new ChannelManager(api));
+
+            chatChannel.BindTo(ipc.ChatChannel);
+            chatChannel.BindValueChanged(c =>
             {
-                chatChannel.BindTo(ipc.ChatChannel);
-                chatChannel.BindValueChanged(c =>
-                {
-                    channelId = c.NewValue;
+                oldChannelId = c.OldValue;
+                channelId = c.NewValue;
 
-                    if (channelId <= 0) return;
+                if (channelId <= 0) return;
 
-                    UpdateChat(false);
-                    Logger.Log($"Switch channel to {channelId}");
-                }, true);
-            }
+                UpdateChat(false);
+                Logger.Log($"Switch channel to {channelId}");
+            }, true);
 
             useAlternateChat.BindTo(ladderInfo.UseAlternateChatSource);
             useAlternateChat.BindValueChanged(_ => UpdateChat(true), true);
@@ -65,15 +66,13 @@ namespace osu.Game.Tournament.Components
 
         public void UpdateChat(bool sourceChanged)
         {
-            if (manager == null)
-            {
-                AddInternal(manager = new ChannelManager(api));
-            }
+            Logger.Log($"Update channel {channelId}, {nameof(sourceChanged)}: {sourceChanged})");
 
             if (!ladderInfo.UseAlternateChatSource.Value)
             {
-                foreach (var ch in manager.JoinedChannels.ToList())
-                    manager.LeaveChannel(ch);
+                var joinedChannel = manager.JoinedChannels.SingleOrDefault(ch => ch.Id == oldChannelId || ch.Id == channelId);
+                if (joinedChannel != null)
+                    manager.LeaveChannel(joinedChannel);
 
                 var channel = new Channel
                 {
