@@ -410,7 +410,7 @@ namespace osu.Game.Tournament.Components
             api.Queue(req);
         });
 
-        protected string? GetBeatmapModPosition()
+        protected string? GetBeatmapTypePosition()
         {
             var roundBeatmap = Ladder.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(roundMap => roundMap.ID == beatmap!.OnlineID);
 
@@ -423,22 +423,22 @@ namespace osu.Game.Tournament.Components
                 mods = LegacyMods.FreeMod;
             }
 
-            var modArray = Ladder.CurrentMatch.Value!.Round.Value.Beatmaps.Where(b => b.Mods == roundBeatmap.Mods).ToArray();
+            var typeArray = Ladder.CurrentMatch.Value!.Round.Value.Beatmaps.Where(b => b.MapType == roundBeatmap.MapType).ToArray();
 
-            if (modArray.Length == 1)
+            if (typeArray.Length == 1)
             {
-                return roundBeatmap.Mods;
+                return roundBeatmap.MapType.ToString().Substring(0, 1);
             }
 
-            int id = Array.FindIndex(modArray, b => b.ID == roundBeatmap?.ID) + 1;
+            int id = Array.FindIndex(typeArray, b => b.ID == roundBeatmap.ID) + 1;
 
-            return $"{roundBeatmap.Mods}{id}";
+            return $"{roundBeatmap.MapType.ToString().Substring(0, 1)}{id}";
         }
 
         protected virtual void PostUpdate()
         {
             // 这步会顺便判断是否为FM谱面
-            string? modPosition = GetBeatmapModPosition();
+            string? modPosition = GetBeatmapTypePosition();
 
             LeftData.Clear();
             RightData.Clear();
