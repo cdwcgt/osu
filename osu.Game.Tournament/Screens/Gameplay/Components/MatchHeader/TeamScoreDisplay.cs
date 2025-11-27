@@ -21,6 +21,18 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
         private TeamDisplay? teamDisplay;
 
+        public bool ShowScore
+        {
+            get => teamDisplay?.ShowScore ?? false;
+            set
+            {
+                if (teamDisplay != null)
+                {
+                    teamDisplay.ShowScore = value;
+                }
+            }
+        }
+
         public TeamScoreDisplay(TeamColour teamColour)
         {
             this.teamColour = teamColour;
@@ -85,10 +97,14 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader
 
         private void teamChanged(ValueChangedEvent<TournamentTeam?> team)
         {
+            bool wasShowingScores = teamDisplay?.ShowScore ?? false;
+
             InternalChildren = new Drawable[]
             {
                 teamDisplay = new TeamDisplay(team.NewValue, teamColour, currentTeamScore, currentMatch.Value?.PointsToWin ?? 1),
             };
+
+            teamDisplay.ShowScore = wasShowingScores;
         }
     }
 }

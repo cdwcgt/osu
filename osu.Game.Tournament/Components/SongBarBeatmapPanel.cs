@@ -40,9 +40,10 @@ namespace osu.Game.Tournament.Components
 
         private void updateColor()
         {
+            // 如果没有自定义的 songBar 颜色 则使用 beatmapPanel 自己的颜色
+            // 不要将 BorderThickness 设为 0
             if (songBarColour.Value == null)
             {
-                MainContainer.BorderThickness = 0;
                 return;
             }
 

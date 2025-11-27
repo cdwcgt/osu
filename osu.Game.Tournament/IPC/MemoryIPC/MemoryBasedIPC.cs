@@ -63,7 +63,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                     Id = c.NewValue,
                     Type = ChannelType.Private
                 };
-            });
+            }, true);
         }
 
         [BackgroundDependencyLoader]
@@ -130,6 +130,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                 if (reader.Status == AttachStatus.UnAttached)
                 {
                     Logger.Log("Attempt fetch data when Unattached. Tourney Manager");
+                    return;
                 }
 
                 throw;
