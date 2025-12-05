@@ -261,12 +261,18 @@ namespace osu.Game.Tournament.Components
 
             if (frame == null) return;
 
-            if (texture == null || texture.Width != w || texture.Height != h)
+            if (texture == null)
             {
                 texture?.Dispose();
                 texture = renderer.CreateTexture(w, h);
                 texture.BypassTextureUploadQueueing = true;
                 sprite.Texture = texture;
+            }
+
+            if (texture.Width != w || texture.Height != h)
+            {
+                texture.Width = w;
+                texture.Height = h;
             }
 
             texture.SetData(frame);
