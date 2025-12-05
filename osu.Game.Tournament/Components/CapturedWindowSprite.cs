@@ -271,6 +271,7 @@ namespace osu.Game.Tournament.Components
             {
                 texture?.Dispose();
                 texture = renderer.CreateTexture(w, h);
+                texture.BypassTextureUploadQueueing = true;
                 sprite.Texture = texture;
             }
 
