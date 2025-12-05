@@ -47,8 +47,8 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
             MaxValue = 4,
         };
 
-        private readonly StableMemoryReader[] readers;
-        private readonly TourneyManagerMemoryReader tourneyManagerMemoryReader;
+        private StableMemoryReader[] readers;
+        private TourneyManagerMemoryReader tourneyManagerMemoryReader;
 
         public MemoryBasedIPC()
         {
@@ -74,6 +74,19 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
         private const int update_hz = 5;
         private double lastUpdateTime;
+
+        public void Reset()
+        {
+            foreach (var reader in readers)
+            {
+                reader.Dispose();
+            }
+
+            readers = Enumerable.Range(0, 8).Select(i => new StableMemoryReader()).ToArray();
+
+            tourneyManagerMemoryReader.Dispose();
+            tourneyManagerMemoryReader = new TourneyManagerMemoryReader();
+        }
 
         private void updateTourneyData()
         {
@@ -168,6 +181,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                     break;
 
                 case AttachStatus.Initializing:
+                    available.Value = false;
                     break;
 
                 case AttachStatus.Attached:
