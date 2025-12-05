@@ -14,7 +14,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
     // https://github.com/tosuapp/tosu
     public class TourneyManagerMemoryReader : StableMemoryReader
     {
-        // found with PercuDan54
+        // found with PercyDan54
         private static readonly PatternInfo channel_id_pattern = new PatternInfo("8B CE BA 07 00 00 00 E8 ?? ?? ?? ?? A3 ?? ?? ?? ?? 89 15 ?? ?? ?? ?? E8", 0xd);
 
         private static readonly PatternInfo chat_area_pattern = new PatternInfo("A1 ?? ?? ?? ?? 89 45 F0 8B D1 85 C9 75");
