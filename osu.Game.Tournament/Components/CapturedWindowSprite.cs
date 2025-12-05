@@ -132,7 +132,7 @@ namespace osu.Game.Tournament.Components
                         continue;
                     }
 
-                    if (bitmapPool == null || graphicsPool == null || poolWidth != w || poolHeight != h)
+                    if (bitmapPool == null || graphicsPool == null || rawBufferPool == null || poolWidth != w || poolHeight != h)
                     {
                         bitmapPool?.Dispose();
                         graphicsPool?.Dispose();
@@ -154,14 +154,12 @@ namespace osu.Game.Tournament.Components
                         poolHeight = h;
                     }
 
-                    // —— 真正抓图到 bitmapPool —— //
                     IntPtr hdcDest = graphicsPool.GetHdc();
                     IntPtr hdcSrc = WindowsAPI.GetWindowDC(hWnd);
                     WindowsAPI.BitBlt(hdcDest, 0, 0, w, h, hdcSrc, 0, 0, 0x00CC0020);
                     graphicsPool.ReleaseHdc(hdcDest);
                     WindowsAPI.ReleaseDC(hWnd, hdcSrc);
 
-                    // —— 锁像素 + 拷到 rawBufferPool —— //
                     var bmpData = bitmapPool.LockBits(
                         new Rectangle(0, 0, w, h),
                         ImageLockMode.ReadOnly,
@@ -172,7 +170,7 @@ namespace osu.Game.Tournament.Components
 
                     uploadPool = new ArrayPoolTextureUpload(w, h);
 
-                    ConvertRgr24ToRgba32(rawBufferPool!, poolWidth, poolHeight, uploadPool!.RawData);
+                    convertRgr24ToRgba32(rawBufferPool, uploadPool!.RawData);
 
                     lock (bufferLock)
                     {
@@ -193,7 +191,7 @@ namespace osu.Game.Tournament.Components
             }
         }
 
-        private void ConvertRgr24ToRgba32(byte[] src, int width, int height, Span<Rgba32> dst)
+        private static void convertRgr24ToRgba32(byte[] src, Span<Rgba32> dst)
         {
             int dstIdx = 0;
 
@@ -203,7 +201,7 @@ namespace osu.Game.Tournament.Components
                 byte g = src[i + 1];
                 byte r = src[i + 2];
 
-                byte a = 255;
+                const byte a = 255;
                 dst[dstIdx++] = new Rgba32(r, g, b, a);
             }
         }
@@ -230,10 +228,8 @@ namespace osu.Game.Tournament.Components
 
             elapsedTime = 0;
 
-            // 1) 请求抓一帧
             captureRequest.Set();
 
-            // 2) 等待抓取完成（同步），最多等 10ms 防止卡死，也可以改为无限等待
             if (!frameReady.WaitOne(0))
             {
                 return;
@@ -247,7 +243,6 @@ namespace osu.Game.Tournament.Components
 
             this.FadeIn(100);
 
-            // 3) 消费像素缓冲区
             ArrayPoolTextureUpload? frame;
             int w, h;
 
@@ -266,7 +261,6 @@ namespace osu.Game.Tournament.Components
 
             if (frame == null) return;
 
-            // 4) 更新或重建纹理
             if (texture == null || texture.Width != w || texture.Height != h)
             {
                 texture?.Dispose();
