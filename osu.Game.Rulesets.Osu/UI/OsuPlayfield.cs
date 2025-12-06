@@ -83,6 +83,8 @@ namespace osu.Game.Rulesets.Osu.UI
                 HitResult.Ok,
                 HitResult.Meh,
                 HitResult.Miss,
+                HitResult.LargeTickHit,
+                HitResult.SliderTailHit,
                 HitResult.LargeTickMiss,
                 HitResult.IgnoreMiss,
             }, onJudgementLoaded));

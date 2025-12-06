@@ -19,7 +19,7 @@ using osu.Game.Screens.Play;
 namespace osu.Game.Tests.Visual
 {
     /// <summary>
-    /// The goal of this abstract test class is to ensure that the process of exporting of a replay does not affect its playback.
+    /// The goal of this abstract test class is to ensure that the process of exporting and re-importing of a replay does not affect its playback.
     /// Use <see cref="RunTest"/> to exercise that property.
     /// </summary>
     [HeadlessTest]
@@ -51,10 +51,16 @@ namespace osu.Game.Tests.Visual
             AddStep(@"push player", () => pushNewPlayer(originalScore));
 
             AddUntilStep(@"wait until player is loaded", () => currentPlayer.IsCurrentScreen());
+            skipIntroIfPresent();
             AddUntilStep(@"wait for completion", () => currentPlayer.GameplayState.HasCompleted);
             AddAssert(@"judgement results before encode are correct", () => results.Select(r => r.Type), () => Is.EquivalentTo(expectedResults));
 
             AddStep(@"exit player", () => currentPlayer.Exit());
+
+            // The incoming beatmap is ruleset-typed in every usage, so the incoming hitobjects will be used as-is rather than being converted.
+            // Because we'll be re-using the beatmap (thus also the hitobjects), we need to make sure the previous player has been fully disposed.
+            AddUntilStep("player exited", () => !currentPlayer.IsCurrentScreen());
+            AddStep("dispose player", () => currentPlayer.Dispose());
 
             AddStep(@"encode and decode score", () =>
             {
@@ -71,6 +77,7 @@ namespace osu.Game.Tests.Visual
             AddStep(@"push player", () => pushNewPlayer(decodedScore));
 
             AddUntilStep(@"Wait until player is loaded", () => currentPlayer.IsCurrentScreen());
+            skipIntroIfPresent();
             AddUntilStep(@"Wait for completion", () => currentPlayer.GameplayState.HasCompleted);
             AddAssert(@"judgement results after encode are correct", () => results.Select(r => r.Type), () => Is.EquivalentTo(expectedResults));
         }
@@ -89,6 +96,13 @@ namespace osu.Game.Tests.Visual
             LoadScreen(currentPlayer = player);
             results.Clear();
         }
+
+        private void skipIntroIfPresent() =>
+            AddStep(@"skip intro if present", () =>
+            {
+                if (currentPlayer.ChildrenOfType<GameplayClockContainer>().Single().CurrentTime < 0)
+                    currentPlayer.Seek(0);
+            });
 
         private class TestScoreDecoder : LegacyScoreDecoder
         {
