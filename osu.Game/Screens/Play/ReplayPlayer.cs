@@ -18,7 +18,6 @@ using osu.Game.IO.Archives;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Scoring;
 using osu.Game.Scoring.Legacy;
-using osu.Game.Screens.Play.HUD;
 using osu.Game.Screens.Play.PlayerSettings;
 using osu.Game.Screens.Ranking;
 using osu.Game.Screens.Select.Leaderboards;
@@ -39,8 +38,6 @@ namespace osu.Game.Screens.Play
         private ScoreManager scoreManager { get; set; }
 
         public bool SaveScore { get; set; } = false;
-
-        private PlaybackSettings playbackSettings;
 
         [Cached(typeof(IGameplayLeaderboardProvider))]
         private readonly SoloGameplayLeaderboardProvider leaderboardProvider = new SoloGameplayLeaderboardProvider();
