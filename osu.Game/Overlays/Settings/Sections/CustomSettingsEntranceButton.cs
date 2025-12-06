@@ -4,9 +4,7 @@
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Localisation;
-using osu.Framework.Screens;
 using osu.Game.Screens;
-using osu.Game.Screens.MapGuess;
 
 namespace osu.Game.Overlays.Settings.Sections
 {
@@ -26,11 +24,6 @@ namespace osu.Game.Overlays.Settings.Sections
                     Text = "Open settings menu",
                     TooltipText = "Settings here is not provided by official",
                     Action = mfpanel.ToggleVisibility
-                },
-                new SettingsButton
-                {
-                    Text = "Open map guess",
-                    Action = () => runner.PerformFromScreen(s => s.Push(new MapGuessConfigScreen()))
                 },
             };
         }
