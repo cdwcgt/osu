@@ -9,6 +9,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Localisation;
 using osu.Game.Beatmaps;
 using osu.Game.Graphics;
+using osu.Game.Overlays;
 using osu.Game.Tournament.Models;
 
 namespace osu.Game.Tournament.Components
@@ -60,12 +61,24 @@ namespace osu.Game.Tournament.Components
         protected override Drawable[] CreateInformation() =>
             new Drawable[]
             {
-                new TournamentSpriteText
+                new Container
                 {
-                    Text = Beatmap?.GetDisplayTitleRomanisable(false, false) ?? (LocalisableString)@"未知",
-                    Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 20),
                     Origin = Anchor.Centre,
                     Anchor = Anchor.Centre,
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    Padding = new MarginPadding { Horizontal = 10 },
+                    Masking = true,
+                    Child = new MarqueeContainer
+                    {
+                        OverflowSpacing = 30,
+                        NonOverflowingContentAnchor = Anchor.Centre,
+                        CreateContent = () => new TournamentSpriteText
+                        {
+                            Text = Beatmap?.GetDisplayTitleRomanisable(false, false) ?? (LocalisableString)@"未知",
+                            Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 20),
+                        }
+                    },
                 },
                 new Container
                 {

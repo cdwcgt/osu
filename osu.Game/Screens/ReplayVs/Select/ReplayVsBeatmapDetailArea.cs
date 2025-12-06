@@ -28,7 +28,7 @@ namespace osu.Game.Screens.ReplayVs.Select
             }
         }
 
-        private Bindable<PlayBeatmapDetailArea.TabType> selectedTab = null!;
+        private Bindable<BeatmapDetailTab> selectedTab = null!;
 
         private Bindable<bool> selectedModsFilter = null!;
 
@@ -40,7 +40,7 @@ namespace osu.Game.Screens.ReplayVs.Select
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
         {
-            selectedTab = new Bindable<PlayBeatmapDetailArea.TabType>(PlayBeatmapDetailArea.TabType.Local);
+            selectedTab = new Bindable<BeatmapDetailTab>(BeatmapDetailTab.Local);
             selectedModsFilter = config.GetBindable<bool>(OsuSetting.BeatmapDetailModsFilter);
 
             selectedTab.BindValueChanged(tab => CurrentTab.Value = getTabItemFromTabType(tab.NewValue), true);
@@ -81,11 +81,11 @@ namespace osu.Game.Screens.ReplayVs.Select
             new BeatmapDetailAreaLeaderboardTabItem<BeatmapLeaderboardScope>(BeatmapLeaderboardScope.Local),
         }).ToArray();
 
-        private BeatmapDetailAreaTabItem getTabItemFromTabType(PlayBeatmapDetailArea.TabType type)
+        private BeatmapDetailAreaTabItem getTabItemFromTabType(BeatmapDetailTab type)
         {
             switch (type)
             {
-                case PlayBeatmapDetailArea.TabType.Details:
+                case BeatmapDetailTab.Details:
                     return new BeatmapDetailAreaDetailTabItem();
 
                 default:
@@ -93,15 +93,15 @@ namespace osu.Game.Screens.ReplayVs.Select
             }
         }
 
-        private PlayBeatmapDetailArea.TabType getTabTypeFromTabItem(BeatmapDetailAreaTabItem item)
+        private BeatmapDetailTab getTabTypeFromTabItem(BeatmapDetailAreaTabItem item)
         {
             switch (item)
             {
                 case BeatmapDetailAreaDetailTabItem:
-                    return PlayBeatmapDetailArea.TabType.Details;
+                    return BeatmapDetailTab.Details;
 
                 case BeatmapDetailAreaLeaderboardTabItem<BeatmapLeaderboardScope>:
-                    return PlayBeatmapDetailArea.TabType.Local;
+                    return BeatmapDetailTab.Local;
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(item));

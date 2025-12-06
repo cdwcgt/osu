@@ -81,9 +81,13 @@ namespace osu.Game.Tournament.Screens.Setup
                 new ActionableInfo
                 {
                     Label = "内存读取状态",
-                    Value = memoryBasedIPC?.Available.Value == true ? "已连接" : "未启动tourney或正在初始化",
+                    Value = memoryBasedIPC?.Available.Value == true ? "已连接，如果你确信数据有误可以点击重置刷新" : "未启动tourney或正在初始化",
                     Failing = memoryBasedIPC?.Available.Value != true,
-                    HideButton = true
+                    ButtonText = "重置",
+                    Action = () =>
+                    {
+                        memoryBasedIPC?.Reset();
+                    }
                 },
                 new ActionableInfo
                 {

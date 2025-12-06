@@ -48,12 +48,12 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             team1MaxCombo = new TournamentComboCounter();
             team2MaxCombo = new TournamentComboCounter();
 
-            Score1Text.CustomContent.Anchor = Anchor.BottomRight;
-            Score1Text.CustomContent.Origin = Anchor.TopRight;
+            Score1Text.CustomContent.Anchor = Anchor.BottomLeft;
+            Score1Text.CustomContent.Origin = Anchor.BottomRight;
             Score1Text.CustomContent.Child = team1MaxCombo;
 
-            Score2Text.CustomContent.Anchor = Anchor.BottomLeft;
-            Score2Text.CustomContent.Origin = Anchor.TopLeft;
+            Score2Text.CustomContent.Anchor = Anchor.BottomRight;
+            Score2Text.CustomContent.Origin = Anchor.BottomLeft;
             Score2Text.CustomContent.Child = team2MaxCombo;
 
             team1MaxCombo.Current.BindTo(additionalData.Team1Combo);
@@ -68,6 +68,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private partial class TournamentComboCounter : ComboCounter
         {
+            protected override double RollingDuration => 1000;
+            protected override Easing RollingEasing => Easing.Out;
+
             protected override OsuSpriteText CreateSpriteText()
                 => base.CreateSpriteText().With(s => s.Font = OsuFont.Torus.With(size: 20f));
 

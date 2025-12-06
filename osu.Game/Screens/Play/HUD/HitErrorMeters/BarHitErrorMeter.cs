@@ -107,7 +107,7 @@ namespace osu.Game.Screens.Play.HUD.HitErrorMeters
             const int bar_width = 2;
             const float chevron_size = 8;
 
-            hitWindows = HitWindows.GetAllAvailableWindows().ToArray();
+            hitWindows = HitWindows.GetAllAvailableWindows().Where(w => w.result.IsHit()).ToArray();
 
             MaxAngleNum.BindValueChanged(s =>
             {

@@ -20,6 +20,7 @@ using osu.Framework.Utils;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Drawables;
 using osu.Game.Graphics;
+using osu.Game.Overlays;
 using osu.Game.Tournament.Models;
 using osuTK;
 using osuTK.Graphics;
@@ -163,7 +164,8 @@ namespace osu.Game.Tournament.Components
                                             },
                                             information = new FillFlowContainer
                                             {
-                                                AutoSizeAxes = Axes.Both,
+                                                RelativeSizeAxes = Axes.X,
+                                                AutoSizeAxes = Axes.Y,
                                                 Anchor = Anchor.CentreLeft,
                                                 Origin = Anchor.CentreLeft,
                                                 Padding = new MarginPadding(15),
@@ -293,10 +295,21 @@ namespace osu.Game.Tournament.Components
         protected virtual Drawable[] CreateInformation() =>
             new Drawable[]
             {
-                new TournamentSpriteText
+                new Container
                 {
-                    Text = Beatmap?.GetDisplayTitleRomanisable(false, false) ?? (LocalisableString)@"未知",
-                    Font = OsuFont.Torus.With(weight: FontWeight.Bold),
+                    Masking = true,
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    Padding = new MarginPadding { Right = 5 },
+                    Child = new MarqueeContainer
+                    {
+                        OverflowSpacing = 20,
+                        CreateContent = () => new TournamentSpriteText
+                        {
+                            Text = Beatmap?.GetDisplayTitleRomanisable(false, false) ?? (LocalisableString)@"未知",
+                            Font = OsuFont.Torus.With(weight: FontWeight.Bold),
+                        },
+                    },
                 },
                 new FillFlowContainer
                 {

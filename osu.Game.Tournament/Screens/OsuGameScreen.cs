@@ -96,13 +96,7 @@ namespace osu.Game.Tournament.Screens
 
         public void Schedule(Action action) => api.Schedule(action);
 
-        public void UpdateLocalFriends() => api.UpdateLocalFriends();
-
-        public void UpdateLocalBlocks() => api.UpdateLocalBlocks();
-
         public IBindable<APIUser> LocalUser => api.LocalUser;
-        public IBindableList<APIRelation> Friends => api.Friends;
-        public IBindableList<APIRelation> Blocks => api.Blocks;
 
         // Not using api.Activity because the tournament client MetadataClient has already bound to it
         public IBindable<UserActivity> Activity => activity;
@@ -128,12 +122,15 @@ namespace osu.Game.Tournament.Screens
 
         public void Logout() => api.Logout();
 
-        public IHubClientConnector? GetHubConnector(string clientName, string endpoint, bool preferMessagePack = true) => api.GetHubConnector(clientName, endpoint, preferMessagePack);
+        public IHubClientConnector? GetHubConnector(string clientName, string endpoint) => api.GetHubConnector(clientName, endpoint);
 
         public INotificationsClient NotificationsClient => api.NotificationsClient;
 
         public IChatClient GetChatClient() => api.GetChatClient();
 
         public RegistrationRequest.RegistrationRequestErrors? CreateAccount(string email, string username, string password) => api.CreateAccount(email, username, password);
+
+        public ILocalUserState LocalUserState => api.LocalUserState;
+        public SessionVerificationMethod? SessionVerificationMethod => api.SessionVerificationMethod;
     }
 }
