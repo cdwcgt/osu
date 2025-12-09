@@ -434,7 +434,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                         totalRows++;
                         flowCount = 1;
 
-                        if (g[b.Mods] % 3 == 1)
+                        if (g[b.Mods] % 3 == 1 && g[b.Mods] < 10)
                         {
                             mapFlows.Add(currentFlow = new FillFlowContainer<TournamentBeatmapPanel>
                             {
