@@ -154,12 +154,22 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
         {
             var channel = TourneyChatChannel.Value;
 
-            var toRemove = channel.Messages.Except(tourneyChatItems).ToList();
+            var toRemove = channel.Messages.Except(tourneyChatItems).ToArray();
             foreach (var item in toRemove)
                 channel.Messages.Remove(item);
 
+            if (toRemove.Length > 0)
+            {
+                Logger.Log($"memory: deleted {toRemove.Length} message items");
+            }
+
             var toAdd = tourneyChatItems.Except(channel.Messages).ToArray();
             channel.AddNewMessages(toAdd);
+
+            if (toAdd.Length > 0)
+            {
+                Logger.Log($"memory: add {toAdd.Length} message items");
+            }
         }
 
         protected override void Update()
