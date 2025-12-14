@@ -136,7 +136,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                 }
 
                 ChatChannel.Value = (int)reader.GetChannelId();
-                updateMessageList(reader.GetTourneyChat() ?? new List<Message>());
+                updateMessageList(reader.GetTourneyChat(TourneyChatChannel.Value.Messages.Count) ?? new List<Message>());
             }
             catch (InvalidOperationException)
             {
@@ -152,9 +152,11 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
         private void updateMessageList(List<Message> tourneyChatItems)
         {
+            var takenChat = tourneyChatItems.TakeLast(Channel.MAX_HISTORY).ToArray();
+
             var channel = TourneyChatChannel.Value;
 
-            var toRemove = channel.Messages.Except(tourneyChatItems).ToArray();
+            var toRemove = channel.Messages.Except(takenChat).ToArray();
             foreach (var item in toRemove)
                 channel.Messages.Remove(item);
 
@@ -163,7 +165,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                 Logger.Log($"memory: deleted {toRemove.Length} message items");
             }
 
-            var toAdd = tourneyChatItems.Except(channel.Messages).ToArray();
+            var toAdd = takenChat.Except(channel.Messages).ToArray();
             channel.AddNewMessages(toAdd);
 
             if (toAdd.Length > 0)
