@@ -48,6 +48,9 @@ namespace osu.Game.Tournament.Components
         {
             AddInternal(manager = new ChannelManager(api));
 
+            useAlternateChat.BindTo(ladderInfo.UseAlternateChatSource);
+            useAlternateChat.BindValueChanged(_ => UpdateChat(true), true);
+
             chatChannel.BindTo(ipc.ChatChannel);
             chatChannel.BindValueChanged(c =>
             {
@@ -59,14 +62,11 @@ namespace osu.Game.Tournament.Components
                 UpdateChat(false);
                 Logger.Log($"Switch channel to {channelId}");
             }, true);
-
-            useAlternateChat.BindTo(ladderInfo.UseAlternateChatSource);
-            useAlternateChat.BindValueChanged(_ => UpdateChat(true), true);
         }
 
         public void UpdateChat(bool sourceChanged)
         {
-            Logger.Log($"Update channel {channelId}, {nameof(sourceChanged)}: {sourceChanged})");
+            Logger.Log($"Update channel {channelId}, {nameof(sourceChanged)}: {sourceChanged}, {nameof(ladderInfo.UseAlternateChatSource)}: {ladderInfo.UseAlternateChatSource.Value}");
 
             if (!ladderInfo.UseAlternateChatSource.Value)
             {
