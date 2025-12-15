@@ -46,7 +46,6 @@ namespace osu.Game.Tournament.Tests
             Ladder.Teams.Add(match.Team2.Value!);
 
             Ruleset.BindTo(Ladder.Ruleset);
-            Dependencies.CacheAs(new StableInfo(storage));
 
             Add(DialogOverlay);
         }

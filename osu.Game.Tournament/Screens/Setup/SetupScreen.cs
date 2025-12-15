@@ -14,7 +14,6 @@ using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Online.API;
 using osu.Game.Overlays;
 using osu.Game.Rulesets;
-using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.IPC.MemoryIPC;
 using osuTK;
 
