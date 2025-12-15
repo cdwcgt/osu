@@ -76,11 +76,11 @@ jobs:
        fail-fast: false
        matrix:
           os:
-            # tournament 目前为 windows only, 禁用 linux
-            # - { prettyname: Windows, fullname: windows-latest }
+            - { prettyname: Windows, fullname: windows-latest }
             # macOS runner performance has gotten unbearably slow so let's turn them off temporarily.
             # - { prettyname: macOS, fullname: macos-latest }
-            - { prettyname: Linux, fullname: ubuntu-latest }
+            # tournament 目前为 windows only, 禁用 linux
+            # - { prettyname: Linux, fullname: ubuntu-latest }
           threadingMode: ['SingleThread', 'MultiThreaded']
     timeout-minutes: 120
     steps:
