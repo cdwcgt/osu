@@ -28,9 +28,6 @@ namespace osu.Game.Tournament.Screens.Setup
         private ResolutionSelector resolution = null!;
 
         [Resolved]
-        private MatchIPCInfo ipc { get; set; } = null!;
-
-        [Resolved]
         private IAPIProvider api { get; set; } = null!;
 
         [Resolved]
@@ -68,14 +65,14 @@ namespace osu.Game.Tournament.Screens.Setup
             };
 
             api.LocalUser.BindValueChanged(_ => Schedule(reload));
-            var memoryBasedIPC = ipc as MemoryBasedIPC;
+            var memoryBasedIPC = IPC as MemoryBasedIPC;
             memoryBasedIPC?.Available.BindValueChanged(_ => Schedule(reload));
             reload();
         }
 
         private void reload()
         {
-            var memoryBasedIPC = ipc as MemoryBasedIPC;
+            var memoryBasedIPC = IPC as MemoryBasedIPC;
             fillFlow.Children = new Drawable[]
             {
                 new ActionableInfo

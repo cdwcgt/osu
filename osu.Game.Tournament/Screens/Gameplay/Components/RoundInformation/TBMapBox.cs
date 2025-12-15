@@ -12,17 +12,19 @@ using osuTK;
 
 namespace osu.Game.Tournament.Screens.Gameplay.Components.RoundInformation
 {
-    public partial class TBMapBox : MapBox
+    public partial class TbMapBox : MapBox
     {
-        public TBMapBox()
+        private readonly RoundBeatmap tbMap;
+
+        public TbMapBox(RoundBeatmap tbMap)
             : base(new BeatmapChoice())
         {
+            this.tbMap = tbMap;
         }
 
         protected override Drawable CreateCenterLine(TeamColour _)
         {
-            var TBMap = Ladder.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(map => map.Mods == "TB");
-            bool isTBSelected = Ladder.CurrentMatch.Value?.PicksBans.Any(p => p?.BeatmapID == TBMap.ID) == true;
+            bool isTbSelected = Ladder.CurrentMatch.Value!.PicksBans.Any(p => p?.BeatmapID == tbMap.ID) == true;
 
             return new Container
             {
@@ -35,7 +37,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.RoundInformation
                         Anchor = Anchor.Centre,
                         Origin = Anchor.Centre,
                         Size = new Vector2(42, 18),
-                        Colour = isTBSelected ? Color4Extensions.FromHex("#C53C64") : Color4Extensions.FromHex("#383838")
+                        Colour = isTbSelected ? Color4Extensions.FromHex("#C53C64") : Color4Extensions.FromHex("#383838")
                     },
                     new SpriteIcon
                     {

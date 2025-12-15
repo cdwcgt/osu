@@ -199,7 +199,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             if (TBMap != null)
             {
-                mapContentContainer.Add(new TBMapBox());
+                mapContentContainer.Add(new TbMapBox(TBMap));
             }
 
             int mapCount = currentMatch.Value.Round.Value!.Beatmaps.Count;

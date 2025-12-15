@@ -29,7 +29,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components.RoundInformation
         protected Box CenterLine = null!;
 
         protected RoundBeatmap RoundBeatmap = null!;
-        private Box flash;
+        private Box flash = null!;
 
         [Resolved]
         protected LadderInfo Ladder { get; private set; } = null!;

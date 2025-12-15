@@ -30,7 +30,6 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         public readonly Bindable<TourneyState> State = new Bindable<TourneyState>();
         private OsuButton warmupButton = null!;
-        private MatchIPCInfo ipc = null!;
         private Sprite slotSprite = null!;
 
         private MatchHeader header = null!;
@@ -61,10 +60,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private bool switchFromMappool;
 
         [BackgroundDependencyLoader]
-        private void load(MatchIPCInfo ipc, TextureStore store)
+        private void load(TextureStore store)
         {
-            this.ipc = ipc;
-
             AddRangeInternal(new Drawable[]
             {
                 new TourneyVideo("gameplay")
@@ -271,7 +268,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
         {
             base.LoadComplete();
 
-            State.BindTo(ipc.State);
+            State.BindTo(IPC.State);
             State.BindValueChanged(_ => updateState(), true);
             LadderInfo.InvertScoreColour.BindValueChanged(v => scoreDisplay.InvertTextColor = v.NewValue, true);
         }
@@ -348,12 +345,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 {
                     if (warmup.Value || CurrentMatch.Value == null) return;
 
-                    var lastPick = CurrentMatch.Value.PicksBans.LastOrDefault(p => p.Type == ChoiceType.Pick && p.BeatmapID == ipc.Beatmap.Value?.OnlineID);
+                    var lastPick = CurrentMatch.Value.PicksBans.LastOrDefault(p => p.Type == ChoiceType.Pick && p.BeatmapID == IPC.Beatmap.Value?.OnlineID);
 
                     if (lastPick?.Winner.Value != null)
                         return;
 
-                    if (ipc.Score1.Value > ipc.Score2.Value)
+                    if (IPC.Score1.Value > IPC.Score2.Value)
                     {
                         CurrentMatch.Value.Team1Score.Value++;
                         if (lastPick != null) lastPick.Winner.Value = TeamColour.Red;

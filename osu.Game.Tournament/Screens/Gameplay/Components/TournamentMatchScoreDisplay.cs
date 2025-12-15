@@ -16,8 +16,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
     public partial class TournamentMatchScoreDisplay : MatchScoreDisplay
     {
         private bool invertTextColor;
-        private ComboCounter team1MaxCombo;
-        private ComboCounter team2MaxCombo;
+        private ComboCounter team1MaxCombo = null!;
+        private ComboCounter team2MaxCombo = null!;
         private readonly Colour4 black = Colour4.FromHex("1f1f1f");
 
         [Resolved]

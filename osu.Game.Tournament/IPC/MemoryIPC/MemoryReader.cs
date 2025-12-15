@@ -122,7 +122,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
             if (!IsAttached)
                 throw new InvalidOperationException("Process is not attached or has exited.");
 
-            foreach (ProcessModule mod in Process.Modules)
+            foreach (ProcessModule mod in Process!.Modules)
             {
                 if (mod.ModuleName.Equals(moduleName, StringComparison.OrdinalIgnoreCase))
                 {

@@ -21,7 +21,7 @@ namespace osu.Game.Tournament.Screens
         protected LadderInfo LadderInfo { get; private set; } = null!;
 
         [Resolved]
-        protected MatchIPCInfo ipc { get; private set; } = null!;
+        protected MatchIPCInfo IPC { get; private set; } = null!;
 
         private MemoryBasedIPC? memoryIpc;
 
@@ -37,9 +37,9 @@ namespace osu.Game.Tournament.Screens
         {
             base.LoadComplete();
 
-            if (ipc is MemoryBasedIPC memoryIpc)
+            if (IPC is MemoryBasedIPC memoryBasedIPC)
             {
-                this.memoryIpc = memoryIpc;
+                memoryIpc = memoryBasedIPC;
             }
         }
 

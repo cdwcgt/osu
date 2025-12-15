@@ -174,8 +174,8 @@ namespace osu.Game.Screens.ReplayVs
 
             var firstScore = teamRedScoreInfos.Count > 0 ? teamRedScoreInfos[0] : teamBlueScoreInfos[0];
             var beatmapInfo = firstScore.BeatmapInfo;
-            var teamRedScores = teamRedScoreInfos.Where(s => s.BeatmapInfo!.Equals(beatmapInfo)).Select(s => scoreManager.GetScore(s)).ToArray();
-            var teamBlueScores = teamBlueScoreInfos.Where(s => s.BeatmapInfo!.Equals(beatmapInfo)).Select(s => scoreManager.GetScore(s)).ToArray();
+            var teamRedScores = teamRedScoreInfos.Where(s => s.BeatmapInfo!.Equals(beatmapInfo)).Select(s => scoreManager.GetScore(s)!).ToArray();
+            var teamBlueScores = teamBlueScoreInfos.Where(s => s.BeatmapInfo!.Equals(beatmapInfo)).Select(s => scoreManager.GetScore(s)!).ToArray();
 
             this.Push(new ReplayVsScreen(teamRedScores, teamBlueScores, beatmapManager.GetWorkingBeatmap(beatmapInfo)));
         }
