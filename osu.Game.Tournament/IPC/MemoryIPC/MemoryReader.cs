@@ -114,7 +114,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
             WindowsAPI.ReadProcessMemory(ProcessHandle, address, buffer, buffer.Length, out _);
 
-            return ByteArrayToStructure<T>(buffer);
+            return byteArrayToStructure<T>(buffer);
         }
 
         public IntPtr GetModuleBase(string moduleName)
@@ -151,7 +151,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
         // https://stackoverflow.com/a/50672487
 
-        private static T ByteArrayToStructure<T>(byte[] bytes) where T : struct
+        private static T byteArrayToStructure<T>(byte[] bytes) where T : struct
         {
             var handle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
 
@@ -166,7 +166,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
         }
 
         // maybe useless unless we write memory :)
-        private static byte[] StructureToByteArray(object obj)
+        private static byte[] structureToByteArray(object obj)
         {
             int length = Marshal.SizeOf(obj);
 
@@ -312,7 +312,7 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
                     });
                 }
 
-                address = new IntPtr(memInfo.BaseAddress.ToInt64() + (long)memInfo.RegionSize);
+                address = new IntPtr(memInfo.BaseAddress.ToInt64() + memInfo.RegionSize);
             }
 
             return regions;
