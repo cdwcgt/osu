@@ -1,0 +1,61 @@
+# from cloneWith
+# https://github.com/CloneWith/osu/blob/b46c9fd4185263be2fbe39eef4a0616ac620430d/.github/workflows/build-release.yml
+name: Build Release
+run-name: Build Release (${{inputs.profile}}-${{inputs.version}})
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'Build Profile'
+        type: choice
+        required: true
+        default: 'Release'
+        options:
+          - Debug
+          - Release
+      version:
+        description: 'Version Number'
+        required: true
+        default: '0.0.0'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ${{matrix.os.fullname}}
+    strategy:
+      matrix:
+        os:
+          - { prettyname: Windows, fullname: windows-latest }
+          - { prettyname: Linux, fullname: ubuntu-latest }
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install .NET 8.0.x
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Update version number (Linux)
+        if: ${{ matrix.os.fullname == 'ubuntu-latest' }}
+        run: |
+          chmod +x ./SetProjectVersion.sh
+          ./SetProjectVersion.sh ${{ inputs.version }}
+
+      - name: Update version number (Windows)
+        if: ${{ matrix.os.fullname == 'windows-latest' }}
+        run: pwsh -ExecutionPolicy Bypass -File ./SetProjectVersion.ps1 ${{ inputs.version }}
+
+      - name: Compile
+        run: dotnet build -c ${{inputs.profile}} osu.Desktop.slnf
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: osu-build-${{inputs.profile}}-${{inputs.version}}@${{matrix.os.fullname}}
+          path: ./osu.Desktop/bin/${{ inputs.profile }}/*
