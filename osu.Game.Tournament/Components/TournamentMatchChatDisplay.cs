@@ -11,7 +11,6 @@ using osu.Game.Online.API;
 using osu.Game.Online.Chat;
 using osu.Game.Overlays.Chat;
 using osu.Game.Tournament.IPC;
-using osu.Game.Tournament.IPC.MemoryIPC;
 using osu.Game.Tournament.Models;
 
 namespace osu.Game.Tournament.Components
@@ -34,8 +33,6 @@ namespace osu.Game.Tournament.Components
         [Resolved]
         private MatchIPCInfo ipc { get; set; } = null!;
 
-        private IProvideAdditionalData? additionalData => ipc as MemoryBasedIPC;
-
         public TournamentMatchChatDisplay()
         {
             RelativeSizeAxes = Axes.Both;
@@ -49,7 +46,7 @@ namespace osu.Game.Tournament.Components
             AddInternal(manager = new ChannelManager(api));
 
             useAlternateChat.BindTo(ladderInfo.UseAlternateChatSource);
-            useAlternateChat.BindValueChanged(_ => UpdateChat(true), true);
+            useAlternateChat.BindValueChanged(_ => UpdateChat(), true);
 
             chatChannel.BindTo(ipc.ChatChannel);
             chatChannel.BindValueChanged(c =>
@@ -59,44 +56,29 @@ namespace osu.Game.Tournament.Components
 
                 if (channelId <= 0) return;
 
-                UpdateChat(false);
+                UpdateChat();
                 Logger.Log($"Switch channel to {channelId}");
             }, true);
         }
 
-        public void UpdateChat(bool sourceChanged)
+        public void UpdateChat()
         {
-            Logger.Log($"Update channel {channelId}, {nameof(sourceChanged)}: {sourceChanged}, {nameof(ladderInfo.UseAlternateChatSource)}: {ladderInfo.UseAlternateChatSource.Value}");
+            Logger.Log($"Update channel {channelId}");
 
-            if (!ladderInfo.UseAlternateChatSource.Value)
+            var joinedChannel = manager.JoinedChannels.SingleOrDefault(ch => ch.Id == oldChannelId || ch.Id == channelId);
+            if (joinedChannel != null)
+                manager.LeaveChannel(joinedChannel);
+
+            var channel = new Channel
             {
-                var joinedChannel = manager.JoinedChannels.SingleOrDefault(ch => ch.Id == oldChannelId || ch.Id == channelId);
-                if (joinedChannel != null)
-                    manager.LeaveChannel(joinedChannel);
+                Id = channelId,
+                Type = ChannelType.Multiplayer,
+                Name = $"#lazermp_{channelId}"
+            };
 
-                var channel = new Channel
-                {
-                    Id = channelId,
-                    Type = ChannelType.Public
-                };
+            manager.JoinChannel(channel);
 
-                manager.JoinChannel(channel);
-
-                if (sourceChanged && additionalData != null)
-                {
-                    Channel.UnbindFrom(additionalData.TourneyChatChannel);
-                    Channel.BindTo(manager.CurrentChannel);
-                }
-
-                manager.CurrentChannel.Value = channel;
-                return;
-            }
-
-            if (sourceChanged && additionalData != null)
-            {
-                Channel.UnbindFrom(manager.CurrentChannel);
-                Channel.BindTo(additionalData.TourneyChatChannel!);
-            }
+            manager.CurrentChannel.Value = channel;
         }
 
         public void Expand() => this.FadeIn(300);

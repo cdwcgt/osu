@@ -21,6 +21,7 @@ using osu.Game.Tournament.Screens.Editors;
 using osu.Game.Tournament.Screens.Gameplay;
 using osu.Game.Tournament.Screens.Ladder;
 using osu.Game.Tournament.Screens.MapPool;
+using osu.Game.Tournament.Screens.RoomSelect;
 using osu.Game.Tournament.Screens.Schedule;
 using osu.Game.Tournament.Screens.Setup;
 using osu.Game.Tournament.Screens.Showcase;
@@ -96,6 +97,7 @@ namespace osu.Game.Tournament
                                 Children = new Drawable[]
                                 {
                                     new SetupScreen(),
+                                    new RoomSelectScreen(),
                                     new ScheduleScreen(),
                                     new LadderScreen(),
                                     new LadderEditorScreen(),
@@ -148,6 +150,7 @@ namespace osu.Game.Tournament
                                     Children = new Drawable[]
                                     {
                                         new ScreenButton(typeof(SetupScreen)) { Text = "Setup", RequestSelection = SetScreen },
+                                        new ScreenButton(typeof(RoomSelectScreen)) { Text = "Select Room", RequestSelection = SetScreen },
                                         new Separator(),
                                         new ScreenButton(typeof(TeamEditorScreen)) { Text = "Team Editor", RequestSelection = SetScreen },
                                         new ScreenButton(typeof(ModColorEditorScreen)) { Text = "Mod Color Editor", RequestSelection = SetScreen },

@@ -19,9 +19,9 @@ using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Online;
 using osu.Game.Online.API.Requests;
+using osu.Game.Screens.OnlinePlay;
 using osu.Game.Tournament.IO;
 using osu.Game.Tournament.IPC;
-using osu.Game.Tournament.IPC.MemoryIPC;
 using osu.Game.Tournament.Models;
 using osu.Game.Users;
 using osuTK.Input;
@@ -40,6 +40,9 @@ namespace osu.Game.Tournament
 
         [Resolved]
         private GameHost host { get; set; } = null!;
+
+        [Cached]
+        private readonly OngoingOperationTracker ongoingOperationTracker = new OngoingOperationTracker();
 
         protected Task BracketLoadTask => bracketLoadTaskCompletionSource.Task;
 
@@ -88,6 +91,8 @@ namespace osu.Game.Tournament
             Textures.AddTextureSource(new TextureLoaderStore(new StorageBackedResourceStore(storage)));
 
             beatmapCache = dependencies.Get<BeatmapLookupCache>();
+
+            Add(ongoingOperationTracker);
         }
 
         protected override void LoadComplete()
@@ -208,7 +213,9 @@ namespace osu.Game.Tournament
                 Ruleset.BindTo(ladder.Ruleset);
 
                 dependencies.Cache(ladder);
-                dependencies.CacheAs(ipc = new MemoryBasedIPC());
+                ipc = new LazerRoomMatchInfo();
+                dependencies.CacheAs((LazerRoomMatchInfo)ipc);
+                dependencies.CacheAs(ipc);
                 Add(ipc);
 
                 bracketLoadTaskCompletionSource.SetResult(true);

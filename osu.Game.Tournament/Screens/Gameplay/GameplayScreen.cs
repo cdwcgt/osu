@@ -199,7 +199,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 new TourneyButton
                 {
                     Text = "强制刷新聊天区域",
-                    Action = () => chat.UpdateChat(false)
+                    Action = () => chat.UpdateChat()
                 }
             });
 
