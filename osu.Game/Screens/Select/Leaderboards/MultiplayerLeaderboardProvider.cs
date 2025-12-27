@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -21,6 +22,7 @@ using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Online.Spectator;
+using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Scoring;
 using osuTK.Graphics;
 
@@ -59,6 +61,14 @@ namespace osu.Game.Screens.Select.Leaderboards
         public MultiplayerLeaderboardProvider(MultiplayerRoomUser[] users)
         {
             this.users = users;
+        }
+
+        public Mod[] GetPlayerMods(int userId)
+        {
+            if (!UserScores.TryGetValue(userId, out var score))
+                return Array.Empty<Mod>();
+
+            return score.ScoreProcessor.Mods.ToArray();
         }
 
         [BackgroundDependencyLoader]

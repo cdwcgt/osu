@@ -9,6 +9,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Logging;
 using osu.Game.Online.API;
 using osu.Game.Online.Chat;
+using osu.Game.Online.Rooms;
 using osu.Game.Overlays.Chat;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
@@ -17,12 +18,9 @@ namespace osu.Game.Tournament.Components
 {
     public partial class TournamentMatchChatDisplay : StandAloneChatDisplay
     {
-        private readonly Bindable<int> chatChannel = new Bindable<int>();
-        private readonly BindableBool useAlternateChat = new BindableBool();
+        private readonly IBindable<Room?> currentRoom = new Bindable<Room?>();
 
         private ChannelManager manager = null!;
-        private int oldChannelId;
-        private int channelId;
 
         [Resolved]
         private LadderInfo ladderInfo { get; set; } = null!;
@@ -31,7 +29,7 @@ namespace osu.Game.Tournament.Components
         private IAPIProvider api { get; set; } = null!;
 
         [Resolved]
-        private MatchIPCInfo ipc { get; set; } = null!;
+        private LazerRoomMatchInfo ipc { get; set; } = null!;
 
         public TournamentMatchChatDisplay()
         {
@@ -45,40 +43,26 @@ namespace osu.Game.Tournament.Components
         {
             AddInternal(manager = new ChannelManager(api));
 
-            useAlternateChat.BindTo(ladderInfo.UseAlternateChatSource);
-            useAlternateChat.BindValueChanged(_ => UpdateChat(), true);
-
-            chatChannel.BindTo(ipc.ChatChannel);
-            chatChannel.BindValueChanged(c =>
+            currentRoom.BindTo(ipc.CurrentRoom);
+            currentRoom.BindValueChanged(c =>
             {
-                oldChannelId = c.OldValue;
-                channelId = c.NewValue;
+                if (c.OldValue != null)
+                {
+                    Logger.Log($"Leave Channel {Channel.Value}");
+                    manager.LeaveChannel(Channel.Value);
+                }
 
-                if (channelId <= 0) return;
-
-                UpdateChat();
-                Logger.Log($"Switch channel to {channelId}");
+                Scheduler.AddOnce(UpdateChat);
             }, true);
         }
 
         public void UpdateChat()
         {
-            Logger.Log($"Update channel {channelId}");
+            if (currentRoom.Value?.RoomID == null || currentRoom.Value?.ChannelId == null)
+                return;
 
-            var joinedChannel = manager.JoinedChannels.SingleOrDefault(ch => ch.Id == oldChannelId || ch.Id == channelId);
-            if (joinedChannel != null)
-                manager.LeaveChannel(joinedChannel);
-
-            var channel = new Channel
-            {
-                Id = channelId,
-                Type = ChannelType.Multiplayer,
-                Name = $"#lazermp_{channelId}"
-            };
-
-            manager.JoinChannel(channel);
-
-            manager.CurrentChannel.Value = channel;
+            Channel.Value = manager.JoinChannel(new Channel { Id = currentRoom.Value.ChannelId, Type = ChannelType.Multiplayer, Name = $"#lazermp_{currentRoom.Value.RoomID.Value}" });
+            Logger.Log($"Join Channel {Channel.Value}");
         }
 
         public void Expand() => this.FadeIn(300);

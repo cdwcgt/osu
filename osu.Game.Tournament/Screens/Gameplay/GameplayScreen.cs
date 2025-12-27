@@ -4,20 +4,25 @@
 using System;
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Audio;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
+using osu.Framework.Screens;
 using osu.Framework.Threading;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Online.Multiplayer;
 using osu.Game.Overlays.Settings;
+using osu.Game.Screens;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Gameplay.Components;
 using osu.Game.Tournament.Screens.Gameplay.Components.MatchHeader;
+using osu.Game.Tournament.Screens.Gameplay.GameplayPlayerArea;
 using osu.Game.Tournament.Screens.MapPool;
 using osu.Game.Tournament.Screens.TeamWin;
 using osuTK;
@@ -44,7 +49,15 @@ namespace osu.Game.Tournament.Screens.Gameplay
         [Resolved]
         private TournamentMatchChatDisplay chat { get; set; } = null!;
 
-        private Drawable chroma = null!;
+        [Resolved]
+        private MultiplayerClient client { get; set; } = null!;
+
+        [Resolved]
+        private AudioManager audio { get; set; } = null!;
+
+        public bool Playing => chroma.CurrentScreen is TournamentMultiSpectatorScreen;
+
+        private ScreenStack chroma = null!;
 
         protected override SongBar CreateSongBar() => new GameplaySongBar
         {
@@ -85,29 +98,13 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     Origin = Anchor.TopCentre,
                     Children = new[]
                     {
-                        chroma = new Container
+                        chroma = new OsuScreenStack
                         {
+                            RelativeSizeAxes = Axes.None,
                             Anchor = Anchor.TopCentre,
                             Origin = Anchor.TopCentre,
                             Height = 512,
                             Width = 1366,
-                            Children = new Drawable[]
-                            {
-                                new PlayerArea(TeamColour.Red)
-                                {
-                                    Name = "Left PlayerArea",
-                                    RelativeSizeAxes = Axes.Both,
-                                    Width = 0.5f,
-                                },
-                                new PlayerArea(TeamColour.Blue)
-                                {
-                                    Name = "Right PlayerArea",
-                                    RelativeSizeAxes = Axes.Both,
-                                    Anchor = Anchor.TopRight,
-                                    Origin = Anchor.TopRight,
-                                    Width = 0.5f,
-                                }
-                            }
                         },
                     }
                 },
@@ -161,14 +158,21 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     Current = LadderInfo.ChromaKeyWidth,
                     KeyboardStep = 1,
                 },
-                OperatingSystem.IsWindows()
-                    ? new SettingsSlider<int>
-                    {
-                        LabelText = "Frame rate",
-                        Current = LadderInfo.FrameRate,
-                        KeyboardStep = 1,
-                    }
-                    : Empty(),
+                new SettingsSlider<double>
+                {
+                    LabelText = "Master Volume",
+                    Current = audio.Volume
+                },
+                new SettingsSlider<double>
+                {
+                    LabelText = "Track Volume",
+                    Current = audio.VolumeTrack
+                },
+                new SettingsSlider<double>
+                {
+                    LabelText = "Sample Volume",
+                    Current = audio.VolumeSample
+                },
                 new SettingsSlider<int>
                 {
                     LabelText = "Players per team",
@@ -200,6 +204,26 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 {
                     Text = "强制刷新聊天区域",
                     Action = () => chat.UpdateChat()
+                },
+                new TourneyButton
+                {
+                    Text = "force spect",
+                    Action = () =>
+                    {
+                        IPC.State.Value = TourneyState.WaitingForClients;
+                        updateState();
+                    }
+                },
+                new TourneyButton
+                {
+                    Text = "panic",
+                    Action = () =>
+                    {
+                        if (chroma.CurrentScreen is IdleScreen)
+                            return;
+
+                        chroma.Exit();
+                    }
                 }
             });
 
@@ -216,6 +240,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 if (s.OldValue == typeof(MapPoolScreen) && s.NewValue == typeof(GameplayScreen))
                     switchFromMappool = true;
             });
+
+            chroma.Push(new IdleScreen());
         }
 
         private bool roundPreviewShow;
@@ -365,6 +391,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 switch (State.Value)
                 {
                     case TourneyState.Idle:
+                        if (Playing)
+                        {
+                            chroma.Exit();
+                        }
+
                         contract();
 
                         if (LadderInfo.AutoProgressScreens.Value)
@@ -389,6 +420,19 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
                     case TourneyState.Ranking:
                         scheduledContract = Scheduler.AddDelayed(contract, 10000);
+                        break;
+
+                    case TourneyState.WaitingForClients:
+                        if (client.Room == null || chroma.CurrentScreen is TournamentMultiSpectatorScreen)
+                            break;
+
+                        int[] userIds = client.CurrentMatchPlayingUserIds.ToArray();
+                        MultiplayerRoomUser[] users = userIds.Select(id => client.Room.Users.First(u => u.UserID == id)).ToArray();
+
+                        if (userIds.Length == 0)
+                            break;
+
+                        chroma.Push(new TournamentMultiSpectatorScreen(users));
                         break;
 
                     default:

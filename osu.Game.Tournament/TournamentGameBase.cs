@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Textures;
@@ -15,6 +16,7 @@ using osu.Framework.IO.Stores;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osu.Game.Beatmaps.Legacy;
+using osu.Game.Configuration;
 using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Online;
@@ -71,6 +73,8 @@ namespace osu.Game.Tournament
 
         private TournamentSpriteText initialisationText = null!;
 
+        private Bindable<string> configSkin;
+
         [BackgroundDependencyLoader]
         private void load(Storage baseStorage)
         {
@@ -93,6 +97,14 @@ namespace osu.Game.Tournament
             beatmapCache = dependencies.Get<BeatmapLookupCache>();
 
             Add(ongoingOperationTracker);
+
+            configSkin = LocalConfig.GetBindable<string>(OsuSetting.Skin);
+
+            // Transfer skin from config to realm instance once on startup.
+            SkinManager.SetSkinFromConfiguration(configSkin.Value);
+
+            // Transfer any runtime changes back to configuration file.
+            SkinManager.CurrentSkinInfo.ValueChanged += skin => configSkin.Value = skin.NewValue.ID.ToString();
         }
 
         protected override void LoadComplete()

@@ -123,9 +123,6 @@ namespace osu.Game.Screens
         {
             if (screenDependencies == null)
             {
-                if (DisallowExternalBeatmapRulesetChanges)
-                    throw new InvalidOperationException($"Screens that specify {nameof(DisallowExternalBeatmapRulesetChanges)} must be pushed immediately.");
-
                 createDependencies(parent);
             }
 
@@ -134,7 +131,7 @@ namespace osu.Game.Screens
 
         private void createDependencies(IReadOnlyDependencyContainer dependencies)
         {
-            screenDependencies = new OsuScreenDependencies(DisallowExternalBeatmapRulesetChanges, dependencies);
+            screenDependencies = new OsuScreenDependencies(false, dependencies);
 
             Beatmap = screenDependencies.Beatmap;
             Ruleset = screenDependencies.Ruleset;

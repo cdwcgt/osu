@@ -1,0 +1,274 @@
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// See the LICENCE file in the repository root for full licence text.
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using osu.Framework.Allocation;
+using osu.Framework.Audio;
+using osu.Framework.Graphics;
+using osu.Framework.Logging;
+using osu.Game.Graphics;
+using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Spectator;
+using osu.Game.Screens.OnlinePlay.Multiplayer.Spectate;
+using osu.Game.Screens.Play;
+using osu.Game.Screens.Play.HUD;
+using osu.Game.Screens.Select.Leaderboards;
+using osu.Game.Screens.Spectate;
+using osu.Game.Tournament.IPC;
+using osu.Game.Tournament.Models;
+using osu.Game.Users;
+
+namespace osu.Game.Tournament.Screens.Gameplay.GameplayPlayerArea
+{
+    /// <summary>
+    /// A <see cref="SpectatorScreen"/> that spectates multiple users in a match.
+    /// </summary>
+    public partial class TournamentMultiSpectatorScreen : SpectatorScreen
+    {
+        // Isolates beatmap/ruleset to this screen.
+        public override bool DisallowExternalBeatmapRulesetChanges => true;
+
+        // We are managing our own adjustments. For now, this happens inside the Player instances themselves.
+        public override bool? ApplyModTrackAdjustments => false;
+
+        public override bool HideOverlaysOnEnter => true;
+
+        /// <summary>
+        /// Whether all spectating players have finished loading.
+        /// </summary>
+        public bool AllPlayersLoaded => instances.All(p => p.PlayerLoaded);
+
+        internal DrawableGameplayLeaderboard Leaderboard { get; private set; } = null!;
+
+        protected override UserActivity InitialActivity => new UserActivity.SpectatingMultiplayerGame(Beatmap.Value.BeatmapInfo, Ruleset.Value);
+
+        [Resolved]
+        private OsuColour colours { get; set; } = null!;
+
+        [Resolved]
+        private MultiplayerClient multiplayerClient { get; set; } = null!;
+
+        [Resolved]
+        private LadderInfo ladderInfo { get; set; } = null!;
+
+        [Resolved]
+        private LazerRoomMatchInfo lazerRoomInfo { get; set; } = null!;
+
+        [Cached(typeof(IGameplayLeaderboardProvider))]
+        private MultiSpectatorLeaderboardProvider leaderboardProvider { get; set; }
+
+        private IAggregateAudioAdjustment? boundAdjustments;
+
+        private readonly List<PlayerArea> instances = new List<PlayerArea>();
+        private MasterGameplayClockContainer masterClockContainer = null!;
+        private SpectatorSyncManager syncManager = null!;
+        private TournamentPlayerGrid grid = null!;
+        private PlayerArea? currentAudioSource;
+
+        /// <summary>
+        /// Creates a new <see cref="MultiSpectatorScreen"/>.
+        /// </summary>
+        /// <param name="users">The players to spectate.</param>
+        public TournamentMultiSpectatorScreen(MultiplayerRoomUser[] users)
+            : base(users.Select(u => u.UserID).ToArray())
+        {
+            leaderboardProvider = new MultiSpectatorLeaderboardProvider(users);
+        }
+
+        [BackgroundDependencyLoader]
+        private void load()
+        {
+            int playerPerTeam = ladderInfo.PlayersPerTeam.Value;
+
+            InternalChildren = new Drawable[]
+            {
+                masterClockContainer = new MasterGameplayClockContainer(Beatmap.Value, 0)
+                {
+                    Child = grid = new TournamentPlayerGrid(playerPerTeam) { RelativeSizeAxes = Axes.Both }
+                },
+                syncManager = new SpectatorSyncManager(masterClockContainer)
+                {
+                    ReadyToStart = performInitialSeek,
+                },
+                new PlayerSettingsOverlay()
+            };
+
+            var team1Player = ladderInfo.CurrentMatch.Value?.GetTeamByColor(TeamColour.Red);
+            var team2Player = ladderInfo.CurrentMatch.Value?.GetTeamByColor(TeamColour.Blue);
+
+            int[] team1Users = Users.Where(u => team1Player == null || team1Player.Players.Any(p => p.OnlineID == u)).Take(playerPerTeam).ToArray();
+            int[] team2Users = Users.Except(team1Users).Where(u => team2Player == null || team2Player.Players.Any(p => p.OnlineID == u)).Take(playerPerTeam).ToArray();
+
+            for (int i = 0; i < team1Users.Length; i++)
+            {
+                var player = new PlayerArea(team1Users[i], syncManager.CreateManagedClock());
+
+                if (grid.AddRedPlayer(player))
+                {
+                    instances.Add(player);
+                }
+            }
+
+            for (int i = 0; i < team2Users.Length; i++)
+            {
+                var player = new PlayerArea(team2Users[i], syncManager.CreateManagedClock());
+
+                if (grid.AddBluePlayer(player))
+                {
+                    instances.Add(player);
+                }
+            }
+
+            LoadComponentAsync(leaderboardProvider, _ =>
+            {
+                AddInternal(leaderboardProvider);
+                foreach (var instance in instances)
+                    leaderboardProvider.AddClock(instance.UserId, instance.SpectatorPlayerClock);
+
+                lazerRoomInfo.LeaderboardProvider = leaderboardProvider;
+            });
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            masterClockContainer.Reset();
+
+            // Start with adjustments from the first player to keep a sane state.
+            bindAudioAdjustments(instances.First());
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+
+            checkAudioSource();
+
+            if (lazerRoomInfo.State.Value == TourneyState.WaitingForClients && AllPlayersLoaded)
+                lazerRoomInfo.State.Value = TourneyState.Playing;
+        }
+
+        private void checkAudioSource()
+        {
+            var firstAvailable = instances.Where(i => isCandidateAudioSource(i.SpectatorPlayerClock)).MinBy(i => Math.Abs(i.SpectatorPlayerClock.CurrentTime - syncManager.CurrentMasterTime));
+
+            // always use the maximised player instance as the current audio source if there is one
+            if (firstAvailable == currentAudioSource)
+                return;
+
+            // at this point we're in one of the following scenarios:
+            // - the maximised player instance is not the current audio source => we want to switch to the maximised player instance
+            // - there is no maximised player instance, and the previous audio source is stopped => find another running audio source
+            currentAudioSource = instances.Where(i => isCandidateAudioSource(i.SpectatorPlayerClock)).MinBy(i => Math.Abs(i.SpectatorPlayerClock.CurrentTime - syncManager.CurrentMasterTime));
+
+            // Only bind adjustments if there's actually a valid source, else just use the previous ones to ensure no sudden changes to audio.
+            if (currentAudioSource != null)
+                bindAudioAdjustments(currentAudioSource);
+
+            foreach (var instance in instances)
+                instance.Mute = instance != currentAudioSource;
+        }
+
+        private void bindAudioAdjustments(PlayerArea first)
+        {
+            if (boundAdjustments != null)
+                masterClockContainer.AdjustmentsFromMods.UnbindAdjustments(boundAdjustments);
+
+            boundAdjustments = first.ClockAdjustmentsFromMods;
+            masterClockContainer.AdjustmentsFromMods.BindAdjustments(boundAdjustments);
+        }
+
+        private bool isCandidateAudioSource(SpectatorPlayerClock? clock)
+            => clock?.IsRunning == true && !clock.IsCatchingUp && !clock.WaitingOnFrames;
+
+        private void performInitialSeek()
+        {
+            // We want to start showing gameplay as soon as possible.
+            // Each client may be in a different place in the beatmap, so we need to do our best to find a common
+            // starting point.
+            //
+            // Preferring a lower value ensures that we don't have some clients stuttering to keep up.
+            List<double> minFrameTimes = new List<double>();
+
+            foreach (var instance in instances)
+            {
+                if (instance.Score == null)
+                    continue;
+
+                minFrameTimes.Add(instance.Score.Replay.Frames.MinBy(f => f.Time)?.Time ?? 0);
+            }
+
+            // Remove any outliers (only need to worry about removing those lower than the mean since we will take a Min() after).
+            double mean = minFrameTimes.Average();
+            minFrameTimes.RemoveAll(t => mean - t > 1000);
+
+            double startTime = minFrameTimes.Min();
+
+            if (startTime < 10000)
+                startTime = 0;
+
+            masterClockContainer.Reset(startTime, true);
+            Logger.Log($"Multiplayer spectator seeking to initial time of {startTime}");
+        }
+
+        protected override void OnNewPlayingUserState(int userId, SpectatorState spectatorState)
+        {
+        }
+
+        protected override void StartGameplay(int userId, SpectatorGameplayState spectatorGameplayState) => Schedule(() =>
+        {
+            var playerArea = instances.Single(i => i.UserId == userId);
+
+            // The multiplayer spectator flow requires the client to return to a higher level screen
+            // (ie. StartGameplay should only be called once per player).
+            //
+            // Meanwhile, the solo spectator flow supports multiple `StartGameplay` calls.
+            // To ensure we don't crash out in an edge case where this is called more than once in multiplayer,
+            // guard against re-entry for the same player.
+            if (playerArea.Score != null)
+                return;
+
+            playerArea.LoadScore(spectatorGameplayState.Score);
+        });
+
+        protected override void FailGameplay(int userId) => Schedule(() =>
+        {
+            // We probably want to visualise this in the future.
+
+            var instance = instances.Single(i => i.UserId == userId);
+            syncManager.RemoveManagedClock(instance.SpectatorPlayerClock);
+        });
+
+        protected override void PassGameplay(int userId) => Schedule(() =>
+        {
+            var instance = instances.Single(i => i.UserId == userId);
+            syncManager.RemoveManagedClock(instance.SpectatorPlayerClock);
+        });
+
+        protected override void QuitGameplay(int userId) => Schedule(() =>
+        {
+            RemoveUser(userId);
+
+            var instance = instances.Single(i => i.UserId == userId);
+
+            instance.FadeColour(colours.Gray4, 400, Easing.OutQuint);
+            syncManager.RemoveManagedClock(instance.SpectatorPlayerClock);
+        });
+
+        public override bool OnBackButton()
+        {
+            if (multiplayerClient.Room == null)
+                return base.OnBackButton();
+
+            // On a manual exit, set the player back to idle unless gameplay has finished.
+            // Of note, this doesn't cover exiting using alt-f4 or menu home option.
+            if (multiplayerClient.Room.State != MultiplayerRoomState.Open)
+                multiplayerClient.ChangeState(MultiplayerUserState.Idle).FireAndForget();
+
+            return base.OnBackButton();
+        }
+    }
+}

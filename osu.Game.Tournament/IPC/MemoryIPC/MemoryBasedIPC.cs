@@ -33,9 +33,6 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
         [Resolved]
         protected LadderInfo Ladder { get; private set; } = null!;
 
-        public BindableInt Team1Combo { get; } = new BindableInt();
-        public BindableInt Team2Combo { get; } = new BindableInt();
-
         [Resolved]
         protected IAPIProvider API { get; private set; } = null!;
 

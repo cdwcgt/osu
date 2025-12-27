@@ -34,6 +34,9 @@ namespace osu.Game.Tournament.Screens.RoomSelect
                     Depth = -1,
                     RelativeSizeAxes = Axes.Both,
                     Child = new ScreenStackFooter(screenStack, backReceptor)
+                    {
+                        BackButtonPressed = handleBackButton
+                    }
                 },
             };
         }
@@ -41,6 +44,15 @@ namespace osu.Game.Tournament.Screens.RoomSelect
         protected override void LoadComplete()
         {
             screenStack.Push(new RoomSelectMultiplayerLoungeSubScreen());
+        }
+
+        private void handleBackButton()
+        {
+            if (!(screenStack.CurrentScreen is IOsuScreen currentScreen)) return;
+
+            if (screenStack.CurrentScreen is RoomSelectMultiplayerLoungeSubScreen) return;
+
+            if (!((Drawable)currentScreen).IsLoaded || (currentScreen.AllowUserExit && !currentScreen.OnBackButton())) screenStack.Exit();
         }
     }
 }

@@ -76,7 +76,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
 
         public override bool? ApplyModTrackAdjustments => true;
 
-        public override bool DisallowExternalBeatmapRulesetChanges => true;
+        public override bool DisallowExternalBeatmapRulesetChanges => false;
 
         /// <summary>
         /// Whether the user has confirmed they want to exit this screen in the presence of unsaved changes.
