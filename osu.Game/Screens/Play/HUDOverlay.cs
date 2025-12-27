@@ -14,6 +14,7 @@ using osu.Framework.Graphics.Primitives;
 using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Game.Configuration;
+using osu.Game.Extensions;
 using osu.Game.Input;
 using osu.Game.Input.Bindings;
 using osu.Game.Localisation;
@@ -28,6 +29,7 @@ using osu.Game.Screens.Play.HUD.ClicksPerSecond;
 using osu.Game.Screens.Play.HUD.JudgementCounter;
 using osu.Game.Skinning;
 using osuTK;
+using osuTK.Graphics;
 
 namespace osu.Game.Screens.Play
 {
@@ -66,6 +68,9 @@ namespace osu.Game.Screens.Play
 
         [Cached]
         private readonly JudgementCountController judgementCountController;
+
+        [Resolved]
+        private ScoreProcessor scoreProcessor { get; set; } = null!;
 
         public Bindable<bool> ShowHealthBar = new Bindable<bool>(true);
 
@@ -221,6 +226,8 @@ namespace osu.Game.Screens.Play
 
             // start all elements hidden
             hideTargets.ForEach(d => d.Hide());
+
+            scoreProcessor.Combo.BindValueChanged(onComboChange);
         }
 
         public override void Hide() =>
@@ -397,6 +404,30 @@ namespace osu.Game.Screens.Play
                 case HUDVisibilityMode.Always:
                     ShowHud.Value = true;
                     break;
+            }
+        }
+
+        [Resolved]
+        private IGameplayClock gameplayClock { get; set; }
+
+        private void onComboChange(ValueChangedEvent<int> combo)
+        {
+            if (gameplayClock.IsRewinding)
+                return;
+
+            if (combo.NewValue == 0 && combo.OldValue > 20)
+            {
+                foreach (var component in mainComponents.Components)
+                {
+                    if (component is not Drawable drawable)
+                        continue;
+
+                    if (component is not IShakeWhenMiss iShake || !iShake.ShakeWhenMiss.Value)
+                        continue;
+
+                    drawable.MoveToOffset(new Vector2(10, 0), 80, Easing.OutSine).Then().MoveToOffset(new Vector2(-20, 0), 80, Easing.InOutSine).Then().MoveToOffset(new Vector2(10, 0), 80, Easing.OutSine);
+                    drawable.FlashColour(Color4.Red, 1000, Easing.InOutSine);
+                }
             }
         }
 
