@@ -11,13 +11,14 @@ using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Localisation.SkinComponents;
 using osu.Game.Overlays.Settings;
+using osu.Game.Screens.Play.HUD;
 
 namespace osu.Game.Skinning
 {
     /// <summary>
     /// A skin component that contains text and allows the user to choose its font.
     /// </summary>
-    public abstract partial class FontAdjustableSkinComponent : Container, ISerialisableDrawable
+    public abstract partial class FontAdjustableSkinComponent : Container, ISerialisableDrawable, IShakeWhenMiss
     {
         public bool UsesFixedAnchor { get; set; }
 
@@ -29,6 +30,9 @@ namespace osu.Game.Skinning
 
         [SettingSource(typeof(SkinnableComponentStrings), nameof(SkinnableComponentStrings.TextColour))]
         public BindableColour4 TextColour { get; } = new BindableColour4(Colour4.White);
+
+        [SettingSource("Shake when miss")]
+        public Bindable<bool> ShakeWhenMiss { get; } = new Bindable<bool>();
 
         /// <summary>
         /// Implement to apply the user font selection to one or more components.
