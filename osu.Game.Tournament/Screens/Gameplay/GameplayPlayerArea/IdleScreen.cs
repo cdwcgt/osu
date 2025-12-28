@@ -7,7 +7,6 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Game.Online.Multiplayer;
 using osu.Game.Screens;
 using osu.Game.Tournament.Models;
 
@@ -18,10 +17,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.GameplayPlayerArea
         [Resolved]
         private LadderInfo ladder { get; set; } = null!;
 
-        [Resolved]
-        private MultiplayerClient client { get; set; } = null!;
-
-        private Bindable<int> playerPerTeam = new Bindable<int>();
+        private readonly Bindable<int> playerPerTeam = new Bindable<int>();
         private readonly Container redTeamContainer;
         private readonly Container blueTeamContainer;
 
@@ -43,6 +39,11 @@ namespace osu.Game.Tournament.Screens.Gameplay.GameplayPlayerArea
                 }
             };
         }
+
+        public override bool HandlePositionalInput => false;
+        public override bool HandleNonPositionalInput => false;
+        public override bool PropagatePositionalInputSubTree => false;
+        public override bool PropagateNonPositionalInputSubTree => false;
 
         protected override void LoadComplete()
         {
