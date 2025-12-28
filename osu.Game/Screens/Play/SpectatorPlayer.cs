@@ -94,6 +94,14 @@ namespace osu.Game.Screens.Play
                 SetGameplayStartTime(score.Replay.Frames[0].Time);
         }
 
+        public void ForceToResult()
+        {
+            if (!this.IsCurrentScreen())
+                return;
+
+            this.Push(CreateResults(score.ScoreInfo));
+        }
+
         protected override Score CreateScore(IBeatmap beatmap) => score;
 
         protected override ResultsScreen CreateResults(ScoreInfo score)

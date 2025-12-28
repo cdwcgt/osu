@@ -298,7 +298,7 @@ namespace osu.Game.Tournament.IPC
         }
 
         private double waitingForIdle;
-        private const int time_to_idle_from_ranking = 10 * 1000;
+        private const int time_to_idle_from_ranking = 15 * 1000;
 
         private void updateUsers() => Scheduler.AddOnce(() =>
         {

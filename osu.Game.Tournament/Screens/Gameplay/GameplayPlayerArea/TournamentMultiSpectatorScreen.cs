@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Logging;
 using osu.Game.Graphics;
@@ -58,6 +59,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.GameplayPlayerArea
 
         [Cached(typeof(IGameplayLeaderboardProvider))]
         private MultiSpectatorLeaderboardProvider leaderboardProvider { get; set; }
+
+        private readonly Bindable<TourneyState> tourneyState = new Bindable<TourneyState>();
 
         private IAggregateAudioAdjustment? boundAdjustments;
 
@@ -129,6 +132,28 @@ namespace osu.Game.Tournament.Screens.Gameplay.GameplayPlayerArea
 
                 lazerRoomInfo.LeaderboardProvider = leaderboardProvider;
             });
+
+            tourneyState.BindTo(lazerRoomInfo.State);
+
+            tourneyState.BindValueChanged(s =>
+            {
+                if (s.OldValue == TourneyState.Playing && s.NewValue == TourneyState.Ranking)
+                    onRanking();
+            });
+        }
+
+        private void onRanking()
+        {
+            Scheduler.AddDelayed(() =>
+            {
+                foreach (var instance in instances)
+                {
+                    if (instance.Player is MultiSpectatorPlayer spectatorPlayer)
+                    {
+                        spectatorPlayer.ForceToResult();
+                    }
+                }
+            }, 5 * 1000);
         }
 
         protected override void LoadComplete()
