@@ -220,7 +220,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.GameplayPlayerArea
 
         protected override void StartGameplay(int userId, SpectatorGameplayState spectatorGameplayState) => Schedule(() =>
         {
-            var playerArea = instances.Single(i => i.UserId == userId);
+            var playerArea = instances.SingleOrDefault(i => i.UserId == userId);
+            if (playerArea == null)
+                return;
 
             // The multiplayer spectator flow requires the client to return to a higher level screen
             // (ie. StartGameplay should only be called once per player).
@@ -238,13 +240,19 @@ namespace osu.Game.Tournament.Screens.Gameplay.GameplayPlayerArea
         {
             // We probably want to visualise this in the future.
 
-            var instance = instances.Single(i => i.UserId == userId);
+            var instance = instances.SingleOrDefault(i => i.UserId == userId);
+            if (instance == null)
+                return;
+
             syncManager.RemoveManagedClock(instance.SpectatorPlayerClock);
         });
 
         protected override void PassGameplay(int userId) => Schedule(() =>
         {
-            var instance = instances.Single(i => i.UserId == userId);
+            var instance = instances.SingleOrDefault(i => i.UserId == userId);
+            if (instance == null)
+                return;
+
             syncManager.RemoveManagedClock(instance.SpectatorPlayerClock);
         });
 
@@ -252,23 +260,12 @@ namespace osu.Game.Tournament.Screens.Gameplay.GameplayPlayerArea
         {
             RemoveUser(userId);
 
-            var instance = instances.Single(i => i.UserId == userId);
+            var instance = instances.SingleOrDefault(i => i.UserId == userId);
+            if (instance == null)
+                return;
 
             instance.FadeColour(colours.Gray4, 400, Easing.OutQuint);
             syncManager.RemoveManagedClock(instance.SpectatorPlayerClock);
         });
-
-        public override bool OnBackButton()
-        {
-            if (multiplayerClient.Room == null)
-                return base.OnBackButton();
-
-            // On a manual exit, set the player back to idle unless gameplay has finished.
-            // Of note, this doesn't cover exiting using alt-f4 or menu home option.
-            if (multiplayerClient.Room.State != MultiplayerRoomState.Open)
-                multiplayerClient.ChangeState(MultiplayerUserState.Idle).FireAndForget();
-
-            return base.OnBackButton();
-        }
     }
 }
