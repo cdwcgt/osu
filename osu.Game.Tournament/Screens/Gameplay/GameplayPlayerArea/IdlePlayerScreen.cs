@@ -50,7 +50,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.GameplayPlayerArea
                     Anchor = Anchor.BottomRight,
                     Origin = Anchor.BottomRight,
                     Font = OsuFont.Default.With(size: 30),
-                    Colour = Color4.Pink
+                    Colour = colour == TeamColour.Red ? Color4.Pink : Color4.Blue
                 }
             };
         }
