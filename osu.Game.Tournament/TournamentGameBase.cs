@@ -73,7 +73,7 @@ namespace osu.Game.Tournament
 
         private TournamentSpriteText initialisationText = null!;
 
-        private Bindable<string> configSkin;
+        private Bindable<string> configSkin = new Bindable<string>();
 
         [BackgroundDependencyLoader]
         private void load(Storage baseStorage)
@@ -98,7 +98,7 @@ namespace osu.Game.Tournament
 
             Add(ongoingOperationTracker);
 
-            configSkin = LocalConfig.GetBindable<string>(OsuSetting.Skin);
+            LocalConfig.BindWith(OsuSetting.Skin, configSkin);
 
             // Transfer skin from config to realm instance once on startup.
             SkinManager.SetSkinFromConfiguration(configSkin.Value);
