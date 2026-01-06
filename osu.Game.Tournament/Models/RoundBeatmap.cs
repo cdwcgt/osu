@@ -10,7 +10,17 @@ namespace osu.Game.Tournament.Models
         public int ID;
         public string Mods = string.Empty;
 
+        public MapGameMode MapGameMode = MapGameMode.Standard;
+
         [JsonProperty("BeatmapInfo")]
         public TournamentBeatmap? Beatmap;
+    }
+
+    public enum MapGameMode
+    {
+        Standard,
+        Taiko,
+        Catch,
+        Mania,
     }
 }

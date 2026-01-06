@@ -163,6 +163,8 @@ namespace osu.Game.Tournament.Screens.Editors
 
                     private readonly Bindable<string> mods = new Bindable<string>(string.Empty);
 
+                    private readonly Bindable<MapGameMode> mapGameMode = new Bindable<MapGameMode>();
+
                     private readonly Container drawableContainer;
 
                     public RoundBeatmapRow(TournamentRound team, RoundBeatmap beatmap)
@@ -206,6 +208,13 @@ namespace osu.Game.Tournament.Screens.Editors
                                         RelativeSizeAxes = Axes.None,
                                         Width = 200,
                                         Current = mods,
+                                    },
+                                    new SettingsEnumDropdown<MapGameMode>
+                                    {
+                                        LabelText = "Map Game Mode",
+                                        RelativeSizeAxes = Axes.None,
+                                        Width = 200,
+                                        Current = mapGameMode,
                                     },
                                     drawableContainer = new Container
                                     {
@@ -265,6 +274,9 @@ namespace osu.Game.Tournament.Screens.Editors
 
                         mods.Value = Model.Mods;
                         mods.BindValueChanged(modString => Model.Mods = modString.NewValue);
+
+                        mapGameMode.Value = Model.MapGameMode;
+                        mapGameMode.BindValueChanged(mode => Model.MapGameMode = mode.NewValue);
                     }
 
                     private void updatePanel() => Schedule(() =>
