@@ -52,6 +52,11 @@ namespace osu.Game.Overlays.Settings.Sections.UserInterface
                 },
                 new SettingsItemV2(new FormCheckBox
                 {
+                    Caption = "Remember last mod config",
+                    Current = config.GetBindable<bool>(OsuSetting.RememberLastModSettings),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
                     Caption = GameplaySettingsStrings.BackgroundBlur,
                     Current = config.GetBindable<bool>(OsuSetting.SongSelectBackgroundBlur),
                 }),

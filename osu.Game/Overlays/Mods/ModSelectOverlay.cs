@@ -20,18 +20,21 @@ using osu.Framework.Utils;
 using osu.Game.Audio;
 using osu.Game.Beatmaps;
 using osu.Game.Configuration;
+using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Cursor;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Input.Bindings;
 using osu.Game.Localisation;
+using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Screens.Footer;
 using osu.Game.Utils;
 using osuTK;
 using osuTK.Graphics;
 using osuTK.Input;
+using Realms;
 
 namespace osu.Game.Overlays.Mods
 {
@@ -109,6 +112,7 @@ namespace osu.Game.Overlays.Mods
         public IEnumerable<ModState> AllAvailableMods => AvailableMods.Value.SelectMany(pair => pair.Value);
 
         private Bindable<bool> textSearchStartsActive = null!;
+        private Bindable<bool> rememberLastModConfig = null!;
 
         private ColumnScrollContainer columnScroll = null!;
         private ColumnFlowContainer columnFlow = null!;
@@ -205,6 +209,7 @@ namespace osu.Game.Overlays.Mods
             globalAvailableMods.BindTo(game.AvailableMods);
 
             textSearchStartsActive = configManager.GetBindable<bool>(OsuSetting.ModSelectTextSearchStartsActive);
+            rememberLastModConfig = configManager.GetBindable<bool>(OsuSetting.RememberLastModSettings);
         }
 
         public override void Hide()
@@ -342,6 +347,12 @@ namespace osu.Game.Overlays.Mods
             return new ColumnDimContainer(column);
         }
 
+        [Resolved]
+        private RealmAccess realm { get; set; } = null!;
+
+        [Resolved]
+        private Bindable<RulesetInfo> ruleset { get; set; } = null!;
+
         private void createLocalMods()
         {
             var newLocalAvailableMods = new Dictionary<ModType, IReadOnlyList<ModState>>();
@@ -355,7 +366,16 @@ namespace osu.Game.Overlays.Mods
                 foreach (var modState in modStates)
                 {
                     modState.Active.Value = SelectedMods.Value.Any(selected => selected.GetType() == modState.Mod.GetType());
-                    modState.Active.BindValueChanged(_ => updateFromInternalSelection());
+                    modState.Active.BindValueChanged(a =>
+                    {
+                        if (!rememberLastModConfig.Value)
+                        {
+                            updateFromInternalSelection();
+                            return;
+                        }
+
+                        Scheduler.AddOnce(() => handleRememberedConfigChange(modState, a.NewValue));
+                    });
                 }
 
                 newLocalAvailableMods[modType] = modStates;
@@ -366,6 +386,57 @@ namespace osu.Game.Overlays.Mods
 
             foreach (var column in columnFlow.Columns.OfType<ModColumn>())
                 column.AvailableMods = AvailableMods.Value.GetValueOrDefault(column.ModType, Array.Empty<ModState>());
+        }
+
+        private void handleRememberedConfigChange(ModState modState, bool isActive)
+        {
+            if (isActive)
+            {
+                realm.Run(r =>
+                {
+                    var lastConfig = getLastConfig(r, modState.Mod.Acronym);
+
+                    if (lastConfig?.Mod != null && lastConfig.Mod.GetType() == modState.Mod.GetType())
+                        modState.Mod.CopyFrom(lastConfig.Mod);
+
+                    updateFromInternalSelection();
+                });
+            }
+            else
+            {
+                var saveConfig = SelectedMods.Value.SingleOrDefault(m => m.Acronym == modState.Mod.Acronym)?.DeepClone();
+                updateFromInternalSelection();
+
+                if (saveConfig == null)
+                    return;
+
+                realm.Write(r =>
+                {
+                    var lastConfig = getLastConfig(r, saveConfig.Acronym);
+
+                    if (lastConfig != null)
+                    {
+                        lastConfig.Mod = saveConfig;
+                        lastConfig.ModAcronym = saveConfig.Acronym;
+                        return;
+                    }
+
+                    r.Add(new LastModConfig
+                    {
+                        Mod = saveConfig,
+                        ModAcronym = saveConfig.Acronym,
+                        Ruleset = r.Find<RulesetInfo>(ruleset.Value.ShortName)!,
+                    });
+                });
+            }
+        }
+
+        private LastModConfig? getLastConfig(Realm realm, string modAcronym)
+        {
+            string rulesetShortName = ruleset.Value.ShortName;
+            return realm.All<LastModConfig>()
+                        .Filter($"{nameof(LastModConfig.ModAcronym)} == $0 AND {nameof(LastModConfig.Ruleset)}.{nameof(RulesetInfo.ShortName)} == $1",
+                            modAcronym, rulesetShortName).SingleOrDefault();
         }
 
         private void filterMods()
