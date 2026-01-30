@@ -179,14 +179,23 @@ namespace osu.Game.Tests.NonVisual.Filtering
         [Test]
         public void TestApplyBPMQueries()
         {
+            const string query = "bpm=200";
+            var filterCriteria = new FilterCriteria();
+            FilterQueryParser.ApplyQueries(filterCriteria, query);
+            Assert.AreEqual(filterCriteria.BPM.Min, 199.5d);
+            Assert.AreEqual(filterCriteria.BPM.Max, 200.5d);
+        }
+
+        [Test]
+        public void TestApplyBPMRangeQueries()
+        {
             const string query = "bpm>:200 gotta go fast";
             var filterCriteria = new FilterCriteria();
             FilterQueryParser.ApplyQueries(filterCriteria, query);
             Assert.AreEqual("gotta go fast", filterCriteria.SearchText.Trim());
             Assert.AreEqual(3, filterCriteria.SearchTerms.Length);
             Assert.IsNotNull(filterCriteria.BPM.Min);
-            Assert.Greater(filterCriteria.BPM.Min, 199.99d);
-            Assert.Less(filterCriteria.BPM.Min, 200.00d);
+            Assert.AreEqual(filterCriteria.BPM.Min, 199.5d);
             Assert.IsNull(filterCriteria.BPM.Max);
         }
 
@@ -292,6 +301,16 @@ namespace osu.Game.Tests.NonVisual.Filtering
             var filterCriteria = new FilterCriteria();
             FilterQueryParser.ApplyQueries(filterCriteria, query);
             Assert.That(filterCriteria.OnlineStatus.Values, Is.Empty);
+        }
+
+        [Test]
+        public void TestPartialStatusNotMatch()
+        {
+            const string query = "status!=r";
+            var filterCriteria = new FilterCriteria();
+            FilterQueryParser.ApplyQueries(filterCriteria, query);
+            Assert.IsNotEmpty(filterCriteria.OnlineStatus.Values);
+            Assert.That(filterCriteria.OnlineStatus.Values, Does.Not.Contain(BeatmapOnlineStatus.Ranked));
         }
 
         [Test]
@@ -719,6 +738,16 @@ namespace osu.Game.Tests.NonVisual.Filtering
             new object[] { "submitted=99999", false },
             new object[] { "submitted>=2012-03-05-04", false },
             new object[] { "submitted>=2012/03.05-04", false },
+
+            new object[] { "created<2012", true },
+            new object[] { "created<2012.03", true },
+            new object[] { "created<2012/03/05", true },
+            new object[] { "created<2012-3-5", true },
+
+            new object[] { "created<0", false },
+            new object[] { "created=99999", false },
+            new object[] { "created>=2012-03-05-04", false },
+            new object[] { "created>=2012/03.05-04", false },
         };
 
         [Test]
@@ -755,6 +784,18 @@ namespace osu.Game.Tests.NonVisual.Filtering
             FilterQueryParser.ApplyQueries(filterCriteria, $"played={query}");
             Assert.AreEqual(true, filterCriteria.LastPlayed.HasFilter);
             Assert.AreEqual(matched, filterCriteria.LastPlayed.IsInRange(reference));
+        }
+
+        [Test]
+        public void TestMultipleTextFilters()
+        {
+            var filterCriteria = new FilterCriteria();
+            FilterQueryParser.ApplyQueries(filterCriteria, "tag=\"simple\" tag=\"clean\"!");
+            Assert.That(filterCriteria.UserTags, Has.Count.EqualTo(2));
+            Assert.That(filterCriteria.UserTags[0].SearchTerm, Is.EqualTo("simple"));
+            Assert.That(filterCriteria.UserTags[0].MatchMode, Is.EqualTo(FilterCriteria.MatchMode.IsolatedPhrase));
+            Assert.That(filterCriteria.UserTags[1].SearchTerm, Is.EqualTo("clean"));
+            Assert.That(filterCriteria.UserTags[1].MatchMode, Is.EqualTo(FilterCriteria.MatchMode.FullPhrase));
         }
     }
 }

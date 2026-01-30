@@ -10,6 +10,7 @@ using osu.Game.Beatmaps;
 using osu.Game.Configuration;
 using osu.Game.Screens.Select.Filter;
 using osu.Game.Screens.SelectV2;
+using osuTK.Input;
 
 namespace osu.Game.Tests.Visual.SongSelectV2
 {
@@ -26,7 +27,7 @@ namespace osu.Game.Tests.Visual.SongSelectV2
     /// </summary>
     public partial class TestSceneSongSelectCurrentSelectionInvalidated : SongSelectTestScene
     {
-        private BeatmapInfo? selectedBeatmap => (BeatmapInfo?)Carousel.CurrentSelection;
+        private BeatmapInfo? selectedBeatmap => Carousel.CurrentBeatmap;
         private BeatmapSetInfo? selectedBeatmapSet => selectedBeatmap?.BeatmapSet;
 
         [SetUpSteps]
@@ -54,22 +55,26 @@ namespace osu.Game.Tests.Visual.SongSelectV2
             waitForFiltering(6);
 
             BeatmapInfo? initiallySelected = null;
-            AddAssert("selected is taiko", () => (initiallySelected = selectedBeatmap)?.Ruleset.OnlineID, () => Is.EqualTo(1));
+            AddAssert("carousel beatmap is taiko", () => (initiallySelected = selectedBeatmap)?.Ruleset.OnlineID, () => Is.EqualTo(1));
+            AddUntilStep("global beatmap is taiko", () => Beatmap.Value.BeatmapInfo.Ruleset.OnlineID, () => Is.EqualTo(1));
 
             ChangeRuleset(0);
             waitForFiltering(7);
-            AddAssert("selected is osu", () => selectedBeatmap?.Ruleset.OnlineID, () => Is.EqualTo(0));
-            AddAssert("selected is same set as original", () => selectedBeatmap?.BeatmapSet, () => Is.EqualTo(initiallySelected!.BeatmapSet));
+            AddAssert("carousel beatmap is osu", () => selectedBeatmap?.Ruleset.OnlineID, () => Is.EqualTo(0));
+            AddUntilStep("global beatmap is osu", () => Beatmap.Value.BeatmapInfo.Ruleset.OnlineID, () => Is.EqualTo(0));
+            AddAssert("carousel beatmap is same set as original", () => selectedBeatmap?.BeatmapSet, () => Is.EqualTo(initiallySelected!.BeatmapSet));
 
             ChangeRuleset(1);
             waitForFiltering(8);
-            AddAssert("selected is taiko", () => selectedBeatmap?.Ruleset.OnlineID, () => Is.EqualTo(1));
-            AddAssert("selected is same set as original", () => selectedBeatmap?.BeatmapSet, () => Is.EqualTo(initiallySelected!.BeatmapSet));
+            AddAssert("carousel beatmap is taiko", () => selectedBeatmap?.Ruleset.OnlineID, () => Is.EqualTo(1));
+            AddUntilStep("global beatmap is taiko", () => Beatmap.Value.BeatmapInfo.Ruleset.OnlineID, () => Is.EqualTo(1));
+            AddAssert("carousel beatmap is same set as original", () => selectedBeatmap?.BeatmapSet, () => Is.EqualTo(initiallySelected!.BeatmapSet));
 
             ChangeRuleset(2);
             waitForFiltering(9);
-            AddAssert("selected is catch", () => selectedBeatmap?.Ruleset.OnlineID, () => Is.EqualTo(2));
-            AddAssert("selected is different set", () => selectedBeatmap?.BeatmapSet, () => Is.Not.EqualTo(initiallySelected!.BeatmapSet));
+            AddAssert("carousel beatmap is catch", () => selectedBeatmap?.Ruleset.OnlineID, () => Is.EqualTo(2));
+            AddUntilStep("global beatmap is catch", () => Beatmap.Value.BeatmapInfo.Ruleset.OnlineID, () => Is.EqualTo(2));
+            AddAssert("carousel beatmap is different set", () => selectedBeatmap?.BeatmapSet, () => Is.Not.EqualTo(initiallySelected!.BeatmapSet));
         }
 
         /// <summary>
@@ -196,6 +201,43 @@ namespace osu.Game.Tests.Visual.SongSelectV2
 
             AddAssert("selected beatmap below", () => selectedBeatmap!.BeatmapSet, () => Is.EqualTo(hiddenBeatmap.BeatmapSet));
             assertPanelSelected<PanelBeatmap>(0);
+        }
+
+        [Test]
+        [Explicit]
+        public void TestDebounceNotBypassedOnUpdate()
+        {
+            BeatmapInfo? selectedBefore = null;
+            BeatmapInfo? selectedBeatmapDuringDebounce = null;
+
+            // we're testing the song select side debounce, so let's make filtering immediate
+            AddStep("set filter debounce delay to zero", () => Carousel.DebounceDelay = 0);
+
+            WaitForFiltering();
+
+            AddUntilStep("wait for global beatmap selection", () => !Beatmap.IsDefault);
+
+            AddStep("store selection", () => selectedBefore = Beatmap.Value.BeatmapInfo);
+
+            AddStep("traverse to next panel and update simultaneously", () =>
+            {
+                InputManager.Key(Key.Right);
+
+                Beatmaps.Delete(Beatmaps.GetAllUsableBeatmapSets().Last());
+
+                // check selection during debounce
+                Scheduler.AddDelayed(() => selectedBeatmapDuringDebounce = Beatmap.Value.BeatmapInfo, Screens.SelectV2.SongSelect.SELECTION_DEBOUNCE / 2f);
+            });
+
+            WaitForFiltering();
+
+            AddUntilStep("wait for pre-debounce selection", () => selectedBeatmapDuringDebounce, () => Is.Not.Null);
+
+            AddAssert("selection during debounce didn't change", () => selectedBeatmapDuringDebounce, () => Is.EqualTo(selectedBefore));
+
+            // Due to nunit runs having limited precision this tends to fail when headless, even though you'd expect the previous step to fail.
+            // Interactively, things fail as expected.
+            AddUntilStep("selection has changed after debounce", () => selectedBeatmapDuringDebounce, () => Is.Not.EqualTo(Beatmap.Value.BeatmapInfo));
         }
 
         private void waitForFiltering(int filterCount = 1)

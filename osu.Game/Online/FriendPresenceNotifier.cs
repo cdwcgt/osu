@@ -6,10 +6,12 @@ using System.Collections.Specialized;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Sprites;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
+using osu.Game.Localisation;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Chat;
@@ -17,6 +19,7 @@ using osu.Game.Online.Metadata;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Notifications;
 using osu.Game.Users;
+using osuTK.Graphics;
 
 namespace osu.Game.Online
 {
@@ -42,16 +45,26 @@ namespace osu.Game.Online
         private readonly HashSet<APIUser> onlineAlertQueue = new HashSet<APIUser>();
         private readonly HashSet<APIUser> offlineAlertQueue = new HashSet<APIUser>();
 
-        private double? lastOnlineAlertTime;
-        private double? lastOfflineAlertTime;
+        private double? nextOnlineAlertTime;
+        private double? nextOfflineAlertTime;
+
+        private const double debounce_time_before_notification = 1000;
 
         protected override void LoadComplete()
         {
             base.LoadComplete();
 
             config.BindWith(OsuSetting.NotifyOnFriendPresenceChange, notifyOnFriendPresenceChange);
+            notifyOnFriendPresenceChange.BindValueChanged(_ =>
+            {
+                onlineAlertQueue.Clear();
+                offlineAlertQueue.Clear();
 
-            friends.BindTo(api.Friends);
+                nextOfflineAlertTime = null;
+                nextOnlineAlertTime = null;
+            });
+
+            friends.BindTo(api.LocalUserState.Friends);
             friends.BindCollectionChanged(onFriendsChanged, true);
 
             friendPresences.BindTo(metadataClient.FriendPresences);
@@ -62,8 +75,11 @@ namespace osu.Game.Online
         {
             base.Update();
 
-            alertOnlineUsers();
-            alertOfflineUsers();
+            if (notifyOnFriendPresenceChange.Value)
+            {
+                alertOnlineUsers();
+                alertOfflineUsers();
+            }
         }
 
         private void onFriendsChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -129,7 +145,7 @@ namespace osu.Game.Online
             if (!offlineAlertQueue.Remove(user))
             {
                 onlineAlertQueue.Add(user);
-                lastOnlineAlertTime ??= Time.Current;
+                nextOnlineAlertTime ??= Time.Current + debounce_time_before_notification;
             }
         }
 
@@ -138,76 +154,61 @@ namespace osu.Game.Online
             if (!onlineAlertQueue.Remove(user))
             {
                 offlineAlertQueue.Add(user);
-                lastOfflineAlertTime ??= Time.Current;
+                nextOfflineAlertTime ??= Time.Current + debounce_time_before_notification;
             }
         }
 
         private void alertOnlineUsers()
         {
-            if (onlineAlertQueue.Count == 0)
+            if (nextOnlineAlertTime == null || Time.Current < nextOnlineAlertTime)
                 return;
 
-            if (lastOnlineAlertTime == null || Time.Current - lastOnlineAlertTime < 1000)
-                return;
+            // If a user quickly switches online-offline, we might reach here without actually having a notification
+            // to fire. Importantly, we should still reset the next alert time in such a scenario.
 
-            if (!notifyOnFriendPresenceChange.Value)
-            {
-                lastOnlineAlertTime = null;
-                return;
-            }
-
-            notifications.Post(new FriendOnlineNotification(onlineAlertQueue.ToArray()));
+            if (onlineAlertQueue.Count == 1)
+                notifications.Post(new SingleFriendOnlineNotification(onlineAlertQueue.Single()));
+            else if (onlineAlertQueue.Count > 1)
+                notifications.Post(new MultipleFriendsOnlineNotification(onlineAlertQueue.ToArray()));
 
             onlineAlertQueue.Clear();
-            lastOnlineAlertTime = null;
+            nextOnlineAlertTime = null;
         }
 
         private void alertOfflineUsers()
         {
-            if (offlineAlertQueue.Count == 0)
+            if (nextOfflineAlertTime == null || Time.Current < nextOfflineAlertTime)
                 return;
 
-            if (lastOfflineAlertTime == null || Time.Current - lastOfflineAlertTime < 1000)
-                return;
+            // If a user quickly switches offline-online, we might reach here without actually having a notification
+            // to fire. Importantly, we should still reset the next alert time in such a scenario.
 
-            if (!notifyOnFriendPresenceChange.Value)
-            {
-                lastOfflineAlertTime = null;
-                return;
-            }
-
-            notifications.Post(new FriendOfflineNotification(offlineAlertQueue.ToArray()));
+            if (offlineAlertQueue.Count == 1)
+                notifications.Post(new SingleFriendOfflineNotification(offlineAlertQueue.Single()));
+            else if (offlineAlertQueue.Count > 1)
+                notifications.Post(new MultipleFriendsOfflineNotification(offlineAlertQueue.ToArray()));
 
             offlineAlertQueue.Clear();
-            lastOfflineAlertTime = null;
+            nextOfflineAlertTime = null;
         }
 
-        public partial class FriendOnlineNotification : SimpleNotification
+        private partial class SingleFriendOnlineNotification : UserAvatarNotification
         {
-            private readonly ICollection<APIUser> users;
-
-            public FriendOnlineNotification(ICollection<APIUser> users)
+            public SingleFriendOnlineNotification(APIUser user)
+                : base(user)
             {
-                this.users = users;
                 Transient = true;
                 IsImportant = false;
-                Icon = FontAwesome.Solid.User;
-                Text = $"Online: {string.Join(@", ", users.Select(u => u.Username))}";
+                Text = NotificationsStrings.FriendOnline(User.Username);
             }
 
             [BackgroundDependencyLoader]
-            private void load(OsuColour colours, ChannelManager channelManager, ChatOverlay chatOverlay)
+            private void load(ChannelManager channelManager, ChatOverlay chatOverlay)
             {
-                IconColour = colours.GrayD;
                 Activated = () =>
                 {
-                    APIUser? singleUser = users.Count == 1 ? users.Single() : null;
-
-                    if (singleUser != null)
-                    {
-                        channelManager.OpenPrivateChannel(singleUser);
-                        chatOverlay.Show();
-                    }
+                    channelManager.OpenPrivateChannel(User);
+                    chatOverlay.Show();
 
                     return true;
                 };
@@ -216,18 +217,56 @@ namespace osu.Game.Online
             public override string PopInSampleName => "UI/notification-friend-online";
         }
 
-        private partial class FriendOfflineNotification : SimpleNotification
+        private partial class MultipleFriendsOnlineNotification : SimpleNotification
         {
-            public FriendOfflineNotification(ICollection<APIUser> users)
+            public MultipleFriendsOnlineNotification(ICollection<APIUser> users)
             {
-                Transient = true;
-                IsImportant = false;
-                Icon = FontAwesome.Solid.UserSlash;
-                Text = $"Offline: {string.Join(@", ", users.Select(u => u.Username))}";
+                Text = NotificationsStrings.FriendOnline(string.Join(@", ", users.Select(u => u.Username)));
             }
 
             [BackgroundDependencyLoader]
-            private void load(OsuColour colours) => IconColour = colours.Gray3;
+            private void load(OsuColour colours)
+            {
+                Icon = FontAwesome.Solid.User;
+                IconColour = colours.Green;
+            }
+
+            public override string PopInSampleName => "UI/notification-friend-online";
+        }
+
+        private partial class SingleFriendOfflineNotification : UserAvatarNotification
+        {
+            public SingleFriendOfflineNotification(APIUser user)
+                : base(user)
+            {
+                Transient = true;
+                IsImportant = false;
+                Text = NotificationsStrings.FriendOffline(User.Username);
+            }
+
+            [BackgroundDependencyLoader]
+            private void load()
+            {
+                Icon = FontAwesome.Solid.UserSlash;
+                Avatar.Colour = Color4.White.Opacity(0.25f);
+            }
+
+            public override string PopInSampleName => "UI/notification-friend-offline";
+        }
+
+        private partial class MultipleFriendsOfflineNotification : SimpleNotification
+        {
+            public MultipleFriendsOfflineNotification(ICollection<APIUser> users)
+            {
+                Text = NotificationsStrings.FriendOffline(string.Join(@", ", users.Select(u => u.Username)));
+            }
+
+            [BackgroundDependencyLoader]
+            private void load(OsuColour colours)
+            {
+                Icon = FontAwesome.Solid.UserSlash;
+                IconColour = colours.Red;
+            }
 
             public override string PopInSampleName => "UI/notification-friend-offline";
         }

@@ -33,7 +33,7 @@ namespace osu.Game.Screens.Select.Leaderboards
 
             var globalScores = leaderboardManager?.Scores.Value;
 
-            isPartial = leaderboardManager?.CurrentCriteria?.Scope != BeatmapLeaderboardScope.Local && globalScores?.TopScores.Count >= 50;
+            isPartial = globalScores == null || globalScores.IsPartial;
 
             List<GameplayLeaderboardScore> newScores = new List<GameplayLeaderboardScore>();
 
@@ -58,6 +58,7 @@ namespace osu.Game.Screens.Select.Leaderboards
 
             scores.AddRange(newScores);
 
+            sort();
             Scheduler.AddDelayed(sort, 1000, true);
         }
 
