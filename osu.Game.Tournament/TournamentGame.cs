@@ -42,6 +42,12 @@ namespace osu.Game.Tournament
         [Cached(typeof(IDialogOverlay))]
         private readonly DialogOverlay dialogOverlay = new DialogOverlay();
 
+        [Cached]
+        private SaveChangesOverlay saveChangesOverlay = new SaveChangesOverlay
+        {
+            Depth = float.MinValue
+        };
+
         [BackgroundDependencyLoader]
         private void load(FrameworkConfigManager frameworkConfig, GameHost host)
         {
@@ -80,10 +86,7 @@ namespace osu.Game.Tournament
 
                 LoadComponentsAsync(new[]
                 {
-                    new SaveChangesOverlay
-                    {
-                        Depth = float.MinValue,
-                    },
+                    saveChangesOverlay,
                     heightWarning = new WarningBox("Please make the window wider")
                     {
                         Anchor = Anchor.BottomCentre,

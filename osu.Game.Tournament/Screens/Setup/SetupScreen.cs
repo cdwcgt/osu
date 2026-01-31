@@ -14,6 +14,7 @@ using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Overlays;
 using osu.Game.Rulesets;
+using osu.Game.Tournament.Github;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
 using osuTK;
@@ -42,8 +43,15 @@ namespace osu.Game.Tournament.Screens.Setup
         [Resolved]
         private TournamentSceneManager? sceneManager { get; set; }
 
+        [Resolved]
+        private SaveChangesOverlay? saveChangesOverlay { get; set; }
+
+        [Resolved]
+        private BracketUploader bracketUploader { get; set; } = null!;
+
         private readonly IBindable<APIUser> localUser = new Bindable<APIUser>();
         private Bindable<Size> windowSize = null!;
+        private ActionableInfo updateToGithubAction = null!;
 
         [BackgroundDependencyLoader]
         private void load(FrameworkConfigManager frameworkConfig)
@@ -148,6 +156,29 @@ namespace osu.Game.Tournament.Screens.Setup
                     Label = "Display team seeds",
                     Description = "Team seeds will display alongside each team at the top in gameplay/map pool screens.",
                     Current = LadderInfo.DisplayTeamSeeds,
+                },
+                updateToGithubAction = new ActionableInfo
+                {
+                    Label = "Upload bracket to Github",
+                    ButtonText = "Upload bracket",
+                    Action = () =>
+                    {
+                        saveChangesOverlay?.SaveChanges();
+                        updateToGithubAction.Failing = false;
+                        updateToGithubAction.Value = "Uploading...";
+                        bracketUploader.UploadAsync().ContinueWith(t =>
+                        {
+                            if (t.IsCompletedSuccessfully)
+                            {
+                                updateToGithubAction.Value = "Upload complete";
+                                return;
+                            }
+
+                            updateToGithubAction.Value = $"Uploading failed {t.Exception?.Message}";
+                            updateToGithubAction.Failing = true;
+                        });
+                    },
+                    Description = "uploade bracket to Github"
                 },
             };
         }
