@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Logging;
+using osu.Framework.Platform;
 using osu.Game.Online.API;
 using osu.Game.Tournament.Github.Online;
 using osu.Game.Tournament.IO;
@@ -24,6 +25,9 @@ namespace osu.Game.Tournament.Github
 
         [Resolved]
         private IAPIProvider api { get; set; } = null!;
+
+        [Resolved]
+        private GameHost host { get; set; } = null!;
 
         private const string github_api_base = "https://api.github.com";
 
@@ -59,6 +63,7 @@ namespace osu.Game.Tournament.Github
             await putFile(token, bracketJson, existingFileSha, newBranch, cancellationToken).ConfigureAwait(false);
 
             string prUrl = await createPullRequest(token, newBranch, prTitle, prBody, cancellationToken).ConfigureAwait(false);
+            host.OpenUrlExternally(prUrl);
             Logger.Log($"Bracket upload complete. PR created: {prUrl}");
         }
 
