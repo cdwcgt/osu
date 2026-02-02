@@ -7,13 +7,13 @@ namespace osu.Game.Tournament.Github
 {
     public class GithubConfig
     {
-        public static string Owner => "cdwcgt";
-        public static string Repo => "mcnc-bracket"; // 不要带 .git
+        public static string Owner => "osu-mania-Chinese-National-Cup";
+        public static string Repo => "osu-mania-Chinese-National-Cup"; // 不要带 .git
         public static string BaseBranch => "main"; // 目标分支
         public static string APIVersion => "2022-11-28"; // GitHub API 版本，可留空
 
         public static string NewBranch => $"bot/update-{DateTime.UtcNow:yyyyMMdd-HHmmss}";
         public static string PrTitle => $"Automated update {DateTime.UtcNow:yyyyMMdd-HHmmss}";
-        public static string PrBody => "Updateing bracket";
+        public static string PrBody => "Updating bracket";
     }
 }
