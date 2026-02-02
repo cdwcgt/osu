@@ -11,6 +11,7 @@ using osu.Framework.Threading;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Overlays.Settings;
 using osu.Game.Tournament.Components;
+using osu.Game.Tournament.Configuration;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Gameplay.Components;
@@ -33,11 +34,14 @@ namespace osu.Game.Tournament.Screens.Gameplay
         [Resolved]
         private TournamentMatchChatDisplay chat { get; set; } = null!;
 
+        private readonly Bindable<bool> useChrome = new Bindable<bool>();
+
         private Drawable chroma = null!;
 
         [BackgroundDependencyLoader]
-        private void load(MatchIPCInfo ipc)
+        private void load(MatchIPCInfo ipc, TournamentConfigManager config)
         {
+            config.BindWith(StorageConfig.UseChroma, useChrome);
             this.ipc = ipc;
 
             LabelledSwitchButton chatToggle;
@@ -127,6 +131,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
                             Current = LadderInfo.PlayersPerTeam,
                             KeyboardStep = 1,
                         },
+                        new LabelledSwitchButton
+                        {
+                            Label = "Use chroma",
+                            Current = useChrome
+                        }
                     }
                 }
             });
@@ -265,7 +274,10 @@ namespace osu.Game.Tournament.Screens.Gameplay
             [Resolved]
             private LadderInfo ladder { get; set; } = null!;
 
-            private TeamColour teamColour;
+            private readonly Bindable<bool> useChrome = new Bindable<bool>();
+            private readonly Bindable<int> playerCount = new Bindable<int>();
+
+            private readonly TeamColour teamColour;
 
             private const string tournament_client_name = " Tournament Client ";
 
@@ -275,22 +287,35 @@ namespace osu.Game.Tournament.Screens.Gameplay
             }
 
             [BackgroundDependencyLoader]
-            private void load()
+            private void load(TournamentConfigManager config)
             {
-                if (!OperatingSystem.IsWindows())
-                {
-                    // chroma key area for stable gameplay
-                    Colour = new Color4(0, 255, 0, 255);
-                }
+                config.BindWith(StorageConfig.UseChroma, useChrome);
 
-                ladder.PlayersPerTeam.BindValueChanged(performLayout, true);
+                playerCount.BindTo(ladder.PlayersPerTeam);
+
+                useChrome.BindValueChanged(u =>
+                {
+                    if (u.NewValue)
+                    {
+                        // chroma key area for stable gameplay
+                        Colour = new Color4(0, 255, 0, 255);
+                    }
+                    else
+                    {
+                        Colour = Color4.White;
+                    }
+
+                    performLayout();
+                }, true);
+
+                playerCount.BindValueChanged(_ => performLayout());
             }
 
-            private void performLayout(ValueChangedEvent<int> playerCount)
+            private void performLayout()
             {
-                if (!OperatingSystem.IsWindows())
+                if (useChrome.Value)
                 {
-                    switch (playerCount.NewValue)
+                    switch (playerCount.Value)
                     {
                         case 3:
                             InternalChildren = new Drawable[]
@@ -324,9 +349,9 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     return;
                 }
 
-                int clientIndex = teamColour == TeamColour.Red ? 0 : playerCount.NewValue;
+                int clientIndex = teamColour == TeamColour.Red ? 0 : playerCount.Value;
 
-                switch (playerCount.NewValue)
+                switch (playerCount.Value)
                 {
                     case 1:
                         InternalChildren = new Drawable[]

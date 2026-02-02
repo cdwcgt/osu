@@ -19,6 +19,7 @@ using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Online;
 using osu.Game.Online.API.Requests;
+using osu.Game.Tournament.Configuration;
 using osu.Game.Tournament.Github;
 using osu.Game.Tournament.IO;
 using osu.Game.Tournament.IPC;
@@ -37,6 +38,7 @@ namespace osu.Game.Tournament
         private DependencyContainer dependencies = null!;
         private FileBasedIPC ipc = null!;
         private BeatmapLookupCache beatmapCache = null!;
+        private TournamentConfigManager configManager = null!;
 
         protected Task BracketLoadTask => bracketLoadTaskCompletionSource.Task;
 
@@ -130,7 +132,9 @@ namespace osu.Game.Tournament
 
             Resources.AddStore(new DllResourceStore(typeof(TournamentGameBase).Assembly));
 
-            dependencies.CacheAs<Storage>(storage = new TournamentStorage(baseStorage));
+            dependencies.Cache(configManager = new TournamentConfigManager(baseStorage));
+
+            dependencies.CacheAs<Storage>(storage = new TournamentStorage(baseStorage, configManager));
             dependencies.CacheAs(storage);
 
             dependencies.Cache(new TournamentVideoResourceStore(storage));
