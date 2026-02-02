@@ -24,6 +24,8 @@ namespace osu.Game.Tournament
         private string? lastSerialisedLadder;
         private readonly TourneyButton saveChangesButton;
 
+        public bool HaveUnsaveChange => saveChangesButton.Enabled.Value;
+
         public SaveChangesOverlay()
         {
             RelativeSizeAxes = Axes.Both;

@@ -15,6 +15,7 @@ using osu.Game.Graphics;
 using osu.Game.Graphics.Cursor;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Overlays;
+using osu.Game.Overlays.Dialog;
 using osu.Game.Tournament.Models;
 using osuTK.Graphics;
 
@@ -117,6 +118,42 @@ namespace osu.Game.Tournament
                     }), true);
                 });
             }));
+        }
+
+        private bool exitConfirmed;
+
+        public override void AttemptExit()
+        {
+            if (!OnExiting())
+                Exit();
+        }
+
+        protected override bool OnExiting()
+        {
+            if (dialogOverlay.IsLoaded && !exitConfirmed)
+            {
+                if (dialogOverlay.CurrentDialog is TournamentConfirmExitDialog exitDialog)
+                {
+                    if (exitDialog.Buttons.OfType<PopupDialogOkButton>().FirstOrDefault() != null)
+                        exitDialog.PerformOkAction();
+                    else
+                        exitDialog.Flash();
+                }
+                else
+                {
+                    dialogOverlay.Push(new TournamentConfirmExitDialog(() =>
+                    {
+                        exitConfirmed = true;
+                        this.Exit();
+                    }, () =>
+                    {
+                    }));
+                }
+
+                return true;
+            }
+
+            return base.OnExiting();
         }
     }
 }
