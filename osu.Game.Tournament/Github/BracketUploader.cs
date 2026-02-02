@@ -22,6 +22,9 @@ namespace osu.Game.Tournament.Github
         [Resolved]
         private TournamentStorage storage { get; set; } = null!;
 
+        [Resolved]
+        private IAPIProvider api { get; set; } = null!;
+
         private const string github_api_base = "https://api.github.com";
 
         public async Task UploadAsync(CancellationToken cancellationToken = default)
@@ -141,7 +144,7 @@ namespace osu.Game.Tournament.Github
             var payload = new CreatePullRequestRequest
             {
                 Title = title,
-                Body = body,
+                Body = $"{body}, by {api.ProvidedUsername}",
                 Head = newBranch,
                 Base = GithubConfig.BaseBranch
             };
