@@ -2,49 +2,46 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.Runtime.InteropServices;
-using osu.Framework.Graphics;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Runtime.InteropServices.Marshalling;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text;
 using System.Threading;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Rendering;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
+using osu.Framework.Graphics.Veldrid;
+using osu.Framework.Graphics.Veldrid.Textures;
+using osu.Framework.Logging;
 using osu.Game.Tournament.Models;
 using SixLabors.ImageSharp.PixelFormats;
+using Vortice.Direct3D11;
+using FillMode = osu.Framework.Graphics.FillMode;
 
 namespace osu.Game.Tournament.Components
 {
-    [SupportedOSPlatform("windows")]
+    [SupportedOSPlatform("windows10.0.19041.0")]
     public partial class CapturedWindowSprite : CompositeDrawable
     {
         private Sprite sprite = null!;
         private readonly string targetWindowTitle;
-        private Thread? captureThread;
-        private bool running;
-
-        private Bitmap? bitmapPool;
-        private System.Drawing.Graphics? graphicsPool;
-        private byte[]? rawBufferPool;
-        private ArrayPoolTextureUpload? uploadPool;
-        private int poolWidth, poolHeight;
-
-        // 同步信号
-        private readonly AutoResetEvent captureRequest = new AutoResetEvent(false);
-        private readonly AutoResetEvent frameReady = new AutoResetEvent(false);
-
-        // 当前窗口尺寸 & 像素缓冲区
-        private int currentWidth, currentHeight;
-        private ArrayPoolTextureUpload? pixelBuffer;
-        private readonly object bufferLock = new object();
-
-        private Texture? texture;
+        private ICaptureSource? capture;
+        private D3D11ExternalTexture? externalTexture;
+        private Texture? cpuTexture;
+        private CaptureFrame pendingFrame;
+        private bool hasPendingFrame;
+        private readonly object pendingFrameLock = new object();
+        private IntPtr targetHwnd;
+        private bool d3d11Available;
+        private Thread? windowWatcherThread;
+        private volatile bool watcherRunning;
+        private IntPtr watchedHwnd;
+        private volatile bool watchedAlive;
 
         private bool isWindowsLive = false;
 
@@ -73,142 +70,29 @@ namespace osu.Game.Tournament.Components
 
             AddInternal(sprite);
 
-            // 启动后台抓取线程
-            running = true;
-            captureThread = new Thread(captureLoop)
-            {
-                IsBackground = true,
-                Name = $"WindowCapture<{targetWindowTitle}>"
-            };
-            captureThread.Start();
-
             if (ladder != null)
             {
                 FrameRate.BindTo(ladder.FrameRate);
             }
+
+            d3d11Available = D3D11Interop.TryGetD3D11Device(renderer, out var device, out _, out _);
+
+            if (d3d11Available)
+                capture = new WgcCaptureSource(new WgcCapture(device));
+            else
+                capture = new BitBltCaptureSource();
+
+            watcherRunning = true;
+            windowWatcherThread = new Thread(watchWindowLoop)
+            {
+                IsBackground = true,
+                Name = $"WindowWatcher<{targetWindowTitle}>"
+            };
+            windowWatcherThread.Start();
         }
 
         [Resolved]
         private IRenderer renderer { get; set; } = null!;
-
-        private void captureLoop()
-        {
-            IntPtr hWnd = FindWindowByPartialTitle(targetWindowTitle);
-
-            // 预先查一次 HWND
-            while (running)
-            {
-                // 等待 Update 发起请求
-                captureRequest.WaitOne();
-
-                if (!running) break;
-
-                if (hWnd != IntPtr.Zero && !IsWindow(hWnd))
-                {
-                    isWindowsLive = false;
-                    hWnd = IntPtr.Zero;
-                    lock (bufferLock)
-                        pixelBuffer = null;
-                    frameReady.Set();
-                }
-
-                if (hWnd == IntPtr.Zero)
-                {
-                    hWnd = FindWindowByPartialTitle(targetWindowTitle);
-
-                    Thread.Sleep(100);
-                    continue;
-                }
-
-                isWindowsLive = true;
-
-                try
-                {
-                    GetWindowRect(hWnd, out RECT rect);
-                    int w = rect.Right - rect.Left;
-                    int h = rect.Bottom - rect.Top;
-
-                    if (w <= 0 || h <= 0)
-                    {
-                        frameReady.Set();
-                        continue;
-                    }
-
-                    if (bitmapPool == null || graphicsPool == null || poolWidth != w || poolHeight != h)
-                    {
-                        bitmapPool?.Dispose();
-                        graphicsPool?.Dispose();
-
-                        bitmapPool = new Bitmap(w, h, PixelFormat.Format24bppRgb);
-                        graphicsPool = System.Drawing.Graphics.FromImage(bitmapPool);
-
-                        // 注意 LockBits 时的 stride 可能有行填充
-                        var tmpData = bitmapPool.LockBits(
-                            new Rectangle(0, 0, w, h),
-                            ImageLockMode.ReadOnly,
-                            PixelFormat.Format24bppRgb);
-                        int stride = Math.Abs(tmpData.Stride);
-                        bitmapPool.UnlockBits(tmpData);
-
-                        rawBufferPool = new byte[stride * h];
-
-                        poolWidth = w;
-                        poolHeight = h;
-                    }
-
-                    // —— 真正抓图到 bitmapPool —— //
-                    IntPtr hdcDest = graphicsPool.GetHdc();
-                    IntPtr hdcSrc = GetWindowDC(hWnd);
-                    BitBlt(hdcDest, 0, 0, w, h, hdcSrc, 0, 0, 0x00CC0020);
-                    graphicsPool.ReleaseHdc(hdcDest);
-                    ReleaseDC(hWnd, hdcSrc);
-
-                    // —— 锁像素 + 拷到 rawBufferPool —— //
-                    var bmpData = bitmapPool.LockBits(
-                        new Rectangle(0, 0, w, h),
-                        ImageLockMode.ReadOnly,
-                        PixelFormat.Format24bppRgb);
-
-                    Marshal.Copy(bmpData.Scan0, rawBufferPool, 0, rawBufferPool.Length);
-                    bitmapPool.UnlockBits(bmpData);
-
-                    uploadPool = new ArrayPoolTextureUpload(w, h);
-
-                    ConvertRgr24ToRgba32(rawBufferPool!, poolWidth, poolHeight, uploadPool!.RawData);
-
-                    lock (bufferLock)
-                    {
-                        pixelBuffer = uploadPool;
-                        currentWidth = w;
-                        currentHeight = h;
-                    }
-                }
-                catch
-                {
-                    hWnd = IntPtr.Zero;
-                }
-                finally
-                {
-                    // 通知 Update 可以消费
-                    frameReady.Set();
-                }
-            }
-        }
-
-        private void ConvertRgr24ToRgba32(byte[] src, int width, int height, Span<Rgba32> dst)
-        {
-            int dstIdx = 0;
-
-            for (int i = 0; i < src.Length; i += 3)
-            {
-                byte b = src[i + 0];
-                byte g = src[i + 1];
-                byte r = src[i + 2];
-
-                byte a = 255;
-                dst[dstIdx++] = new Rgba32(r, g, b, a);
-            }
-        }
 
         public BindableInt FrameRate { get; } = new BindableInt(60)
         {
@@ -218,6 +102,7 @@ namespace osu.Game.Tournament.Components
         };
 
         private double elapsedTime;
+        private bool captureErrorReported;
 
         protected override void Update()
         {
@@ -232,13 +117,39 @@ namespace osu.Game.Tournament.Components
 
             elapsedTime = 0;
 
-            // 1) 请求抓一帧
-            captureRequest.Set();
-
-            // 2) 等待抓取完成（同步），最多等 10ms 防止卡死，也可以改为无限等待
-            if (!frameReady.WaitOne(0))
-            {
+            if (capture == null)
                 return;
+
+            if (targetHwnd == IntPtr.Zero || !IsWindow(targetHwnd))
+            {
+                if (capture.IsRunning)
+                    capture.Stop();
+
+                targetHwnd = watchedHwnd;
+
+                if (targetHwnd != IntPtr.Zero && watchedAlive)
+                {
+                    try
+                    {
+                        capture.StartForWindow(targetHwnd);
+                        isWindowsLive = true;
+                        captureErrorReported = false;
+                    }
+                    catch (Exception e)
+                    {
+                        if (!captureErrorReported)
+                        {
+                            Logger.Error(e, $"{targetWindowTitle} Capture Error");
+                            captureErrorReported = true;
+                        }
+
+                        isWindowsLive = false;
+                    }
+                }
+                else
+                {
+                    isWindowsLive = false;
+                }
             }
 
             if (!isWindowsLive)
@@ -249,73 +160,118 @@ namespace osu.Game.Tournament.Components
 
             this.FadeIn(100);
 
-            // 3) 消费像素缓冲区
-            ArrayPoolTextureUpload? frame;
-            int w, h;
-
-            lock (bufferLock)
+            if (capture.TryAcquireLatestFrame(out var frame))
             {
-                if (pixelBuffer == null)
+                lock (pendingFrameLock)
                 {
+                    if (hasPendingFrame)
+                        pendingFrame.ReleaseResources(discardUpload: true);
+
+                    pendingFrame = frame;
+                    hasPendingFrame = true;
+                }
+            }
+        }
+
+        private void consumePendingFrame()
+        {
+            CaptureFrame frame;
+
+            lock (pendingFrameLock)
+            {
+                if (!hasPendingFrame)
                     return;
+
+                frame = pendingFrame;
+                hasPendingFrame = false;
+            }
+
+            if (capture == null || !frame.IsValid)
+                return;
+
+            try
+            {
+                capture.ApplyFrame(frame, renderer, sprite, ref externalTexture, ref cpuTexture);
+            }
+            finally
+            {
+                frame.ReleaseResources(discardUpload: false);
+            }
+        }
+
+        protected override DrawNode CreateDrawNode() => new CaptureDrawNode(this);
+
+        private sealed class CaptureDrawNode : CompositeDrawableDrawNode
+        {
+            public CaptureDrawNode(CapturedWindowSprite source)
+                : base(source)
+            {
+            }
+
+            protected override void Draw(IRenderer renderer)
+            {
+                ((CapturedWindowSprite)Source).consumePendingFrame();
+                base.Draw(renderer);
+            }
+        }
+
+        private void watchWindowLoop()
+        {
+            while (watcherRunning)
+            {
+                try
+                {
+                    IntPtr hwnd = watchedHwnd;
+
+                    if (hwnd != IntPtr.Zero && !IsWindow(hwnd))
+                    {
+                        watchedHwnd = IntPtr.Zero;
+                        watchedAlive = false;
+                    }
+
+                    if (watchedHwnd == IntPtr.Zero)
+                    {
+                        hwnd = FindWindowByPartialTitle(targetWindowTitle);
+                        watchedHwnd = hwnd;
+                        watchedAlive = hwnd != IntPtr.Zero;
+                    }
+                    else
+                    {
+                        watchedAlive = true;
+                    }
+                }
+                catch
+                {
+                    watchedHwnd = IntPtr.Zero;
+                    watchedAlive = false;
                 }
 
-                frame = pixelBuffer;
-                w = currentWidth;
-                h = currentHeight;
-                pixelBuffer = null;
+                Thread.Sleep(500);
             }
-
-            if (frame == null) return;
-
-            // 4) 更新或重建纹理
-            if (texture == null || texture.Width != w || texture.Height != h)
-            {
-                texture?.Dispose();
-                texture = renderer.CreateTexture(w, h);
-                sprite.Texture = texture;
-            }
-
-            texture.SetData(frame);
         }
 
         protected override void Dispose(bool isDisposing)
         {
             base.Dispose(isDisposing);
-            running = false;
-            captureRequest.Set();
-            captureThread?.Join();
-            texture?.Dispose();
-            bitmapPool?.Dispose();
-            graphicsPool?.Dispose();
+            capture?.Dispose();
+            externalTexture?.Dispose();
+            cpuTexture?.Dispose();
+
+            lock (pendingFrameLock)
+            {
+                if (hasPendingFrame)
+                    pendingFrame.ReleaseResources(discardUpload: true);
+                hasPendingFrame = false;
+            }
+
+            watcherRunning = false;
+            windowWatcherThread?.Join();
         }
 
         #region Windows API
 
-        public static Bitmap CaptureWindowFromBitbit(IntPtr hWnd)
-        {
-            GetWindowRect(hWnd, out RECT rect);
-            int width = rect.Right - rect.Left;
-            int height = rect.Bottom - rect.Top;
-
-            Bitmap bmp = new Bitmap(width, height, PixelFormat.Format32bppArgb);
-
-            using (System.Drawing.Graphics gfxBmp = System.Drawing.Graphics.FromImage(bmp))
-            {
-                IntPtr hdcBitmap = gfxBmp.GetHdc();
-                IntPtr hdcWindow = GetWindowDC(hWnd);
-
-                BitBlt(hdcBitmap, 0, 0, width, height, hdcWindow, 0, 0, 0x00CC0020); // SRCCOPY
-
-                ReleaseDC(hWnd, hdcWindow);
-                gfxBmp.ReleaseHdc(hdcBitmap);
-            }
-
-            return bmp;
-        }
-
         [DllImport("user32.dll")]
-        private static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+        private static extern IntPtr FindWindow(string? lpClassName, string lpWindowName);
 
         [DllImport("user32.dll")]
         private static extern IntPtr GetWindowDC(IntPtr hWnd);
@@ -330,15 +286,6 @@ namespace osu.Game.Tournament.Components
         [DllImport("user32.dll")]
         private static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
 
-        [StructLayout(LayoutKind.Sequential)]
-        public struct RECT
-        {
-            public int Left;
-            public int Top;
-            public int Right;
-            public int Bottom;
-        }
-
         [DllImport("user32.dll")]
         private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
 
@@ -347,6 +294,15 @@ namespace osu.Game.Tournament.Components
 
         [DllImport("user32.dll")]
         private static extern bool IsWindow(IntPtr hWnd);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
 
         private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
@@ -375,5 +331,236 @@ namespace osu.Game.Tournament.Components
         }
 
         #endregion
+
+        private interface ICaptureSource : IDisposable
+        {
+            bool IsRunning { get; }
+            void StartForWindow(IntPtr hwnd);
+            void Stop();
+            bool TryAcquireLatestFrame(out CaptureFrame frame);
+            void ApplyFrame(CaptureFrame frame, IRenderer renderer, Sprite sprite, ref D3D11ExternalTexture? externalTexture, ref Texture? cpuTexture);
+        }
+
+        private readonly struct CaptureFrame
+        {
+            public static readonly CaptureFrame EMPTY = new CaptureFrame(CaptureFrameKind.None, null, null, 0, 0);
+
+            public CaptureFrameKind Kind { get; }
+            public ID3D11Texture2D? D3D11Texture { get; }
+            public ITextureUpload? Upload { get; }
+            public int Width { get; }
+            public int Height { get; }
+
+            public bool IsValid => Kind != CaptureFrameKind.None;
+
+            private CaptureFrame(CaptureFrameKind kind, ID3D11Texture2D? texture, ITextureUpload? upload, int width, int height)
+            {
+                Kind = kind;
+                D3D11Texture = texture;
+                Upload = upload;
+                Width = width;
+                Height = height;
+            }
+
+            public static CaptureFrame FromD3D11(ID3D11Texture2D texture, int width, int height)
+                => new CaptureFrame(CaptureFrameKind.D3D11Texture, texture, null, width, height);
+
+            public static CaptureFrame FromUpload(ITextureUpload upload, int width, int height)
+                => new CaptureFrame(CaptureFrameKind.CpuUpload, null, upload, width, height);
+
+            public void ReleaseResources(bool discardUpload)
+            {
+                D3D11Texture?.Release();
+
+                if (discardUpload)
+                    Upload?.Dispose();
+            }
+        }
+
+        private enum CaptureFrameKind
+        {
+            None,
+            D3D11Texture,
+            CpuUpload
+        }
+
+        private sealed class WgcCaptureSource : ICaptureSource
+        {
+            private readonly WgcCapture capture;
+
+            public WgcCaptureSource(WgcCapture capture)
+            {
+                this.capture = capture;
+            }
+
+            public bool IsRunning => capture.IsRunning;
+
+            public void StartForWindow(IntPtr hwnd) => capture.StartForWindow(hwnd);
+
+            public void Stop() => capture.Stop();
+
+            public bool TryAcquireLatestFrame(out CaptureFrame frame)
+            {
+                if (capture.TryAcquireLatestTexture(out var texture, out int width, out int height))
+                {
+                    frame = CaptureFrame.FromD3D11(texture, width, height);
+                    return true;
+                }
+
+                frame = CaptureFrame.EMPTY;
+                return false;
+            }
+
+            public void ApplyFrame(CaptureFrame frame, IRenderer renderer, Sprite sprite, ref D3D11ExternalTexture? externalTexture, ref Texture? cpuTexture)
+            {
+                if (frame.Kind != CaptureFrameKind.D3D11Texture || frame.D3D11Texture == null)
+                    return;
+
+                if (externalTexture == null || externalTexture.Width != frame.Width || externalTexture.Height != frame.Height)
+                {
+                    externalTexture?.Dispose();
+                    externalTexture = new D3D11ExternalTexture(renderer, frame.Width, frame.Height);
+                    sprite.Texture = externalTexture;
+                }
+
+                externalTexture.UpdateFrom(frame.D3D11Texture);
+            }
+
+            public void Dispose() => capture.Dispose();
+        }
+
+        private sealed class BitBltCaptureSource : ICaptureSource
+        {
+            private System.Drawing.Bitmap? bitmapPool;
+            private System.Drawing.Graphics? graphicsPool;
+            private byte[]? rawBufferPool;
+            private int poolWidth;
+            private int poolHeight;
+            private int poolStride;
+            private IntPtr hwnd;
+
+            public bool IsRunning { get; private set; }
+
+            public void StartForWindow(IntPtr hwnd)
+            {
+                this.hwnd = hwnd;
+                IsRunning = true;
+            }
+
+            public void Stop()
+            {
+                IsRunning = false;
+                hwnd = IntPtr.Zero;
+            }
+
+            public bool TryAcquireLatestFrame(out CaptureFrame frame)
+            {
+                frame = CaptureFrame.EMPTY;
+
+                if (!IsRunning)
+                    return false;
+
+                if (hwnd == IntPtr.Zero)
+                    return false;
+
+                if (!GetWindowRect(hwnd, out RECT rect))
+                    return false;
+
+                int width = rect.Right - rect.Left;
+                int height = rect.Bottom - rect.Top;
+
+                if (width <= 0 || height <= 0)
+                    return false;
+
+                if (bitmapPool == null || graphicsPool == null || poolWidth != width || poolHeight != height)
+                {
+                    bitmapPool?.Dispose();
+                    graphicsPool?.Dispose();
+
+                    bitmapPool = new System.Drawing.Bitmap(width, height, PixelFormat.Format24bppRgb);
+                    graphicsPool = System.Drawing.Graphics.FromImage(bitmapPool);
+
+                    var tmpData = bitmapPool.LockBits(
+                        new Rectangle(0, 0, width, height),
+                        ImageLockMode.ReadOnly,
+                        PixelFormat.Format24bppRgb);
+                    poolStride = Math.Abs(tmpData.Stride);
+                    bitmapPool.UnlockBits(tmpData);
+
+                    rawBufferPool = new byte[poolStride * height];
+
+                    poolWidth = width;
+                    poolHeight = height;
+                }
+
+                try
+                {
+                    IntPtr hdcDest = graphicsPool.GetHdc();
+                    IntPtr hdcSrc = GetWindowDC(hwnd);
+                    BitBlt(hdcDest, 0, 0, width, height, hdcSrc, 0, 0, 0x00CC0020);
+                    graphicsPool.ReleaseHdc(hdcDest);
+                    ReleaseDC(hwnd, hdcSrc);
+
+                    var bmpData = bitmapPool.LockBits(
+                        new Rectangle(0, 0, width, height),
+                        ImageLockMode.ReadOnly,
+                        PixelFormat.Format24bppRgb);
+
+                    Marshal.Copy(bmpData.Scan0, rawBufferPool!, 0, rawBufferPool!.Length);
+                    bitmapPool.UnlockBits(bmpData);
+
+                    var upload = new ArrayPoolTextureUpload(width, height);
+                    convertRgr24ToRgba32(rawBufferPool!, width, height, poolStride, upload.RawData);
+
+                    frame = CaptureFrame.FromUpload(upload, width, height);
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+
+            private static void convertRgr24ToRgba32(byte[] src, int width, int height, int stride, Span<Rgba32> dst)
+            {
+                int dstIdx = 0;
+
+                for (int y = 0; y < height; y++)
+                {
+                    int rowStart = y * stride;
+
+                    for (int x = 0; x < width; x++)
+                    {
+                        int i = rowStart + x * 3;
+                        byte b = src[i + 0];
+                        byte g = src[i + 1];
+                        byte r = src[i + 2];
+
+                        dst[dstIdx++] = new Rgba32(r, g, b, 255);
+                    }
+                }
+            }
+
+            public void ApplyFrame(CaptureFrame frame, IRenderer renderer, Sprite sprite, ref D3D11ExternalTexture? externalTexture, ref Texture? cpuTexture)
+            {
+                if (frame.Kind != CaptureFrameKind.CpuUpload || frame.Upload == null)
+                    return;
+
+                if (cpuTexture == null || cpuTexture.Width != frame.Width || cpuTexture.Height != frame.Height)
+                {
+                    cpuTexture?.Dispose();
+                    cpuTexture = renderer.CreateTexture(frame.Width, frame.Height);
+                    sprite.Texture = cpuTexture;
+                }
+
+                cpuTexture.SetData(frame.Upload);
+            }
+
+            public void Dispose()
+            {
+                bitmapPool?.Dispose();
+                graphicsPool?.Dispose();
+            }
+        }
     }
 }

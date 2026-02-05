@@ -6,8 +6,11 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Rendering;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Graphics.Veldrid;
 using osu.Framework.Threading;
+using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Overlays.Settings;
 using osu.Game.Tournament.Components;
@@ -33,6 +36,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         [Resolved]
         private TournamentMatchChatDisplay chat { get; set; } = null!;
+
+        [Resolved]
+        private IRenderer renderer { get; set; } = null!;
+
+        [Resolved]
+        private OsuColour colours { get; set; } = null!;
 
         private readonly Bindable<bool> useChrome = new Bindable<bool>();
 
@@ -125,6 +134,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
                                 KeyboardStep = 1,
                             }
                             : Empty(),
+                        OperatingSystem.IsWindows()
+                            ? frameRateInputBox = new SettingsNumberBox
+                            {
+                                LabelText = "Frame rate",
+                            }
+                            : Empty(),
                         new SettingsSlider<int>
                         {
                             LabelText = "Players per team",
@@ -135,7 +150,19 @@ namespace osu.Game.Tournament.Screens.Gameplay
                         {
                             Label = "Use chroma",
                             Current = useChrome
-                        }
+                        },
+                        !D3D11Interop.TryGetD3D11Device(renderer, out _, out _, out _)
+                            ? new TournamentSpriteText
+                            {
+                                Colour = colours.Orange1,
+                                Padding = new MarginPadding
+                                {
+                                    Horizontal = 5
+                                },
+                                RelativeSizeAxes = Axes.X,
+                                Text = "目前的渲染器不是D3D11，无法使用WGC捕捉，已回滚至bitblt，可能会有延迟或者性能损失"
+                            }
+                            : Empty(),
                     }
                 }
             });
@@ -146,6 +173,18 @@ namespace osu.Game.Tournament.Screens.Gameplay
             LadderInfo.ChromaKeyWidth.BindValueChanged(width => chroma.Width = width.NewValue, true);
 
             warmup.BindValueChanged(w => header.ShowScores = !w.NewValue, true);
+
+            if (frameRateInputBox != null)
+            {
+                LadderInfo.FrameRate.BindValueChanged(f => frameRateInputBox.Current.Value = f.NewValue, true);
+                frameRateInputBox.Current.BindValueChanged(f =>
+                {
+                    if (f.NewValue == null)
+                        return;
+
+                    LadderInfo.FrameRate.Value = f.NewValue.Value;
+                });
+            }
         }
 
         protected override void LoadComplete()
@@ -174,6 +213,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         private TourneyState lastState;
         private MatchHeader header = null!;
+        private SettingsNumberBox? frameRateInputBox;
 
         private void contract()
         {
