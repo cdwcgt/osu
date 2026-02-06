@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
@@ -33,9 +34,6 @@ namespace osu.Game.Tournament.Components
         private ICaptureSource? capture;
         private D3D11ExternalTexture? externalTexture;
         private Texture? cpuTexture;
-        private CaptureFrame pendingFrame;
-        private bool hasPendingFrame;
-        private readonly object pendingFrameLock = new object();
         private IntPtr targetHwnd;
         private bool d3d11Available;
         private Thread? windowWatcherThread;
@@ -101,26 +99,16 @@ namespace osu.Game.Tournament.Components
             Default = 60,
         };
 
-        private double elapsedTime;
         private bool captureErrorReported;
 
         protected override void Update()
         {
             base.Update();
 
-            elapsedTime += Time.Elapsed;
-
-            if (elapsedTime < 1000f / FrameRate.Value)
-            {
-                return;
-            }
-
-            elapsedTime = 0;
-
             if (capture == null)
                 return;
 
-            if (targetHwnd == IntPtr.Zero || !IsWindow(targetHwnd))
+            if (targetHwnd == IntPtr.Zero || !IsWindow(targetHwnd) || !isWindowsLive)
             {
                 if (capture.IsRunning)
                     capture.Stop();
@@ -159,33 +147,10 @@ namespace osu.Game.Tournament.Components
             }
 
             this.FadeIn(100);
-
-            if (capture.TryAcquireLatestFrame(out var frame))
-            {
-                lock (pendingFrameLock)
-                {
-                    if (hasPendingFrame)
-                        pendingFrame.ReleaseResources(discardUpload: true);
-
-                    pendingFrame = frame;
-                    hasPendingFrame = true;
-                }
-            }
         }
 
-        private void consumePendingFrame()
+        private void consumePendingFrame(CaptureFrame frame, IRenderer renderer)
         {
-            CaptureFrame frame;
-
-            lock (pendingFrameLock)
-            {
-                if (!hasPendingFrame)
-                    return;
-
-                frame = pendingFrame;
-                hasPendingFrame = false;
-            }
-
             if (capture == null || !frame.IsValid)
                 return;
 
@@ -203,6 +168,11 @@ namespace osu.Game.Tournament.Components
 
         private sealed class CaptureDrawNode : CompositeDrawableDrawNode
         {
+            private readonly Stopwatch stopwatch = Stopwatch.StartNew();
+            private double elapsedMs;
+
+            private ICaptureSource? capture => ((CapturedWindowSprite)Source).capture;
+
             public CaptureDrawNode(CapturedWindowSprite source)
                 : base(source)
             {
@@ -210,7 +180,18 @@ namespace osu.Game.Tournament.Components
 
             protected override void Draw(IRenderer renderer)
             {
-                ((CapturedWindowSprite)Source).consumePendingFrame();
+                double interval = 1000.0 / ((CapturedWindowSprite)Source).FrameRate.Value;
+                elapsedMs += stopwatch.Elapsed.TotalMilliseconds;
+                stopwatch.Restart();
+
+                if (capture != null && elapsedMs >= interval)
+                {
+                    if (capture.TryAcquireLatestFrame(out var frame))
+                        ((CapturedWindowSprite)Source).consumePendingFrame(frame, renderer);
+
+                    elapsedMs = Math.Min(elapsedMs - interval, interval);
+                }
+
                 base.Draw(renderer);
             }
         }
@@ -256,13 +237,6 @@ namespace osu.Game.Tournament.Components
             capture?.Dispose();
             externalTexture?.Dispose();
             cpuTexture?.Dispose();
-
-            lock (pendingFrameLock)
-            {
-                if (hasPendingFrame)
-                    pendingFrame.ReleaseResources(discardUpload: true);
-                hasPendingFrame = false;
-            }
 
             watcherRunning = false;
             windowWatcherThread?.Join();

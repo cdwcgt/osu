@@ -21,7 +21,7 @@ namespace osu.Game.Tournament.Components
     [SupportedOSPlatform("windows10.0.19041.0")]
     public sealed class WgcCapture : IDisposable
     {
-        private const int frame_buffer_count = 1;
+        private const int frame_buffer_count = 2;
 
         private readonly ID3D11Device d3dDevice;
         private readonly IDirect3DDevice winrtDevice;
@@ -126,15 +126,9 @@ namespace osu.Game.Tournament.Components
         {
             Direct3D11CaptureFrame? frame = null;
 
-            while (true)
-            {
-                var next = sender.TryGetNextFrame();
-                if (next == null)
-                    break;
+            frame?.Dispose();
 
-                frame?.Dispose();
-                frame = next;
-            }
+            frame = sender.TryGetNextFrame();
 
             if (frame == null)
                 return;
