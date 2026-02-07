@@ -11,6 +11,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Logging;
 using osu.Game.Online.API;
+using osu.Game.Tournament.Configuration;
 using osu.Game.Tournament.Github.Online;
 using osu.Game.Tournament.IO;
 
@@ -20,6 +21,9 @@ namespace osu.Game.Tournament.Github
     {
         [Resolved]
         private TournamentStorage storage { get; set; } = null!;
+
+        [Resolved]
+        private TournamentConfigManager config { get; set; } = null!;
 
         private const string github_api_base = "https://api.github.com";
 
@@ -45,7 +49,22 @@ namespace osu.Game.Tournament.Github
             using (Stream stream = storage.GetStream(TournamentGameBase.BRACKET_FILENAME, FileAccess.Write, FileMode.Create))
                 await stream.WriteAsync(bytes, cancellationToken).ConfigureAwait(false);
 
+            string baseSha = await getBaseBranchSha(token, cancellationToken).ConfigureAwait(false);
+            config.SetValue(StorageConfig.LastGithubCommitSha, baseSha);
+
             Logger.Log($"Bracket download complete: {path} updated.");
+        }
+
+        private async Task<string> getBaseBranchSha(string token, CancellationToken cancellationToken)
+        {
+            string url = $"{github_api_base}/repos/{GithubConfig.Owner}/{GithubConfig.Repo}/git/ref/heads/{GithubConfig.BaseBranch}";
+            GitRefResponse response = await sendJson<GitRefResponse>(HttpMethod.Get, url, token, null, cancellationToken).ConfigureAwait(false);
+            string? sha = response.Object?.Sha;
+
+            if (string.IsNullOrWhiteSpace(sha))
+                throw new InvalidOperationException("Failed to resolve base branch SHA from GitHub.");
+
+            return sha;
         }
 
         private static async Task<TResponse> sendJson<TResponse>(HttpMethod method, string url, string? token, object? payload, CancellationToken cancellationToken)

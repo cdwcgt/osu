@@ -24,6 +24,7 @@ namespace osu.Game.Tournament.Configuration
 
             SetDefault(StorageConfig.CurrentTournament, default_tournament);
             SetDefault(StorageConfig.UseChroma, !OperatingSystem.IsWindows());
+            SetDefault(StorageConfig.LastGithubCommitSha, string.Empty);
         }
     }
 
@@ -31,5 +32,6 @@ namespace osu.Game.Tournament.Configuration
     {
         CurrentTournament,
         UseChroma,
+        LastGithubCommitSha,
     }
 }

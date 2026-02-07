@@ -29,6 +29,9 @@ namespace osu.Game.Tournament.Github
         [Resolved]
         private GameHost host { get; set; } = null!;
 
+        [Resolved]
+        private TournamentConfigManager config { get; set; } = null!;
+
         private const string github_api_base = "https://api.github.com";
 
         public async Task UploadAsync(CancellationToken cancellationToken = default)
@@ -56,10 +59,14 @@ namespace osu.Game.Tournament.Github
             string prTitle = GithubConfig.PrTitle;
             string prBody = GithubConfig.PrBody;
 
-            string baseSha = await getBaseBranchSha(token, cancellationToken).ConfigureAwait(false);
+            string savedSha = config.Get<string>(StorageConfig.LastGithubCommitSha);
+            string baseSha = string.IsNullOrWhiteSpace(savedSha)
+                ? await getBaseBranchSha(token, cancellationToken).ConfigureAwait(false)
+                : savedSha;
+
             await ensureBranch(token, baseSha, newBranch, cancellationToken).ConfigureAwait(false);
 
-            string? existingFileSha = await getFileSha(token, cancellationToken).ConfigureAwait(false);
+            string? existingFileSha = await getFileSha(token, newBranch, cancellationToken).ConfigureAwait(false);
             await putFile(token, bracketJson, existingFileSha, newBranch, cancellationToken).ConfigureAwait(false);
 
             string prUrl = await createPullRequest(token, newBranch, prTitle, prBody, cancellationToken).ConfigureAwait(false);
@@ -110,10 +117,10 @@ namespace osu.Game.Tournament.Github
             }
         }
 
-        private async Task<string?> getFileSha(string token, CancellationToken cancellationToken)
+        private async Task<string?> getFileSha(string token, string branch, CancellationToken cancellationToken)
         {
             string path = TournamentGameBase.BRACKET_FILENAME.Replace('\\', '/');
-            string url = $"{github_api_base}/repos/{GithubConfig.Owner}/{GithubConfig.Repo}/contents/{path}?ref={GithubConfig.BaseBranch}";
+            string url = $"{github_api_base}/repos/{GithubConfig.Owner}/{GithubConfig.Repo}/contents/{path}?ref={branch}";
 
             try
             {
