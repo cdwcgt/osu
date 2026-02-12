@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
@@ -47,7 +48,12 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
 
             //todo: tournamentgamebase?
             if (ladderInfo.CurrentMatch.Value != null)
-                ladderInfo.CurrentMatch.Value.Current.Value = false;
+            {
+                foreach (var m in ladderInfo.Matches.Where(m => m.Current.Value))
+                {
+                    m.Current.Value = false;
+                }
+            }
 
             ladderInfo.CurrentMatch.Value = match;
             ladderInfo.CurrentMatch.Value.Current.Value = true;
