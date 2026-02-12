@@ -35,16 +35,22 @@ namespace osu.Game.Tournament.Github
 
             ContentResponse response = await sendJson<ContentResponse>(HttpMethod.Get, url, token, null, cancellationToken).ConfigureAwait(false);
 
-            if (string.IsNullOrWhiteSpace(response.Content))
+            if (string.IsNullOrWhiteSpace(response.Content) && string.IsNullOrWhiteSpace(response.DownloadUrl))
+                throw new InvalidOperationException($"Bracket download aborted: {path} content is empty.");
+
+            byte[] bytes;
+
+            if (string.Equals(response.Encoding, "base64", StringComparison.OrdinalIgnoreCase))
             {
-                Logger.Log($"Bracket download aborted: {path} content is empty.");
-                return;
+                bytes = Convert.FromBase64String(response.Content!.Replace("\n", string.Empty).Replace("\r", string.Empty));
             }
+            else
+            {
+                var request = new OsuWebRequest(response.DownloadUrl!);
+                await request.PerformAsync(cancellationToken).ConfigureAwait(false);
 
-            if (!string.Equals(response.Encoding, "base64", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException($"Unexpected GitHub content encoding: {response.Encoding}");
-
-            byte[] bytes = Convert.FromBase64String(response.Content.Replace("\n", string.Empty).Replace("\r", string.Empty));
+                bytes = request.GetResponseData() ?? throw new InvalidOperationException("Failed to get response data.");
+            }
 
             using (Stream stream = storage.GetStream(TournamentGameBase.BRACKET_FILENAME, FileAccess.Write, FileMode.Create))
                 await stream.WriteAsync(bytes, cancellationToken).ConfigureAwait(false);

@@ -27,6 +27,9 @@ namespace osu.Game.Tournament.Github.Online
 
         [JsonProperty("encoding")]
         public string? Encoding { get; set; }
+
+        [JsonProperty("download_url")]
+        public string? DownloadUrl { get; set; }
     }
 
     public class PullRequestResponse
