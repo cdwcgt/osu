@@ -244,6 +244,7 @@ namespace osu.Game.Tournament.Components
 
         #region Windows API
 
+        // ReSharper disable InconsistentNaming
         [DllImport("user32.dll")]
         private static extern IntPtr FindWindow(string? lpClassName, string lpWindowName);
 
@@ -303,6 +304,7 @@ namespace osu.Game.Tournament.Components
 
             return result;
         }
+        // ReSharper restore InconsistentNaming
 
         #endregion
 
