@@ -30,10 +30,27 @@ namespace osu.Game.Tournament.Github
         public async Task DownloadAsync(CancellationToken cancellationToken = default)
         {
             string path = TournamentGameBase.BRACKET_FILENAME.Replace('\\', '/');
-            string url = $"{github_api_base}/repos/{GithubConfig.Owner}/{GithubConfig.Repo}/contents/{path}?ref={GithubConfig.BaseBranch}";
-            string? token = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
 
-            ContentResponse response = await sendJson<ContentResponse>(HttpMethod.Get, url, token, null, cancellationToken).ConfigureAwait(false);
+            byte[] bytes = await GetJsonBytes(GithubConfig.BaseBranch, cancellationToken).ConfigureAwait(false);
+
+            using (Stream stream = storage.GetStream(TournamentGameBase.BRACKET_FILENAME, FileAccess.Write, FileMode.Create))
+                await stream.WriteAsync(bytes, cancellationToken).ConfigureAwait(false);
+
+            if (GithubConfig.GithubToken != null)
+            {
+                string baseSha = await getBaseBranchSha(GithubConfig.GithubToken, cancellationToken).ConfigureAwait(false);
+                config.SetValue(StorageConfig.LastGithubCommitSha, baseSha);
+            }
+
+            Logger.Log($"Bracket download complete: {path} updated.");
+        }
+
+        public static async Task<byte[]> GetJsonBytes(string refCommit, CancellationToken cancellationToken = default)
+        {
+            string path = TournamentGameBase.BRACKET_FILENAME.Replace('\\', '/');
+            string url = $"{github_api_base}/repos/{GithubConfig.Owner}/{GithubConfig.Repo}/contents/{path}?ref={refCommit}";
+
+            ContentResponse response = await sendJson<ContentResponse>(HttpMethod.Get, url, GithubConfig.GithubToken, null, cancellationToken).ConfigureAwait(false);
 
             if (string.IsNullOrWhiteSpace(response.Content) && string.IsNullOrWhiteSpace(response.DownloadUrl))
                 throw new InvalidOperationException($"Bracket download aborted: {path} content is empty.");
@@ -52,16 +69,10 @@ namespace osu.Game.Tournament.Github
                 bytes = request.GetResponseData() ?? throw new InvalidOperationException("Failed to get response data.");
             }
 
-            using (Stream stream = storage.GetStream(TournamentGameBase.BRACKET_FILENAME, FileAccess.Write, FileMode.Create))
-                await stream.WriteAsync(bytes, cancellationToken).ConfigureAwait(false);
-
-            string baseSha = await getBaseBranchSha(token, cancellationToken).ConfigureAwait(false);
-            config.SetValue(StorageConfig.LastGithubCommitSha, baseSha);
-
-            Logger.Log($"Bracket download complete: {path} updated.");
+            return bytes;
         }
 
-        private async Task<string> getBaseBranchSha(string token, CancellationToken cancellationToken)
+        private static async Task<string> getBaseBranchSha(string token, CancellationToken cancellationToken)
         {
             string url = $"{github_api_base}/repos/{GithubConfig.Owner}/{GithubConfig.Repo}/git/ref/heads/{GithubConfig.BaseBranch}";
             GitRefResponse response = await sendJson<GitRefResponse>(HttpMethod.Get, url, token, null, cancellationToken).ConfigureAwait(false);

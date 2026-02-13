@@ -3,6 +3,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
@@ -13,8 +14,10 @@ using osu.Framework.Graphics;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osu.Game.Online.API;
+using osu.Game.Tournament.Configuration;
 using osu.Game.Tournament.Github.Online;
 using osu.Game.Tournament.IO;
+using osu.Game.Tournament.Models;
 
 namespace osu.Game.Tournament.Github
 {
@@ -42,7 +45,7 @@ namespace osu.Game.Tournament.Github
                 return;
             }
 
-            string? token = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
+            string? token = GithubConfig.GithubToken;
 
             if (string.IsNullOrWhiteSpace(token))
             {
@@ -67,7 +70,58 @@ namespace osu.Game.Tournament.Github
             await ensureBranch(token, baseSha, newBranch, cancellationToken).ConfigureAwait(false);
 
             string? existingFileSha = await getFileSha(token, newBranch, cancellationToken).ConfigureAwait(false);
-            await putFile(token, bracketJson, existingFileSha, newBranch, cancellationToken).ConfigureAwait(false);
+            await putFile(token, bracketJson, TournamentGameBase.BRACKET_FILENAME, existingFileSha, newBranch, cancellationToken).ConfigureAwait(false);
+
+            string prUrl = await createPullRequest(token, newBranch, prTitle, prBody, cancellationToken).ConfigureAwait(false);
+            host.OpenUrlExternally(prUrl);
+            Logger.Log($"Bracket upload complete. PR created: {prUrl}");
+        }
+
+        public async Task UploadByMatchAsync(TournamentMatch match, CancellationToken cancellationToken = default)
+        {
+            string? token = GithubConfig.GithubToken;
+
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                Logger.Log("Bracket upload aborted: GITHUB_TOKEN is not set.");
+                return;
+            }
+
+            string savedSha = config.Get<string>(StorageConfig.LastGithubCommitSha);
+            string baseSha = string.IsNullOrWhiteSpace(savedSha)
+                ? await getBaseBranchSha(token, cancellationToken).ConfigureAwait(false)
+                : savedSha;
+
+            byte[] bracketBytes = await BracketDownloader.GetJsonBytes(baseSha, cancellationToken).ConfigureAwait(false);
+
+            // 希望够用
+            var bracket = JsonConvert.DeserializeObject<LadderInfo>(Encoding.UTF8.GetString(bracketBytes), new JsonPointConverter());
+            if (bracket == null)
+                throw new InvalidOperationException("Failed to resolve bracket from GitHub.");
+
+            var existing = bracket.Matches.FirstOrDefault(m => m.ID == match.ID)
+                           ?? throw new InvalidOperationException("Failed to get match from Github bracket.");
+
+            int idx = bracket.Matches.IndexOf(existing);
+            bracket.Matches[idx] = match;
+
+            string bracketJson = JsonConvert.SerializeObject(bracket,
+                new JsonSerializerSettings
+                {
+                    Formatting = Formatting.Indented,
+                    NullValueHandling = NullValueHandling.Ignore,
+                    DefaultValueHandling = DefaultValueHandling.Ignore,
+                    Converters = new JsonConverter[] { new JsonPointConverter() }
+                });
+
+            string newBranch = GithubConfig.NewBranch;
+            string prTitle = $"Match: {match.ID}, {GithubConfig.PrTitle}";
+            string prBody = GithubConfig.PrBody;
+
+            await ensureBranch(token, baseSha, newBranch, cancellationToken).ConfigureAwait(false);
+
+            string? existingFileSha = await getFileSha(token, newBranch, cancellationToken).ConfigureAwait(false);
+            await putFile(token, bracketJson, TournamentGameBase.BRACKET_FILENAME, existingFileSha, newBranch, cancellationToken).ConfigureAwait(false);
 
             string prUrl = await createPullRequest(token, newBranch, prTitle, prBody, cancellationToken).ConfigureAwait(false);
             host.OpenUrlExternally(prUrl);
@@ -133,9 +187,9 @@ namespace osu.Game.Tournament.Github
             }
         }
 
-        private async Task putFile(string token, string bracketJson, string? existingSha, string newBranch, CancellationToken cancellationToken)
+        private async Task putFile(string token, string bracketJson, string fileName, string? existingSha, string newBranch, CancellationToken cancellationToken)
         {
-            string path = TournamentGameBase.BRACKET_FILENAME.Replace('\\', '/');
+            string path = fileName.Replace('\\', '/');
             string url = $"{github_api_base}/repos/{GithubConfig.Owner}/{GithubConfig.Repo}/contents/{path}";
 
             string contentBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(bracketJson));

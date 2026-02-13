@@ -14,6 +14,9 @@ namespace osu.Game.Tournament.Github
 
         public static string NewBranch => $"bot/update-{DateTime.UtcNow:yyyyMMdd-HHmmss}";
         public static string PrTitle => $"Automated update {DateTime.UtcNow:yyyyMMdd-HHmmss}";
+
         public static string PrBody => "Updating bracket";
+
+        public static string? GithubToken => Environment.GetEnvironmentVariable("GITHUB_TOKEN");
     }
 }
