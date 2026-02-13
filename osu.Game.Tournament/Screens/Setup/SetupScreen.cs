@@ -1,19 +1,25 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Drawing;
+using System.Threading;
+using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Configuration;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Platform;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
+using osu.Game.Online.Multiplayer;
 using osu.Game.Overlays;
 using osu.Game.Rulesets;
+using osu.Game.Tournament.Configuration;
 using osu.Game.Tournament.Github;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
@@ -49,9 +55,16 @@ namespace osu.Game.Tournament.Screens.Setup
         [Resolved]
         private BracketUploader bracketUploader { get; set; } = null!;
 
+        [Resolved]
+        private GameHost host { get; set; } = null!;
+
+        [Resolved]
+        private TournamentConfigManager config { get; set; } = null!;
+
         private readonly IBindable<APIUser> localUser = new Bindable<APIUser>();
         private Bindable<Size> windowSize = null!;
         private ActionableInfo updateToGithubAction = null!;
+        private ActionableInfo newestCommitInfo = null!;
 
         [BackgroundDependencyLoader]
         private void load(FrameworkConfigManager frameworkConfig)
@@ -83,6 +96,8 @@ namespace osu.Game.Tournament.Screens.Setup
             localUser.BindValueChanged(_ => Schedule(reload));
             stableInfo.OnStableInfoSaved += () => Schedule(reload);
             reload();
+
+            Scheduler.AddDelayed(() => updateNewestCommit().FireAndForget(), 5 * 60 * 1000, true);
         }
 
         private void reload()
@@ -180,7 +195,41 @@ namespace osu.Game.Tournament.Screens.Setup
                     },
                     Description = "upload bracket to Github"
                 },
+                newestCommitInfo = new ActionableInfo
+                {
+                    Label = "Current newest commit",
+                    ButtonText = "Open repo",
+                    Action = () => { host.OpenUrlExternally($"https://github.com/{GithubConfig.Owner}/{GithubConfig.Repo}/{GithubConfig.BaseBranch}"); },
+                }
             };
+
+            updateNewestCommit().FireAndForget();
+        }
+
+        private async Task updateNewestCommit(CancellationToken cancellationToken = default)
+        {
+            string? token = GithubConfig.GithubToken;
+            if (token == null)
+                throw new InvalidOperationException("Github token not set");
+
+            string newestCommit = await GithubApiClient.GetBaseBranchShaAsync(token, cancellationToken).ConfigureAwait(false);
+
+            Scheduler.Add(() =>
+            {
+                newestCommitInfo.Value = newestCommit;
+                string latestLocalCommit = config.Get<string>(StorageConfig.LastGithubCommitSha);
+
+                if (latestLocalCommit != newestCommit)
+                {
+                    newestCommitInfo.Failing = true;
+                    newestCommitInfo.Value = $"{latestLocalCommit}...{newestCommit}";
+                }
+                else
+                {
+                    newestCommitInfo.Failing = false;
+                    newestCommitInfo.Value = newestCommit;
+                }
+            });
         }
 
         private const float aspect_ratio = 16f / 9f;

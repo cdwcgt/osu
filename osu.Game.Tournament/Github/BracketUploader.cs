@@ -35,8 +35,6 @@ namespace osu.Game.Tournament.Github
         [Resolved]
         private TournamentConfigManager config { get; set; } = null!;
 
-        private const string github_api_base = "https://api.github.com";
-
         public async Task UploadAsync(CancellationToken cancellationToken = default)
         {
             if (!storage.Exists(TournamentGameBase.BRACKET_FILENAME))
@@ -64,7 +62,7 @@ namespace osu.Game.Tournament.Github
 
             string savedSha = config.Get<string>(StorageConfig.LastGithubCommitSha);
             string baseSha = string.IsNullOrWhiteSpace(savedSha)
-                ? await getBaseBranchSha(token, cancellationToken).ConfigureAwait(false)
+                ? await GithubApiClient.GetBaseBranchShaAsync(token, cancellationToken).ConfigureAwait(false)
                 : savedSha;
 
             await ensureBranch(token, baseSha, newBranch, cancellationToken).ConfigureAwait(false);
@@ -89,7 +87,7 @@ namespace osu.Game.Tournament.Github
 
             string savedSha = config.Get<string>(StorageConfig.LastGithubCommitSha);
             string baseSha = string.IsNullOrWhiteSpace(savedSha)
-                ? await getBaseBranchSha(token, cancellationToken).ConfigureAwait(false)
+                ? await GithubApiClient.GetBaseBranchShaAsync(token, cancellationToken).ConfigureAwait(false)
                 : savedSha;
 
             byte[] bracketBytes = await BracketDownloader.GetJsonBytes(baseSha, cancellationToken).ConfigureAwait(false);
@@ -128,41 +126,29 @@ namespace osu.Game.Tournament.Github
             Logger.Log($"Bracket upload complete. PR created: {prUrl}");
         }
 
-        private async Task<string> getBaseBranchSha(string token, CancellationToken cancellationToken)
-        {
-            string url = $"{github_api_base}/repos/{GithubConfig.Owner}/{GithubConfig.Repo}/git/ref/heads/{GithubConfig.BaseBranch}";
-            GitRefResponse response = await sendJson<GitRefResponse>(HttpMethod.Get, url, token, null, cancellationToken).ConfigureAwait(false);
-            string? sha = response.Object?.Sha;
-
-            if (string.IsNullOrWhiteSpace(sha))
-                throw new InvalidOperationException("Failed to resolve base branch SHA from GitHub.");
-
-            return sha;
-        }
-
         private async Task ensureBranch(string token, string baseSha, string newBranch, CancellationToken cancellationToken)
         {
             string? existingSha = await getBranchSha(token, newBranch, cancellationToken).ConfigureAwait(false);
             if (!string.IsNullOrWhiteSpace(existingSha))
                 return;
 
-            string url = $"{github_api_base}/repos/{GithubConfig.Owner}/{GithubConfig.Repo}/git/refs";
+            string url = GithubApiClient.CreateRepoUrl("git/refs");
             var payload = new CreateRefRequest
             {
                 Ref = $"refs/heads/{newBranch}",
                 Sha = baseSha
             };
 
-            await sendJson<object>(HttpMethod.Post, url, token, payload, cancellationToken).ConfigureAwait(false);
+            await GithubApiClient.SendJsonAsync<object>(HttpMethod.Post, url, token, payload, cancellationToken).ConfigureAwait(false);
         }
 
         private async Task<string?> getBranchSha(string token, string newBranch, CancellationToken cancellationToken)
         {
-            string url = $"{github_api_base}/repos/{GithubConfig.Owner}/{GithubConfig.Repo}/git/ref/heads/{newBranch}";
+            string url = GithubApiClient.CreateRepoUrl($"git/ref/heads/{newBranch}");
 
             try
             {
-                GitRefResponse response = await sendJson<GitRefResponse>(HttpMethod.Get, url, token, null, cancellationToken).ConfigureAwait(false);
+                GitRefResponse response = await GithubApiClient.SendJsonAsync<GitRefResponse>(HttpMethod.Get, url, token, null, cancellationToken).ConfigureAwait(false);
                 return response.Object?.Sha;
             }
             catch
@@ -174,11 +160,11 @@ namespace osu.Game.Tournament.Github
         private async Task<string?> getFileSha(string token, string branch, CancellationToken cancellationToken)
         {
             string path = TournamentGameBase.BRACKET_FILENAME.Replace('\\', '/');
-            string url = $"{github_api_base}/repos/{GithubConfig.Owner}/{GithubConfig.Repo}/contents/{path}?ref={branch}";
+            string url = $"{GithubApiClient.CreateRepoUrl($"contents/{path}")}?ref={branch}";
 
             try
             {
-                ContentResponse response = await sendJson<ContentResponse>(HttpMethod.Get, url, token, null, cancellationToken).ConfigureAwait(false);
+                ContentResponse response = await GithubApiClient.SendJsonAsync<ContentResponse>(HttpMethod.Get, url, token, null, cancellationToken).ConfigureAwait(false);
                 return response.Sha;
             }
             catch
@@ -190,7 +176,7 @@ namespace osu.Game.Tournament.Github
         private async Task putFile(string token, string bracketJson, string fileName, string? existingSha, string newBranch, CancellationToken cancellationToken)
         {
             string path = fileName.Replace('\\', '/');
-            string url = $"{github_api_base}/repos/{GithubConfig.Owner}/{GithubConfig.Repo}/contents/{path}";
+            string url = GithubApiClient.CreateRepoUrl($"contents/{path}");
 
             string contentBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(bracketJson));
             var payload = new CreateOrUpdateFileRequest
@@ -201,12 +187,12 @@ namespace osu.Game.Tournament.Github
                 Sha = string.IsNullOrWhiteSpace(existingSha) ? null : existingSha
             };
 
-            await sendJson<object>(HttpMethod.Put, url, token, payload, cancellationToken).ConfigureAwait(false);
+            await GithubApiClient.SendJsonAsync<object>(HttpMethod.Put, url, token, payload, cancellationToken).ConfigureAwait(false);
         }
 
         private async Task<string> createPullRequest(string token, string newBranch, string title, string body, CancellationToken cancellationToken)
         {
-            string url = $"{github_api_base}/repos/{GithubConfig.Owner}/{GithubConfig.Repo}/pulls";
+            string url = GithubApiClient.CreateRepoUrl("pulls");
             var payload = new CreatePullRequestRequest
             {
                 Title = title,
@@ -215,34 +201,13 @@ namespace osu.Game.Tournament.Github
                 Base = GithubConfig.BaseBranch
             };
 
-            PullRequestResponse response = await sendJson<PullRequestResponse>(HttpMethod.Post, url, token, payload, cancellationToken).ConfigureAwait(false);
+            PullRequestResponse response = await GithubApiClient.SendJsonAsync<PullRequestResponse>(HttpMethod.Post, url, token, payload, cancellationToken).ConfigureAwait(false);
             string htmlUrl = response.HtmlUrl;
 
             if (string.IsNullOrWhiteSpace(htmlUrl))
                 throw new InvalidOperationException("Failed to resolve PR URL from GitHub.");
 
             return htmlUrl;
-        }
-
-        private static async Task<TResponse> sendJson<TResponse>(HttpMethod method, string url, string token, object? payload, CancellationToken cancellationToken)
-        {
-            using var request = new OsuJsonWebRequest<TResponse>(url)
-            {
-                Method = method,
-                ContentType = "application/json"
-            };
-
-            request.AddHeader("Accept", "application/vnd.github+json");
-            request.AddHeader("Authorization", $"Bearer {token}");
-            if (!string.IsNullOrWhiteSpace(GithubConfig.APIVersion))
-                request.AddHeader("X-GitHub-Api-Version", GithubConfig.APIVersion);
-
-            if (payload != null)
-                request.AddRaw(JsonConvert.SerializeObject(payload));
-
-            await request.PerformAsync(cancellationToken).ConfigureAwait(false);
-
-            return request.ResponseObject;
         }
     }
 }
