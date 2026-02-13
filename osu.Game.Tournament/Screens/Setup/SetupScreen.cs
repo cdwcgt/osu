@@ -178,7 +178,7 @@ namespace osu.Game.Tournament.Screens.Setup
                             updateToGithubAction.Failing = true;
                         });
                     },
-                    Description = "uploade bracket to Github"
+                    Description = "upload bracket to Github"
                 },
             };
         }
