@@ -15,6 +15,16 @@ namespace osu.Game.Rulesets.Catch.Judgements
         public CatcherAnimationState CatcherAnimationState;
 
         /// <summary>
+        /// The catcher's position at the time to this judgement.
+        /// </summary>
+        public float CatcherPosition;
+
+        /// <summary>
+        ///
+        /// </summary>
+        public Direction CatcherDirection;
+
+        /// <summary>
         /// Whether the catcher was hyper dashing prior to this judgement.
         /// </summary>
         public bool CatcherHyperDash;
