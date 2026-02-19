@@ -1,6 +1,7 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.ComponentModel;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -15,6 +16,7 @@ using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Localisation.HUD;
 using osu.Game.Rulesets.Judgements;
+using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Objects.Legacy;
 using osu.Game.Rulesets.Osu.Judgements;
 using osu.Game.Rulesets.Osu.Objects;
@@ -23,46 +25,47 @@ using osu.Game.Rulesets.Scoring;
 using osu.Game.Screens.Play.HUD.HitErrorMeters;
 using osuTK;
 using osuTK.Graphics;
+using Container = osu.Framework.Graphics.Containers.Container;
 
 namespace osu.Game.Rulesets.Osu.HUD
 {
     [Cached]
     public partial class AimErrorMeter : HitErrorMeter
     {
-        [SettingSource(typeof(AimErrorMeterStrings), nameof(AimErrorMeterStrings.HitPositionSize), nameof(AimErrorMeterStrings.HitPositionSizeDescription))]
-        public BindableNumber<float> HitPositionSize { get; } = new BindableNumber<float>(7f)
+        [SettingSource(typeof(AimErrorMeterStrings), nameof(AimErrorMeterStrings.HitMarkerSize), nameof(AimErrorMeterStrings.HitMarkerSizeDescription))]
+        public BindableNumber<float> HitMarkerSize { get; } = new BindableNumber<float>(7f)
         {
             MinValue = 0f,
             MaxValue = 12f,
             Precision = 1f
         };
 
-        [SettingSource(typeof(AimErrorMeterStrings), nameof(AimErrorMeterStrings.HitPositionStyle), nameof(AimErrorMeterStrings.HitPositionStyleDescription))]
-        public Bindable<HitStyle> HitPositionStyle { get; } = new Bindable<HitStyle>();
+        [SettingSource(typeof(AimErrorMeterStrings), nameof(AimErrorMeterStrings.HitMarkerStyle), nameof(AimErrorMeterStrings.HitMarkerStyleDescription))]
+        public Bindable<MarkerStyle> HitMarkerStyle { get; } = new Bindable<MarkerStyle>();
 
-        [SettingSource(typeof(AimErrorMeterStrings), nameof(AimErrorMeterStrings.AverageSize), nameof(AimErrorMeterStrings.AverageSizeDescription))]
-        public BindableNumber<float> AverageSize { get; } = new BindableNumber<float>(12f)
+        [SettingSource(typeof(AimErrorMeterStrings), nameof(AimErrorMeterStrings.AverageMarkerSize), nameof(AimErrorMeterStrings.AverageMarkerSizeDescription))]
+        public BindableNumber<float> AverageMarkerSize { get; } = new BindableNumber<float>(12f)
         {
             MinValue = 7f,
             MaxValue = 25f,
             Precision = 1f
         };
 
-        [SettingSource(typeof(AimErrorMeterStrings), nameof(AimErrorMeterStrings.AverageStyle), nameof(AimErrorMeterStrings.AverageStyleDescription))]
-        public Bindable<HitStyle> AverageStyle { get; } = new Bindable<HitStyle>(HitStyle.Plus);
+        [SettingSource(typeof(AimErrorMeterStrings), nameof(AimErrorMeterStrings.AverageMarkerStyle), nameof(AimErrorMeterStrings.AverageMarkerStyleDescription))]
+        public Bindable<MarkerStyle> AverageMarkerStyle { get; } = new Bindable<MarkerStyle>(MarkerStyle.Plus);
 
-        [SettingSource(typeof(AimErrorMeterStrings), nameof(AimErrorMeterStrings.PositionStyle), nameof(AimErrorMeterStrings.PositionStyleDescription))]
-        public Bindable<MappingStyle> PositionMappingStyle { get; } = new Bindable<MappingStyle>();
+        [SettingSource(typeof(AimErrorMeterStrings), nameof(AimErrorMeterStrings.PositionDisplayStyle), nameof(AimErrorMeterStrings.PositionDisplayStyleDescription))]
+        public Bindable<PositionDisplay> PositionDisplayStyle { get; } = new Bindable<PositionDisplay>();
 
-        [Resolved]
-        private ScoreProcessor scoreProcessor { get; set; } = null!;
+        // used for calculate relative position.
+        private Vector2? lastObjectPosition;
 
-        private Container averagePositionContainer = null!;
-        private Container averagePositionRotateContainer = null!;
-        private Vector2 averagePosition;
+        private Container averagePositionMarker = null!;
+        private Container averagePositionMarkerRotationContainer = null!;
+        private Vector2? averagePosition;
 
-        private readonly DrawablePool<HitPosition> hitPositionPool = new DrawablePool<HitPosition>(30);
-        private Container hitPositionContainer = null!;
+        private readonly DrawablePool<HitPositionMarker> hitPositionPool = new DrawablePool<HitPositionMarker>(30);
+        private Container hitPositionMarkerContainer = null!;
 
         private Container arrowBackgroundContainer = null!;
         private UprightAspectMaintainingContainer rotateFixedContainer = null!;
@@ -85,7 +88,7 @@ namespace osu.Game.Rulesets.Osu.HUD
         }
 
         [BackgroundDependencyLoader]
-        private void load(IBindable<WorkingBeatmap> beatmap)
+        private void load(IBindable<WorkingBeatmap> beatmap, ScoreProcessor processor)
         {
             InternalChild = new Container
             {
@@ -220,18 +223,18 @@ namespace osu.Game.Rulesets.Osu.HUD
                         Origin = Anchor.Centre,
                         Children = new Drawable[]
                         {
-                            hitPositionContainer = new Container
+                            hitPositionMarkerContainer = new Container
                             {
                                 RelativeSizeAxes = Axes.Both,
                                 Anchor = Anchor.Centre,
                                 Origin = Anchor.Centre
                             },
-                            averagePositionContainer = new UprightAspectMaintainingContainer
+                            averagePositionMarker = new UprightAspectMaintainingContainer
                             {
                                 RelativePositionAxes = Axes.Both,
                                 Anchor = Anchor.Centre,
                                 Origin = Anchor.Centre,
-                                Child = averagePositionRotateContainer = new Container
+                                Child = averagePositionMarkerRotationContainer = new Container
                                 {
                                     RelativeSizeAxes = Axes.Both,
                                     Anchor = Anchor.Centre,
@@ -261,17 +264,25 @@ namespace osu.Game.Rulesets.Osu.HUD
                 }
             };
 
-            objectRadius = OsuHitObject.OBJECT_RADIUS * LegacyRulesetExtensions.CalculateScaleFromCircleSize(beatmap.Value.Beatmap.Difficulty.CircleSize, true);
+            // handle IApplicableToDifficulty for CS change.
+            BeatmapDifficulty newDifficulty = new BeatmapDifficulty();
+            beatmap.Value.Beatmap.Difficulty.CopyTo(newDifficulty);
 
-            AverageSize.BindValueChanged(size => averagePositionContainer.Size = new Vector2(size.NewValue), true);
-            AverageStyle.BindValueChanged(style => averagePositionRotateContainer.Rotation = style.NewValue == HitStyle.Plus ? 0 : 45, true);
+            var mods = processor.Mods.Value;
 
-            PositionMappingStyle.BindValueChanged(s =>
+            foreach (var mod in mods.OfType<IApplicableToDifficulty>())
+                mod.ApplyToDifficulty(newDifficulty);
+
+            objectRadius = OsuHitObject.OBJECT_RADIUS * LegacyRulesetExtensions.CalculateScaleFromCircleSize(newDifficulty.CircleSize, true);
+
+            AverageMarkerSize.BindValueChanged(size => averagePositionMarker.Size = new Vector2(size.NewValue), true);
+            AverageMarkerStyle.BindValueChanged(style => averagePositionMarkerRotationContainer.Rotation = style.NewValue == MarkerStyle.Plus ? 0 : 45, true);
+
+            PositionDisplayStyle.BindValueChanged(s =>
             {
-                // reset hit position to let it re-stat in the new mode
                 Clear();
 
-                if (s.NewValue == MappingStyle.Relative)
+                if (s.NewValue == PositionDisplay.Normalised)
                 {
                     arrowBackgroundContainer.FadeIn(100);
                     rotateFixedContainer.Remove(mainContainer, false);
@@ -280,8 +291,7 @@ namespace osu.Game.Rulesets.Osu.HUD
                 else
                 {
                     arrowBackgroundContainer.FadeOut(100);
-                    // consider that component rotate is meaningless and will cause confusing in absolute mode.
-                    // so let component in rotate fixed when in absolute mapping mode.
+                    // when in absolute mode, rotation of the aim error meter as a whole should not affect how the component is displayed
                     RemoveInternal(mainContainer, false);
                     rotateFixedContainer.Add(mainContainer);
                 }
@@ -294,12 +304,12 @@ namespace osu.Game.Rulesets.Osu.HUD
 
             if (circleJudgement.CursorPositionAtHit == null) return;
 
-            if (hitPositionContainer.Count > max_concurrent_judgements)
+            if (hitPositionMarkerContainer.Count > max_concurrent_judgements)
             {
                 const double quick_fade_time = 300;
 
                 // check with a bit of lenience to avoid precision error in comparison.
-                var old = hitPositionContainer.FirstOrDefault(j => j.LifetimeEnd > Clock.CurrentTime + quick_fade_time * 1.1);
+                var old = hitPositionMarkerContainer.FirstOrDefault(j => j.LifetimeEnd > Clock.CurrentTime + quick_fade_time * 1.1);
 
                 if (old != null)
                 {
@@ -308,17 +318,12 @@ namespace osu.Game.Rulesets.Osu.HUD
                 }
             }
 
-            // the Vector2 for component is X (-0.5, 0.5), Y (-0.5, 0.5)
             Vector2 hitPosition;
 
-            if (PositionMappingStyle.Value == MappingStyle.Relative && scoreProcessor.HitEvents.LastOrDefault().LastHitObject != null)
+            if (PositionDisplayStyle.Value == PositionDisplay.Normalised && lastObjectPosition != null)
             {
-                var currentHitEvent = scoreProcessor.HitEvents.Last();
-
-                // let local center in (0.5, 0.5) to prevent localRadius in calculate will get zero.
-                // then manual subtraction 0.5 to match component mapping.
-                hitPosition = AccuracyHeatmap.FindRelativeHitPosition(((OsuHitObject)currentHitEvent.LastHitObject).StackedEndPosition, ((OsuHitObject)currentHitEvent.HitObject).StackedEndPosition,
-                    circleJudgement.CursorPositionAtHit.Value, objectRadius, new Vector2(0.5f), inner_portion, 45) - new Vector2(0.5f);
+                hitPosition = AccuracyHeatmap.FindRelativeHitPosition(lastObjectPosition.Value, ((OsuHitObject)circleJudgement.HitObject).StackedEndPosition,
+                    circleJudgement.CursorPositionAtHit.Value, objectRadius, 45) * (inner_portion / 2);
             }
             else
             {
@@ -334,53 +339,55 @@ namespace osu.Game.Rulesets.Osu.HUD
                 drawableHit.Y = hitPosition.Y;
                 drawableHit.Colour = getColourForPosition(hitPosition);
 
-                hitPositionContainer.Add(drawableHit);
+                hitPositionMarkerContainer.Add(drawableHit);
             });
 
-            averagePositionContainer.MoveTo(averagePosition = (hitPosition + averagePosition) / 2, 800, Easing.OutQuint);
+            var newAveragePosition = 0.1f * hitPosition + 0.9f * (averagePosition ?? hitPosition);
+            averagePositionMarker.MoveTo(newAveragePosition, 800, Easing.OutQuint);
+            averagePosition = newAveragePosition;
+            lastObjectPosition = ((OsuHitObject)circleJudgement.HitObject).StackedPosition;
         }
 
         private Color4 getColourForPosition(Vector2 position)
         {
-            switch (Vector2.Distance(position, Vector2.Zero))
-            {
-                case >= 0.5f * inner_portion:
-                    return colours.Red;
+            float distance = Vector2.Distance(position, Vector2.Zero);
 
-                case >= 0.35f * inner_portion:
-                    return colours.Yellow;
+            if (distance >= 0.5f * inner_portion)
+                return colours.Red;
 
-                case >= 0.2f * inner_portion:
-                    return colours.Green;
+            if (distance >= 0.35f * inner_portion)
+                return colours.Yellow;
 
-                default:
-                    return colours.Blue;
-            }
+            if (distance >= 0.2f * inner_portion)
+                return colours.Green;
+
+            return colours.Blue;
         }
 
         public override void Clear()
         {
-            averagePositionContainer.MoveTo(averagePosition = Vector2.Zero, 800, Easing.OutQuint);
+            averagePosition = null;
+            averagePositionMarker.MoveTo(Vector2.Zero, 800, Easing.OutQuint);
+            lastObjectPosition = null;
 
-            foreach (var h in hitPositionContainer)
+            foreach (var h in hitPositionMarkerContainer)
             {
                 h.ClearTransforms();
                 h.Expire();
             }
         }
 
-        private partial class HitPosition : PoolableDrawable
+        private partial class HitPositionMarker : PoolableDrawable
         {
             [Resolved]
             private AimErrorMeter aimErrorMeter { get; set; } = null!;
 
-            public readonly BindableNumber<float> HitPointSize = new BindableFloat();
-
-            public readonly Bindable<HitStyle> HitPointStyle = new Bindable<HitStyle>();
+            public readonly BindableNumber<float> MarkerSize = new BindableFloat();
+            public readonly Bindable<MarkerStyle> Style = new Bindable<MarkerStyle>();
 
             private readonly Container content;
 
-            public HitPosition()
+            public HitPositionMarker()
             {
                 RelativePositionAxes = Axes.Both;
 
@@ -424,10 +431,10 @@ namespace osu.Game.Rulesets.Osu.HUD
             {
                 base.LoadComplete();
 
-                HitPointSize.BindTo(aimErrorMeter.HitPositionSize);
-                HitPointSize.BindValueChanged(size => Size = new Vector2(size.NewValue), true);
-                HitPointStyle.BindTo(aimErrorMeter.HitPositionStyle);
-                HitPointStyle.BindValueChanged(style => content.Rotation = style.NewValue == HitStyle.X ? 0 : 45, true);
+                MarkerSize.BindTo(aimErrorMeter.HitMarkerSize);
+                MarkerSize.BindValueChanged(size => Size = new Vector2(size.NewValue), true);
+                Style.BindTo(aimErrorMeter.HitMarkerStyle);
+                Style.BindValueChanged(style => content.Rotation = style.NewValue == MarkerStyle.X ? 0 : 45, true);
             }
 
             protected override void PrepareForUse()
@@ -440,29 +447,29 @@ namespace osu.Game.Rulesets.Osu.HUD
                 this
                     .ResizeTo(new Vector2(0))
                     .FadeInFromZero(judgement_fade_in_duration, Easing.OutQuint)
-                    .ResizeTo(new Vector2(HitPointSize.Value), judgement_fade_in_duration, Easing.OutQuint)
+                    .ResizeTo(new Vector2(MarkerSize.Value), judgement_fade_in_duration, Easing.OutQuint)
                     .Then()
                     .FadeOut(judgement_fade_out_duration)
                     .Expire();
             }
         }
 
-        public enum HitStyle
+        public enum MarkerStyle
         {
-            [LocalisableDescription(typeof(AimErrorMeterStrings), nameof(AimErrorMeterStrings.StyleX))]
+            [Description("x")]
             X,
 
-            [LocalisableDescription(typeof(AimErrorMeterStrings), nameof(AimErrorMeterStrings.StylePlus))]
+            [Description("+")]
             Plus,
         }
 
-        public enum MappingStyle
+        public enum PositionDisplay
         {
             [LocalisableDescription(typeof(AimErrorMeterStrings), nameof(AimErrorMeterStrings.Absolute))]
             Absolute,
 
-            [LocalisableDescription(typeof(AimErrorMeterStrings), nameof(AimErrorMeterStrings.Relative))]
-            Relative,
+            [LocalisableDescription(typeof(AimErrorMeterStrings), nameof(AimErrorMeterStrings.Normalised))]
+            Normalised,
         }
     }
 }

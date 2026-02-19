@@ -4,13 +4,16 @@
 using System;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Platform;
 using osu.Game.Configuration;
 using osu.Game.Localisation;
+using osu.Game.Online.API;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Dialog;
+using osu.Game.Overlays.Notifications;
 using WebCommonStrings = osu.Game.Resources.Localisation.Web.CommonStrings;
 
 namespace osu.Game.Online.Chat
@@ -21,10 +24,16 @@ namespace osu.Game.Online.Chat
         private GameHost host { get; set; } = null!;
 
         [Resolved]
-        private Clipboard clipboard { get; set; } = null!;
+        private OsuGame? game { get; set; }
 
-        [Resolved(CanBeNull = true)]
+        [Resolved]
         private IDialogOverlay? dialogOverlay { get; set; }
+
+        [Resolved]
+        private INotificationOverlay? notificationOverlay { get; set; }
+
+        [Resolved]
+        private IAPIProvider api { get; set; } = null!;
 
         private Bindable<bool> externalLinkWarning = null!;
 
@@ -34,10 +43,52 @@ namespace osu.Game.Online.Chat
             externalLinkWarning = config.GetBindable<bool>(OsuSetting.ExternalLinkWarning);
         }
 
-        public void OpenUrlExternally(string url, bool bypassWarning = false)
+        public void OpenUrlExternally(string url, LinkWarnMode warnMode = LinkWarnMode.Default)
         {
-            if (!bypassWarning && externalLinkWarning.Value && dialogOverlay != null)
-                dialogOverlay.Push(new ExternalLinkDialog(url, () => host.OpenUrlExternally(url), () => clipboard.SetText(url)));
+            bool isTrustedDomain;
+
+            if (url.StartsWith('/'))
+            {
+                url = $"{api.Endpoints.WebsiteUrl}{url}";
+                isTrustedDomain = true;
+            }
+            else
+            {
+                isTrustedDomain = url.StartsWith(api.Endpoints.WebsiteUrl, StringComparison.Ordinal);
+            }
+
+            if (!url.CheckIsValidUrl())
+            {
+                notificationOverlay?.Post(new SimpleErrorNotification
+                {
+                    Text = NotificationsStrings.UnsupportedOrDangerousUrlProtocol(url),
+                });
+
+                return;
+            }
+
+            bool shouldWarn;
+
+            switch (warnMode)
+            {
+                case LinkWarnMode.Default:
+                    shouldWarn = externalLinkWarning.Value && !isTrustedDomain;
+                    break;
+
+                case LinkWarnMode.AlwaysWarn:
+                    shouldWarn = true;
+                    break;
+
+                case LinkWarnMode.NeverWarn:
+                    shouldWarn = false;
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(warnMode), warnMode, null);
+            }
+
+            if (dialogOverlay != null && shouldWarn)
+                dialogOverlay.Push(new ExternalLinkDialog(url, () => host.OpenUrlExternally(url), () => game?.CopyToClipboard(url)));
             else
                 host.OpenUrlExternally(url);
         }

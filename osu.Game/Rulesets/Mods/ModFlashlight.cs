@@ -2,7 +2,6 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 using osu.Framework.Allocation;
@@ -15,8 +14,8 @@ using osu.Framework.Graphics.Rendering.Vertices;
 using osu.Framework.Graphics.Shaders;
 using osu.Framework.Graphics.Shaders.Types;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Layout;
 using osu.Framework.Localisation;
-using osu.Framework.Utils;
 using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.OpenGL.Vertices;
@@ -99,9 +98,10 @@ namespace osu.Game.Rulesets.Mods
 
             flashlight.Combo.BindTo(Combo);
 
-            flashlight.DefaultCombo.BindTo(DefaultCombo);
+            var playfieldDrawInfoTracker = new PlayfieldDrawInfoTracker();
 
-            flashlight.GetPlayfieldScale = () => drawableRuleset.Playfield.Scale;
+            drawableRuleset.PlayfieldAdjustmentContainer.Add(playfieldDrawInfoTracker);
+            flashlight.PlayfieldDrawInfoTracker = playfieldDrawInfoTracker;
 
             drawableRuleset.Overlays.Add(new Container
             {
@@ -129,7 +129,9 @@ namespace osu.Game.Rulesets.Mods
 
             public override bool RemoveCompletedTransforms => false;
 
-            internal Func<Vector2>? GetPlayfieldScale;
+            internal PlayfieldDrawInfoTracker PlayfieldDrawInfoTracker { get; set; } = null!;
+
+            private DrawInfo playfieldDrawInfo => PlayfieldDrawInfoTracker.DrawInfo;
 
             private readonly float defaultFlashlightSize;
             private readonly float sizeMultiplier;
@@ -164,6 +166,8 @@ namespace osu.Game.Rulesets.Mods
                     isBreakTime.BindTo(player.IsBreakTime);
                     isBreakTime.BindValueChanged(_ => UpdateFlashlightSize(GetSize()), true);
                 }
+
+                PlayfieldDrawInfoTracker.OnDrawInfoInvalidate += () => Invalidate(Invalidation.DrawNode);
             }
 
             protected abstract void UpdateFlashlightSize(float size);
@@ -173,15 +177,6 @@ namespace osu.Game.Rulesets.Mods
             public float GetSize()
             {
                 float size = defaultFlashlightSize * sizeMultiplier;
-
-                if (GetPlayfieldScale != null)
-                {
-                    Vector2 playfieldScale = GetPlayfieldScale();
-
-                    Debug.Assert(Precision.AlmostEquals(Math.Abs(playfieldScale.X), Math.Abs(playfieldScale.Y)),
-                        @"Playfield has non-proportional scaling. Flashlight implementations should be revisited with regard to balance.");
-                    size *= Math.Abs(playfieldScale.X);
-                }
 
                 if (isBreakTime.Value)
                     size *= 2.5f;
@@ -283,7 +278,11 @@ namespace osu.Game.Rulesets.Mods
                     shader = Source.shader;
                     screenSpaceDrawQuad = Source.ScreenSpaceDrawQuad;
                     flashlightPosition = Vector2Extensions.Transform(Source.FlashlightPosition, DrawInfo.Matrix);
-                    flashlightSize = Source.FlashlightSize * DrawInfo.Matrix.ExtractScale().Xy;
+
+                    // scale the flashlight based on the playfield to match gameplay components scale.
+                    Vector2 drawInfoScale = Source.playfieldDrawInfo.Matrix.ExtractScale().Xy;
+                    flashlightSize = Source.FlashlightSize * drawInfoScale;
+
                     flashlightDim = Source.FlashlightDim;
                     flashlightSmoothness = Source.flashlightSmoothness;
                 }
@@ -336,6 +335,34 @@ namespace osu.Game.Rulesets.Mods
                     public UniformFloat Dim;
                     public UniformFloat Smoothness;
                     private readonly UniformPadding8 pad1;
+                }
+            }
+        }
+
+        /// <summary>
+        /// The purpose of this component is to track any changes to <c>Playfield.Parent.DrawInfo</c>
+        /// (by being added to the content of <see cref="PlayfieldAdjustmentContainer"/>).
+        /// All in order for the flashlight to invalidate its draw node and read any changes in the playfield's scaling.
+        /// </summary>
+        internal partial class PlayfieldDrawInfoTracker : Component
+        {
+            private readonly LayoutValue drawInfoLayout = new LayoutValue(Invalidation.DrawInfo);
+
+            public Action? OnDrawInfoInvalidate;
+
+            public PlayfieldDrawInfoTracker()
+            {
+                AddLayout(drawInfoLayout);
+            }
+
+            protected override void Update()
+            {
+                base.Update();
+
+                if (!drawInfoLayout.IsValid)
+                {
+                    OnDrawInfoInvalidate?.Invoke();
+                    drawInfoLayout.Validate();
                 }
             }
         }

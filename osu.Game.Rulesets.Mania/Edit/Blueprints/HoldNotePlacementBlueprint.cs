@@ -26,7 +26,7 @@ namespace osu.Game.Rulesets.Mania.Edit.Blueprints
         [Resolved]
         private IScrollingInfo scrollingInfo { get; set; } = null!;
 
-        protected override bool IsValidForPlacement => Precision.DefinitelyBigger(HitObject.Duration, 0);
+        protected override bool IsValidForPlacement => base.IsValidForPlacement && (PlacementActive == PlacementState.Waiting || Precision.DefinitelyBigger(HitObject.Duration, 0));
 
         public HoldNotePlacementBlueprint()
             : base(new HoldNote())
@@ -98,9 +98,9 @@ namespace osu.Game.Rulesets.Mania.Edit.Blueprints
 
         private double originalStartTime;
 
-        public override void UpdateTimeAndPosition(SnapResult result)
+        public override SnapResult UpdateTimeAndPosition(Vector2 screenSpacePosition, double fallbackTime)
         {
-            base.UpdateTimeAndPosition(result);
+            var result = base.UpdateTimeAndPosition(screenSpacePosition, fallbackTime);
 
             if (PlacementActive == PlacementState.Active)
             {
@@ -121,6 +121,8 @@ namespace osu.Game.Rulesets.Mania.Edit.Blueprints
                 if (result.Time is double startTime)
                     originalStartTime = HitObject.StartTime = startTime;
             }
+
+            return result;
         }
     }
 }

@@ -2,17 +2,23 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using osu.Framework.Platform;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Formats;
 using osu.Game.Beatmaps.Timing;
+using osu.Game.Extensions;
 using osu.Game.IO;
+using osu.Game.Localisation;
+using osu.Game.Overlays.Notifications;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Skinning;
+using osu.Game.Utils;
 using osuTK;
 
 namespace osu.Game.Database
@@ -61,6 +67,20 @@ namespace osu.Game.Database
                 Configuration = new LegacySkinDecoder().Decode(skinStreamReader)
             };
 
+            MutateBeatmap(model, playableBeatmap);
+
+            // Encode to legacy format
+            var stream = new MemoryStream();
+            using (var sw = new StreamWriter(stream, Encoding.UTF8, 1024, true))
+                new LegacyBeatmapEncoder(playableBeatmap, beatmapSkin).Encode(sw);
+
+            stream.Seek(0, SeekOrigin.Begin);
+
+            return stream;
+        }
+
+        protected virtual void MutateBeatmap(BeatmapSetInfo beatmapSet, IBeatmap playableBeatmap)
+        {
             // Convert beatmap elements to be compatible with legacy format
             // So we truncate time and position values to integers, and convert paths with multiple segments to Bézier curves
 
@@ -118,32 +138,97 @@ namespace osu.Game.Database
                     hasPath.Path.ControlPoints[^1].Type = null;
 
                 if (BezierConverter.CountSegments(hasPath.Path.ControlPoints) <= 1
-                    && hasPath.Path.ControlPoints[0].Type!.Value.Degree == null) continue;
-
-                var newControlPoints = BezierConverter.ConvertToModernBezier(hasPath.Path.ControlPoints);
-
-                // Truncate control points to integer positions
-                foreach (var pathControlPoint in newControlPoints)
+                    && hasPath.Path.ControlPoints[0].Type!.Value.Degree == null)
                 {
-                    pathControlPoint.Position = new Vector2(
-                        (float)Math.Floor(pathControlPoint.Position.X),
-                        (float)Math.Floor(pathControlPoint.Position.Y));
+                    // Round every control point to integer positions before skipping to the next hit object
+                    for (int i = 0; i < hasPath.Path.ControlPoints.Count; i++)
+                    {
+                        var position = new Vector2(
+                            MathF.Round(hasPath.Path.ControlPoints[i].Position.X),
+                            MathF.Round(hasPath.Path.ControlPoints[i].Position.Y));
+
+                        hasPath.Path.ControlPoints[i].Position = position;
+                    }
+
+                    continue;
                 }
 
+                var convertedToBezier = BezierConverter.ConvertToModernBezier(hasPath.Path.ControlPoints);
+
                 hasPath.Path.ControlPoints.Clear();
-                hasPath.Path.ControlPoints.AddRange(newControlPoints);
+
+                for (int i = 0; i < convertedToBezier.Count; i++)
+                {
+                    var convertedPoint = convertedToBezier[i];
+
+                    // Round control points to integer positions
+                    var position = new Vector2(
+                        MathF.Round(convertedPoint.Position.X),
+                        MathF.Round(convertedPoint.Position.Y));
+
+                    // stable only supports a single curve type specification per slider.
+                    // we exploit the fact that the converted-to-Bézier path only has Bézier segments,
+                    // and thus we specify the Bézier curve type once ever at the start of the slider.
+                    hasPath.Path.ControlPoints.Add(new PathControlPoint(position, i == 0 ? PathType.BEZIER : null));
+
+                    // however, the Bézier path as output by the converter has multiple segments.
+                    // `LegacyBeatmapEncoder` will attempt to encode this by emitting per-control-point curve type specs which don't do anything for stable.
+                    // instead, stable expects control points that start a segment to be present in the path twice in succession.
+                    if (convertedPoint.Type == PathType.BEZIER && i > 0)
+                        hasPath.Path.ControlPoints.Add(new PathControlPoint(position));
+                }
             }
-
-            // Encode to legacy format
-            var stream = new MemoryStream();
-            using (var sw = new StreamWriter(stream, Encoding.UTF8, 1024, true))
-                new LegacyBeatmapEncoder(playableBeatmap, beatmapSkin).Encode(sw);
-
-            stream.Seek(0, SeekOrigin.Begin);
-
-            return stream;
         }
 
         protected override string FileExtension => @".osz";
+
+        public Task ExportAsync(Live<BeatmapInfo> beatmap) => Task.Run(() =>
+        {
+            string itemFilename = Path.GetFileNameWithoutExtension(beatmap.PerformRead(s => s.File!.Filename.GetValidFilename()));
+            const string osu_extension = @".osu";
+
+            if (itemFilename.Length > MAX_FILENAME_LENGTH - osu_extension.Length)
+                itemFilename = itemFilename.Remove(MAX_FILENAME_LENGTH - osu_extension.Length);
+
+            IEnumerable<string> existingExports = ExportStorage
+                                                  .GetFiles(string.Empty, $"{itemFilename}*{osu_extension}")
+                                                  .Concat(ExportStorage.GetDirectories(string.Empty));
+
+            string filename = NamingUtils.GetNextBestFilename(existingExports, $"{itemFilename}{osu_extension}");
+
+            ProgressNotification notification = new ProgressNotification
+            {
+                State = ProgressNotificationState.Active,
+                Text = NotificationsStrings.FileExportOngoing(itemFilename),
+            };
+
+            PostNotification?.Invoke(notification);
+
+            try
+            {
+                beatmap.PerformRead(b =>
+                {
+                    using var exportStream = ExportStorage.CreateFileSafely(filename);
+                    using var inputFile = GetFileContents(b.BeatmapSet!, b.File!);
+
+                    if (inputFile == null)
+                        throw new InvalidOperationException($"Beatmap file {b.File!.Filename} could not be opened!");
+
+                    inputFile.CopyTo(exportStream);
+                });
+            }
+            catch
+            {
+                notification.State = ProgressNotificationState.Cancelled;
+
+                // cleanup if export is failed or canceled.
+                ExportStorage.Delete(filename);
+                throw;
+            }
+
+            notification.CompletionText = NotificationsStrings.FileExportFinished(itemFilename);
+            notification.CompletionClickAction = () => ExportStorage.PresentFileExternally(filename);
+            notification.State = ProgressNotificationState.Completed;
+        });
     }
 }

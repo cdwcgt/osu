@@ -4,6 +4,7 @@
 #nullable disable
 
 using System;
+using System.Diagnostics;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Audio.Sample;
@@ -458,7 +459,7 @@ namespace osu.Game.Screens.Menu
 
         public void StopSamplePlayback() => sampleClickChannel?.Stop();
 
-        public Drawable ProxyToContainer(Container c)
+        public IDisposable ProxyToContainer(Container c)
         {
             if (currentProxyTarget != null)
                 throw new InvalidOperationException("Previous proxy usage was not returned");
@@ -470,21 +471,19 @@ namespace osu.Game.Screens.Menu
 
             defaultProxyTarget.Remove(proxy, false);
             currentProxyTarget.Add(proxy);
-            return proxy;
-        }
 
-        public void ReturnProxy()
-        {
-            if (currentProxyTarget == null)
-                throw new InvalidOperationException("No usage to return");
+            return new InvokeOnDisposal(returnProxy);
 
-            if (defaultProxyTarget == null)
-                throw new InvalidOperationException($"{nameof(SetupDefaultContainer)} must be called first");
+            void returnProxy()
+            {
+                Debug.Assert(currentProxyTarget != null);
+                Debug.Assert(defaultProxyTarget != null);
 
-            currentProxyTarget.Remove(proxy, false);
-            currentProxyTarget = null;
+                currentProxyTarget.Remove(proxy, false);
+                currentProxyTarget = null;
 
-            defaultProxyTarget.Add(proxy);
+                defaultProxyTarget.Add(proxy);
+            }
         }
 
         public void SetupDefaultContainer(Container container)

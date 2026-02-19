@@ -31,9 +31,12 @@ namespace osu.Game.Graphics.UserInterfaceV2
         public LocalisableString Caption { get; init; }
         public LocalisableString HintText { get; init; }
 
-        private Box background = null!;
+        public BindableBool CanAdd { get; } = new BindableBool(true);
+
+        private FormControlBackground background = null!;
         private FormFieldCaption caption = null!;
         private FillFlowContainer flow = null!;
+        private RoundedButton addButton = null!;
 
         [Resolved]
         private OverlayColourProvider colourProvider { get; set; } = null!;
@@ -44,18 +47,9 @@ namespace osu.Game.Graphics.UserInterfaceV2
             RelativeSizeAxes = Axes.X;
             AutoSizeAxes = Axes.Y;
 
-            Masking = true;
-            CornerRadius = 5;
-
-            RoundedButton button;
-
             InternalChildren = new Drawable[]
             {
-                background = new Box
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Colour = colourProvider.Background5,
-                },
+                background = new FormControlBackground(),
                 new FillFlowContainer
                 {
                     RelativeSizeAxes = Axes.X,
@@ -76,7 +70,7 @@ namespace osu.Game.Graphics.UserInterfaceV2
                             AutoSizeAxes = Axes.Y,
                             Direction = FillDirection.Full,
                             Spacing = new Vector2(5),
-                            Child = button = new RoundedButton
+                            Child = addButton = new RoundedButton
                             {
                                 Action = addNewColour,
                                 Size = new Vector2(70),
@@ -87,7 +81,7 @@ namespace osu.Game.Graphics.UserInterfaceV2
                 },
             };
 
-            flow.SetLayoutPosition(button, float.MaxValue);
+            flow.SetLayoutPosition(addButton, float.MaxValue);
         }
 
         protected override void LoadComplete()
@@ -98,6 +92,19 @@ namespace osu.Game.Graphics.UserInterfaceV2
             {
                 if (args.Action != NotifyCollectionChangedAction.Replace)
                     updateColours();
+            }, true);
+            CanAdd.BindValueChanged(canAdd =>
+            {
+                if (canAdd.NewValue)
+                {
+                    addButton.Enabled.Value = true;
+                    addButton.TooltipText = string.Empty;
+                }
+                else
+                {
+                    addButton.Enabled.Value = false;
+                    addButton.TooltipText = "Maximum combo colours reached";
+                }
             }, true);
             updateState();
         }
@@ -126,13 +133,12 @@ namespace osu.Game.Graphics.UserInterfaceV2
 
         private void updateState()
         {
-            background.Colour = colourProvider.Background5;
             caption.Colour = colourProvider.Content2;
 
-            BorderThickness = IsHovered ? 2 : 0;
-
             if (IsHovered)
-                BorderColour = colourProvider.Light4;
+                background.VisualStyle = VisualStyle.Hovered;
+            else
+                background.VisualStyle = VisualStyle.Normal;
         }
 
         private void updateColours()
@@ -164,7 +170,8 @@ namespace osu.Game.Graphics.UserInterfaceV2
                 Size = new Vector2(70);
 
                 Masking = true;
-                CornerRadius = 35;
+                CornerRadius = 10;
+                CornerExponent = 2.5f;
                 Action = this.ShowPopover;
 
                 Children = new Drawable[]

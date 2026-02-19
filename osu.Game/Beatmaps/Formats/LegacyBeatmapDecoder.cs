@@ -36,6 +36,11 @@ namespace osu.Game.Beatmaps.Formats
         /// </remarks>
         public const double CONTROL_POINT_LENIENCY = 5;
 
+        /// <summary>
+        /// The maximum allowed number of keys in mania beatmaps.
+        /// </summary>
+        public const int MAX_MANIA_KEY_COUNT = 18;
+
         internal static RulesetStore? RulesetStore;
 
         private Beatmap beatmap = null!;
@@ -79,7 +84,7 @@ namespace osu.Game.Beatmaps.Formats
         protected override void ParseStreamInto(LineBufferedReader stream, Beatmap beatmap)
         {
             this.beatmap = beatmap;
-            this.beatmap.BeatmapInfo.BeatmapVersion = FormatVersion;
+            this.beatmap.BeatmapVersion = FormatVersion;
             parser = new ConvertHitObjectParser(getOffsetTime(), FormatVersion);
 
             ApplyLegacyDefaults(this.beatmap);
@@ -116,7 +121,7 @@ namespace osu.Game.Beatmaps.Formats
             // mania uses "circle size" for key count, thus different allowable range
             difficulty.CircleSize = beatmap.BeatmapInfo.Ruleset.OnlineID != 3
                 ? Math.Clamp(difficulty.CircleSize, 0, 10)
-                : Math.Clamp(difficulty.CircleSize, 1, 18);
+                : Math.Clamp(difficulty.CircleSize, 1, MAX_MANIA_KEY_COUNT);
 
             difficulty.OverallDifficulty = Math.Clamp(difficulty.OverallDifficulty, 0, 10);
             difficulty.ApproachRate = Math.Clamp(difficulty.ApproachRate, 0, 10);
@@ -165,21 +170,21 @@ namespace osu.Game.Beatmaps.Formats
             {
                 SampleControlPoint sampleControlPoint = (beatmap.ControlPointInfo as LegacyControlPointInfo)?.SamplePointAt(hitObject.StartTime + CONTROL_POINT_LENIENCY + 1)
                                                         ?? SampleControlPoint.DEFAULT;
-                hitObject.Samples = hitObject.Samples.Select(o => sampleControlPoint.ApplyTo(o)).ToList();
+                hitObject.Samples = hitObject.Samples.Select(sampleControlPoint.ApplyTo).ToList();
 
                 for (int i = 0; i < hasRepeats.NodeSamples.Count; i++)
                 {
                     double time = hitObject.StartTime + i * hasRepeats.Duration / hasRepeats.SpanCount() + CONTROL_POINT_LENIENCY;
                     var nodeSamplePoint = (beatmap.ControlPointInfo as LegacyControlPointInfo)?.SamplePointAt(time) ?? SampleControlPoint.DEFAULT;
 
-                    hasRepeats.NodeSamples[i] = hasRepeats.NodeSamples[i].Select(o => nodeSamplePoint.ApplyTo(o)).ToList();
+                    hasRepeats.NodeSamples[i] = hasRepeats.NodeSamples[i].Select(nodeSamplePoint.ApplyTo).ToList();
                 }
             }
             else
             {
                 SampleControlPoint sampleControlPoint = (beatmap.ControlPointInfo as LegacyControlPointInfo)?.SamplePointAt(hitObject.GetEndTime() + CONTROL_POINT_LENIENCY)
                                                         ?? SampleControlPoint.DEFAULT;
-                hitObject.Samples = hitObject.Samples.Select(o => sampleControlPoint.ApplyTo(o)).ToList();
+                hitObject.Samples = hitObject.Samples.Select(sampleControlPoint.ApplyTo).ToList();
             }
         }
 
@@ -193,6 +198,10 @@ namespace osu.Game.Beatmaps.Formats
         internal static void ApplyLegacyDefaults(Beatmap beatmap)
         {
             beatmap.WidescreenStoryboard = false;
+            // in a perfect world this would throw if osu! ruleset couldn't be found,
+            // but unfortunately there are "legitimate" cases where it's not there (i.e. ruleset test projects),
+            // so attempt to trudge on with whatever it is that's in `BeatmapInfo` if the lookup fails.
+            beatmap.BeatmapInfo.Ruleset = RulesetStore?.GetRuleset(0) ?? beatmap.BeatmapInfo.Ruleset;
         }
 
         protected override void ParseLine(Beatmap beatmap, Section section, string line)

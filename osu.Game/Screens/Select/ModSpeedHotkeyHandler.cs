@@ -21,9 +21,6 @@ namespace osu.Game.Screens.Select
         private Bindable<IReadOnlyList<Mod>> selectedMods { get; set; } = null!;
 
         [Resolved]
-        private OsuConfigManager config { get; set; } = null!;
-
-        [Resolved]
         private OnScreenDisplay? onScreenDisplay { get; set; }
 
         private ModRateAdjust? lastActiveRateAdjustMod;
@@ -55,7 +52,7 @@ namespace osu.Game.Screens.Select
             if (Precision.AlmostEquals(targetSpeed, 1, 0.005))
             {
                 selectedMods.Value = selectedMods.Value.Where(m => m is not ModRateAdjust).ToList();
-                onScreenDisplay?.Display(new SpeedChangeToast(config, targetSpeed));
+                onScreenDisplay?.Display(new SpeedChangeToast(targetSpeed));
                 return true;
             }
 
@@ -108,7 +105,7 @@ namespace osu.Game.Screens.Select
                 return false;
 
             selectedMods.Value = intendedMods;
-            onScreenDisplay?.Display(new SpeedChangeToast(config, targetMod.SpeedChange.Value));
+            onScreenDisplay?.Display(new SpeedChangeToast(targetMod.SpeedChange.Value));
             return true;
         }
     }

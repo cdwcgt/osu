@@ -1,7 +1,6 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using osu.Framework.Extensions.ObjectExtensions;
@@ -51,22 +50,17 @@ namespace osu.Game.Beatmaps
                 if (lookupScope != MetadataLookupScope.None)
                     metadataLookup.Update(beatmapSet, lookupScope == MetadataLookupScope.OnlineFirst);
 
-                foreach (var beatmap in beatmapSet.Beatmaps)
+                foreach (BeatmapInfo beatmap in beatmapSet.Beatmaps)
                 {
-                    difficultyCache.Invalidate(beatmap);
-
                     var working = workingBeatmapCache.GetWorkingBeatmap(beatmap);
+
+                    difficultyCache.Invalidate(beatmap, working.BeatmapInfo);
+
                     var ruleset = working.BeatmapInfo.Ruleset.CreateInstance();
-
-                    Debug.Assert(ruleset != null);
-
                     var calculator = ruleset.CreateDifficultyCalculator(working);
 
                     beatmap.StarRating = calculator.Calculate().StarRating;
-                    beatmap.Length = working.Beatmap.CalculatePlayableLength();
-                    beatmap.BPM = 60000 / working.Beatmap.GetMostCommonBeatLength();
-                    beatmap.EndTimeObjectCount = working.Beatmap.HitObjects.Count(h => h is IHasDuration);
-                    beatmap.TotalObjectCount = working.Beatmap.HitObjects.Count;
+                    beatmap.UpdateStatisticsFromBeatmap(working.Beatmap);
                 }
 
                 // And invalidate again afterwards as re-fetching the most up-to-date database metadata will be required.

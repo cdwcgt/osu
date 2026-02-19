@@ -14,6 +14,7 @@ using osu.Framework.Input.Events;
 using osu.Game.Rulesets.Osu.Judgements;
 using osu.Game.Rulesets.Osu.Objects;
 using NUnit.Framework;
+using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Utils;
 using osu.Framework.Threading;
 using osu.Game.Rulesets.Osu.HUD;
@@ -30,6 +31,22 @@ namespace osu.Game.Rulesets.Osu.Tests
         private CircularContainer gameObject = null!;
 
         private ScheduledDelegate? automaticAdditionDelegate;
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            AddSliderStep("Hit marker size", 0f, 12f, 7f, t =>
+            {
+                if (aimErrorMeter.IsNotNull())
+                    aimErrorMeter.HitMarkerSize.Value = t;
+            });
+            AddSliderStep("Average position marker size", 1f, 25f, 7f, t =>
+            {
+                if (aimErrorMeter.IsNotNull())
+                    aimErrorMeter.AverageMarkerSize.Value = t;
+            });
+        }
 
         [SetUpSteps]
         public void SetupSteps() => AddStep("Create components", () =>
@@ -63,7 +80,7 @@ namespace osu.Game.Rulesets.Osu.Tests
 
                 gameObject = new CircularContainer
                 {
-                    Size = new Vector2(108),
+                    Size = new Vector2(2 * OsuHitObject.OBJECT_RADIUS),
                     Position = new Vector2(256, 192),
                     Colour = Color4.Yellow,
                     Masking = true,
@@ -90,7 +107,8 @@ namespace osu.Game.Rulesets.Osu.Tests
 
         protected override bool OnMouseDown(MouseDownEvent e)
         {
-            aimErrorMeter.AddPoint(gameObject.ToLocalSpace(e.ScreenSpaceMouseDownPosition) - new Vector2(54));
+            // the division by 2 is because CS=5 applies a 0.5x (plus fudge) multiplier to `OBJECT_RADIUS`
+            aimErrorMeter.AddPoint((gameObject.ToLocalSpace(e.ScreenSpaceMouseDownPosition) - new Vector2(OsuHitObject.OBJECT_RADIUS)) / 2);
             return true;
         }
 
@@ -102,15 +120,26 @@ namespace osu.Game.Rulesets.Osu.Tests
                 automaticAdditionDelegate = Scheduler.AddDelayed(() =>
                 {
                     var randomPos = new Vector2(
-                        RNG.NextSingle(0, 108),
-                        RNG.NextSingle(0, 108));
+                        RNG.NextSingle(0, 2 * OsuHitObject.OBJECT_RADIUS),
+                        RNG.NextSingle(0, 2 * OsuHitObject.OBJECT_RADIUS));
 
-                    aimErrorMeter.AddPoint(randomPos - new Vector2(54));
+                    aimErrorMeter.AddPoint(randomPos - new Vector2(OsuHitObject.OBJECT_RADIUS));
                     InputManager.MoveMouseTo(gameObject.ToScreenSpace(randomPos));
                 }, 1, true);
             });
-
             AddWaitStep("wait for some hit points", 10);
+        }
+
+        [Test]
+        public void TestDisplayStyles()
+        {
+            AddStep("Switch hit position marker style to +", () => aimErrorMeter.HitMarkerStyle.Value = AimErrorMeter.MarkerStyle.Plus);
+            AddStep("Switch hit position marker style to x", () => aimErrorMeter.HitMarkerStyle.Value = AimErrorMeter.MarkerStyle.X);
+            AddStep("Switch average position marker style to +", () => aimErrorMeter.AverageMarkerStyle.Value = AimErrorMeter.MarkerStyle.Plus);
+            AddStep("Switch average position marker style to x", () => aimErrorMeter.AverageMarkerStyle.Value = AimErrorMeter.MarkerStyle.X);
+
+            AddStep("Switch position display to absolute", () => aimErrorMeter.PositionDisplayStyle.Value = AimErrorMeter.PositionDisplay.Absolute);
+            AddStep("Switch position display to relative", () => aimErrorMeter.PositionDisplayStyle.Value = AimErrorMeter.PositionDisplay.Normalised);
         }
 
         [Test]

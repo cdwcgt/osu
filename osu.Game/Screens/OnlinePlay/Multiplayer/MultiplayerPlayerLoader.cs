@@ -15,8 +15,13 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
     {
         public bool GameplayPassed => player?.GameplayState.HasPassed == true;
 
+        public override bool AllowUserExit => false;
+
         [Resolved]
         private MultiplayerClient multiplayerClient { get; set; } = null!;
+
+        [Resolved]
+        private OsuGame? game { get; set; }
 
         private Player? player;
 
@@ -38,6 +43,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         protected override void OnPlayerLoaded()
         {
             base.OnPlayerLoaded();
+
+            game?.Window?.Flash();
 
             multiplayerClient.ChangeState(MultiplayerUserState.Loaded)
                              .ContinueWith(task => failAndBail(task.Exception?.Message ?? "Server error"), TaskContinuationOptions.NotOnRanToCompletion);

@@ -4,20 +4,16 @@
 using System.Threading.Tasks;
 using osu.Framework;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Localisation;
-using osu.Framework.Logging;
-using osu.Framework.Platform;
-using osu.Framework.Screens;
-using osu.Framework.Statistics;
 using osu.Game.Configuration;
+using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Localisation;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Overlays.Dialog;
 using osu.Game.Overlays.Notifications;
-using osu.Game.Overlays.Settings.Sections.Maintenance;
 using osu.Game.Updater;
-using osu.Game.Utils;
-using SharpCompress.Archives.Zip;
 
 namespace osu.Game.Overlays.Settings.Sections.General
 {
@@ -25,7 +21,12 @@ namespace osu.Game.Overlays.Settings.Sections.General
     {
         protected override LocalisableString Header => GeneralSettingsStrings.UpdateHeader;
 
-        private SettingsButton checkForUpdatesButton = null!;
+        private SettingsButtonV2 checkForUpdatesButton = null!;
+        private FormEnumDropdown<ReleaseStream> releaseStreamDropdown = null!;
+
+        private readonly Bindable<SettingsNote.Data?> releaseStreamDropdownNote = new Bindable<SettingsNote.Data?>();
+
+        private readonly Bindable<ReleaseStream> configReleaseStream = new Bindable<ReleaseStream>();
 
         [Resolved]
         private UpdateManager? updateManager { get; set; }
@@ -34,51 +35,65 @@ namespace osu.Game.Overlays.Settings.Sections.General
         private INotificationOverlay? notifications { get; set; }
 
         [Resolved]
-        private Storage storage { get; set; } = null!;
+        private OsuGame? game { get; set; }
 
         [Resolved]
-        private OsuGame? game { get; set; }
+        private IDialogOverlay? dialogOverlay { get; set; }
 
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
         {
-            Add(new SettingsEnumDropdown<ReleaseStream>
+            config.BindWith(OsuSetting.ReleaseStream, configReleaseStream);
+
+            bool isDesktop = RuntimeInfo.IsDesktop;
+
+            // For simplicity, hide the concept of release streams from mobile users.
+            if (isDesktop)
             {
-                LabelText = GeneralSettingsStrings.ReleaseStream,
-                Current = config.GetBindable<ReleaseStream>(OsuSetting.ReleaseStream),
+                Add(new SettingsItemV2(releaseStreamDropdown = new FormEnumDropdown<ReleaseStream>
+                {
+                    Caption = GeneralSettingsStrings.ReleaseStream,
+                    Current = { Value = configReleaseStream.Value },
+                })
+                {
+                    Keywords = new[] { @"version" },
+                    ShowRevertToDefaultButton = updateManager!.FixedReleaseStream == null
+                });
+
+                if (updateManager!.FixedReleaseStream != null)
+                {
+                    configReleaseStream.Value = updateManager.FixedReleaseStream.Value;
+
+                    releaseStreamDropdown.Items = [updateManager.FixedReleaseStream.Value];
+                    releaseStreamDropdownNote.Value = new SettingsNote.Data(GeneralSettingsStrings.ChangeReleaseStreamPackageManagerWarning, SettingsNote.Type.Warning);
+                }
+
+                releaseStreamDropdown.Current.BindValueChanged(releaseStreamChanged);
+            }
+
+            Add(checkForUpdatesButton = new SettingsButtonV2
+            {
+                Text = GeneralSettingsStrings.CheckUpdate,
+                Action = () => checkForUpdates().FireAndForget()
             });
+        }
 
-            if (updateManager?.CanCheckForUpdate == true)
+        private void releaseStreamChanged(ValueChangedEvent<ReleaseStream> stream)
+        {
+            if (stream.NewValue == ReleaseStream.Tachyon)
             {
-                Add(checkForUpdatesButton = new SettingsButton
-                {
-                    Text = GeneralSettingsStrings.CheckUpdate,
-                    Action = () => checkForUpdates().FireAndForget()
-                });
+                dialogOverlay?.Push(
+                    new ConfirmDialog(GeneralSettingsStrings.ChangeReleaseStreamConfirmation,
+                        () => configReleaseStream.Value = ReleaseStream.Tachyon,
+                        () => releaseStreamDropdown.Current.Value = ReleaseStream.Lazer)
+                    {
+                        BodyText = GeneralSettingsStrings.ChangeReleaseStreamConfirmationInfo
+                    });
+
+                return;
             }
 
-            if (RuntimeInfo.IsDesktop)
-            {
-                Add(new SettingsButton
-                {
-                    Text = GeneralSettingsStrings.OpenOsuFolder,
-                    Keywords = new[] { @"logs", @"files", @"access", "directory" },
-                    Action = () => storage.PresentExternally(),
-                });
-
-                Add(new SettingsButton
-                {
-                    Text = GeneralSettingsStrings.ExportLogs,
-                    Keywords = new[] { @"bug", "report", "logs", "files" },
-                    Action = () => Task.Run(exportLogs),
-                });
-
-                Add(new SettingsButton
-                {
-                    Text = GeneralSettingsStrings.ChangeFolderLocation,
-                    Action = () => game?.PerformFromScreen(menu => menu.Push(new MigrationSelectScreen()))
-                });
-            }
+            configReleaseStream.Value = stream.NewValue;
         }
 
         private async Task checkForUpdates()
@@ -96,7 +111,7 @@ namespace osu.Game.Overlays.Settings.Sections.General
 
             try
             {
-                bool foundUpdate = await updateManager.CheckForUpdateAsync().ConfigureAwait(true);
+                bool foundUpdate = await updateManager.CheckForUpdateAsync(checkingNotification.CancellationToken).ConfigureAwait(true);
 
                 if (!foundUpdate)
                 {
@@ -112,54 +127,12 @@ namespace osu.Game.Overlays.Settings.Sections.General
             }
             finally
             {
-                // This sequence allows the notification to be immediately dismissed.
-                checkingNotification.State = ProgressNotificationState.Cancelled;
+                // This sequence allows the notification to be immediately dismissed without posting a continuation message.
+                checkingNotification.CompletionTarget = null;
+                checkingNotification.State = ProgressNotificationState.Completed;
                 checkingNotification.Close(false);
                 checkForUpdatesButton.Enabled.Value = true;
             }
-        }
-
-        private void exportLogs()
-        {
-            ProgressNotification notification = new ProgressNotification
-            {
-                State = ProgressNotificationState.Active,
-                Text = "Exporting logs...",
-            };
-
-            notifications?.Post(notification);
-
-            const string archive_filename = "exports/compressed-logs.zip";
-
-            try
-            {
-                GlobalStatistics.OutputToLog();
-                Logger.Flush();
-
-                var logStorage = Logger.Storage;
-
-                using (var outStream = storage.CreateFileSafely(archive_filename))
-                using (var zip = ZipArchive.Create())
-                {
-                    foreach (string? f in logStorage.GetFiles(string.Empty, "*.log"))
-                        FileUtils.AttemptOperation(z => z.AddEntry(f, logStorage.GetStream(f), true), zip);
-
-                    zip.SaveTo(outStream);
-                }
-            }
-            catch
-            {
-                notification.State = ProgressNotificationState.Cancelled;
-
-                // cleanup if export is failed or canceled.
-                storage.Delete(archive_filename);
-                throw;
-            }
-
-            notification.CompletionText = "Exported logs! Click to view.";
-            notification.CompletionClickAction = () => storage.PresentFileExternally(archive_filename);
-
-            notification.State = ProgressNotificationState.Completed;
         }
     }
 }
