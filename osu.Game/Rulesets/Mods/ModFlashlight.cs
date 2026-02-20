@@ -97,6 +97,7 @@ namespace osu.Game.Rulesets.Mods
             flashlight.Colour = Color4.Black;
 
             flashlight.Combo.BindTo(Combo);
+            flashlight.DefaultCombo.BindTo(DefaultCombo);
 
             var playfieldDrawInfoTracker = new PlayfieldDrawInfoTracker();
 
