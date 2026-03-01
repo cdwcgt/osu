@@ -30,7 +30,7 @@ namespace osu.Game.Tournament.Github
 
             byte[] bytes = await GetJsonBytes(GithubConfig.BaseBranch, cancellationToken).ConfigureAwait(false);
 
-            using (Stream stream = storage.GetStream(TournamentGameBase.BRACKET_FILENAME, FileAccess.Write, FileMode.Create))
+            using (Stream stream = storage.CreateFileSafely(TournamentGameBase.BRACKET_FILENAME))
                 await stream.WriteAsync(bytes, cancellationToken).ConfigureAwait(false);
 
             if (GithubConfig.GithubToken != null)
