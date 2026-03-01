@@ -85,10 +85,7 @@ namespace osu.Game.Tournament.Github
                 return;
             }
 
-            string savedSha = config.Get<string>(StorageConfig.LastGithubCommitSha);
-            string baseSha = string.IsNullOrWhiteSpace(savedSha)
-                ? await GithubApiClient.GetBaseBranchShaAsync(token, cancellationToken).ConfigureAwait(false)
-                : savedSha;
+            string baseSha = await GithubApiClient.GetBaseBranchShaAsync(token, cancellationToken).ConfigureAwait(false);
 
             byte[] bracketBytes = await BracketDownloader.GetJsonBytes(baseSha, cancellationToken).ConfigureAwait(false);
 
