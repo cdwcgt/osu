@@ -8,14 +8,17 @@ using System.Linq;
 using osu.Framework.Extensions;
 using osu.Framework.Extensions.EnumExtensions;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input.Bindings;
 using osu.Framework.IO.Stores;
 using osu.Framework.Localisation;
+using osu.Framework.Utils;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Legacy;
 using osu.Game.Configuration;
 using osu.Game.Extensions;
+using osu.Game.Localisation;
 using osu.Game.Overlays.Settings;
 using osu.Game.Rulesets.Configuration;
 using osu.Game.Rulesets.Difficulty;
@@ -30,6 +33,7 @@ using osu.Game.Screens.Edit.Setup;
 using osu.Game.Screens.Ranking.Statistics;
 using osu.Game.Skinning;
 using osu.Game.Users;
+using osuTK;
 
 namespace osu.Game.Rulesets
 {
@@ -99,7 +103,7 @@ namespace osu.Game.Rulesets
         /// <param name="acronym">The acronym to query for .</param>
         public Mod? CreateModFromAcronym(string acronym)
         {
-            return AllMods.FirstOrDefault(m => m.Acronym == acronym)?.CreateInstance();
+            return AllMods.FirstOrDefault(m => string.Equals(m.Acronym, acronym, StringComparison.OrdinalIgnoreCase))?.CreateInstance();
         }
 
         /// <summary>
@@ -331,13 +335,17 @@ namespace osu.Game.Rulesets
         public virtual StatisticItem[] CreateStatisticsForScore(ScoreInfo score, IBeatmap playableBeatmap) => Array.Empty<StatisticItem>();
 
         /// <summary>
-        /// Get all valid <see cref="HitResult"/>s for this ruleset.
-        /// Generally used for results display purposes, where it can't be determined if zero-count means the user has not achieved any or the type is not used by this ruleset.
+        /// Get all <see cref="HitResult"/>s for this ruleset which are important enough to displayed to the end user.
+        /// Used for results display purposes, where it can't be determined if zero-count means the user has not achieved any or the type is not used by this ruleset.
         /// </summary>
+        /// <remarks>
+        /// <see cref="HitResult.Miss"/> is implicitly included. Special types like <see cref="HitResult.IgnoreHit"/> are not returned by this method.
+        /// Values are returned as ordered by <see cref="OrderAttribute"/>.
+        /// </remarks>
         /// <returns>
-        /// All valid <see cref="HitResult"/>s along with a display-friendly name.
+        /// All relevant <see cref="HitResult"/>s along with a display-friendly name.
         /// </returns>
-        public IEnumerable<(HitResult result, LocalisableString displayName)> GetHitResults()
+        public IEnumerable<(HitResult result, LocalisableString displayName)> GetHitResultsForDisplay()
         {
             var validResults = GetValidHitResults();
 
@@ -350,6 +358,7 @@ namespace osu.Game.Rulesets
                     case HitResult.None:
                     case HitResult.IgnoreHit:
                     case HitResult.IgnoreMiss:
+                    case HitResult.ComboBreak:
                     // display is handled as a completion count with corresponding "hit" type.
                     case HitResult.LargeTickMiss:
                     case HitResult.SmallTickMiss:
@@ -363,12 +372,10 @@ namespace osu.Game.Rulesets
 
         /// <summary>
         /// Get all valid <see cref="HitResult"/>s for this ruleset.
-        /// Generally used for results display purposes, where it can't be determined if zero-count means the user has not achieved any or the type is not used by this ruleset.
+        /// Used for strict validation purposes. The ruleset should return ALL applicable <see cref="HitResult"/> types here
+        /// (except <see cref="HitResult.None"/> and obsolete types).
         /// </summary>
-        /// <remarks>
-        /// <see cref="HitResult.Miss"/> is implicitly included. Special types like <see cref="HitResult.IgnoreHit"/> are ignored even when specified.
-        /// </remarks>
-        protected virtual IEnumerable<HitResult> GetValidHitResults() => EnumExtensions.GetValuesInOrder<HitResult>();
+        public virtual IEnumerable<HitResult> GetValidHitResults() => EnumExtensions.GetValuesInOrder<HitResult>();
 
         /// <summary>
         /// Get a display friendly name for the specified result type.
@@ -378,15 +385,39 @@ namespace osu.Game.Rulesets
         public virtual LocalisableString GetDisplayNameForHitResult(HitResult result) => result.GetLocalisableDescription();
 
         /// <summary>
-        /// Applies changes to difficulty attributes for presenting to a user a rough estimate of how rate adjust mods affect difficulty.
+        /// Applies changes to difficulty attributes for presenting to a user a rough estimate of how mods affect difficulty.
         /// Importantly, this should NOT BE USED FOR ANY CALCULATIONS.
         ///
         /// It is also not always correct, and arguably is never correct depending on your frame of mind.
         /// </summary>
-        /// <param name="difficulty">>The <see cref="IBeatmapDifficultyInfo"/> that will be adjusted.</param>
-        /// <param name="rate">The rate adjustment multiplier from mods. For example 1.5 for DT.</param>
+        /// <param name="beatmapInfo">The <see cref="IBeatmapInfo"/> for which to display the adjusted difficulty.</param>
+        /// <param name="mods">The active mods.</param>
         /// <returns>The adjusted difficulty attributes.</returns>
-        public virtual BeatmapDifficulty GetRateAdjustedDisplayDifficulty(IBeatmapDifficultyInfo difficulty, double rate) => new BeatmapDifficulty(difficulty);
+        public virtual BeatmapDifficulty GetAdjustedDisplayDifficulty(IBeatmapInfo beatmapInfo, IReadOnlyCollection<Mod> mods)
+        {
+            BeatmapDifficulty adjustedDifficulty = new BeatmapDifficulty(beatmapInfo.Difficulty);
+
+            foreach (var mod in mods.OfType<IApplicableToDifficulty>())
+                mod.ApplyToDifficulty(adjustedDifficulty);
+
+            return adjustedDifficulty;
+        }
+
+        /// <summary>
+        /// Returns a list of <see cref="RulesetBeatmapAttribute"/>s to be displayed wherever it is wanted to display a given beatmap's difficulty information.
+        /// The returned data includes both material changes to difficulty from <see cref="IApplicableToDifficulty"/> mods,
+        /// as well as "effective" adjustments coming from <see cref="GetAdjustedDisplayDifficulty"/>.
+        /// </summary>
+        public virtual IEnumerable<RulesetBeatmapAttribute> GetBeatmapAttributesForDisplay(IBeatmapInfo beatmapInfo, IReadOnlyCollection<Mod> mods)
+        {
+            var originalDifficulty = beatmapInfo.Difficulty;
+            var adjustedDifficulty = GetAdjustedDisplayDifficulty(beatmapInfo, mods);
+
+            yield return new RulesetBeatmapAttribute(SongSelectStrings.CircleSize, @"CS", originalDifficulty.CircleSize, adjustedDifficulty.CircleSize, 10);
+            yield return new RulesetBeatmapAttribute(SongSelectStrings.ApproachRate, @"AR", originalDifficulty.ApproachRate, adjustedDifficulty.ApproachRate, 10);
+            yield return new RulesetBeatmapAttribute(SongSelectStrings.Accuracy, @"OD", originalDifficulty.OverallDifficulty, adjustedDifficulty.OverallDifficulty, 10);
+            yield return new RulesetBeatmapAttribute(SongSelectStrings.HPDrain, @"HP", originalDifficulty.DrainRate, adjustedDifficulty.DrainRate, 10);
+        }
 
         /// <summary>
         /// Creates ruleset-specific beatmap filter criteria to be used on the song select screen.
@@ -396,10 +427,33 @@ namespace osu.Game.Rulesets
         /// <summary>
         /// Can be overridden to add ruleset-specific sections to the editor beatmap setup screen.
         /// </summary>
-        public virtual IEnumerable<SetupSection> CreateEditorSetupSections() =>
+        public virtual IEnumerable<Drawable> CreateEditorSetupSections() =>
         [
+            new MetadataSection(),
             new DifficultySection(),
-            new ColoursSection(),
+            new FillFlowContainer
+            {
+                AutoSizeAxes = Axes.Y,
+                Direction = FillDirection.Vertical,
+                Spacing = new Vector2(25),
+                Children = new Drawable[]
+                {
+                    new ResourcesSection
+                    {
+                        RelativeSizeAxes = Axes.X,
+                    },
+                    new ColoursSection
+                    {
+                        RelativeSizeAxes = Axes.X,
+                    }
+                }
+            },
+            new DesignSection(),
         ];
+
+        /// <summary>
+        /// Can be overridden to avoid showing scroll speed changes in the editor.
+        /// </summary>
+        public virtual bool EditorShowScrollSpeed => true;
     }
 }

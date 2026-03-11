@@ -94,6 +94,7 @@ namespace osu.Game.Overlays.Settings.Sections.Input
         private Container content = null!;
 
         private OsuSpriteText text = null!;
+        private SettingsRevertToDefaultButton revertButton = null!;
         private FillFlowContainer cancelAndClearButtons = null!;
         private FillFlowContainer<KeyButton> buttons = null!;
 
@@ -127,27 +128,22 @@ namespace osu.Game.Overlays.Settings.Sections.Input
         {
             RelativeSizeAxes = Axes.X;
             AutoSizeAxes = Axes.Y;
-            Padding = new MarginPadding { Right = SettingsPanel.CONTENT_MARGINS };
+            Padding = new MarginPadding { Right = SettingsPanel.CONTENT_PADDING.Right };
 
             InternalChildren = new Drawable[]
             {
-                new Container
+                revertButton = new SettingsRevertToDefaultButton
                 {
+                    Anchor = Anchor.TopRight,
+                    Origin = Anchor.TopRight,
                     RelativeSizeAxes = Axes.Y,
-                    Width = SettingsPanel.CONTENT_MARGINS,
-                    Child = new RevertToDefaultButton<bool>
-                    {
-                        Current = isDefault,
-                        Action = RestoreDefaults,
-                        Anchor = Anchor.Centre,
-                        Origin = Anchor.Centre,
-                    }
+                    Action = RestoreDefaults,
                 },
                 new Container
                 {
                     RelativeSizeAxes = Axes.X,
                     AutoSizeAxes = Axes.Y,
-                    Padding = new MarginPadding { Left = SettingsPanel.CONTENT_MARGINS },
+                    Padding = new MarginPadding { Left = SettingsPanel.CONTENT_PADDING.Left },
                     Children = new Drawable[]
                     {
                         content = new Container
@@ -179,7 +175,8 @@ namespace osu.Game.Overlays.Settings.Sections.Input
                                 {
                                     AutoSizeAxes = Axes.Both,
                                     Anchor = Anchor.TopRight,
-                                    Origin = Anchor.TopRight
+                                    Origin = Anchor.TopRight,
+                                    Spacing = new Vector2(-6, 0),
                                 },
                                 cancelAndClearButtons = new FillFlowContainer
                                 {
@@ -191,8 +188,18 @@ namespace osu.Game.Overlays.Settings.Sections.Input
                                     Spacing = new Vector2(5),
                                     Children = new Drawable[]
                                     {
-                                        new CancelButton { Action = () => finalise(false) },
-                                        new ClearButton { Action = clear },
+                                        new RoundedButton
+                                        {
+                                            Text = CommonStrings.ButtonsCancel,
+                                            Size = new Vector2(80, 20),
+                                            Action = () => finalise(false)
+                                        },
+                                        new DangerousRoundedButton
+                                        {
+                                            Text = CommonStrings.ButtonsClear,
+                                            Size = new Vector2(80, 20),
+                                            Action = clear
+                                        },
                                     },
                                 },
                                 new HoverClickSounds()
@@ -213,6 +220,19 @@ namespace osu.Game.Overlays.Settings.Sections.Input
                 keypressSamples[i] = audioManager.Samples.Get($@"Keyboard/key-press-{1 + i}");
         }
 
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            isDefault.BindValueChanged(d =>
+            {
+                if (d.NewValue)
+                    revertButton.Hide();
+                else
+                    revertButton.Show();
+            }, true);
+        }
+
         public void RestoreDefaults()
         {
             int i = 0;
@@ -222,7 +242,7 @@ namespace osu.Game.Overlays.Settings.Sections.Input
                 var button = buttons[i++];
                 button.UpdateKeyCombination(d);
 
-                tryPersistKeyBinding(button.KeyBinding.Value, advanceToNextBinding: false);
+                tryPersistKeyBinding(button.KeyBinding.Value, advanceToNextBinding: false, restoringDefaults: true);
             }
 
             isDefault.Value = true;
@@ -473,7 +493,7 @@ namespace osu.Game.Overlays.Settings.Sections.Input
 
         protected override void OnFocus(FocusEvent e)
         {
-            content.AutoSizeDuration = 500;
+            content.AutoSizeDuration = 250;
             content.AutoSizeEasing = Easing.OutQuint;
 
             cancelAndClearButtons.FadeIn(300, Easing.OutQuint);
@@ -489,12 +509,25 @@ namespace osu.Game.Overlays.Settings.Sections.Input
             base.OnFocusLost(e);
         }
 
-        private void tryPersistKeyBinding(RealmKeyBinding keyBinding, bool advanceToNextBinding)
+        private bool isConflictingBinding(RealmKeyBinding first, RealmKeyBinding second, bool restoringDefaults)
+        {
+            if (first.ID == second.ID)
+                return false;
+
+            // ignore conflicts with same action bindings during revert. the assumption is that the other binding will be reverted subsequently in the same higher-level operation.
+            // this happens if the bindings for an action are rebound to the same keys, but the ordering of the bindings itself is different.
+            if (restoringDefaults && first.ActionInt == second.ActionInt)
+                return false;
+
+            return first.KeyCombination.Equals(second.KeyCombination);
+        }
+
+        private void tryPersistKeyBinding(RealmKeyBinding keyBinding, bool advanceToNextBinding, bool restoringDefaults = false)
         {
             List<RealmKeyBinding> bindings = GetAllSectionBindings();
             RealmKeyBinding? existingBinding = keyBinding.KeyCombination.Equals(new KeyCombination(InputKey.None))
                 ? null
-                : bindings.FirstOrDefault(other => other.ID != keyBinding.ID && other.KeyCombination.Equals(keyBinding.KeyCombination));
+                : bindings.FirstOrDefault(other => isConflictingBinding(keyBinding, other, restoringDefaults));
 
             if (existingBinding == null)
             {
@@ -524,24 +557,6 @@ namespace osu.Game.Overlays.Settings.Sections.Input
         private void updateIsDefaultValue()
         {
             isDefault.Value = KeyBindings.Select(b => b.KeyCombination).SequenceEqual(Defaults);
-        }
-
-        private partial class CancelButton : RoundedButton
-        {
-            public CancelButton()
-            {
-                Text = CommonStrings.ButtonsCancel;
-                Size = new Vector2(80, 20);
-            }
-        }
-
-        public partial class ClearButton : DangerousRoundedButton
-        {
-            public ClearButton()
-            {
-                Text = CommonStrings.ButtonsClear;
-                Size = new Vector2(80, 20);
-            }
         }
     }
 }

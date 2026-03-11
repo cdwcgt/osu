@@ -155,6 +155,8 @@ namespace osu.Game.Scoring
         [MapTo("MaximumStatistics")]
         public string MaximumStatisticsJson { get; set; } = string.Empty;
 
+        public IList<int> Pauses { get; } = null!;
+
         public ScoreInfo(BeatmapInfo? beatmap = null, RulesetInfo? ruleset = null, RealmUser? realmUser = null)
         {
             Ruleset = ruleset ?? new RulesetInfo();
@@ -165,7 +167,7 @@ namespace osu.Game.Scoring
         }
 
         [UsedImplicitly] // Realm
-        private ScoreInfo()
+        protected ScoreInfo()
         {
         }
 
@@ -359,7 +361,7 @@ namespace osu.Game.Scoring
 
         public IEnumerable<HitResultDisplayStatistic> GetStatisticsForDisplay()
         {
-            foreach (var r in Ruleset.CreateInstance().GetHitResults())
+            foreach (var r in Ruleset.CreateInstance().GetHitResultsForDisplay())
             {
                 int value = Statistics.GetValueOrDefault(r.result);
 

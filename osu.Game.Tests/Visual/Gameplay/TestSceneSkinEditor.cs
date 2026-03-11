@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Newtonsoft.Json;
 using NUnit.Framework;
 using osu.Framework.Allocation;
 using osu.Framework.Extensions;
@@ -15,6 +16,7 @@ using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input;
 using osu.Framework.Testing;
 using osu.Game.Database;
+using osu.Game.Graphics.UserInterface;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Settings;
 using osu.Game.Overlays.SkinEditor;
@@ -46,7 +48,7 @@ namespace osu.Game.Tests.Visual.Gameplay
         [Resolved]
         private SkinManager skins { get; set; } = null!;
 
-        private SkinComponentsContainer targetContainer => Player.ChildrenOfType<SkinComponentsContainer>().First();
+        private SkinnableContainer targetContainer => Player.ChildrenOfType<SkinnableContainer>().First();
 
         [SetUpSteps]
         public override void SetUpSteps()
@@ -75,7 +77,7 @@ namespace osu.Game.Tests.Visual.Gameplay
 
             AddStep("Add big black boxes", () =>
             {
-                var target = Player.ChildrenOfType<SkinComponentsContainer>().First();
+                var target = Player.ChildrenOfType<SkinnableContainer>().First();
                 target.Add(box1 = new BigBlackBox
                 {
                     Position = new Vector2(-90),
@@ -149,7 +151,7 @@ namespace osu.Game.Tests.Visual.Gameplay
         {
             List<SkinBlueprint> blueprints = new List<SkinBlueprint>();
 
-            AddStep("clear list", () => blueprints.Clear());
+            AddStep("clear list", blueprints.Clear);
 
             for (int i = 0; i < 3; i++)
             {
@@ -200,14 +202,14 @@ namespace osu.Game.Tests.Visual.Gameplay
         [Test]
         public void TestUndoEditHistory()
         {
-            SkinComponentsContainer firstTarget = null!;
+            SkinnableContainer firstTarget = null!;
             TestSkinEditorChangeHandler changeHandler = null!;
             byte[] defaultState = null!;
             IEnumerable<ISerialisableDrawable> testComponents = null!;
 
             AddStep("Load necessary things", () =>
             {
-                firstTarget = Player.ChildrenOfType<SkinComponentsContainer>().First();
+                firstTarget = Player.ChildrenOfType<SkinnableContainer>().First();
                 changeHandler = new TestSkinEditorChangeHandler(firstTarget);
 
                 changeHandler.SaveState();
@@ -377,11 +379,28 @@ namespace osu.Game.Tests.Visual.Gameplay
                 () => Is.EqualTo(3));
         }
 
-        private SkinComponentsContainer globalHUDTarget => Player.ChildrenOfType<SkinComponentsContainer>()
-                                                                 .Single(c => c.Lookup.Target == SkinComponentsContainerLookup.TargetArea.MainHUDComponents && c.Lookup.Ruleset == null);
+        [Test]
+        public void TestCopyPasteIdempotency()
+        {
+            string state = null!;
+            AddStep("select everything", () => InputManager.Keys(PlatformAction.SelectAll));
+            AddStep("dump state", () =>
+            {
+                state = JsonConvert.SerializeObject(skinEditor.SelectedComponents.Cast<Drawable>().Select(s => s.CreateSerialisedInfo()).ToArray());
+            });
+            AddStep("copy", () => InputManager.Keys(PlatformAction.Copy));
+            AddStep("delete", () => InputManager.Keys(PlatformAction.Delete));
+            AddStep("paste", () => InputManager.Keys(PlatformAction.Paste));
+            AddAssert("pasted state equals dumped",
+                () => JsonConvert.SerializeObject(skinEditor.SelectedComponents.Cast<Drawable>().Select(s => s.CreateSerialisedInfo()).ToArray()),
+                () => Is.EqualTo(state));
+        }
 
-        private SkinComponentsContainer rulesetHUDTarget => Player.ChildrenOfType<SkinComponentsContainer>()
-                                                                  .Single(c => c.Lookup.Target == SkinComponentsContainerLookup.TargetArea.MainHUDComponents && c.Lookup.Ruleset != null);
+        private SkinnableContainer globalHUDTarget => Player.ChildrenOfType<SkinnableContainer>()
+                                                            .Single(c => c.Lookup.Lookup == GlobalSkinnableContainers.MainHUDComponents && c.Lookup.Ruleset == null);
+
+        private SkinnableContainer rulesetHUDTarget => Player.ChildrenOfType<SkinnableContainer>()
+                                                             .Single(c => c.Lookup.Lookup == GlobalSkinnableContainers.MainHUDComponents && c.Lookup.Ruleset != null);
 
         [Test]
         public void TestMigrationArgon()
@@ -440,8 +459,8 @@ namespace osu.Game.Tests.Visual.Gameplay
 
             AddStep("import old classic skin", () => skins.CurrentSkinInfo.Value = importedSkin = importSkinFromArchives(@"classic-layout-version-0.osk").SkinInfo);
             AddUntilStep("wait for load", () => globalHUDTarget.ComponentsLoaded && rulesetHUDTarget.ComponentsLoaded);
-            AddAssert("no combo in global target", () => !globalHUDTarget.Components.OfType<LegacyComboCounter>().Any());
-            AddAssert("combo placed in ruleset target", () => rulesetHUDTarget.Components.OfType<LegacyComboCounter>().Count() == 1);
+            AddAssert("no combo in global target", () => !globalHUDTarget.Components.OfType<LegacyDefaultComboCounter>().Any());
+            AddAssert("combo placed in ruleset target", () => rulesetHUDTarget.Components.OfType<LegacyDefaultComboCounter>().Count() == 1);
 
             AddStep("add combo to global target", () => globalHUDTarget.Add(new LegacyDefaultComboCounter
             {
@@ -454,8 +473,64 @@ namespace osu.Game.Tests.Visual.Gameplay
             AddStep("select another skin", () => skins.CurrentSkinInfo.SetDefault());
             AddStep("select skin again", () => skins.CurrentSkinInfo.Value = importedSkin);
             AddUntilStep("wait for load", () => globalHUDTarget.ComponentsLoaded && rulesetHUDTarget.ComponentsLoaded);
-            AddAssert("combo placed in global target", () => globalHUDTarget.Components.OfType<LegacyComboCounter>().Count() == 1);
-            AddAssert("combo placed in ruleset target", () => rulesetHUDTarget.Components.OfType<LegacyComboCounter>().Count() == 1);
+            AddAssert("combo placed in global target", () => globalHUDTarget.Components.OfType<LegacyDefaultComboCounter>().Count() == 1);
+            AddAssert("combo placed in ruleset target", () => rulesetHUDTarget.Components.OfType<LegacyDefaultComboCounter>().Count() == 1);
+        }
+
+        [Test]
+        public void TestAnchorRadioButtonBehavior()
+        {
+            ISerialisableDrawable? selectedComponent = null;
+
+            AddStep("Select first component", () =>
+            {
+                var blueprint = skinEditor.ChildrenOfType<SkinBlueprint>().First();
+                skinEditor.SelectedComponents.Clear();
+                skinEditor.SelectedComponents.Add(blueprint.Item);
+                selectedComponent = blueprint.Item;
+            });
+
+            AddStep("Right-click to open context menu", () =>
+            {
+                if (selectedComponent != null)
+                    InputManager.MoveMouseTo(((Drawable)selectedComponent).ScreenSpaceDrawQuad.Centre);
+                InputManager.Click(MouseButton.Right);
+            });
+
+            AddStep("Click on Anchor menu", () =>
+            {
+                InputManager.MoveMouseTo(getMenuItemByText("Anchor"));
+                InputManager.Click(MouseButton.Left);
+            });
+
+            AddStep("Right-click TopLeft anchor", () =>
+            {
+                InputManager.MoveMouseTo(getMenuItemByText("TopLeft"));
+                InputManager.Click(MouseButton.Right);
+            });
+
+            AddAssert("TopLeft item checked", () => (getMenuItemByText("TopLeft").Item as TernaryStateRadioMenuItem)?.State.Value == TernaryState.True);
+
+            AddStep("Right-click Centre anchor", () =>
+            {
+                InputManager.MoveMouseTo(getMenuItemByText("Centre"));
+                InputManager.Click(MouseButton.Right);
+            });
+
+            AddAssert("Centre item checked", () => (getMenuItemByText("Centre").Item as TernaryStateRadioMenuItem)?.State.Value == TernaryState.True);
+            AddAssert("TopLeft item unchecked", () => (getMenuItemByText("TopLeft").Item as TernaryStateRadioMenuItem)?.State.Value == TernaryState.False);
+
+            AddStep("Right-click Closest anchor", () =>
+            {
+                InputManager.MoveMouseTo(getMenuItemByText("Closest"));
+                InputManager.Click(MouseButton.Right);
+            });
+
+            AddAssert("Closest item checked", () => (getMenuItemByText("Closest").Item as TernaryStateRadioMenuItem)?.State.Value == TernaryState.True);
+            AddAssert("Centre item unchecked", () => (getMenuItemByText("Centre").Item as TernaryStateRadioMenuItem)?.State.Value == TernaryState.False);
+
+            Menu.DrawableMenuItem getMenuItemByText(string text)
+                => this.ChildrenOfType<Menu.DrawableMenuItem>().First(m => m.Item.Text.ToString() == text);
         }
 
         private Skin importSkinFromArchives(string filename)

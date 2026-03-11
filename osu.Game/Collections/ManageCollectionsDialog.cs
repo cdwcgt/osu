@@ -7,11 +7,14 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Localisation;
 using osu.Game.Overlays;
+using osu.Game.Resources.Localisation.Web;
 using osuTK;
 
 namespace osu.Game.Collections
@@ -25,6 +28,9 @@ namespace osu.Game.Collections
         protected override string PopOutSampleName => @"UI/overlay-big-pop-out";
 
         private IDisposable? duckOperation;
+
+        private BasicSearchTextBox searchTextBox = null!;
+        private DrawableCollectionList list = null!;
 
         [Resolved]
         private MusicController? musicController { get; set; }
@@ -75,7 +81,7 @@ namespace osu.Game.Collections
                                         {
                                             Anchor = Anchor.Centre,
                                             Origin = Anchor.Centre,
-                                            Text = "Manage collections",
+                                            Text = CollectionsStrings.ManageCollectionsTitle,
                                             Font = OsuFont.GetFont(size: 30),
                                             Padding = new MarginPadding { Vertical = 10 },
                                         },
@@ -97,17 +103,46 @@ namespace osu.Game.Collections
                                 new Container
                                 {
                                     RelativeSizeAxes = Axes.Both,
+                                    Masking = true,
                                     Children = new Drawable[]
                                     {
                                         new Box
                                         {
                                             RelativeSizeAxes = Axes.Both,
-                                            Colour = colours.GreySeaFoamDarker
+                                            Colour = colours.GreySeaFoamDarker,
                                         },
-                                        new DrawableCollectionList
+                                        new Container
                                         {
                                             RelativeSizeAxes = Axes.Both,
-                                        }
+                                            Padding = new MarginPadding(10),
+                                            Children = new Drawable[]
+                                            {
+                                                list = new DrawableCollectionList
+                                                {
+                                                    Padding = new MarginPadding { Vertical = 50 },
+                                                    RelativeSizeAxes = Axes.Both,
+                                                },
+                                                searchTextBox = new BasicSearchTextBox
+                                                {
+                                                    RelativeSizeAxes = Axes.X,
+                                                    Height = 40,
+                                                    ReleaseFocusOnCommit = false,
+                                                    HoldFocus = true,
+                                                    PlaceholderText = HomeStrings.SearchPlaceholder,
+                                                },
+                                                new Container
+                                                {
+                                                    RelativeSizeAxes = Axes.X,
+                                                    AutoSizeAxes = Axes.Y,
+                                                    Anchor = Anchor.BottomLeft,
+                                                    Origin = Anchor.BottomLeft,
+                                                    Children = new Drawable[]
+                                                    {
+                                                        new NewCollectionEntryItem()
+                                                    }
+                                                },
+                                            }
+                                        },
                                     }
                                 }
                             },
@@ -115,6 +150,16 @@ namespace osu.Game.Collections
                     }
                 }
             };
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            searchTextBox.Current.BindValueChanged(_ =>
+            {
+                list.SearchTerm = searchTextBox.Current.Value;
+            });
         }
 
         protected override void Dispose(bool isDisposing)
@@ -147,6 +192,31 @@ namespace osu.Game.Collections
 
             // Ensure that textboxes commit
             GetContainingFocusManager()?.TriggerFocusContention(this);
+        }
+
+        private partial class NewCollectionEntryItem : DrawableCollectionListItem
+        {
+            [Resolved]
+            private RealmAccess realm { get; set; } = null!;
+
+            public NewCollectionEntryItem()
+                : base(new BeatmapCollection().ToLiveUnmanaged(), false)
+            {
+            }
+
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+
+                TextBox.OnCommit += (_, _) =>
+                {
+                    if (string.IsNullOrEmpty(TextBox.Text))
+                        return;
+
+                    realm.Write(r => r.Add(new BeatmapCollection(TextBox.Text)));
+                    TextBox.Text = string.Empty;
+                };
+            }
         }
     }
 }

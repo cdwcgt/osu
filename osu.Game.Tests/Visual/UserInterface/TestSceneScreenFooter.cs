@@ -2,203 +2,316 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Screens;
 using osu.Framework.Testing;
 using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Mods;
+using osu.Game.Screens;
 using osu.Game.Screens.Footer;
-using osu.Game.Screens.SelectV2.Footer;
+using osu.Game.Screens.Select;
 
 namespace osu.Game.Tests.Visual.UserInterface
 {
-    public partial class TestSceneScreenFooter : OsuManualInputManagerTestScene
+    public partial class TestSceneScreenFooter : ScreenTestScene
     {
-        private DependencyProvidingContainer contentContainer = null!;
-        private ScreenFooter screenFooter = null!;
-        private TestModSelectOverlay modOverlay = null!;
-
-        [SetUp]
-        public void SetUp() => Schedule(() =>
-        {
-            screenFooter = new ScreenFooter();
-
-            Child = contentContainer = new DependencyProvidingContainer
-            {
-                RelativeSizeAxes = Axes.Both,
-                CachedDependencies = new (Type, object)[]
-                {
-                    (typeof(ScreenFooter), screenFooter)
-                },
-                Children = new Drawable[]
-                {
-                    modOverlay = new TestModSelectOverlay(),
-                    new PopoverContainer
-                    {
-                        RelativeSizeAxes = Axes.Both,
-                        Depth = float.MinValue,
-                        Child = screenFooter,
-                    },
-                },
-            };
-
-            screenFooter.SetButtons(new ScreenFooterButton[]
-            {
-                new ScreenFooterButtonMods(modOverlay) { Current = SelectedMods },
-                new ScreenFooterButtonRandom(),
-                new ScreenFooterButtonOptions(),
-            });
-        });
-
-        [SetUpSteps]
-        public void SetUpSteps()
-        {
-            AddStep("show footer", () => screenFooter.Show());
-        }
-
-        /// <summary>
-        /// Transition when moving from a screen with no buttons to a screen with buttons.
-        /// </summary>
         [Test]
         public void TestButtonsIn()
         {
+            AddStep("push empty screen", () => LoadScreen(new TestScreen()));
+            AddStep("push screen", () => LoadScreen(new TestScreen
+            {
+                CreateButtons = () => new[]
+                {
+                    new ScreenFooterButton { Text = "Button 1", Action = () => { } },
+                    new ScreenFooterButton { Text = "Button 2", Action = () => { } },
+                    new ScreenFooterButton { Text = "Button 3", Action = () => { } },
+                },
+            }));
         }
 
-        /// <summary>
-        /// Transition when moving from a screen with buttons to a screen with no buttons.
-        /// </summary>
         [Test]
         public void TestButtonsOut()
         {
-            AddStep("clear buttons", () => screenFooter.SetButtons(Array.Empty<ScreenFooterButton>()));
+            AddStep("push empty screen", () => LoadScreen(new TestScreen()));
+            AddStep("push screen", () => LoadScreen(new TestScreen
+            {
+                CreateButtons = () => new[]
+                {
+                    new ScreenFooterButton { Text = "Button 1", Action = () => { } },
+                    new ScreenFooterButton { Text = "Button 2", Action = () => { } },
+                    new ScreenFooterButton { Text = "Button 3", Action = () => { } },
+                },
+            }));
+            AddStep("exit screen", () => Stack.Exit());
         }
 
-        /// <summary>
-        /// Transition when moving from a screen with buttons to a screen with buttons.
-        /// </summary>
         [Test]
         public void TestReplaceButtons()
         {
-            AddStep("replace buttons", () => screenFooter.SetButtons(new[]
+            AddStep("push first screen", () => LoadScreen(new TestScreen
             {
-                new ScreenFooterButton { Text = "One", Action = () => { } },
-                new ScreenFooterButton { Text = "Two", Action = () => { } },
-                new ScreenFooterButton { Text = "Three", Action = () => { } },
+                CreateButtons = () => new[]
+                {
+                    new ScreenFooterButton { Text = "Button 1", Action = () => { } },
+                    new ScreenFooterButton { Text = "Button 2", Action = () => { } },
+                    new ScreenFooterButton { Text = "Button 3", Action = () => { } },
+                },
             }));
+            AddStep("push second screen", () => LoadScreen(new TestScreen
+            {
+                CreateButtons = () => new[]
+                {
+                    new ScreenFooterButton { Text = "Button 4", Action = () => { } },
+                    new ScreenFooterButton { Text = "Button 5", Action = () => { } },
+                    new ScreenFooterButton { Text = "Button 6", Action = () => { } },
+                },
+            }));
+        }
+
+        [Test]
+        public void TestFooterVisibility()
+        {
+            TestScreen screen = null!;
+            TestScreen screenWithoutFooter = null!;
+
+            AddAssert("footer hidden", () => ScreenFooter.State.Value, () => Is.EqualTo(Visibility.Hidden));
+
+            AddStep("push screen", () => LoadScreen(screen = new TestScreen
+            {
+                CreateButtons = () => new[]
+                {
+                    new ScreenFooterButton { Text = "Button 1", Action = () => { } },
+                    new ScreenFooterButton { Text = "Button 2", Action = () => { } },
+                    new ScreenFooterButton { Text = "Button 3", Action = () => { } },
+                },
+            }));
+            AddUntilStep("wait until screen is loaded", () => screen.IsCurrentScreen(), () => Is.True);
+            AddAssert("footer shown", () => ScreenFooter.State.Value, () => Is.EqualTo(Visibility.Visible));
+
+            AddStep("push screen with no footer", () => LoadScreen(screenWithoutFooter = new TestScreen(showFooter: false)));
+            AddUntilStep("wait until screen is loaded", () => screenWithoutFooter.IsCurrentScreen(), () => Is.True);
+            AddAssert("footer hidden", () => ScreenFooter.State.Value, () => Is.EqualTo(Visibility.Hidden));
+
+            AddStep("exit screen", () => Stack.Exit());
+            AddUntilStep("wait until screen is loaded", () => screen.IsCurrentScreen(), () => Is.True);
+            AddAssert("footer shown", () => ScreenFooter.State.Value, () => Is.EqualTo(Visibility.Visible));
         }
 
         [Test]
         public void TestExternalOverlayContent()
         {
-            TestShearedOverlayContainer externalOverlay = null!;
+            TestScreen screen = null!;
 
-            AddStep("add overlay", () => contentContainer.Add(externalOverlay = new TestShearedOverlayContainer()));
-            AddStep("set buttons", () => screenFooter.SetButtons(new[]
+            AddStep("push screen", () =>
             {
-                new ScreenFooterButton(externalOverlay)
+                ShearedOverlayContainer overlay = new TestShearedOverlayContainer();
+
+                LoadScreen(screen = new TestScreen
                 {
-                    AccentColour = Dependencies.Get<OsuColour>().Orange1,
-                    Icon = FontAwesome.Solid.Toolbox,
-                    Text = "One",
-                },
-                new ScreenFooterButton { Text = "Two", Action = () => { } },
-                new ScreenFooterButton { Text = "Three", Action = () => { } },
-            }));
-            AddWaitStep("wait for transition", 3);
+                    Overlay = overlay,
+                    CreateButtons = () => new[]
+                    {
+                        new ScreenFooterButton(overlay)
+                        {
+                            AccentColour = Dependencies.Get<OsuColour>().Orange1,
+                            Icon = FontAwesome.Solid.Toolbox,
+                            Text = "One",
+                        },
+                        new ScreenFooterButton { Text = "Two", Action = () => { } },
+                        new ScreenFooterButton { Text = "Three", Action = () => { } },
+                    },
+                });
+            });
+            AddUntilStep("wait until screen is loaded", () => screen.IsCurrentScreen(), () => Is.True);
 
-            AddStep("show overlay", () => externalOverlay.Show());
-            AddAssert("content displayed in footer", () => screenFooter.ChildrenOfType<TestShearedOverlayContainer.TestFooterContent>().Single().IsPresent);
-            AddUntilStep("other buttons hidden", () => screenFooter.ChildrenOfType<ScreenFooterButton>().Skip(1).All(b => b.Child.Parent!.Y > 0));
+            AddStep("show overlay", () => screen.Overlay.Show());
+            contentDisplayed();
+            AddAssert("other buttons hidden", () => ScreenFooter.ChildrenOfType<ScreenFooterButton>().Skip(1).All(b => b.Child.Parent!.Y > 0));
 
-            AddStep("hide overlay", () => externalOverlay.Hide());
-            AddUntilStep("content hidden from footer", () => screenFooter.ChildrenOfType<TestShearedOverlayContainer.TestFooterContent>().SingleOrDefault()?.IsPresent != true);
-            AddUntilStep("other buttons returned", () => screenFooter.ChildrenOfType<ScreenFooterButton>().Skip(1).All(b => b.ChildrenOfType<Container>().First().Y == 0));
+            AddStep("hide overlay", () => screen.Overlay.Hide());
+            contentHidden();
+            AddAssert("other buttons returned", () => ScreenFooter.ChildrenOfType<ScreenFooterButton>().Skip(1).All(b => b.ChildrenOfType<Container>().First().Y == 0));
         }
 
         [Test]
         public void TestTemporarilyShowFooter()
         {
-            TestShearedOverlayContainer externalOverlay = null!;
+            TestScreen screen = null!;
 
-            AddStep("hide footer", () => screenFooter.Hide());
-            AddStep("remove buttons", () => screenFooter.SetButtons(Array.Empty<ScreenFooterButton>()));
+            AddStep("push screen", () => LoadScreen(screen = new TestScreen(showFooter: false)));
+            AddUntilStep("wait until screen is loaded", () => screen.IsCurrentScreen(), () => Is.True);
+            AddAssert("footer hidden", () => ScreenFooter.State.Value, () => Is.EqualTo(Visibility.Hidden));
 
-            AddStep("add external overlay", () => contentContainer.Add(externalOverlay = new TestShearedOverlayContainer()));
-            AddStep("show external overlay", () => externalOverlay.Show());
-            AddAssert("footer shown", () => screenFooter.State.Value == Visibility.Visible);
-            AddAssert("content displayed in footer", () => screenFooter.ChildrenOfType<TestShearedOverlayContainer.TestFooterContent>().Single().IsPresent);
+            AddStep("show overlay", () => screen.Overlay.Show());
+            AddAssert("footer shown", () => ScreenFooter.State.Value, () => Is.EqualTo(Visibility.Visible));
+            contentDisplayed();
 
-            AddStep("hide external overlay", () => externalOverlay.Hide());
-            AddAssert("footer hidden", () => screenFooter.State.Value == Visibility.Hidden);
-            AddUntilStep("content hidden from footer", () => screenFooter.ChildrenOfType<TestShearedOverlayContainer.TestFooterContent>().SingleOrDefault()?.IsPresent != true);
-
-            AddStep("show footer", () => screenFooter.Show());
-            AddAssert("content still hidden from footer", () => screenFooter.ChildrenOfType<TestShearedOverlayContainer.TestFooterContent>().SingleOrDefault()?.IsPresent != true);
-
-            AddStep("show external overlay", () => externalOverlay.Show());
-            AddAssert("footer still visible", () => screenFooter.State.Value == Visibility.Visible);
-
-            AddStep("hide external overlay", () => externalOverlay.Hide());
-            AddAssert("footer still visible", () => screenFooter.State.Value == Visibility.Visible);
-
-            AddStep("hide footer", () => screenFooter.Hide());
-            AddStep("show external overlay", () => externalOverlay.Show());
+            AddStep("hide overlay", () => screen.Overlay.Hide());
+            AddAssert("footer hidden", () => ScreenFooter.State.Value, () => Is.EqualTo(Visibility.Hidden));
+            contentHidden();
         }
 
         [Test]
-        public void TestBackButton()
+        public void TestShowOverlayHidesOtherOverlays()
         {
-            TestShearedOverlayContainer externalOverlay = null!;
+            TestScreen screen = null!;
 
-            AddStep("hide footer", () => screenFooter.Hide());
-            AddStep("remove buttons", () => screenFooter.SetButtons(Array.Empty<ScreenFooterButton>()));
+            AddStep("push screen", () =>
+            {
+                ShearedOverlayContainer overlay = new TestShearedOverlayContainer();
+                ModSelectOverlay secondOverlay = new ModSelectOverlay();
 
-            AddStep("add external overlay", () => contentContainer.Add(externalOverlay = new TestShearedOverlayContainer()));
-            AddStep("show external overlay", () => externalOverlay.Show());
-            AddAssert("footer shown", () => screenFooter.State.Value == Visibility.Visible);
+                LoadScreen(screen = new TestScreen
+                {
+                    Overlay = overlay,
+                    SecondOverlay = secondOverlay,
+                    CreateButtons = () => new[]
+                    {
+                        new ScreenFooterButton(overlay)
+                        {
+                            AccentColour = Dependencies.Get<OsuColour>().Orange1,
+                            Icon = FontAwesome.Solid.Toolbox,
+                            Text = "One",
+                        },
+                        new FooterButtonMods(secondOverlay),
+                        new ScreenFooterButton { Text = "Two", Action = () => { } },
+                        new ScreenFooterButton { Text = "Three", Action = () => { } },
+                    },
+                });
+            });
+            AddUntilStep("wait until screen is loaded", () => screen.IsCurrentScreen(), () => Is.True);
 
-            AddStep("press back", () => this.ChildrenOfType<ScreenBackButton>().Single().TriggerClick());
-            AddAssert("overlay hidden", () => externalOverlay.State.Value == Visibility.Hidden);
-            AddAssert("footer hidden", () => screenFooter.State.Value == Visibility.Hidden);
+            AddStep("show mods overlay", () => ScreenFooter.ChildrenOfType<FooterButtonMods>().First().TriggerClick());
+            AddUntilStep("wait until overlay is shown", () => screen.SecondOverlay.State.Value, () => Is.EqualTo(Visibility.Visible));
+            AddAssert("first button still visible", () => ScreenFooter.ChildrenOfType<ScreenFooterButton>().First(b => b.Text == "One").Y, () => Is.EqualTo(0));
 
-            AddStep("show external overlay", () => externalOverlay.Show());
-            AddStep("set block count", () => externalOverlay.BackButtonCount = 1);
-            AddStep("press back", () => this.ChildrenOfType<ScreenBackButton>().Single().TriggerClick());
-            AddAssert("overlay still visible", () => externalOverlay.State.Value == Visibility.Visible);
-            AddAssert("footer still shown", () => screenFooter.State.Value == Visibility.Visible);
-            AddStep("press back again", () => this.ChildrenOfType<ScreenBackButton>().Single().TriggerClick());
-            AddAssert("overlay hidden", () => externalOverlay.State.Value == Visibility.Hidden);
-            AddAssert("footer hidden", () => screenFooter.State.Value == Visibility.Hidden);
+            AddStep("show test overlay", () => ScreenFooter.ChildrenOfType<ScreenFooterButton>().First(b => b.Text == "One").TriggerClick());
+            AddUntilStep("wait until overlay is shown", () => screen.Overlay.State.Value, () => Is.EqualTo(Visibility.Visible));
+            AddAssert("mod overlay is hidden", () => screen.SecondOverlay.State.Value, () => Is.EqualTo(Visibility.Hidden));
+
+            AddStep("hide test overlay", () => screen.Overlay.Hide());
+            contentHidden();
+            AddAssert("other buttons returned", () => ScreenFooter.ChildrenOfType<ScreenFooterButton>().Skip(1).All(b => b.ChildrenOfType<Container>().First().Y == 0));
         }
 
         [Test]
-        public void TestLoadOverlayAfterFooterIsDisplayed()
+        public void TestButtonResizedAfterFooterIsDisplayed()
         {
-            TestShearedOverlayContainer externalOverlay = null!;
+            TestScreen screen = null!;
 
-            AddStep("show mod overlay", () => modOverlay.Show());
-            AddUntilStep("mod footer content shown", () => this.ChildrenOfType<ModSelectFooterContent>().SingleOrDefault()?.IsPresent, () => Is.True);
+            const float initial_width = 116;
+            const float width_increase = 124;
 
-            AddStep("add external overlay", () => contentContainer.Add(externalOverlay = new TestShearedOverlayContainer()));
-            AddUntilStep("wait for load", () => externalOverlay.IsLoaded);
-            AddAssert("mod footer content still shown", () => this.ChildrenOfType<ModSelectFooterContent>().SingleOrDefault()?.IsPresent, () => Is.True);
-            AddAssert("external overlay content not shown", () => this.ChildrenOfType<TestShearedOverlayContainer.TestFooterContent>().SingleOrDefault()?.IsPresent, () => Is.Not.True);
+            float secondButtonX = 0;
+            float overlayContentX = 0;
 
-            AddStep("hide mod overlay", () => modOverlay.Hide());
-            AddUntilStep("mod footer content hidden", () => this.ChildrenOfType<ModSelectFooterContent>().SingleOrDefault()?.IsPresent, () => Is.Not.True);
-            AddAssert("external overlay content still not shown", () => this.ChildrenOfType<TestShearedOverlayContainer.TestFooterContent>().SingleOrDefault()?.IsPresent, () => Is.Not.True);
+            AddStep("push screen", () =>
+            {
+                ShearedOverlayContainer overlay = new TestShearedOverlayContainer();
+
+                LoadScreen(screen = new TestScreen
+                {
+                    Overlay = overlay,
+                    CreateButtons = () => new[]
+                    {
+                        new ScreenFooterButton(overlay)
+                        {
+                            AccentColour = Dependencies.Get<OsuColour>().Orange1,
+                            Icon = FontAwesome.Solid.Toolbox,
+                            Text = "One",
+                        },
+                        new ScreenFooterButton { Text = "Two", Action = () => { } },
+                        new ScreenFooterButton { Text = "Three", Action = () => { } },
+                    },
+                });
+            });
+            AddUntilStep("wait until screen is loaded", () => screen.IsCurrentScreen(), () => Is.True);
+            AddStep("save second button position", () => secondButtonX = ScreenFooter.ChildrenOfType<ScreenFooterButton>().ElementAt(1).X);
+
+            AddStep("resize active button", () => ScreenFooter.ChildrenOfType<ScreenFooterButton>().First().ResizeWidthTo(initial_width + width_increase, 300, Easing.OutQuint));
+            AddUntilStep("second button moved", () => ScreenFooter.ChildrenOfType<ScreenFooterButton>().ElementAt(1).X, () => Is.EqualTo(secondButtonX + width_increase).Within(0.001));
+            AddStep("resize active button back", () => this.ChildrenOfType<ScreenFooterButton>().First().ResizeWidthTo(initial_width, 300, Easing.OutQuint));
+            AddUntilStep("second button moved back", () => ScreenFooter.ChildrenOfType<ScreenFooterButton>().ElementAt(1).X, () => Is.EqualTo(secondButtonX).Within(0.001));
+
+            AddStep("show overlay", () => screen.Overlay.Show());
+            contentDisplayed();
+            AddAssert("other buttons hidden", () => ScreenFooter.ChildrenOfType<ScreenFooterButton>().Skip(1).All(b => b.Child.Parent!.Y > 0));
+            AddStep("save overlay content position", () => overlayContentX = ScreenFooter.ChildrenOfType<TestShearedOverlayContainer.TestFooterContent>().First().Parent!.Parent!.X);
+
+            AddStep("resize active button", () => ScreenFooter.ChildrenOfType<ScreenFooterButton>().First().ResizeWidthTo(initial_width + width_increase, 300, Easing.OutQuint));
+            AddUntilStep("overlay content moved", () => ScreenFooter.ChildrenOfType<TestShearedOverlayContainer.TestFooterContent>().First().Parent!.Parent!.X, () => Is.EqualTo(overlayContentX + width_increase).Within(0.001));
+            AddStep("resize active button back", () => this.ChildrenOfType<ScreenFooterButton>().First().ResizeWidthTo(initial_width, 300, Easing.OutQuint));
+            AddUntilStep("overlay content moved back", () => ScreenFooter.ChildrenOfType<TestShearedOverlayContainer.TestFooterContent>().First().Parent!.Parent!.X, () => Is.EqualTo(overlayContentX).Within(0.001));
+
+            AddStep("hide overlay", () => screen.Overlay.Hide());
+            contentHidden();
+            AddUntilStep("other buttons returned", () => ScreenFooter.ChildrenOfType<ScreenFooterButton>().Skip(1).All(b => b.ChildrenOfType<Container>().First().Y == 0));
         }
 
-        private partial class TestModSelectOverlay : UserModSelectOverlay
+        private void contentHidden()
         {
-            protected override bool ShowPresets => true;
+            AddUntilStep("content hidden from footer", () => ScreenFooter.ChildrenOfType<TestShearedOverlayContainer.TestFooterContent>().SingleOrDefault()?.IsPresent != true);
+        }
+
+        private void contentDisplayed()
+        {
+            AddUntilStep("content displayed in footer", () => ScreenFooter.ChildrenOfType<TestShearedOverlayContainer.TestFooterContent>().Single().IsPresent);
+        }
+
+        private partial class TestScreen : OsuScreen
+        {
+            public override bool ShowFooter { get; }
+
+            public Func<IReadOnlyList<ScreenFooterButton>> CreateButtons = Array.Empty<ScreenFooterButton>;
+
+            public ShearedOverlayContainer Overlay = new TestShearedOverlayContainer();
+            public ShearedOverlayContainer SecondOverlay = new TestShearedOverlayContainer();
+
+            private IDisposable? overlayRegistration;
+            private IDisposable? secondOverlayRegistration;
+
+            [Cached]
+            private readonly OverlayColourProvider colourProvider = new OverlayColourProvider(OverlayColourScheme.Blue);
+
+            [Resolved]
+            private IOverlayManager? overlayManager { get; set; }
+
+            public TestScreen(bool showFooter = true)
+            {
+                ShowFooter = showFooter;
+            }
+
+            [BackgroundDependencyLoader]
+            private void load()
+            {
+                LoadComponent(Overlay);
+                LoadComponent(SecondOverlay);
+            }
+
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+                overlayRegistration = overlayManager?.RegisterBlockingOverlay(Overlay);
+                secondOverlayRegistration = overlayManager?.RegisterBlockingOverlay(SecondOverlay);
+            }
+
+            public override IReadOnlyList<ScreenFooterButton> CreateFooterButtons() => CreateButtons.Invoke();
+
+            protected override void Dispose(bool isDisposing)
+            {
+                base.Dispose(isDisposing);
+                overlayRegistration?.Dispose();
+                secondOverlayRegistration?.Dispose();
+            }
         }
 
         private partial class TestShearedOverlayContainer : ShearedOverlayContainer
@@ -215,19 +328,6 @@ namespace osu.Game.Tests.Visual.UserInterface
                 Header.Description = "An overlay that is made purely for testing purposes.";
             }
 
-            public int BackButtonCount;
-
-            public override bool OnBackButton()
-            {
-                if (BackButtonCount > 0)
-                {
-                    BackButtonCount--;
-                    return true;
-                }
-
-                return false;
-            }
-
             public override VisibilityContainer CreateFooterContent() => new TestFooterContent();
 
             public partial class TestFooterContent : VisibilityContainer
@@ -235,15 +335,15 @@ namespace osu.Game.Tests.Visual.UserInterface
                 [BackgroundDependencyLoader]
                 private void load()
                 {
-                    RelativeSizeAxes = Axes.Both;
+                    AutoSizeAxes = Axes.Both;
 
                     InternalChild = new FillFlowContainer
                     {
                         AutoSizeAxes = Axes.Both,
                         Children = new[]
                         {
-                            new ShearedButton(200) { Text = "Action #1", Action = () => { } },
-                            new ShearedButton(140) { Text = "Action #2", Action = () => { } },
+                            new ShearedButton { Width = 200, Text = "Action #1", Action = () => { } },
+                            new ShearedButton { Width = 140, Text = "Action #2", Action = () => { } },
                         }
                     };
                 }

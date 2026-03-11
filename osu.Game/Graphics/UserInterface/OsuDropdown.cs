@@ -18,6 +18,7 @@ using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Input.Bindings;
 using osu.Game.Overlays;
+using osu.Game.Resources.Localisation.Web;
 using osuTK;
 using osuTK.Graphics;
 
@@ -53,7 +54,7 @@ namespace osu.Game.Graphics.UserInterface
 
         #region OsuDropdownMenu
 
-        protected partial class OsuDropdownMenu : DropdownMenu
+        public partial class OsuDropdownMenu : DropdownMenu
         {
             public override bool HandleNonPositionalInput => State == MenuState.Open;
 
@@ -75,7 +76,7 @@ namespace osu.Game.Graphics.UserInterface
             [BackgroundDependencyLoader(true)]
             private void load(OverlayColourProvider? colourProvider, OsuColour colours, AudioManager audio)
             {
-                BackgroundColour = colourProvider?.Background5 ?? Color4.Black.Opacity(0.5f);
+                BackgroundColour = colourProvider?.Background5 ?? Color4.Black;
                 HoverColour = colourProvider?.Light4 ?? colours.PinkDarker;
                 SelectionColour = colourProvider?.Background3 ?? colours.PinkDarker.Opacity(0.5f);
 
@@ -103,9 +104,17 @@ namespace osu.Game.Graphics.UserInterface
                 }
             }
 
+            private Vector2? targetSize;
+
             // todo: this uses the same styling as OsuMenu. hopefully we can just use OsuMenu in the future with some refactoring
             protected override void UpdateSize(Vector2 newSize)
             {
+                // TODO: should probably fix this at a framework level (this method is running every frame which can spam transforms)
+                if (newSize == targetSize)
+                    return;
+
+                targetSize = newSize;
+
                 if (Direction == Direction.Vertical)
                 {
                     Width = newSize.X;
@@ -252,6 +261,7 @@ namespace osu.Game.Graphics.UserInterface
                                 Size = new Vector2(8),
                                 Alpha = 0,
                                 X = chevron_offset,
+                                Y = 1,
                                 Margin = new MarginPadding { Left = 3, Right = 3 },
                                 Origin = Anchor.CentreLeft,
                                 Anchor = Anchor.CentreLeft,
@@ -355,7 +365,8 @@ namespace osu.Game.Graphics.UserInterface
                                 Icon = FontAwesome.Solid.ChevronDown,
                                 Anchor = Anchor.CentreRight,
                                 Origin = Anchor.CentreRight,
-                                Size = new Vector2(16),
+                                Size = new Vector2(10),
+                                Margin = new MarginPadding { Right = 2 },
                             },
                         }
                     }
@@ -397,7 +408,7 @@ namespace osu.Game.Graphics.UserInterface
             {
                 bool hovered = Enabled.Value && IsHovered;
                 var hoveredColour = colourProvider?.Light4 ?? colours.PinkDarker;
-                var unhoveredColour = colourProvider?.Background5 ?? Color4.Black.Opacity(0.5f);
+                var unhoveredColour = colourProvider?.Background5 ?? Color4.Black;
 
                 Colour = Color4.White;
                 Alpha = Enabled.Value ? 1 : 0.3f;
@@ -439,6 +450,11 @@ namespace osu.Game.Graphics.UserInterface
 
                 private partial class DropdownSearchTextBox : OsuTextBox
                 {
+                    public DropdownSearchTextBox()
+                    {
+                        PlaceholderText = HomeStrings.SearchPlaceholder;
+                    }
+
                     [BackgroundDependencyLoader]
                     private void load(OverlayColourProvider? colourProvider)
                     {

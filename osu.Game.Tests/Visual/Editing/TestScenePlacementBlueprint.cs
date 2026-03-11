@@ -7,6 +7,8 @@ using osu.Framework.Screens;
 using osu.Framework.Testing;
 using osu.Game.Audio;
 using osu.Game.Beatmaps;
+using osu.Game.Beatmaps.ControlPoints;
+using osu.Game.Graphics.UserInterface;
 using osu.Game.Input.Bindings;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Edit;
@@ -14,8 +16,10 @@ using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Rulesets.Osu;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.UI;
+using osu.Game.Screens.Edit.Components.TernaryButtons;
 using osu.Game.Screens.Edit.Compose.Components;
 using osu.Game.Tests.Beatmaps;
+using osuTK;
 using osuTK.Input;
 
 namespace osu.Game.Tests.Visual.Editing
@@ -24,9 +28,50 @@ namespace osu.Game.Tests.Visual.Editing
     {
         protected override Ruleset CreateEditorRuleset() => new OsuRuleset();
 
-        protected override IBeatmap CreateBeatmap(RulesetInfo ruleset) => new TestBeatmap(ruleset, false);
+        protected override IBeatmap CreateBeatmap(RulesetInfo ruleset)
+        {
+            var beatmap = new TestBeatmap(ruleset, false);
+            beatmap.ControlPointInfo.Add(0, new TimingControlPoint());
+            return beatmap;
+        }
 
         private GlobalActionContainer globalActionContainer => this.ChildrenOfType<GlobalActionContainer>().Single();
+
+        [Test]
+        public void TestPlaceThenUndo()
+        {
+            AddStep("select circle placement tool", () => InputManager.Key(Key.Number2));
+            AddStep("move mouse to center of playfield", () => InputManager.MoveMouseTo(this.ChildrenOfType<Playfield>().Single()));
+            AddStep("place circle", () => InputManager.Click(MouseButton.Left));
+
+            AddAssert("one circle added", () => EditorBeatmap.HitObjects, () => Has.One.Items);
+
+            AddStep("undo", () => Editor.Undo());
+
+            AddAssert("circle removed", () => EditorBeatmap.HitObjects, () => Is.Empty);
+        }
+
+        [Test]
+        public void TestTimingLost()
+        {
+            AddStep("select circle placement tool", () => InputManager.Key(Key.Number2));
+            AddStep("move mouse to center of playfield", () => InputManager.MoveMouseTo(this.ChildrenOfType<Playfield>().Single()));
+
+            AddAssert("placement ready", () => this.ChildrenOfType<ComposeBlueprintContainer>().Single().CurrentPlacement, () => Is.Not.Null);
+
+            AddStep("nuke timing", () => EditorBeatmap.ControlPointInfo.Clear());
+
+            AddAssert("placement not available", () => this.ChildrenOfType<ComposeBlueprintContainer>().Single().CurrentPlacement, () => Is.Null);
+
+            AddStep("select circle placement tool", () => InputManager.Key(Key.Number2));
+
+            AddAssert("placement not available", () => this.ChildrenOfType<ComposeBlueprintContainer>().Single().CurrentPlacement, () => Is.Null);
+
+            AddStep("add back timing", () => EditorBeatmap.ControlPointInfo.Add(0, new TimingControlPoint()));
+            AddStep("select circle placement tool", () => InputManager.Key(Key.Number2));
+
+            AddAssert("placement ready", () => this.ChildrenOfType<ComposeBlueprintContainer>().Single().CurrentPlacement, () => Is.Not.Null);
+        }
 
         [Test]
         public void TestDeleteUsingMiddleMouse()
@@ -58,23 +103,66 @@ namespace osu.Game.Tests.Visual.Editing
         }
 
         [Test]
-        public void TestContextMenu()
+        public void TestRightClickDuringEmptyPlacementTogglesNewCombo()
+        {
+            AddStep("select circle placement tool", () => InputManager.Key(Key.Number2));
+            AddStep("move mouse to center of playfield", () => InputManager.MoveMouseTo(this.ChildrenOfType<Playfield>().Single()));
+            AddStep("place circle", () => InputManager.Click(MouseButton.Left));
+            AddAssert("one circle added", () => EditorBeatmap.HitObjects, () => Has.One.Items);
+
+            AddStep("move mouse away from placed circle", () => InputManager.MoveMouseTo(this.ChildrenOfType<Playfield>().Single().ScreenSpaceDrawQuad.TopLeft + Vector2.One));
+
+            AddAssert("new combo false", () => this.ChildrenOfType<NewComboTernaryButton>().Single().Current.Value, () => Is.EqualTo(TernaryState.False));
+            AddStep("click right mouse", () => InputManager.Click(MouseButton.Right));
+            AddAssert("new combo true", () => this.ChildrenOfType<NewComboTernaryButton>().Single().Current.Value, () => Is.EqualTo(TernaryState.True));
+            AddAssert("context menu not visible", () => !Editor.ChildrenOfType<OsuContextMenu>().Any(c => c.IsPresent));
+
+            AddStep("click right mouse", () => InputManager.Click(MouseButton.Right));
+            AddAssert("new combo false", () => this.ChildrenOfType<NewComboTernaryButton>().Single().Current.Value, () => Is.EqualTo(TernaryState.False));
+            AddAssert("context menu not visible", () => !Editor.ChildrenOfType<OsuContextMenu>().Any(c => c.IsPresent));
+        }
+
+        [Test]
+        public void TestRightClickDuringPlacementDeletes()
+        {
+            AddStep("select circle placement tool", () => InputManager.Key(Key.Number2));
+            AddStep("move mouse to center of playfield", () => InputManager.MoveMouseTo(this.ChildrenOfType<Playfield>().Single()));
+            AddStep("place circle", () => InputManager.Click(MouseButton.Left));
+            AddAssert("one circle added", () => EditorBeatmap.HitObjects, () => Has.One.Items);
+
+            AddStep("click right mouse", () => InputManager.Click(MouseButton.Right));
+
+            AddAssert("circle removed", () => EditorBeatmap.HitObjects, () => Has.Exactly(0).Items);
+            AddAssert("circle not selected", () => EditorBeatmap.SelectedHitObjects, () => Has.Exactly(0).Items);
+            AddAssert("context menu not visible", () => !Editor.ChildrenOfType<OsuContextMenu>().Any(c => c.IsPresent));
+            AddAssert("new combo false", () => this.ChildrenOfType<NewComboTernaryButton>().Single().Current.Value, () => Is.EqualTo(TernaryState.False));
+        }
+
+        [Test]
+        public void TestRightClickDuringSelectionShowsContextMenu()
         {
             AddStep("select circle placement tool", () => InputManager.Key(Key.Number2));
             AddStep("move mouse to center of playfield", () => InputManager.MoveMouseTo(this.ChildrenOfType<Playfield>().Single()));
             AddStep("place circle", () => InputManager.Click(MouseButton.Left));
 
-            AddAssert("one circle added", () => EditorBeatmap.HitObjects, () => Has.One.Items);
-            AddStep("delete with right mouse", () =>
-            {
-                InputManager.Click(MouseButton.Right);
-            });
-            AddAssert("circle not removed", () => EditorBeatmap.HitObjects, () => Has.One.Items);
+            // ensure the circle we're selecting is not a new combo so we can assert
+            // new combo doesn't happen to get toggled by right click.
+            AddStep("seek forward", () => EditorClock.Seek(1000));
+            AddStep("place second circle", () => InputManager.Click(MouseButton.Left));
+
+            AddAssert("two circles added", () => EditorBeatmap.HitObjects, () => Has.Exactly(2).Items);
+            AddAssert("context menu not visible", () => !Editor.ChildrenOfType<OsuContextMenu>().Any(c => c.IsPresent));
+
+            AddStep("select selection tool", () => InputManager.Key(Key.Number1));
+            AddStep("click right mouse", () => InputManager.Click(MouseButton.Right));
+
+            AddAssert("circle not removed", () => EditorBeatmap.HitObjects, () => Has.Exactly(2).Items);
             AddAssert("circle selected", () => EditorBeatmap.SelectedHitObjects, () => Has.One.Items);
+            AddAssert("context menu visible", () => Editor.ChildrenOfType<OsuContextMenu>().Any(c => c.IsPresent));
+            AddAssert("new combo false", () => this.ChildrenOfType<NewComboTernaryButton>().Single().Current.Value, () => Is.EqualTo(TernaryState.False));
         }
 
         [Test]
-        [Solo]
         public void TestCommitPlacementViaRightClick()
         {
             Playfield playfield = null!;
@@ -93,32 +181,6 @@ namespace osu.Game.Tests.Visual.Editing
                 InputManager.MoveMouseTo(location);
             });
             AddStep("confirm via right click", () => InputManager.Click(MouseButton.Right));
-            AddAssert("slider placed", () => EditorBeatmap.HitObjects.Count, () => Is.EqualTo(1));
-        }
-
-        [Test]
-        public void TestCommitPlacementViaGlobalAction()
-        {
-            Playfield playfield = null!;
-
-            AddStep("select slider placement tool", () => InputManager.Key(Key.Number3));
-            AddStep("move mouse to top left of playfield", () =>
-            {
-                playfield = this.ChildrenOfType<Playfield>().Single();
-                var location = (3 * playfield.ScreenSpaceDrawQuad.TopLeft + playfield.ScreenSpaceDrawQuad.BottomRight) / 4;
-                InputManager.MoveMouseTo(location);
-            });
-            AddStep("begin placement", () => InputManager.Click(MouseButton.Left));
-            AddStep("move mouse to bottom right of playfield", () =>
-            {
-                var location = (playfield.ScreenSpaceDrawQuad.TopLeft + 3 * playfield.ScreenSpaceDrawQuad.BottomRight) / 4;
-                InputManager.MoveMouseTo(location);
-            });
-            AddStep("confirm via global action", () =>
-            {
-                globalActionContainer.TriggerPressed(GlobalAction.Select);
-                globalActionContainer.TriggerReleased(GlobalAction.Select);
-            });
             AddAssert("slider placed", () => EditorBeatmap.HitObjects.Count, () => Is.EqualTo(1));
         }
 
@@ -191,7 +253,9 @@ namespace osu.Game.Tests.Visual.Editing
             AddStep("enable automatic bank assignment", () =>
             {
                 InputManager.PressKey(Key.LShift);
+                InputManager.PressKey(Key.LAlt);
                 InputManager.Key(Key.Q);
+                InputManager.ReleaseKey(Key.LAlt);
                 InputManager.ReleaseKey(Key.LShift);
             });
             AddStep("select circle placement tool", () => InputManager.Key(Key.Number2));
@@ -208,8 +272,8 @@ namespace osu.Game.Tests.Visual.Editing
             AddAssert("circle has 2 samples", () => EditorBeatmap.HitObjects[1].Samples, () => Has.Count.EqualTo(2));
             AddAssert("normal sample has soft bank", () => EditorBeatmap.HitObjects[1].Samples.Single(s => s.Name == HitSampleInfo.HIT_NORMAL).Bank,
                 () => Is.EqualTo(HitSampleInfo.BANK_SOFT));
-            AddAssert("clap sample has drum bank", () => EditorBeatmap.HitObjects[1].Samples.Single(s => s.Name == HitSampleInfo.HIT_CLAP).Bank,
-                () => Is.EqualTo(HitSampleInfo.BANK_DRUM));
+            AddAssert("clap sample has soft bank", () => EditorBeatmap.HitObjects[1].Samples.Single(s => s.Name == HitSampleInfo.HIT_CLAP).Bank,
+                () => Is.EqualTo(HitSampleInfo.BANK_SOFT));
             AddAssert("circle inherited volume", () => EditorBeatmap.HitObjects[1].Samples.All(s => s.Volume == 70));
 
             AddStep("seek to 1000", () => EditorClock.Seek(1000)); // previous object is the one at time 500, which has no additions
@@ -254,7 +318,9 @@ namespace osu.Game.Tests.Visual.Editing
             AddStep("select drum bank", () =>
             {
                 InputManager.PressKey(Key.LShift);
+                InputManager.PressKey(Key.LAlt);
                 InputManager.Key(Key.R);
+                InputManager.ReleaseKey(Key.LAlt);
                 InputManager.ReleaseKey(Key.LShift);
             });
             AddStep("enable clap addition", () => InputManager.Key(Key.R));
@@ -272,11 +338,7 @@ namespace osu.Game.Tests.Visual.Editing
                 var location = (playfield.ScreenSpaceDrawQuad.TopLeft + 3 * playfield.ScreenSpaceDrawQuad.BottomRight) / 4;
                 InputManager.MoveMouseTo(location);
             });
-            AddStep("confirm via global action", () =>
-            {
-                globalActionContainer.TriggerPressed(GlobalAction.Select);
-                globalActionContainer.TriggerReleased(GlobalAction.Select);
-            });
+            AddStep("confirm via right click", () => InputManager.Click(MouseButton.Right));
             AddAssert("slider placed", () => EditorBeatmap.HitObjects.Count, () => Is.EqualTo(1));
 
             AddAssert("slider samples have drum bank", () => EditorBeatmap.HitObjects[0].Samples.All(s => s.Bank == HitSampleInfo.BANK_DRUM));
