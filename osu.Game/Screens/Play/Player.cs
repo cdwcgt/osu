@@ -179,6 +179,8 @@ namespace osu.Game.Screens.Play
 
         public readonly PlayerConfiguration Configuration;
 
+        private Bindable<bool> keepPlayerAfterFail = new Bindable<bool>();
+
         /// <summary>
         /// The score for the current play session.
         /// Available only after the player is loaded.
@@ -248,8 +250,7 @@ namespace osu.Game.Screens.Play
                 return;
             }
 
-            if (Configuration.AllowFailAnimation)
-                Configuration.AllowFailAnimation = !config.Get<bool>(OsuSetting.NoFailAnimation);
+            config.BindWith(OsuSetting.KeepPlayerAfterFail, keepPlayerAfterFail);
 
             if (game != null)
                 gameActive.BindTo(game.IsActive);
@@ -977,6 +978,13 @@ namespace osu.Game.Screens.Play
             Debug.Assert(!GameplayState.HasFailed);
             Debug.Assert(!GameplayState.HasPassed);
             Debug.Assert(!GameplayState.HasQuit);
+
+            // block fail logic here and fail the score.
+            if (keepPlayerAfterFail.Value && !DrawableRuleset.HasReplayLoaded.Value)
+            {
+                ScoreProcessor.FailScore(Score.ScoreInfo);
+                return;
+            }
 
             GameplayState.HasFailed = true;
 

@@ -33,7 +33,7 @@ namespace osu.Game.Overlays.Settings.Sections.Gameplay
                 new SettingsItemV2(new FormCheckBox
                 {
                     Caption = GeneralSettingsStrings.KeepPlayingEvenIsFailed,
-                    Current = config.GetBindable<bool>(OsuSetting.NoFailAnimation)
+                    Current = config.GetBindable<bool>(OsuSetting.KeepPlayerAfterFail)
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {

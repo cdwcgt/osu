@@ -27,7 +27,7 @@ namespace osu.Game.Tests.Visual.Gameplay
         public void TestOsuWithNoFailAnimationEnable()
         {
             AddStep("allow fail animation by player", () => enableFailAnimationByPlayer = true);
-            AddStep("enable No Fail Animation", () => LocalConfig.SetValue(OsuSetting.NoFailAnimation, true));
+            AddStep("enable No Fail Animation", () => LocalConfig.SetValue(OsuSetting.KeepPlayerAfterFail, true));
             CreateTest();
             AddUntilStep("wait for score rank F", () => Player.Score.ScoreInfo.Rank == ScoreRank.F);
             AddUntilStep("player has not fail", () => !Player.GameplayState.HasFailed);
@@ -37,7 +37,7 @@ namespace osu.Game.Tests.Visual.Gameplay
         public void TestOsuWithNoFailAnimationDisable()
         {
             AddStep("allow fail animation by player", () => enableFailAnimationByPlayer = true);
-            AddStep("disable no fail animation", () => LocalConfig.SetValue(OsuSetting.NoFailAnimation, false));
+            AddStep("disable no fail animation", () => LocalConfig.SetValue(OsuSetting.KeepPlayerAfterFail, false));
             CreateTest();
             AddUntilStep("wait for score rank F", () => Player.Score.ScoreInfo.Rank == ScoreRank.F);
             AddUntilStep("player has failed", () => Player.GameplayState.HasFailed);
@@ -50,7 +50,7 @@ namespace osu.Game.Tests.Visual.Gameplay
         public void TestNoFailAnimationEnableByPlayer()
         {
             AddStep("disallow fail animation by player", () => enableFailAnimationByPlayer = false);
-            AddStep("disable no fail animation", () => LocalConfig.SetValue(OsuSetting.NoFailAnimation, false));
+            AddStep("disable no fail animation", () => LocalConfig.SetValue(OsuSetting.KeepPlayerAfterFail, false));
             CreateTest();
             AddUntilStep("wait for score rank F", () => Player.Score.ScoreInfo.Rank == ScoreRank.F);
             AddUntilStep("player has not fail", () => !Player.GameplayState.HasFailed);
