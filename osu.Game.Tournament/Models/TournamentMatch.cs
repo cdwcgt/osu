@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Drawing;
+using System.Linq;
 using Newtonsoft.Json;
 using osu.Framework.Bindables;
 using osu.Game.Tournament.Screens.Ladder.Components;
@@ -19,15 +20,30 @@ namespace osu.Game.Tournament.Models
     {
         public int ID;
 
+        public readonly Bindable<MatchStructureType> StructureType = new Bindable<MatchStructureType>(MatchStructureType.HeadToHead);
+
         [JsonIgnore]
         public List<string> Acronyms
         {
             get
             {
-                List<string> acronyms = new List<string>();
-                if (Team1Acronym != null) acronyms.Add(Team1Acronym);
-                if (Team2Acronym != null) acronyms.Add(Team2Acronym);
-                return acronyms;
+                if (StructureType.Value == MatchStructureType.FourTeams)
+                {
+                    List<string> acronyms = new List<string>();
+
+                    foreach (var slot in TeamSlots)
+                    {
+                        if (slot.TeamAcronym != null)
+                            acronyms.Add(slot.TeamAcronym);
+                    }
+
+                    return acronyms;
+                }
+
+                List<string> legacyAcronyms = new List<string>();
+                if (Team1Acronym != null) legacyAcronyms.Add(Team1Acronym);
+                if (Team2Acronym != null) legacyAcronyms.Add(Team2Acronym);
+                return legacyAcronyms;
             }
         }
 
@@ -44,6 +60,13 @@ namespace osu.Game.Tournament.Models
         public string? Team2Acronym;
 
         public readonly Bindable<int?> Team2Score = new Bindable<int?>();
+
+        /// <summary>
+        /// New structure for multi-team matches.
+        /// Only used when StructureType is not HeadToHead.
+        /// </summary>
+        [JsonProperty]
+        public readonly BindableList<TournamentMatchSlot> TeamSlots = new BindableList<TournamentMatchSlot>();
 
         public readonly Bindable<bool> Completed = new Bindable<bool>();
 
@@ -86,7 +109,19 @@ namespace osu.Game.Tournament.Models
         }
 
         [JsonIgnore]
-        public TournamentTeam? Winner => !Completed.Value ? null : Team1Score.Value > Team2Score.Value ? Team1.Value : Team2.Value;
+        public TournamentTeam? Winner
+        {
+            get
+            {
+                if (!Completed.Value)
+                    return null;
+
+                if (StructureType.Value == MatchStructureType.HeadToHead)
+                    return Team1Score.Value > Team2Score.Value ? Team1.Value : Team2.Value;
+
+                return TeamSlots.MaxBy(t => t.Score.Value)?.Team.Value;
+            }
+        }
 
         [JsonIgnore]
         public TournamentTeam? Loser => !Completed.Value ? null : Team1Score.Value > Team2Score.Value ? Team2.Value : Team1.Value;
