@@ -31,6 +31,8 @@ namespace osu.Game.Tournament
         public static readonly Color4 ELEMENT_BACKGROUND_COLOUR = Color4Extensions.FromHex("#fff");
         public static readonly Color4 ELEMENT_FOREGROUND_COLOUR = Color4Extensions.FromHex("#000");
 
+        public const string TOURNAMENT_CLIENT_NAME = " Tournament Client ";
+
         public static readonly Color4 TEXT_COLOUR = Color4Extensions.FromHex("#fff");
         private Drawable heightWarning = null!;
 

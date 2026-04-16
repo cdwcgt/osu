@@ -20,6 +20,7 @@ using osu.Game.Online;
 using osu.Game.Online.API.Requests;
 using osu.Game.Tournament.IO;
 using osu.Game.Tournament.IPC;
+using osu.Game.Tournament.IPC.MemoryIPC;
 using osu.Game.Tournament.Models;
 using osu.Game.Users;
 using osuTK.Input;
@@ -33,7 +34,7 @@ namespace osu.Game.Tournament
         private LadderInfo ladder = new LadderInfo();
         private TournamentStorage storage = null!;
         private DependencyContainer dependencies = null!;
-        private FileBasedIPC ipc = null!;
+        private MemoryBasedIPC ipc = null!;
         private BeatmapLookupCache beatmapCache = null!;
 
         protected Task BracketLoadTask => bracketLoadTaskCompletionSource.Task;
@@ -125,14 +126,24 @@ namespace osu.Game.Tournament
                 // assign teams
                 foreach (var match in ladder.Matches)
                 {
-                    match.Team1.Value = ladder.Teams.FirstOrDefault(t => t.Acronym.Value == match.Team1Acronym);
-                    match.Team2.Value = ladder.Teams.FirstOrDefault(t => t.Acronym.Value == match.Team2Acronym);
-
-                    foreach (var conditional in match.ConditionalMatches)
+                    if (match.StructureType.Value == MatchStructureType.HeadToHead)
                     {
-                        conditional.Team1.Value = ladder.Teams.FirstOrDefault(t => t.Acronym.Value == conditional.Team1Acronym);
-                        conditional.Team2.Value = ladder.Teams.FirstOrDefault(t => t.Acronym.Value == conditional.Team2Acronym);
-                        conditional.Round.Value = match.Round.Value;
+                        match.Team1.Value = ladder.Teams.FirstOrDefault(t => t.Acronym.Value == match.Team1Acronym);
+                        match.Team2.Value = ladder.Teams.FirstOrDefault(t => t.Acronym.Value == match.Team2Acronym);
+
+                        foreach (var conditional in match.ConditionalMatches)
+                        {
+                            conditional.Team1.Value = ladder.Teams.FirstOrDefault(t => t.Acronym.Value == conditional.Team1Acronym);
+                            conditional.Team2.Value = ladder.Teams.FirstOrDefault(t => t.Acronym.Value == conditional.Team2Acronym);
+                            conditional.Round.Value = match.Round.Value;
+                        }
+                    }
+                    else
+                    {
+                        foreach (var slot in match.TeamSlots)
+                        {
+                            slot.Team.Value = ladder.Teams.FirstOrDefault(t => t.Acronym.Value == slot.TeamAcronym);
+                        }
                     }
                 }
 
@@ -202,7 +213,7 @@ namespace osu.Game.Tournament
                 Ruleset.BindTo(ladder.Ruleset);
 
                 dependencies.Cache(ladder);
-                dependencies.CacheAs<MatchIPCInfo>(ipc = new FileBasedIPC());
+                dependencies.CacheAs<MatchIPCInfo>(ipc = new MemoryBasedIPC());
                 Add(ipc);
 
                 bracketLoadTaskCompletionSource.SetResult(true);

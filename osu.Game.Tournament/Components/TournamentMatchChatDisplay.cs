@@ -16,7 +16,7 @@ namespace osu.Game.Tournament.Components
 {
     public partial class TournamentMatchChatDisplay : StandAloneChatDisplay
     {
-        private readonly Bindable<string> channelName = new Bindable<string>();
+        private readonly Bindable<int> channelName = new Bindable<int>();
 
         private ChannelManager? manager;
 
@@ -42,24 +42,18 @@ namespace osu.Game.Tournament.Components
             channelName.BindTo(ipc.ChatChannel);
             channelName.BindValueChanged(c =>
             {
-                if (int.TryParse(c.OldValue, out int oldChannelId) && oldChannelId > 0)
-                {
-                    var joinedChannel = manager.JoinedChannels.SingleOrDefault(ch => ch.Id == oldChannelId);
-                    if (joinedChannel != null)
-                        manager.LeaveChannel(joinedChannel);
-                }
+                var joinedChannel = manager.JoinedChannels.SingleOrDefault(ch => ch.Id == c.OldValue);
+                if (joinedChannel != null)
+                    manager.LeaveChannel(joinedChannel);
 
-                if (int.TryParse(c.NewValue, out int newChannelId) && newChannelId > 0)
+                var channel = new Channel
                 {
-                    var channel = new Channel
-                    {
-                        Id = newChannelId,
-                        Type = ChannelType.Public
-                    };
+                    Id = c.NewValue,
+                    Type = ChannelType.Public
+                };
 
-                    manager.JoinChannel(channel);
-                    manager.CurrentChannel.Value = channel;
-                }
+                manager.JoinChannel(channel);
+                manager.CurrentChannel.Value = channel;
             }, true);
         }
 
