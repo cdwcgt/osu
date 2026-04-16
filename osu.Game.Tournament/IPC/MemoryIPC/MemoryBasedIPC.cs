@@ -39,6 +39,8 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
         public BindableInt Team1Combo { get; } = new BindableInt();
         public BindableInt Team2Combo { get; } = new BindableInt();
+        public BindableInt Team3Combo { get; } = new BindableInt();
+        public BindableInt Team4Combo { get; } = new BindableInt();
 
         [Resolved]
         protected IAPIProvider API { get; private set; } = null!;
@@ -333,6 +335,8 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
 
             Team1Combo.Value = getCombo(TeamColour.Red);
             Team2Combo.Value = getCombo(TeamColour.Blue);
+            Team3Combo.Value = getCombo(TeamColour.Yellow);
+            Team4Combo.Value = getCombo(TeamColour.Green);
         }
 
         protected virtual IEnumerable<PlayerScore> GetTeamScore(TeamColour colour)
