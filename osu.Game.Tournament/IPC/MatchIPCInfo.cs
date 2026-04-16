@@ -16,5 +16,8 @@ namespace osu.Game.Tournament.IPC
         public Bindable<int> ChatChannel { get; } = new Bindable<int>();
         public BindableLong Score1 { get; } = new BindableLong();
         public BindableLong Score2 { get; } = new BindableLong();
+
+        public BindableLong Score3 { get; } = new BindableLong();
+        public BindableLong Score4 { get; } = new BindableLong();
     }
 }

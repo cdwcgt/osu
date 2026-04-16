@@ -328,6 +328,8 @@ namespace osu.Game.Tournament.IPC.MemoryIPC
         {
             Score1.Value = GetTeamScore(TeamColour.Red).Sum(s => s.Score);
             Score2.Value = GetTeamScore(TeamColour.Blue).Sum(s => s.Score);
+            Score3.Value = GetTeamScore(TeamColour.Yellow).Sum(s => s.Score);
+            Score4.Value = GetTeamScore(TeamColour.Green).Sum(s => s.Score);
 
             Team1Combo.Value = getCombo(TeamColour.Red);
             Team2Combo.Value = getCombo(TeamColour.Blue);
