@@ -52,6 +52,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 {
                     ShowLogo = false,
                 },
+                new FourTeamMatchHeader(null),
                 new Container
                 {
                     RelativeSizeAxes = Axes.X,

@@ -51,6 +51,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                 {
                     ShowScores = true,
                 },
+                new FourTeamMatchHeader(null),
                 mapFlows = new FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>>
                 {
                     Y = 160,

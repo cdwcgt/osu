@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Game.Tournament.Components;
@@ -15,6 +16,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private TeamScoreDisplay teamDisplay1 = null!;
         private TeamScoreDisplay teamDisplay2 = null!;
         private DrawableTournamentHeaderLogo logo = null!;
+
+        private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
 
         private bool showScores = true;
 
@@ -51,7 +54,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         }
 
         [BackgroundDependencyLoader]
-        private void load()
+        private void load(LadderInfo info)
         {
             RelativeSizeAxes = Axes.X;
             Height = 95;
@@ -95,6 +98,19 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     Origin = Anchor.TopRight,
                 },
             };
+
+            currentMatch.BindValueChanged(m =>
+            {
+                if (m.NewValue == null || m.NewValue.StructureType.Value != MatchStructureType.HeadToHead)
+                {
+                    Hide();
+                    return;
+                }
+
+                Show();
+            });
+
+            currentMatch.BindTo(info.CurrentMatch);
         }
 
         protected override void LoadComplete()

@@ -21,9 +21,10 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private readonly BindableList<TournamentMatchSlot> slot = new BindableList<TournamentMatchSlot>();
         private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
 
-        public FourTeamMatchHeader(BindableList<TournamentMatchSlot> slot) // test purpose
+        public FourTeamMatchHeader(BindableList<TournamentMatchSlot>? slot) // test purpose
         {
-            this.slot.BindTo(slot);
+            if (slot != null)
+                this.slot.BindTo(slot);
 
             RelativeSizeAxes = Axes.X;
             Height = 95;
@@ -35,8 +36,12 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             currentMatch.BindValueChanged(m =>
             {
                 if (m.NewValue == null || m.NewValue.StructureType.Value != MatchStructureType.FourTeams)
+                {
+                    Hide();
                     return;
+                }
 
+                Show();
                 slot.BindTo(m.NewValue.TeamSlots);
             });
 
