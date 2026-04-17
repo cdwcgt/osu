@@ -57,6 +57,7 @@ namespace osu.Game.Tournament.Components
         }
 
         private FillFlowContainer flow = null!;
+        private Box background = null!;
 
         private bool expanded;
 
@@ -67,6 +68,7 @@ namespace osu.Game.Tournament.Components
             {
                 expanded = value;
                 flow.Direction = expanded ? FillDirection.Full : FillDirection.Vertical;
+                background.Width = expanded ? 1 : 0.5f;
             }
         }
 
@@ -84,8 +86,10 @@ namespace osu.Game.Tournament.Components
 
             InternalChildren = new Drawable[]
             {
-                new Box
+                background = new Box
                 {
+                    Anchor = Anchor.TopRight,
+                    Origin = Anchor.TopRight,
                     Colour = colours.Gray3,
                     RelativeSizeAxes = Axes.Both,
                     Alpha = 0.4f,

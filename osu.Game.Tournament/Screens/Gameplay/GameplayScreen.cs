@@ -90,12 +90,14 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 scoreDisplay = new TournamentMatchScoreDisplay
                 {
                     Y = -147,
+                    Alpha = 0,
                     Anchor = Anchor.BottomCentre,
                     Origin = Anchor.TopCentre,
                 },
                 fourTeamScoreDisplay = new FourTeamScoreDisplay
                 {
                     RelativeSizeAxes = Axes.X,
+                    Alpha = 0,
                     Width = 0.5f,
                     Height = 145f,
                     Anchor = Anchor.BottomLeft,
@@ -181,6 +183,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 return;
             }
 
+            fourTeamScoreDisplay.FadeOut();
             SongBar.Expanded = false;
             scoreDisplay.FadeOut(100);
             using (chat.BeginDelayedSequence(500))
@@ -199,8 +202,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
             if (CurrentMatch.Value?.StructureType.Value == MatchStructureType.FourTeams)
             {
                 fourTeamScoreDisplay.FadeIn(100);
+                scoreDisplay.FadeOut();
+                SongBar.Expanded = false;
                 return;
             }
+
+            fourTeamScoreDisplay.FadeOut();
 
             using (BeginDelayedSequence(300))
             {

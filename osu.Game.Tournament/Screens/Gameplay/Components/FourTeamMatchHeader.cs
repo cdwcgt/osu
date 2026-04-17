@@ -36,6 +36,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 if (m.NewValue == null || m.NewValue.StructureType.Value != MatchStructureType.FourTeams)
                 {
                     Hide();
+                    slot.UnbindBindings();
                     return;
                 }
 

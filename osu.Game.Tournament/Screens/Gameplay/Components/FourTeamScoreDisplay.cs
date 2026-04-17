@@ -174,7 +174,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     return;
 
                 var team = currentMatch.Value.TeamSlots.SingleOrDefault(t => t.Colour.Value == colour);
-                teamNameText.Text = team?.Team.Value?.FlagName.Value ?? $"Team {colour}";
+                teamNameText.Text = team?.Team.Value?.FullName.Value ?? $"Team {colour}";
             }
 
             private void updateScore()
