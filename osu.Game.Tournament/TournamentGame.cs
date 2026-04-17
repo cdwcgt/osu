@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -23,10 +24,31 @@ namespace osu.Game.Tournament
     [Cached]
     public partial class TournamentGame : TournamentGameBase
     {
-        public static ColourInfo GetTeamColour(TeamColour teamColour) => teamColour == TeamColour.Red ? COLOUR_RED : COLOUR_BLUE;
+        public static ColourInfo GetTeamColour(TeamColour teamColour)
+        {
+            switch (teamColour)
+            {
+                case TeamColour.Red:
+                    return COLOUR_RED;
+
+                case TeamColour.Blue:
+                    return COLOUR_BLUE;
+
+                case TeamColour.Yellow:
+                    return COLOUR_YELLOW;
+
+                case TeamColour.Green:
+                    return COLOUR_GREEN;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(teamColour), teamColour, null);
+            }
+        }
 
         public static readonly Color4 COLOUR_RED = new OsuColour().TeamColourRed;
         public static readonly Color4 COLOUR_BLUE = new OsuColour().TeamColourBlue;
+        public static readonly Color4 COLOUR_YELLOW = Color4Extensions.FromHex(@"eeaa00");
+        public static readonly Color4 COLOUR_GREEN = Color4Extensions.FromHex(@"33cc40");
 
         public static readonly Color4 ELEMENT_BACKGROUND_COLOUR = Color4Extensions.FromHex("#fff");
         public static readonly Color4 ELEMENT_FOREGROUND_COLOUR = Color4Extensions.FromHex("#000");
