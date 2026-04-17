@@ -5,14 +5,12 @@ using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
-using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Game.Graphics;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osuTK;
-using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Screens.Gameplay.Components
 {
@@ -121,38 +119,17 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             }
 
             [BackgroundDependencyLoader]
-            private void load(OsuColour color)
+            private void load()
             {
                 if (slot == null || Team == null)
                     return;
-
-                ColourInfo backgroundColor = Color4.Black;
-
-                switch (slot!.Colour.Value)
-                {
-                    case TeamColour.Red:
-                        backgroundColor = color.Red3;
-                        break;
-
-                    case TeamColour.Blue:
-                        backgroundColor = color.BlueDark;
-                        break;
-
-                    case TeamColour.Yellow:
-                        backgroundColor = color.YellowDark;
-                        break;
-
-                    case TeamColour.Green:
-                        backgroundColor = color.Green3;
-                        break;
-                }
 
                 InternalChildren = new Drawable[]
                 {
                     new Box
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Colour = backgroundColor
+                        Colour = TournamentGame.GetTeamColour(slot.Colour.Value),
                     },
                     new GridContainer
                     {

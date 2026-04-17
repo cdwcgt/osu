@@ -93,6 +93,14 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     Anchor = Anchor.BottomCentre,
                     Origin = Anchor.TopCentre,
                 },
+                fourTeamScoreDisplay = new FourTeamScoreDisplay
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Width = 0.5f,
+                    Height = 145f,
+                    Anchor = Anchor.BottomLeft,
+                    Origin = Anchor.BottomLeft,
+                },
                 new ControlPanel
                 {
                     Children = new Drawable[]
@@ -156,6 +164,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         private TourneyState lastState;
         private MatchHeader header = null!;
+        private FourTeamScoreDisplay fourTeamScoreDisplay;
 
         private void contract()
         {
@@ -163,6 +172,14 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 return;
 
             scheduledContract?.Cancel();
+
+            if (CurrentMatch.Value?.StructureType.Value == MatchStructureType.FourTeams)
+            {
+                fourTeamScoreDisplay.FadeOut(100);
+                using (chat.BeginDelayedSequence(500))
+                    chat.Expand();
+                return;
+            }
 
             SongBar.Expanded = false;
             scoreDisplay.FadeOut(100);
@@ -178,6 +195,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
             scheduledContract?.Cancel();
 
             chat.Contract();
+
+            if (CurrentMatch.Value?.StructureType.Value == MatchStructureType.FourTeams)
+            {
+                fourTeamScoreDisplay.FadeIn(100);
+                return;
+            }
 
             using (BeginDelayedSequence(300))
             {
