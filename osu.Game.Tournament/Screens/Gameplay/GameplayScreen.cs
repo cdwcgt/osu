@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -226,10 +227,42 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 {
                     if (warmup.Value || CurrentMatch.Value == null) return;
 
-                    if (ipc.Score1.Value > ipc.Score2.Value)
-                        CurrentMatch.Value.Team1Score.Value++;
-                    else
-                        CurrentMatch.Value.Team2Score.Value++;
+                    if (CurrentMatch.Value.StructureType.Value == MatchStructureType.HeadToHead)
+                    {
+                        if (ipc.Score1.Value > ipc.Score2.Value)
+                            CurrentMatch.Value.Team1Score.Value++;
+                        else
+                            CurrentMatch.Value.Team2Score.Value++;
+                    }
+                    else if (CurrentMatch.Value.StructureType.Value == MatchStructureType.FourTeams)
+                    {
+                        var rankableScores = new[]
+                                             {
+                                                 (Score: ipc.Score1.Value, Colour: TeamColour.Red),
+                                                 (Score: ipc.Score2.Value, Colour: TeamColour.Blue),
+                                                 (Score: ipc.Score3.Value, Colour: TeamColour.Yellow),
+                                                 (Score: ipc.Score4.Value, Colour: TeamColour.Green)
+                                             }
+                                             .OrderByDescending(s => s.Score)
+                                             .ToList();
+
+                        int[] rewards = { 3, 2, 1, 0 };
+
+                        for (int i = 0; i < rankableScores.Count; i++)
+                        {
+                            var scoreInfo = rankableScores[i];
+                            int reward = rewards[i];
+
+                            if (reward <= 0) continue;
+
+                            var slot = CurrentMatch.Value.TeamSlots.SingleOrDefault(t => t.Colour.Value == scoreInfo.Colour);
+
+                            if (slot != null)
+                            {
+                                slot.Score.Value += reward;
+                            }
+                        }
+                    }
                 }
 
                 switch (State.Value)
