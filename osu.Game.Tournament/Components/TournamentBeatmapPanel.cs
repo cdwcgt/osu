@@ -10,10 +10,13 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Localisation;
+using osu.Framework.Graphics.Sprites;
+using osu.Framework.Graphics.Textures;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Drawables;
 using osu.Game.Graphics;
 using osu.Game.Tournament.Models;
+using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Components
@@ -22,18 +25,21 @@ namespace osu.Game.Tournament.Components
     {
         public readonly IBeatmapInfo? Beatmap;
 
-        private readonly string mod;
+        private readonly string? mod;
 
         public const float HEIGHT = 50;
 
         private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
 
         private Box flash = null!;
+        private PadLock padLock = null!;
+        private readonly bool isMappool;
 
-        public TournamentBeatmapPanel(IBeatmapInfo? beatmap, string mod = "")
+        public TournamentBeatmapPanel(IBeatmapInfo? beatmap, string mod = "", bool isMappool = false)
         {
             Beatmap = beatmap;
             this.mod = mod;
+            this.isMappool = isMappool;
 
             Width = 400;
             Height = HEIGHT;
@@ -107,6 +113,12 @@ namespace osu.Game.Tournament.Components
                         }
                     },
                 },
+                padLock = new PadLock
+                {
+                    Origin = Anchor.Centre,
+                    Anchor = Anchor.Centre,
+                    Alpha = 0f,
+                },
                 flash = new Box
                 {
                     RelativeSizeAxes = Axes.Both,
@@ -151,20 +163,37 @@ namespace osu.Game.Tournament.Components
                 return;
             }
 
-            var newChoice = currentMatch.Value.PicksBans.FirstOrDefault(p => p.BeatmapID == Beatmap?.OnlineID);
+            var found = currentMatch.Value.PicksBans.Where(p => p.BeatmapID == Beatmap?.OnlineID).ToList();
+            var foundProtected = isMappool ? found.FirstOrDefault(s => s.Type == ChoiceType.Protected) : null;
+            var lastFound = found.LastOrDefault();
 
-            bool shouldFlash = newChoice != choice;
+            bool shouldFlash = lastFound != choice;
 
-            if (newChoice != null)
+            if (foundProtected != null && isMappool)
+            {
+                padLock.Team = foundProtected.Team;
+                padLock.Show();
+
+                if (currentMatch.Value.PicksBans.Any(p => p.Type == ChoiceType.Pick))
+                {
+                    padLock.FadeTo(0.5f);
+                }
+            }
+            else
+            {
+                padLock.Hide();
+            }
+
+            if (lastFound != null)
             {
                 if (shouldFlash)
                     flash.FadeOutFromOne(500).Loop(0, 10);
 
                 BorderThickness = 6;
 
-                BorderColour = TournamentGame.GetTeamColour(newChoice.Team);
+                BorderColour = TournamentGame.GetTeamColour(lastFound.Team);
 
-                switch (newChoice.Type)
+                switch (lastFound.Type)
                 {
                     case ChoiceType.Pick:
                         Colour = Color4.White;
@@ -175,6 +204,11 @@ namespace osu.Game.Tournament.Components
                         Colour = Color4.Gray;
                         Alpha = 0.5f;
                         break;
+
+                    case ChoiceType.Protected:
+                        Alpha = 1f;
+                        BorderThickness = 0;
+                        break;
                 }
             }
             else
@@ -184,7 +218,7 @@ namespace osu.Game.Tournament.Components
                 Alpha = 1;
             }
 
-            choice = newChoice;
+            choice = lastFound;
         }
 
         private partial class NoUnloadBeatmapSetCover : UpdateableOnlineBeatmapSetCover
@@ -195,6 +229,46 @@ namespace osu.Game.Tournament.Components
             // Use DelayedLoadWrapper to avoid content unloading when switching away to another screen.
             protected override DelayedLoadWrapper CreateDelayedLoadWrapper(Func<Drawable> createContentFunc, double timeBeforeLoad)
                 => new DelayedLoadWrapper(createContentFunc(), timeBeforeLoad);
+        }
+
+        private partial class PadLock : Container
+        {
+            [Resolved]
+            private OsuColour osuColour { get; set; } = null!;
+
+            public TeamColour Team
+            {
+                set => lockIcon.Colour = value == TeamColour.Red ? osuColour.TeamColourRed : osuColour.TeamColourBlue;
+            }
+
+            private Sprite background = null!;
+            private SpriteIcon lockIcon = null!;
+
+            [BackgroundDependencyLoader]
+            private void load(TextureStore textures)
+            {
+                Size = new Vector2(40);
+
+                Children = new Drawable[]
+                {
+                    background = new Sprite
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        FillMode = FillMode.Fit,
+                        Texture = textures.Get("Icons/BeatmapDetails/mod-icon"),
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
+                    },
+                    lockIcon = new SpriteIcon
+                    {
+                        Origin = Anchor.Centre,
+                        Anchor = Anchor.Centre,
+                        Size = new Vector2(22),
+                        Icon = FontAwesome.Solid.ShieldAlt,
+                        Shadow = true,
+                    }
+                };
+            }
         }
     }
 }
