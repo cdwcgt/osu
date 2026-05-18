@@ -17,6 +17,8 @@ namespace osu.Game.Tournament.Github
 
         public static string PrBody => "Updating bracket";
 
+        public static string? BracketUploadServiceUrl => Environment.GetEnvironmentVariable("BRACKET_UPLOADER_URL");
+
         public static string? GithubToken => Environment.GetEnvironmentVariable("GITHUB_TOKEN");
     }
 }

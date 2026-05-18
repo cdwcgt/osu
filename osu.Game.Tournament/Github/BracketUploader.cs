@@ -3,8 +3,6 @@
 
 using System;
 using System.IO;
-using System.Linq;
-using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -43,11 +41,9 @@ namespace osu.Game.Tournament.Github
                 return;
             }
 
-            string? token = GithubConfig.GithubToken;
-
-            if (string.IsNullOrWhiteSpace(token))
+            if (string.IsNullOrWhiteSpace(GithubConfig.BracketUploadServiceUrl))
             {
-                Logger.Log("Bracket upload aborted: GITHUB_TOKEN is not set.");
+                Logger.Log("Bracket upload aborted: BRACKET_UPLOADER_URL is not set.");
                 return;
             }
 
@@ -56,51 +52,29 @@ namespace osu.Game.Tournament.Github
             using (var sr = new StreamReader(stream, Encoding.UTF8))
                 bracketJson = await sr.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
 
-            string newBranch = GithubConfig.NewBranch;
-            string prTitle = GithubConfig.PrTitle;
-            string prBody = GithubConfig.PrBody;
-
             string savedSha = config.Get<string>(StorageConfig.LastGithubCommitSha);
-            string baseSha = string.IsNullOrWhiteSpace(savedSha)
-                ? await GithubApiClient.GetBaseBranchShaAsync(token, cancellationToken).ConfigureAwait(false)
-                : savedSha;
+            var request = BracketUploadRequest.CreateFull(
+                bracketJson,
+                string.IsNullOrWhiteSpace(savedSha) ? null : savedSha,
+                api.ProvidedUsername);
 
-            await ensureBranch(token, baseSha, newBranch, cancellationToken).ConfigureAwait(false);
+            await api.PerformAsync(request).ConfigureAwait(false);
 
-            string? existingFileSha = await getFileSha(token, newBranch, cancellationToken).ConfigureAwait(false);
-            await putFile(token, bracketJson, TournamentGameBase.BRACKET_FILENAME, existingFileSha, newBranch, cancellationToken).ConfigureAwait(false);
-
-            string prUrl = await createPullRequest(token, newBranch, prTitle, prBody, cancellationToken).ConfigureAwait(false);
+            string prUrl = request.Response?.PullRequestUrl
+                           ?? throw new InvalidOperationException("Failed to resolve PR URL from bracket upload service.");
             host.OpenUrlExternally(prUrl);
             Logger.Log($"Bracket upload complete. PR created: {prUrl}");
         }
 
         public async Task UploadByMatchAsync(TournamentMatch match, CancellationToken cancellationToken = default)
         {
-            string? token = GithubConfig.GithubToken;
-
-            if (string.IsNullOrWhiteSpace(token))
+            if (string.IsNullOrWhiteSpace(GithubConfig.BracketUploadServiceUrl))
             {
-                Logger.Log("Bracket upload aborted: GITHUB_TOKEN is not set.");
+                Logger.Log("Bracket upload aborted: BRACKET_UPLOADER_URL is not set.");
                 return;
             }
 
-            string baseSha = await GithubApiClient.GetBaseBranchShaAsync(token, cancellationToken).ConfigureAwait(false);
-
-            byte[] bracketBytes = await BracketDownloader.GetJsonBytes(baseSha, cancellationToken).ConfigureAwait(false);
-
-            // 希望够用
-            var bracket = JsonConvert.DeserializeObject<LadderInfo>(Encoding.UTF8.GetString(bracketBytes), new JsonPointConverter());
-            if (bracket == null)
-                throw new InvalidOperationException("Failed to resolve bracket from GitHub.");
-
-            var existing = bracket.Matches.FirstOrDefault(m => m.ID == match.ID)
-                           ?? throw new InvalidOperationException("Failed to get match from Github bracket.");
-
-            int idx = bracket.Matches.IndexOf(existing);
-            bracket.Matches[idx] = match;
-
-            string bracketJson = JsonConvert.SerializeObject(bracket,
+            string matchJson = JsonConvert.SerializeObject(match,
                 new JsonSerializerSettings
                 {
                     Formatting = Formatting.Indented,
@@ -109,102 +83,14 @@ namespace osu.Game.Tournament.Github
                     Converters = new JsonConverter[] { new JsonPointConverter() }
                 });
 
-            string newBranch = GithubConfig.NewBranch;
-            string prTitle = $"Match: {match.ID}, {GithubConfig.PrTitle}";
-            string prBody = GithubConfig.PrBody;
+            var request = BracketUploadRequest.CreateMatch(match.ID, matchJson, api.ProvidedUsername);
 
-            await ensureBranch(token, baseSha, newBranch, cancellationToken).ConfigureAwait(false);
+            await api.PerformAsync(request).ConfigureAwait(false);
 
-            string? existingFileSha = await getFileSha(token, newBranch, cancellationToken).ConfigureAwait(false);
-            await putFile(token, bracketJson, TournamentGameBase.BRACKET_FILENAME, existingFileSha, newBranch, cancellationToken).ConfigureAwait(false);
-
-            string prUrl = await createPullRequest(token, newBranch, prTitle, prBody, cancellationToken).ConfigureAwait(false);
+            string prUrl = request.Response?.PullRequestUrl
+                           ?? throw new InvalidOperationException("Failed to resolve PR URL from bracket upload service.");
             host.OpenUrlExternally(prUrl);
             Logger.Log($"Bracket upload complete. PR created: {prUrl}");
-        }
-
-        private async Task ensureBranch(string token, string baseSha, string newBranch, CancellationToken cancellationToken)
-        {
-            string? existingSha = await getBranchSha(token, newBranch, cancellationToken).ConfigureAwait(false);
-            if (!string.IsNullOrWhiteSpace(existingSha))
-                return;
-
-            string url = GithubApiClient.CreateRepoUrl("git/refs");
-            var payload = new CreateRefRequest
-            {
-                Ref = $"refs/heads/{newBranch}",
-                Sha = baseSha
-            };
-
-            await GithubApiClient.SendJsonAsync<object>(HttpMethod.Post, url, token, payload, cancellationToken).ConfigureAwait(false);
-        }
-
-        private async Task<string?> getBranchSha(string token, string newBranch, CancellationToken cancellationToken)
-        {
-            string url = GithubApiClient.CreateRepoUrl($"git/ref/heads/{newBranch}");
-
-            try
-            {
-                GitRefResponse response = await GithubApiClient.SendJsonAsync<GitRefResponse>(HttpMethod.Get, url, token, null, cancellationToken).ConfigureAwait(false);
-                return response.Object?.Sha;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        private async Task<string?> getFileSha(string token, string branch, CancellationToken cancellationToken)
-        {
-            string path = TournamentGameBase.BRACKET_FILENAME.Replace('\\', '/');
-            string url = $"{GithubApiClient.CreateRepoUrl($"contents/{path}")}?ref={branch}";
-
-            try
-            {
-                ContentResponse response = await GithubApiClient.SendJsonAsync<ContentResponse>(HttpMethod.Get, url, token, null, cancellationToken).ConfigureAwait(false);
-                return response.Sha;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        private async Task putFile(string token, string bracketJson, string fileName, string? existingSha, string newBranch, CancellationToken cancellationToken)
-        {
-            string path = fileName.Replace('\\', '/');
-            string url = GithubApiClient.CreateRepoUrl($"contents/{path}");
-
-            string contentBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(bracketJson));
-            var payload = new CreateOrUpdateFileRequest
-            {
-                Message = $"Update {path}",
-                Content = contentBase64,
-                Branch = newBranch,
-                Sha = string.IsNullOrWhiteSpace(existingSha) ? null : existingSha
-            };
-
-            await GithubApiClient.SendJsonAsync<object>(HttpMethod.Put, url, token, payload, cancellationToken).ConfigureAwait(false);
-        }
-
-        private async Task<string> createPullRequest(string token, string newBranch, string title, string body, CancellationToken cancellationToken)
-        {
-            string url = GithubApiClient.CreateRepoUrl("pulls");
-            var payload = new CreatePullRequestRequest
-            {
-                Title = title,
-                Body = $"{body}, by {api.ProvidedUsername}",
-                Head = newBranch,
-                Base = GithubConfig.BaseBranch
-            };
-
-            PullRequestResponse response = await GithubApiClient.SendJsonAsync<PullRequestResponse>(HttpMethod.Post, url, token, payload, cancellationToken).ConfigureAwait(false);
-            string htmlUrl = response.HtmlUrl;
-
-            if (string.IsNullOrWhiteSpace(htmlUrl))
-                throw new InvalidOperationException("Failed to resolve PR URL from GitHub.");
-
-            return htmlUrl;
         }
     }
 }
