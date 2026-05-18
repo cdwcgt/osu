@@ -115,6 +115,7 @@ namespace osu.Game.Tournament.Screens.Setup
                     Description =
                         "The osu!stable installation which is currently being used as a data source. If a source is not found, make sure you have created an empty ipc.txt in your stable cutting-edge installation."
                 },
+                new UpdateCheckAction(),
                 new ActionableInfo
                 {
                     Label = "Current user",

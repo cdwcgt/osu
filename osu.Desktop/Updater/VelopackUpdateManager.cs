@@ -55,10 +55,11 @@ namespace osu.Desktop.Updater
 
             try
             {
-                IUpdateSource updateSource = new GithubSource(@"https://github.com/ppy/osu", null, ReleaseStream.Value == Game.Configuration.ReleaseStream.Tachyon);
+                IUpdateSource updateSource = new GithubSource(@"https://github.com/osu-mania-Chinese-National-Cup/osu/", null, false);
                 Velopack.UpdateManager updateManager = new Velopack.UpdateManager(updateSource, new UpdateOptions
                 {
-                    AllowVersionDowngrade = true
+                    AllowVersionDowngrade = true,
+                    ExplicitChannel = ReleaseStream.Value.ToString().ToLowerInvariant(),
                 });
 
                 UpdateInfo? update = await updateManager.CheckForUpdatesAsync().ConfigureAwait(false);

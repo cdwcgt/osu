@@ -23,7 +23,7 @@ namespace osu.Desktop
 #if DEBUG
         private const string base_game_name = @"osu-development";
 #else
-        private const string base_game_name = @"osu";
+        private const string base_game_name = @"osu-mcnc";
 #endif
 
         private static LegacyTcpIpcProvider? legacyIpc;
@@ -135,7 +135,12 @@ namespace osu.Desktop
                 }
 
                 if (tournamentClient)
-                    host.Run(new TournamentGame());
+                {
+                    host.Run(new TournamentGame
+                    {
+                        IsFirstRun = isFirstRun
+                    });
+                }
                 else
                 {
                     host.Run(new OsuGameDesktop(args)
@@ -183,11 +188,11 @@ namespace osu.Desktop
             //
             // Special consideration for velopack startup arguments, which must be handled during update.
             // See https://docs.velopack.io/integrating/hooks#command-line-hooks.
-            if (args.Length > 0 && !args[0].StartsWith("--velo", StringComparison.Ordinal))
-            {
-                Logger.Log("Handling arguments, skipping velopack setup.");
-                return;
-            }
+            //if (args.Length > 0 && !args[0].StartsWith("--velo", StringComparison.Ordinal))
+            //{
+            //    Logger.Log("Handling arguments, skipping velopack setup.");
+            //    return;
+            //}
 
             if (OsuGameDesktop.IsPackageManaged)
             {
@@ -208,9 +213,9 @@ namespace osu.Desktop
         [SupportedOSPlatform("windows")]
         private static void configureWindows(VelopackApp app)
         {
-            app.OnFirstRun(_ => WindowsAssociationManager.InstallAssociations());
-            app.OnAfterUpdateFastCallback(_ => WindowsAssociationManager.UpdateAssociations());
-            app.OnBeforeUninstallFastCallback(_ => WindowsAssociationManager.UninstallAssociations());
+            // app.OnFirstRun(_ => WindowsAssociationManager.InstallAssociations());
+            // app.OnAfterUpdateFastCallback(_ => WindowsAssociationManager.UpdateAssociations());
+            // app.OnBeforeUninstallFastCallback(_ => WindowsAssociationManager.UninstallAssociations());
         }
     }
 }

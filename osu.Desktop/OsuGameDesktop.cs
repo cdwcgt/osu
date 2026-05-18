@@ -113,7 +113,7 @@ namespace osu.Desktop
             // This ensures that if a user is trying to recover from a failed startup on an unstable release stream,
             // the game doesn't immediately try and update them back to the release stream after starting up.
             if (IsFirstRun)
-                LocalConfig.SetValue(OsuSetting.ReleaseStream, ReleaseStream.Lazer);
+                LocalConfig.SetValue(OsuSetting.ReleaseStream, ReleaseStream.Mcnc);
 
             if (IsPackageManaged)
                 return new NoActionUpdateManager();

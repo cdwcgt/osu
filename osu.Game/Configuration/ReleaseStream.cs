@@ -7,9 +7,7 @@ namespace osu.Game.Configuration
 {
     public enum ReleaseStream
     {
-        Lazer,
-
-        [Description("Tachyon (Unstable)")]
-        Tachyon
+        [Description("mcnc 直播端")]
+        Mcnc,
     }
 }

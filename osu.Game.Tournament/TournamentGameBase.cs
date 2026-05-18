@@ -15,6 +15,7 @@ using osu.Framework.IO.Stores;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osu.Framework.Threading;
+using osu.Game.Configuration;
 using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Online;
@@ -46,6 +47,8 @@ namespace osu.Game.Tournament
         protected Task BracketLoadTask => bracketLoadTaskCompletionSource.Task;
 
         private readonly TaskCompletionSource<bool> bracketLoadTaskCompletionSource = new TaskCompletionSource<bool>();
+
+        public bool IsFirstRun { get; init; }
 
         protected override IReadOnlyDependencyContainer CreateChildDependencies(IReadOnlyDependencyContainer parent)
         {
@@ -151,6 +154,9 @@ namespace osu.Game.Tournament
             Add(bracketDownloader = new BracketDownloader());
             Add(bracketUploader = new BracketUploader());
             dependencies.Cache(bracketUploader);
+
+            if (IsFirstRun)
+                LocalConfig.SetValue(OsuSetting.ReleaseStream, ReleaseStream.Mcnc);
         }
 
         protected override void LoadComplete()

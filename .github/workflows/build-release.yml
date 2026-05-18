@@ -1,0 +1,152 @@
+name: Build Release
+run-name: Build Release (${{ inputs.profile }}-${{ inputs.version_core }}-${{ inputs.feature_suffix }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Build Profile
+        type: choice
+        required: true
+        default: Release
+        options:
+          - Debug
+          - Release
+
+      version_core:
+        description: "Version core (example: 2026.308.0)"
+        required: true
+        default: 2026.518.0
+
+      feature_suffix:
+        description: "Version suffix / feature name (example: tournament-ui)"
+        required: true
+        default: mcnc
+
+      channel_override:
+        description: "update channel"
+        type: choice
+        required: true
+        default: mcnc
+        options:
+          - mcnc
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: pwsh
+    working-directory: ./osu
+
+env:
+  DOTNET_VERSION: 8.0.x
+
+  PACK_ID: osulazer-mcnc
+  PACK_TITLE: osu!
+  MAIN_EXE: osu!.exe
+
+  PUBLISH_DIR: ${{ github.workspace }}\publish
+  RELEASES_DIR: ${{ github.workspace }}\velopack-releases
+
+jobs:
+  build:
+    name: Build windows-x64
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          path: osu
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install Velopack CLI
+        run: dotnet tool install --global vpk
+
+      - name: Compose metadata
+        id: meta
+        run: |
+          $version = "${{ inputs.version_core }}-${{ inputs.feature_suffix }}"
+
+          $channel = "${{ inputs.channel_override }}"
+          if ([string]::IsNullOrWhiteSpace($channel)) {
+            $channel = "${{ inputs.feature_suffix }}"
+          }
+
+          $tag = "$channel-${{ inputs.version_core }}"
+
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "channel=$channel" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+
+          Write-Host "Version: $version"
+          Write-Host "Channel: $channel"
+          Write-Host "Tag: $tag"
+
+      - name: Prepare directories
+        run: |
+          New-Item -ItemType Directory -Force -Path "${env:PUBLISH_DIR}" | Out-Null
+          New-Item -ItemType Directory -Force -Path "${env:RELEASES_DIR}" | Out-Null
+
+      - name: Download previous Velopack assets for same channel
+        continue-on-error: true
+        env:
+          VPK_TOKEN: ${{ github.token }}
+        run: |
+          $env:PATH += ";$env:USERPROFILE\.dotnet\tools"
+
+          vpk download github `
+            --repoUrl "https://github.com/${{ github.repository }}" `
+            --channel "${{ steps.meta.outputs.channel }}" `
+            --outputDir "${env:RELEASES_DIR}" `
+            --token "${env:VPK_TOKEN}"
+
+      - name: Publish osu.Desktop
+        run: |
+          dotnet publish `
+            "${{ github.workspace }}/osu/osu.Desktop/osu.Desktop.csproj" `
+            -r win-x64 `
+            -c "${{ inputs.profile }}" `
+            -o "${env:PUBLISH_DIR}" `
+            /p:Version="${{ steps.meta.outputs.version }}"
+
+      - name: Pack Velopack release
+        run: |
+          $env:PATH += ";$env:USERPROFILE\.dotnet\tools"
+
+          vpk pack `
+            --packId "${env:PACK_ID}" `
+            --packVersion "${{ steps.meta.outputs.version }}" `
+            --packDir "${env:PUBLISH_DIR}" `
+            --mainExe "${env:MAIN_EXE}" `
+            --packTitle "${env:PACK_TITLE}" `
+            --runtime "win-x64" `
+            --channel "${{ steps.meta.outputs.channel }}" `
+            --outputDir "${env:RELEASES_DIR}"
+
+      - name: Show generated files
+        run: |
+          Get-ChildItem -Force "${env:RELEASES_DIR}" | Format-Table Name, Length, LastWriteTime
+
+      - name: Upload Velopack release
+        env:
+          VPK_TOKEN: ${{ github.token }}
+        run: |
+          $env:PATH += ";$env:USERPROFILE\.dotnet\tools"
+
+          vpk upload github `
+            --repoUrl "https://github.com/${{ github.repository }}" `
+            --outputDir "${env:RELEASES_DIR}" `
+            --channel "${{ steps.meta.outputs.channel }}" `
+            --tag "${{ steps.meta.outputs.tag }}" `
+            --releaseName "${{ steps.meta.outputs.tag }}" `
+            --targetCommitish "${{ github.sha }}" `
+            --merge `
+            --token "${env:VPK_TOKEN}"
