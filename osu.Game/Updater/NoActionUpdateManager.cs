@@ -35,14 +35,11 @@ namespace osu.Game.Updater
         {
             try
             {
-                ReleaseStream stream = externalReleaseStream ?? ReleaseStream.Value;
-                bool includePrerelease = stream == Configuration.ReleaseStream.Tachyon;
-
                 OsuJsonWebRequest<GitHubRelease[]> releasesRequest = new OsuJsonWebRequest<GitHubRelease[]>("https://api.github.com/repos/ppy/osu/releases?per_page=10&page=1");
                 await releasesRequest.PerformAsync(cancellationToken).ConfigureAwait(false);
 
                 GitHubRelease[] releases = releasesRequest.ResponseObject;
-                GitHubRelease? latest = releases.OrderByDescending(r => r.PublishedAt).FirstOrDefault(r => includePrerelease || !r.Prerelease);
+                GitHubRelease? latest = releases.OrderByDescending(r => r.PublishedAt).FirstOrDefault(r => !r.Prerelease);
 
                 if (latest == null)
                     return false;

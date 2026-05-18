@@ -35,20 +35,18 @@ namespace osu.Game.Updater
         private void load(OsuGameBase game)
         {
             version = game.Version.Split('-').First();
-            stream = Enum.TryParse(game.Version.Split('-').Last(), true, out ReleaseStream s) ? s : Configuration.ReleaseStream.Lazer;
+            stream = Enum.TryParse(game.Version.Split('-').Last(), true, out ReleaseStream s) ? s : Configuration.ReleaseStream.Mcnc;
         }
 
         protected override async Task<bool> PerformUpdateCheck(CancellationToken cancellationToken)
         {
             try
             {
-                bool includePrerelease = stream == Configuration.ReleaseStream.Tachyon;
-
                 OsuJsonWebRequest<GitHubRelease[]> releasesRequest = new OsuJsonWebRequest<GitHubRelease[]>("https://api.github.com/repos/ppy/osu/releases?per_page=10&page=1");
                 await releasesRequest.PerformAsync(cancellationToken).ConfigureAwait(false);
 
                 GitHubRelease[] releases = releasesRequest.ResponseObject;
-                GitHubRelease? latest = releases.OrderByDescending(r => r.PublishedAt).FirstOrDefault(r => includePrerelease || !r.Prerelease);
+                GitHubRelease? latest = releases.OrderByDescending(r => r.PublishedAt).FirstOrDefault(r => !r.Prerelease);
 
                 if (latest == null)
                     return false;
