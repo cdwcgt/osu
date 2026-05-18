@@ -36,7 +36,6 @@ using osu.Game.Beatmaps;
 using osu.Game.Collections;
 using osu.Game.Configuration;
 using osu.Game.Database;
-using osu.Game.Extensions;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.UserInterface;
@@ -69,9 +68,9 @@ using osu.Game.Screens.OnlinePlay.Matchmaking.Queue;
 using osu.Game.Screens.OnlinePlay.Multiplayer;
 using osu.Game.Screens.OnlinePlay.Playlists;
 using osu.Game.Screens.Play;
+using osu.Game.Screens.Play.Leaderboards;
 using osu.Game.Screens.Ranking;
 using osu.Game.Screens.Select;
-using osu.Game.Screens.Select.Leaderboards;
 using osu.Game.Seasonal;
 using osu.Game.Skinning;
 using osu.Game.Updater;
@@ -193,7 +192,7 @@ namespace osu.Game
 
         protected readonly Bindable<LocalUserPlayingState> UserPlayingState = new Bindable<LocalUserPlayingState>();
 
-        protected OsuScreenStack ScreenStack;
+        public OsuScreenStack ScreenStack { get; private set; }
 
         protected BackButton BackButton => screenStackFooter.BackButton;
         protected ScreenFooter ScreenFooter => screenStackFooter.Footer;
@@ -762,7 +761,7 @@ namespace osu.Game
                 }
             }, validScreens: new[]
             {
-                typeof(SongSelect), typeof(Screens.SelectV2.SongSelect), typeof(IHandlePresentBeatmap)
+                typeof(SongSelect), typeof(IHandlePresentBeatmap)
             });
         }
 
@@ -865,7 +864,7 @@ namespace osu.Game
             // which may not match the score, and thus crash.
             IEnumerable<Type> validScreens =
                 Beatmap.Value.BeatmapInfo.Equals(databasedBeatmap) && Ruleset.Value.Equals(databasedScore.ScoreInfo.Ruleset)
-                    ? new[] { typeof(SongSelect), typeof(Screens.SelectV2.SongSelect), typeof(DailyChallenge) }
+                    ? new[] { typeof(SongSelect), typeof(DailyChallenge) }
                     : Array.Empty<Type>();
 
             PerformFromScreen(screen =>
@@ -1053,30 +1052,6 @@ namespace osu.Game
         {
             base.LoadComplete();
 
-            var languages = Enum.GetValues<Language>();
-
-            var mappings = languages.Select(language =>
-            {
-#if DEBUG
-                if (language == Language.debug)
-                    return new LocaleMapping("debug", new DebugLocalisationStore());
-#endif
-
-                string cultureCode = language.ToCultureCode();
-
-                try
-                {
-                    return new LocaleMapping(new ResourceManagerLocalisationStore(cultureCode));
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error(ex, $"Could not load localisations for language \"{cultureCode}\"");
-                    return null;
-                }
-            }).Where(m => m != null);
-
-            Localisation.AddLocaleMappings(mappings);
-
             // The next time this is updated is in UpdateAfterChildren, which occurs too late and results
             // in the cursor being shown for a few frames during the intro.
             // This prevents the cursor from showing until we have a screen with CursorVisible = true
@@ -1139,6 +1114,7 @@ namespace osu.Game
                                 },
                                 new PopoverContainer
                                 {
+                                    // Ensure the footer is displayed above any content and/or overlays.
                                     Depth = -1,
                                     RelativeSizeAxes = Axes.Both,
                                     Child = screenStackFooter = new ScreenStackFooter(ScreenStack, backReceptor)

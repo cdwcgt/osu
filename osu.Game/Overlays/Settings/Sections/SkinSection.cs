@@ -22,8 +22,8 @@ using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Localisation;
+using osu.Game.Overlays.Dialog;
 using osu.Game.Overlays.SkinEditor;
-using osu.Game.Screens.Select;
 using osu.Game.Skinning;
 using osuTK;
 using Realms;
@@ -237,6 +237,27 @@ namespace osu.Game.Overlays.Settings.Sections
             }
         }
 
+        public partial class SkinDeleteDialog : DeletionDialog
+        {
+            private readonly Skin skin;
+
+            public SkinDeleteDialog(Skin skin)
+            {
+                this.skin = skin;
+                BodyText = skin.SkinInfo.Value.Name;
+            }
+
+            [BackgroundDependencyLoader]
+            private void load(SkinManager manager)
+            {
+                DangerousAction = () =>
+                {
+                    manager.Delete(skin.SkinInfo.Value);
+                    manager.CurrentSkinInfo.SetDefault();
+                };
+            }
+        }
+
         public partial class RenameSkinPopover : OsuPopover
         {
             [Resolved]
@@ -261,7 +282,7 @@ namespace osu.Game.Overlays.Settings.Sections
                     {
                         textBox = new FocusedTextBox
                         {
-                            PlaceholderText = @"Skin name",
+                            PlaceholderText = SkinSettingsStrings.SkinName,
                             FontSize = OsuFont.DEFAULT_FONT_SIZE,
                             RelativeSizeAxes = Axes.X,
                             SelectAllOnFocus = true,

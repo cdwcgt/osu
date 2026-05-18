@@ -16,5 +16,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="Graphics\D3D11ExternalTexture.cs" />
+    <PackageReference Include="ppy.LocalisationAnalyser" Version="2025.1208.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 </Project>

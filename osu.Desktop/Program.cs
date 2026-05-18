@@ -145,7 +145,8 @@ namespace osu.Desktop
                 {
                     host.Run(new OsuGameDesktop(args)
                     {
-                        IsFirstRun = isFirstRun
+                        IsFirstRun = isFirstRun,
+                        EnableWebSocketServer = Environment.GetEnvironmentVariable("OSU_WEBSOCKET_SERVER") == "1",
                     });
                 }
             }

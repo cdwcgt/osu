@@ -34,5 +34,20 @@ namespace osu.Game.Online.Multiplayer.MatchTypes.RankedPlay
         /// </summary>
         [Key(3)]
         public int RatingAfter { get; set; }
+
+        /// <summary>
+        /// Information about damage being applied in the current stage.
+        /// </summary>
+        /// <remarks>
+        /// This value is only expected to be populated during the <see cref="RankedPlayStage.Results"/> stage.
+        /// </remarks>
+        [Key(4)]
+        public RankedPlayDamageInfo? DamageInfo;
+
+        /// <summary>
+        /// Number of rounds this player has won.
+        /// </summary>
+        [Key(5)]
+        public int RoundsWon { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-<Project>
+﻿<Project>
   <ItemGroup>
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\osu-framework\osu.Framework.Android\osu.Framework.Android.csproj" />
   </ItemGroup>
