@@ -62,6 +62,13 @@ jobs:
           path: osu
           fetch-depth: 0
 
+      - name: Checkout framework
+        uses: actions/checkout@v4
+        with:
+          repository: osu-mania-Chinese-National-Cup/osu-framework
+          ref: mcnc-custom
+          path: osu-framework
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
