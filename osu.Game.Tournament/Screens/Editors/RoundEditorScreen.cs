@@ -83,6 +83,12 @@ namespace osu.Game.Tournament.Screens.Editors
                             },
                             new SettingsSlider<int>
                             {
+                                LabelText = "# of Protects",
+                                Width = 0.33f,
+                                Current = Model.ProtectCount
+                            },
+                            new SettingsSlider<int>
+                            {
                                 LabelText = "# of Bans",
                                 Width = 0.33f,
                                 Current = Model.BanCount

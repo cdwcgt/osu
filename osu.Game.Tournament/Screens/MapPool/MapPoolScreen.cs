@@ -172,13 +172,14 @@ namespace osu.Game.Tournament.Screens.MapPool
             if (CurrentMatch.Value?.Round.Value == null)
                 return;
 
+            int totalProtectsRequired = CurrentMatch.Value.Round.Value.ProtectCount.Value * 2;
             int totalBansRequired = CurrentMatch.Value.Round.Value.BanCount.Value * 2;
 
             TeamColour lastPickColour = CurrentMatch.Value.PicksBans.LastOrDefault()?.Team ?? TeamColour.Red;
 
             TeamColour nextColour;
 
-            bool hasAllProtected = CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Protected) >= 2;
+            bool hasAllProtected = CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Protected) >= totalProtectsRequired;
 
             bool hasAllBans = CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Ban) >= totalBansRequired;
 
