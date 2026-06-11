@@ -26,7 +26,7 @@ using FillMode = osu.Framework.Graphics.FillMode;
 
 namespace osu.Game.Tournament.Components
 {
-    [SupportedOSPlatform("windows10.0.19041.0")]
+    [SupportedOSPlatform("windows10.0.26100.0")]
     public partial class CapturedWindowSprite : CompositeDrawable
     {
         private Sprite sprite = null!;
@@ -76,7 +76,7 @@ namespace osu.Game.Tournament.Components
             d3d11Available = D3D11Interop.TryGetD3D11Device(renderer, out var device, out _, out _);
 
             if (d3d11Available)
-                capture = new WgcCaptureSource(new WgcCapture(device));
+                capture = new WgcCaptureSource(new WgcCapture(device!));
             else
                 capture = new BitBltCaptureSource();
 

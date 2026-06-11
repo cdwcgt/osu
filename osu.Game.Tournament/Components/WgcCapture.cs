@@ -18,7 +18,7 @@ using Vortice.DXGI;
 
 namespace osu.Game.Tournament.Components
 {
-    [SupportedOSPlatform("windows10.0.19041.0")]
+    [SupportedOSPlatform("windows10.0.26100.0")]
     public sealed class WgcCapture : IDisposable
     {
         private const int frame_buffer_count = 2;
@@ -116,6 +116,13 @@ namespace osu.Game.Tournament.Components
                     nameof(GraphicsCaptureSession.IsBorderRequired)))
             {
                 session.IsBorderRequired = false;
+            }
+
+            if (ApiInformation.IsPropertyPresent(
+                    "Windows.Graphics.Capture.GraphicsCaptureSession",
+                    nameof(GraphicsCaptureSession.MinUpdateInterval)))
+            {
+                session.MinUpdateInterval = TimeSpan.FromMilliseconds(0);
             }
 
             session.StartCapture();
