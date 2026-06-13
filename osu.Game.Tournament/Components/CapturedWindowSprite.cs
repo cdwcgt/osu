@@ -40,6 +40,8 @@ namespace osu.Game.Tournament.Components
         private volatile bool watcherRunning;
         private IntPtr watchedHwnd;
         private volatile bool watchedAlive;
+        private Texture? pendingSpriteTexture;
+        private volatile bool spriteTextureAssignmentsStopped;
 
         private bool isWindowsLive = false;
 
@@ -154,14 +156,58 @@ namespace osu.Game.Tournament.Components
             if (capture == null || !frame.IsValid)
                 return;
 
+            bool resourceOwnershipTransferred = false;
+            Texture? textureToApply = null;
+
             try
             {
-                capture.ApplyFrame(frame, renderer, sprite, ref externalTexture, ref cpuTexture);
+                resourceOwnershipTransferred = capture.ApplyFrame(frame, renderer, ref externalTexture, ref cpuTexture, out textureToApply);
+
+                if (textureToApply != null)
+                    queueSpriteTexture(textureToApply);
             }
             finally
             {
-                frame.ReleaseResources(discardUpload: false);
+                frame.ReleaseResources(discardUpload: !resourceOwnershipTransferred);
             }
+        }
+
+        private void queueSpriteTexture(Texture texture)
+        {
+            if (spriteTextureAssignmentsStopped)
+            {
+                texture.Dispose();
+                return;
+            }
+
+            var previousTexture = Interlocked.Exchange(ref pendingSpriteTexture, texture);
+
+            if (previousTexture != null && previousTexture != texture)
+                previousTexture.Dispose();
+
+            if (spriteTextureAssignmentsStopped)
+            {
+                Interlocked.Exchange(ref pendingSpriteTexture, null)?.Dispose();
+                return;
+            }
+
+            Scheduler.AddOnce(applyPendingSpriteTexture);
+        }
+
+        private void applyPendingSpriteTexture()
+        {
+            var texture = Interlocked.Exchange(ref pendingSpriteTexture, null);
+
+            if (texture == null)
+                return;
+
+            if (spriteTextureAssignmentsStopped)
+            {
+                texture.Dispose();
+                return;
+            }
+
+            sprite.Texture = texture;
         }
 
         protected override DrawNode CreateDrawNode() => new CaptureDrawNode(this);
@@ -171,8 +217,6 @@ namespace osu.Game.Tournament.Components
             private readonly Stopwatch stopwatch = Stopwatch.StartNew();
             private double elapsedMs;
 
-            private ICaptureSource? capture => ((CapturedWindowSprite)Source).capture;
-
             public CaptureDrawNode(CapturedWindowSprite source)
                 : base(source)
             {
@@ -180,14 +224,17 @@ namespace osu.Game.Tournament.Components
 
             protected override void Draw(IRenderer renderer)
             {
-                double interval = 1000.0 / ((CapturedWindowSprite)Source).FrameRate.Value;
+                var source = (CapturedWindowSprite)Source;
+                double interval = 1000.0 / source.FrameRate.Value;
                 elapsedMs += stopwatch.Elapsed.TotalMilliseconds;
                 stopwatch.Restart();
 
-                if (capture != null && elapsedMs >= interval)
+                var capture = source.capture;
+
+                if (!source.spriteTextureAssignmentsStopped && capture != null && elapsedMs >= interval)
                 {
                     if (capture.TryAcquireLatestFrame(out var frame))
-                        ((CapturedWindowSprite)Source).consumePendingFrame(frame, renderer);
+                        source.consumePendingFrame(frame, renderer);
 
                     elapsedMs = Math.Min(elapsedMs - interval, interval);
                 }
@@ -233,8 +280,14 @@ namespace osu.Game.Tournament.Components
 
         protected override void Dispose(bool isDisposing)
         {
+            var captureToDispose = capture;
+            capture = null;
+            spriteTextureAssignmentsStopped = true;
+
+            Interlocked.Exchange(ref pendingSpriteTexture, null)?.Dispose();
+
             base.Dispose(isDisposing);
-            capture?.Dispose();
+            captureToDispose?.Dispose();
             externalTexture?.Dispose();
             cpuTexture?.Dispose();
 
@@ -314,7 +367,7 @@ namespace osu.Game.Tournament.Components
             void StartForWindow(IntPtr hwnd);
             void Stop();
             bool TryAcquireLatestFrame(out CaptureFrame frame);
-            void ApplyFrame(CaptureFrame frame, IRenderer renderer, Sprite sprite, ref D3D11ExternalTexture? externalTexture, ref Texture? cpuTexture);
+            bool ApplyFrame(CaptureFrame frame, IRenderer renderer, ref D3D11ExternalTexture? externalTexture, ref Texture? cpuTexture, out Texture? textureToApply);
         }
 
         private readonly struct CaptureFrame
@@ -387,19 +440,21 @@ namespace osu.Game.Tournament.Components
                 return false;
             }
 
-            public void ApplyFrame(CaptureFrame frame, IRenderer renderer, Sprite sprite, ref D3D11ExternalTexture? externalTexture, ref Texture? cpuTexture)
+            public bool ApplyFrame(CaptureFrame frame, IRenderer renderer, ref D3D11ExternalTexture? externalTexture, ref Texture? cpuTexture, out Texture? textureToApply)
             {
+                textureToApply = null;
+
                 if (frame.Kind != CaptureFrameKind.D3D11Texture || frame.D3D11Texture == null)
-                    return;
+                    return false;
 
                 if (externalTexture == null || externalTexture.Width != frame.Width || externalTexture.Height != frame.Height)
                 {
-                    externalTexture?.Dispose();
                     externalTexture = new D3D11ExternalTexture(renderer, frame.Width, frame.Height);
-                    sprite.Texture = externalTexture;
+                    textureToApply = externalTexture;
                 }
 
                 externalTexture.UpdateFrom(frame.D3D11Texture);
+                return false;
             }
 
             public void Dispose() => capture.Dispose();
@@ -517,19 +572,21 @@ namespace osu.Game.Tournament.Components
                 }
             }
 
-            public void ApplyFrame(CaptureFrame frame, IRenderer renderer, Sprite sprite, ref D3D11ExternalTexture? externalTexture, ref Texture? cpuTexture)
+            public bool ApplyFrame(CaptureFrame frame, IRenderer renderer, ref D3D11ExternalTexture? externalTexture, ref Texture? cpuTexture, out Texture? textureToApply)
             {
+                textureToApply = null;
+
                 if (frame.Kind != CaptureFrameKind.CpuUpload || frame.Upload == null)
-                    return;
+                    return false;
 
                 if (cpuTexture == null || cpuTexture.Width != frame.Width || cpuTexture.Height != frame.Height)
                 {
-                    cpuTexture?.Dispose();
                     cpuTexture = renderer.CreateTexture(frame.Width, frame.Height);
-                    sprite.Texture = cpuTexture;
+                    textureToApply = cpuTexture;
                 }
 
                 cpuTexture.SetData(frame.Upload);
+                return true;
             }
 
             public void Dispose()
