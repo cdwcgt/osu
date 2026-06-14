@@ -112,13 +112,13 @@ namespace osu.Game.Tournament.Screens.MapPool
                         {
                             RelativeSizeAxes = Axes.X,
                             Text = "Yellow Pick",
-                            Action = () => setMode(TeamColour.Blue, ChoiceType.Pick)
+                            Action = () => setMode(TeamColour.Yellow, ChoiceType.Pick)
                         },
                         buttonGreenPick = new TourneyButton
                         {
                             RelativeSizeAxes = Axes.X,
                             Text = "Green Pick",
-                            Action = () => setMode(TeamColour.Blue, ChoiceType.Pick)
+                            Action = () => setMode(TeamColour.Green, ChoiceType.Pick)
                         },
                         new ControlPanel.Spacer(),
                         new TourneyButton
