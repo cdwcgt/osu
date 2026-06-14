@@ -6,6 +6,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.Versioning;
 using Microsoft.Win32;
+using osu.Desktop.IPC;
 using osu.Desktop.Performance;
 using osu.Desktop.Security;
 using osu.Framework.Platform;
@@ -34,6 +35,8 @@ namespace osu.Desktop
         private readonly HighPerformanceSessionManager highPerformanceSessionManager = new HighPerformanceSessionManager();
 
         public bool IsFirstRun { get; init; }
+
+        public bool EnableWebSocketServer { get; init; }
 
         public OsuGameDesktop(string[]? args = null)
             : base(args)
@@ -112,7 +115,7 @@ namespace osu.Desktop
             // This ensures that if a user is trying to recover from a failed startup on an unstable release stream,
             // the game doesn't immediately try and update them back to the release stream after starting up.
             if (IsFirstRun)
-                LocalConfig.SetValue(OsuSetting.ReleaseStream, ReleaseStream.Lazer);
+                LocalConfig.SetValue(OsuSetting.ReleaseStream, ReleaseStream.Mcnc);
 
             if (IsPackageManaged)
                 return new NoActionUpdateManager();
@@ -148,6 +151,9 @@ namespace osu.Desktop
 
             osuSchemeLinkIPCChannel = new OsuSchemeLinkIPCChannel(Host, this);
             archiveImportIPCChannel = new ArchiveImportIPCChannel(Host, this);
+
+            if (EnableWebSocketServer)
+                Add(new OsuWebSocketProvider());
         }
 
         public override void SetHost(GameHost host)

@@ -33,9 +33,16 @@ namespace osu.Game.Tournament.Models
             MaxValue = 1366,
         };
 
+        public BindableInt FrameRate = new BindableInt(60)
+        {
+            MinValue = 30,
+            MaxValue = 360,
+            Default = 60,
+        };
+
         public Bindable<int> PlayersPerTeam = new BindableInt(4)
         {
-            MinValue = 3,
+            MinValue = 1,
             MaxValue = 4,
         };
 

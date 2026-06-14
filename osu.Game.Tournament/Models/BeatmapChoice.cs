@@ -36,5 +36,6 @@ namespace osu.Game.Tournament.Models
     {
         Pick,
         Ban,
+        Protected,
     }
 }

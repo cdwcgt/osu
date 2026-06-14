@@ -8,6 +8,7 @@ using osu.Framework.Audio;
 using osu.Framework.Audio.Sample;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Audio;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Transforms;
@@ -15,8 +16,11 @@ using osu.Framework.Utils;
 using osu.Game.Extensions;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
+using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Multiplayer.MatchTypes.RankedPlay;
+using osu.Game.Rulesets.Mods;
 using osu.Game.Scoring;
+using osu.Game.Screens.OnlinePlay.Matchmaking.Match.BeatmapSelect;
 using osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay.Components;
 using osuTK;
 using osuTK.Graphics;
@@ -32,6 +36,9 @@ namespace osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay
             public required RankedPlayDamageInfo PlayerDamageInfo { get; init; }
             public required RankedPlayDamageInfo OpponentDamageInfo { get; init; }
 
+            public required APIBeatmap Beatmap { get; init; }
+            public required Mod[] Mods { get; init; }
+
             [Resolved]
             private RankedPlayMatchInfo matchInfo { get; set; } = null!;
 
@@ -43,6 +50,7 @@ namespace osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay
             private readonly Bindable<Visibility> cornerPieceVisibility = new Bindable<Visibility>();
             private readonly Bindable<float> scoreBarProgress = new Bindable<float>();
 
+            private Drawable beatmapPanel = null!;
             private PanelScaffold panelScaffold = null!;
             private Box flash = null!;
             private ScoreDetails playerScoreDetails = null!;
@@ -59,17 +67,18 @@ namespace osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay
 
             private RankedPlayDamageInfo losingDamageInfo = null!;
 
-            private Sample resultsAppearSample = null!;
-            private Sample dmgFlySample = null!;
-            private Sample dmgHitSample = null!;
-            private Sample hpDownSample = null!;
-            private Sample playerAppearSample = null!;
-            private Sample pseudoScoreCounterSample = null!;
-            private Sample scoreTickSample = null!;
-            private Sample gradePassSample = null!;
-            private Sample gradePassSsSample = null!;
-            private Sample gradeFailSample = null!;
-            private Sample gradeFailDSample = null!;
+            private AudioContainer sampleContainer = null!;
+            private DrawableSample resultsAppearSample = null!;
+            private DrawableSample dmgFlySample = null!;
+            private DrawableSample dmgHitSample = null!;
+            private DrawableSample hpDownSample = null!;
+            private DrawableSample playerAppearSample = null!;
+            private DrawableSample pseudoScoreCounterSample = null!;
+            private DrawableSample scoreTickSample = null!;
+            private DrawableSample gradePassSample = null!;
+            private DrawableSample gradePassSsSample = null!;
+            private DrawableSample gradeFailSample = null!;
+            private DrawableSample gradeFailDSample = null!;
             private SampleChannel? playerScoreTickChannel;
             private SampleChannel? opponentScoreTickChannel;
             private readonly BindableDouble playerScoreTickPitch = new BindableDouble();
@@ -83,6 +92,22 @@ namespace osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay
                                             .Select(it => it.Value.DamageInfo)
                                             .OfType<RankedPlayDamageInfo>()
                                             .MaxBy(it => it.Damage)!;
+
+                AddInternal(new Container
+                {
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    Size = cardSize,
+                    Child = beatmapPanel = new Container
+                    {
+                        Anchor = Anchor.TopRight,
+                        Origin = Anchor.BottomRight,
+                        Margin = new MarginPadding { Bottom = 10 },
+                        Scale = new Vector2(1.1f),
+                        Size = new Vector2(MatchmakingSelectPanel.WIDTH, MatchmakingSelectPanel.HEIGHT),
+                        Child = new MatchmakingSelectPanel.CardContentBeatmap(Beatmap, Mods)
+                    }
+                });
 
                 AddInternal(panelScaffold = new PanelScaffold
                 {
@@ -288,17 +313,23 @@ namespace osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay
                     }
                 });
 
-                resultsAppearSample = audio.Samples.Get(@"Multiplayer/Matchmaking/Ranked/Results/results-appear");
-                dmgFlySample = audio.Samples.Get(@"Multiplayer/Matchmaking/Ranked/Results/dmg-fly");
-                dmgHitSample = audio.Samples.Get(@"Multiplayer/Matchmaking/Ranked/Results/dmg-hit");
-                hpDownSample = audio.Samples.Get(@"Multiplayer/Matchmaking/Ranked/Results/hp-down");
-                playerAppearSample = audio.Samples.Get(@"Multiplayer/Matchmaking/Ranked/Results/players-appear");
-                pseudoScoreCounterSample = audio.Samples.Get(@"Multiplayer/Matchmaking/Ranked/Results/pseudo-score-counter");
-                scoreTickSample = audio.Samples.Get(@"Multiplayer/Matchmaking/Ranked/Results/score-tick");
-                gradePassSample = audio.Samples.Get(@"Results/rank-impact-pass");
-                gradePassSsSample = audio.Samples.Get(@"Results/rank-impact-pass-ss");
-                gradeFailSample = audio.Samples.Get(@"Results/rank-impact-fail");
-                gradeFailDSample = audio.Samples.Get(@"Results/rank-impact-fail-d");
+                AddInternal(sampleContainer = new AudioContainer
+                {
+                    Children = new Drawable[]
+                    {
+                        resultsAppearSample = new DrawableSample(audio.Samples.Get(@"Multiplayer/Matchmaking/Ranked/Results/results-appear")),
+                        dmgFlySample = new DrawableSample(audio.Samples.Get(@"Multiplayer/Matchmaking/Ranked/Results/dmg-fly")),
+                        dmgHitSample = new DrawableSample(audio.Samples.Get(@"Multiplayer/Matchmaking/Ranked/Results/dmg-hit")),
+                        hpDownSample = new DrawableSample(audio.Samples.Get(@"Multiplayer/Matchmaking/Ranked/Results/hp-down")),
+                        playerAppearSample = new DrawableSample(audio.Samples.Get(@"Multiplayer/Matchmaking/Ranked/Results/players-appear")),
+                        pseudoScoreCounterSample = new DrawableSample(audio.Samples.Get(@"Multiplayer/Matchmaking/Ranked/Results/pseudo-score-counter")),
+                        scoreTickSample = new DrawableSample(audio.Samples.Get(@"Multiplayer/Matchmaking/Ranked/Results/score-tick")),
+                        gradePassSample = new DrawableSample(audio.Samples.Get(@"Results/rank-impact-pass")),
+                        gradePassSsSample = new DrawableSample(audio.Samples.Get(@"Results/rank-impact-pass-ss")),
+                        gradeFailSample = new DrawableSample(audio.Samples.Get(@"Results/rank-impact-fail")),
+                        gradeFailDSample = new DrawableSample(audio.Samples.Get(@"Results/rank-impact-fail-d")),
+                    }
+                });
             }
 
             protected override void LoadComplete()
@@ -315,6 +346,10 @@ namespace osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay
                 double delay = 0;
 
                 resultsAppearSample.Play();
+
+                beatmapPanel.FadeOut()
+                            .Delay(800)
+                            .FadeIn(300);
 
                 panelScaffold.FadeIn(100)
                              .ResizeTo(0)
@@ -526,7 +561,7 @@ namespace osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay
                 }
             }
 
-            private Sample getRankSample(ScoreRank rank)
+            private DrawableSample getRankSample(ScoreRank rank)
             {
                 switch (rank)
                 {
@@ -555,6 +590,13 @@ namespace osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay
                     return 1;
 
                 return (int)Math.Floor(Math.Log10(value)) + 1;
+            }
+
+            public void StopAllSamples()
+            {
+                sampleContainer.Volume.Value = 0;
+                playerScoreTickChannel?.Stop();
+                opponentScoreTickChannel?.Stop();
             }
 
             private partial class DamageParticle : Triangle

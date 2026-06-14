@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
@@ -11,9 +12,12 @@ using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
+using osu.Framework.Logging;
 using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Overlays;
 using osu.Game.Tournament.Components;
+using osu.Game.Tournament.Github;
 using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Editors;
 using osuTK;
@@ -47,7 +51,12 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
 
             //todo: tournamentgamebase?
             if (ladderInfo.CurrentMatch.Value != null)
-                ladderInfo.CurrentMatch.Value.Current.Value = false;
+            {
+                foreach (var m in ladderInfo.Matches.Where(m => m.Current.Value))
+                {
+                    m.Current.Value = false;
+                }
+            }
 
             ladderInfo.CurrentMatch.Value = match;
             ladderInfo.CurrentMatch.Value.Current.Value = true;
@@ -186,6 +195,12 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
             scoreText.Font = scoreText.Font.With(weight: winner ? FontWeight.Bold : FontWeight.Regular);
         }
 
+        [Resolved]
+        private BracketUploader bracketUploader { get; set; } = null!;
+
+        [Resolved]
+        private IDialogOverlay dialogOverlay { get; set; } = null!;
+
         public MenuItem[] ContextMenuItems
         {
             get
@@ -198,6 +213,17 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
                     new OsuMenuItem("Set as current", MenuItemType.Standard, setCurrent),
                     new OsuMenuItem("Join with", MenuItemType.Standard, () => ladderEditor.BeginJoin(match, false)),
                     new OsuMenuItem("Join with (loser)", MenuItemType.Standard, () => ladderEditor.BeginJoin(match, true)),
+                    new OsuMenuItem("Upload this match", MenuItemType.Standard, () =>
+                    {
+                        bracketUploader.UploadByMatchAsync(match).ContinueWith(t =>
+                        {
+                            if (t.IsCompletedSuccessfully)
+                                return;
+
+                            Scheduler.Add(() => dialogOverlay.Push(new UploadFailedDialog(t.Exception?.Message)));
+                            Logger.Error(t.Exception, "Upload match failed");
+                        }).ConfigureAwait(false);
+                    }),
                     new OsuMenuItem("Remove", MenuItemType.Destructive, () => ladderEditor.Remove(match)),
                 };
             }

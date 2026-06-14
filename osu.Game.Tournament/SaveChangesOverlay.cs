@@ -24,6 +24,8 @@ namespace osu.Game.Tournament
         private string? lastSerialisedLadder;
         private readonly TourneyButton saveChangesButton;
 
+        public bool HaveUnsaveChange => saveChangesButton.Enabled.Value;
+
         public SaveChangesOverlay()
         {
             RelativeSizeAxes = Axes.Both;
@@ -49,7 +51,7 @@ namespace osu.Game.Tournament
                         Width = 140,
                         Height = 50,
                         Margin = new MarginPadding(10),
-                        Action = saveChanges,
+                        Action = SaveChanges,
                         // Enabled = { Value = false },
                     },
                 }
@@ -98,7 +100,7 @@ namespace osu.Game.Tournament
 
         private void scheduleNextCheck() => Scheduler.AddDelayed(() => checkForChanges().FireAndForget(), 1000);
 
-        private void saveChanges()
+        public void SaveChanges()
         {
             tournamentGame.SaveChanges();
             lastSerialisedLadder = tournamentGame.GetSerialisedLadder();

@@ -14,10 +14,14 @@ using osu.Framework.Input;
 using osu.Framework.IO.Stores;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
+using osu.Framework.Threading;
+using osu.Game.Configuration;
 using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Online;
 using osu.Game.Online.API.Requests;
+using osu.Game.Tournament.Configuration;
+using osu.Game.Tournament.Github;
 using osu.Game.Tournament.IO;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.IPC.MemoryIPC;
@@ -36,10 +40,16 @@ namespace osu.Game.Tournament
         private DependencyContainer dependencies = null!;
         private MemoryBasedIPC ipc = null!;
         private BeatmapLookupCache beatmapCache = null!;
+        private TournamentConfigManager configManager = null!;
+
+        [Resolved]
+        private GameHost host { get; set; } = null!;
 
         protected Task BracketLoadTask => bracketLoadTaskCompletionSource.Task;
 
         private readonly TaskCompletionSource<bool> bracketLoadTaskCompletionSource = new TaskCompletionSource<bool>();
+
+        public bool IsFirstRun { get; init; }
 
         protected override IReadOnlyDependencyContainer CreateChildDependencies(IReadOnlyDependencyContainer parent)
         {
@@ -59,10 +69,15 @@ namespace osu.Game.Tournament
             base.SetHost(host);
 
             if (host.Window != null)
-                host.Window.Title = $"{Name} [tournament client]";
+                host.Window.Title = $"{Name} [MCNC tournament client]";
         }
 
         private TournamentSpriteText initialisationText = null!;
+        private TourneyButton downloadFromGithub = null!;
+        private TourneyButton continueButton = null!;
+        private ScheduledDelegate? continueScheduler;
+        private BracketDownloader bracketDownloader = null!;
+        private BracketUploader bracketUploader = null!;
 
         [BackgroundDependencyLoader]
         private void load(Storage baseStorage)
@@ -72,11 +87,61 @@ namespace osu.Game.Tournament
                 Anchor = Anchor.Centre,
                 Origin = Anchor.Centre,
                 Font = OsuFont.Torus.With(size: 32),
+                Text = "Click button to update from github"
+            });
+
+            Add(downloadFromGithub = new TourneyButton
+            {
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
+                Y = -50,
+                Width = 200,
+                Height = 50,
+                RelativeSizeAxes = Axes.None,
+                Text = "Update From Github",
+                Action = () =>
+                {
+                    initialisationText.Text = "Updating from github";
+                    continueScheduler?.Cancel();
+                    expireButton();
+                    bracketDownloader.DownloadAsync().ContinueWith(t =>
+                    {
+                        if (t.IsCompletedSuccessfully)
+                        {
+                            initialisationText.Text = "Update completed successfully";
+                            Task.Run(readBracket);
+                            return;
+                        }
+
+                        initialisationText.Text = "Update failed, will load local bracket";
+                        Task.Run(readBracket);
+                    }).ConfigureAwait(false);
+                }
+            });
+
+            Add(continueButton = new TourneyButton
+            {
+                Anchor = Anchor.Centre,
+                Origin = Anchor.Centre,
+                RelativeSizeAxes = Axes.None,
+                Y = -150,
+                Width = 200,
+                Height = 50,
+                Text = "Continue without update",
+                Action = () =>
+                {
+                    continueScheduler?.Cancel();
+                    initialisationText.Text = "loading bracket...";
+                    Task.Run(readBracket);
+                    expireButton();
+                }
             });
 
             Resources.AddStore(new DllResourceStore(typeof(TournamentGameBase).Assembly));
 
-            dependencies.CacheAs<Storage>(storage = new TournamentStorage(baseStorage));
+            dependencies.Cache(configManager = new TournamentConfigManager(baseStorage));
+
+            dependencies.CacheAs<Storage>(storage = new TournamentStorage(baseStorage, configManager));
             dependencies.CacheAs(storage);
 
             dependencies.Cache(new TournamentVideoResourceStore(storage));
@@ -86,6 +151,13 @@ namespace osu.Game.Tournament
             dependencies.CacheAs(new StableInfo(storage));
 
             beatmapCache = dependencies.Get<BeatmapLookupCache>();
+
+            Add(bracketDownloader = new BracketDownloader());
+            Add(bracketUploader = new BracketUploader());
+            dependencies.Cache(bracketUploader);
+
+            if (IsFirstRun)
+                LocalConfig.SetValue(OsuSetting.ReleaseStream, ReleaseStream.Mcnc);
         }
 
         protected override void LoadComplete()
@@ -97,7 +169,18 @@ namespace osu.Game.Tournament
 
             base.LoadComplete();
 
-            Task.Run(readBracket);
+            continueScheduler = Scheduler.AddDelayed(() =>
+            {
+                initialisationText.Text = "loading bracket...";
+                Task.Run(readBracket);
+                expireButton();
+            }, 10_000);
+        }
+
+        private void expireButton()
+        {
+            continueButton.Expire();
+            downloadFromGithub.Expire();
         }
 
         private async Task readBracket()
@@ -201,6 +284,8 @@ namespace osu.Game.Tournament
 
                     SaveChanges();
                 });
+
+                ladder.FrameRate.BindValueChanged(f => host.MaximumInactiveHz = Math.Max(f.NewValue, 60), true);
             }
             catch (Exception e)
             {

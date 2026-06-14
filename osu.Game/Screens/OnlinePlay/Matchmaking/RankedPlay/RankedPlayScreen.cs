@@ -34,6 +34,7 @@ using osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay.Card;
 using osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay.Components;
 using osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay.Intro;
 using osu.Game.Screens.OnlinePlay.Multiplayer;
+using osu.Game.Users;
 using osuTK;
 
 namespace osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay
@@ -42,6 +43,10 @@ namespace osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay
     public partial class RankedPlayScreen : OsuScreen, IPreviewTrackOwner, IHandlePresentBeatmap
     {
         protected override bool InitialBackButtonVisibility => false;
+
+        public override bool? ApplyModTrackAdjustments => true;
+
+        public override bool DisallowExternalBeatmapRulesetChanges => true;
 
         public override bool HideOverlaysOnEnter => true;
 
@@ -87,7 +92,6 @@ namespace osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay
 
         private readonly Container stageOverlayContainer;
         private readonly Container<RankedPlaySubScreen> screenContainer;
-        private readonly RankedPlayChatDisplay chat;
 
         private RankedPlayBottomOrnament ornament = null!;
         private IDisposable? ornamentOverlayRegistration;
@@ -98,6 +102,9 @@ namespace osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay
 
         private readonly Bindable<Visibility> cornerPieceVisibility = new Bindable<Visibility>();
         private readonly Bindable<bool> showBeatmapBackground = new Bindable<bool>();
+
+        [Cached]
+        private readonly RankedPlayChatDisplay chat;
 
         [Cached]
         private readonly RankedPlayMatchInfo matchInfo;
@@ -114,6 +121,8 @@ namespace osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay
         public RankedPlayScreen(MultiplayerRoom room)
         {
             this.room = room;
+
+            Activity.Value = new UserActivity.InLobby(room);
 
             InternalChildren = new Drawable[]
             {
@@ -186,8 +195,8 @@ namespace osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay
             int localUserId = api.LocalUser.Value.OnlineID;
             int opponentUserId = ((RankedPlayRoomState)client.Room!.MatchState!).Users.Keys.Single(it => it != localUserId);
 
-            localUser = users.GetUserAsync(localUserId).GetResultSafely()!;
-            opponentUser = users.GetUserAsync(opponentUserId).GetResultSafely()!;
+            localUser = users.GetUserAsync(localUserId).GetResultSafely() ?? api.LocalUser.Value;
+            opponentUser = users.GetUserAsync(opponentUserId).GetResultSafely() ?? APIUser.UnknownUser(opponentUserId);
 
             AddRangeInternal([
                 new RankedPlayCornerPiece(RankedPlayColourScheme.BLUE, Anchor.BottomLeft)
@@ -369,6 +378,7 @@ namespace osu.Game.Screens.OnlinePlay.Matchmaking.RankedPlay
                     return true;
                 }
 
+                ActiveSubScreen?.OnExiting(null);
                 backgroundMusic.Stop();
                 previewTrackManager.StopAnyPlaying(this);
 
