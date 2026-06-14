@@ -33,11 +33,8 @@ namespace osu.Game.Tournament.Github
             using (Stream stream = storage.CreateFileSafely(TournamentGameBase.BRACKET_FILENAME))
                 await stream.WriteAsync(bytes, cancellationToken).ConfigureAwait(false);
 
-            if (GithubConfig.GithubToken != null)
-            {
-                string baseSha = await GithubApiClient.GetBaseBranchShaAsync(GithubConfig.GithubToken, cancellationToken).ConfigureAwait(false);
-                config.SetValue(StorageConfig.LastGithubCommitSha, baseSha);
-            }
+            string baseSha = await GithubApiClient.GetBaseBranchShaAsync(GithubConfig.GithubToken, cancellationToken).ConfigureAwait(false);
+            config.SetValue(StorageConfig.LastGithubCommitSha, baseSha);
 
             Logger.Log($"Bracket download complete: {path} updated.");
         }

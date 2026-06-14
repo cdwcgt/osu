@@ -1,7 +1,6 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System;
 using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
@@ -209,11 +208,7 @@ namespace osu.Game.Tournament.Screens.Setup
 
         private async Task updateNewestCommit(CancellationToken cancellationToken = default)
         {
-            string? token = GithubConfig.GithubToken;
-            if (token == null)
-                throw new InvalidOperationException("Github token not set");
-
-            string newestCommit = await GithubApiClient.GetBaseBranchShaAsync(token, cancellationToken).ConfigureAwait(false);
+            string newestCommit = await GithubApiClient.GetBaseBranchShaAsync(GithubConfig.GithubToken, cancellationToken).ConfigureAwait(false);
 
             Scheduler.Add(() =>
             {

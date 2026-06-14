@@ -18,7 +18,7 @@ namespace osu.Game.Tournament.Github
         public static string CreateRepoUrl(string relativePath)
             => $"{github_api_base}/repos/{GithubConfig.Owner}/{GithubConfig.Repo}/{relativePath.TrimStart('/')}";
 
-        public static async Task<string> GetBaseBranchShaAsync(string token, CancellationToken cancellationToken)
+        public static async Task<string> GetBaseBranchShaAsync(string? token, CancellationToken cancellationToken)
         {
             string url = CreateRepoUrl($"git/ref/heads/{GithubConfig.BaseBranch}");
             GitRefResponse response = await SendJsonAsync<GitRefResponse>(HttpMethod.Get, url, token, null, cancellationToken).ConfigureAwait(false);
