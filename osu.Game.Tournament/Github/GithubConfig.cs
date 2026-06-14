@@ -17,7 +17,7 @@ namespace osu.Game.Tournament.Github
 
         public static string PrBody => "Updating bracket";
 
-        public static string? BracketUploadServiceUrl => Environment.GetEnvironmentVariable("BRACKET_UPLOADER_URL");
+        public static string? BracketUploadServiceUrl => "https://mcnc-bracket.cdwcgt.top";
 
         public static string? GithubToken => Environment.GetEnvironmentVariable("GITHUB_TOKEN");
     }
