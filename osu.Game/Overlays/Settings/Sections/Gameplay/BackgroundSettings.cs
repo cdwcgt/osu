@@ -35,6 +35,11 @@ namespace osu.Game.Overlays.Settings.Sections.Gameplay
                 }),
                 new SettingsItemV2(new FormCheckBox
                 {
+                    Caption = "Use Adapter Dim",
+                    Current = config.GetBindable<bool>(OsuSetting.UseAdapterDim),
+                }),
+                new SettingsItemV2(new FormCheckBox
+                {
                     Caption = GameplaySettingsStrings.LightenDuringBreaks,
                     Current = config.GetBindable<bool>(OsuSetting.LightenDuringBreaks),
                 })

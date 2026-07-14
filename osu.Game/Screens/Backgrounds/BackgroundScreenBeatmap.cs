@@ -14,6 +14,7 @@ using osu.Game.Graphics.Backgrounds;
 using osu.Game.Graphics.Containers;
 using osu.Game.Screens.Play;
 using osuTK;
+using Logger = osu.Framework.Logging.Logger;
 
 namespace osu.Game.Screens.Backgrounds
 {
@@ -24,7 +25,7 @@ namespace osu.Game.Screens.Backgrounds
         /// </summary>
         public const float USER_BLUR_FACTOR = 25;
 
-        protected Background Background;
+        protected BeatmapBackground Background;
 
         private WorkingBeatmap beatmap;
 
@@ -92,7 +93,7 @@ namespace osu.Game.Screens.Backgrounds
 
                 Schedule(() =>
                 {
-                    if ((Background as BeatmapBackground)?.Beatmap.BeatmapInfo.BackgroundEquals(beatmap?.BeatmapInfo) ?? false)
+                    if (Background?.Beatmap!.BeatmapInfo.BackgroundEquals(beatmap?.BeatmapInfo) ?? false)
                         return;
 
                     cancellationSource?.Cancel();
@@ -136,7 +137,11 @@ namespace osu.Game.Screens.Backgrounds
 
             public readonly Bindable<bool> StoryboardReplacesBackground = new Bindable<bool>();
 
-            public Background Background
+            public readonly Bindable<bool> UseAdapterDim = new Bindable<bool>();
+
+            private readonly Bindable<double> perceivedBrightness = new Bindable<double>();
+
+            public BeatmapBackground Background
             {
                 get => background;
                 set
@@ -145,12 +150,13 @@ namespace osu.Game.Screens.Backgrounds
 
                     base.Add(background = value);
                     background.BlurTo(blurTarget, 0, Easing.OutQuint);
+                    perceivedBrightness.BindTo(background.PerceivedBrightness);
                 }
             }
 
             private Bindable<double> userBlurLevel { get; set; }
 
-            private Background background;
+            private BeatmapBackground background;
 
             public override void Add(Drawable drawable)
             {
@@ -173,6 +179,7 @@ namespace osu.Game.Screens.Backgrounds
             private void load(OsuConfigManager config)
             {
                 userBlurLevel = config.GetBindable<double>(OsuSetting.BlurLevel);
+                config.BindWith(OsuSetting.UseAdapterDim, UseAdapterDim);
             }
 
             protected override void LoadComplete()
@@ -182,6 +189,8 @@ namespace osu.Game.Screens.Backgrounds
                 userBlurLevel.ValueChanged += _ => UpdateVisuals();
                 BlurAmount.ValueChanged += _ => UpdateVisuals();
                 StoryboardReplacesBackground.ValueChanged += _ => UpdateVisuals();
+                perceivedBrightness.ValueChanged += _ => UpdateVisuals();
+                UseAdapterDim.ValueChanged += _ => UpdateVisuals();
             }
 
             protected override float DimLevel
@@ -191,8 +200,29 @@ namespace osu.Game.Screens.Backgrounds
                     if ((IgnoreUserSettings.Value || ShowStoryboard.Value) && StoryboardReplacesBackground.Value)
                         return 1;
 
+                    if (UseAdapterDim.Value && !IgnoreUserSettings.Value)
+                    {
+                        float dim = (float)calculateDim(perceivedBrightness.Value, base.DimLevel);
+                        Logger.Log($"Use adapter dim, background brightness {perceivedBrightness.Value}, target dim {dim}");
+                        return dim;
+                    }
+
                     return base.DimLevel;
                 }
+            }
+
+            private static double calculateDim(double imageBrightness, double targetDarkness)
+            {
+                const double strength = 1.8;
+                const double brightness_curve = 2.0;
+
+                double b = Math.Clamp(imageBrightness, 0.0, 1.0);
+                double t = Math.Clamp(targetDarkness, 0.0, 1.0);
+
+                double exponent =
+                    1.0 + strength * Math.Pow(1.0 - b, brightness_curve);
+
+                return Math.Pow(t, exponent);
             }
 
             protected override void UpdateVisuals()
