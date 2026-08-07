@@ -65,6 +65,8 @@ namespace osu.Game.Screens.Play.Leaderboards
         /// </remarks>
         public Func<ScoringMode, long> GetDisplayScore { get; set; }
 
+        public bool UpdateDisplayScoreWhatever;
+
         /// <summary>
         /// The colour of the team that the user playing is on, if any.
         /// </summary>

@@ -75,6 +75,8 @@ namespace osu.Game.Rulesets.Scoring
         /// </summary>
         public readonly BindableDouble MinimumAccuracy = new BindableDouble { MinValue = 0, MaxValue = 1 };
 
+        public readonly BindableDouble AchievableMinimumAccuracy = new BindableDouble { MinValue = 0, MaxValue = 1 };
+
         /// <summary>
         /// The maximum achievable accuracy for the whole beatmap at this stage of gameplay.
         /// Assumes that all objects that have not been judged yet will receive the maximum hit result.
@@ -393,6 +395,8 @@ namespace osu.Game.Rulesets.Scoring
             Accuracy.Value = currentMaximumBaseScore > 0 ? currentBaseScore / currentMaximumBaseScore : 1;
             MinimumAccuracy.Value = maximumBaseScore > 0 ? currentBaseScore / maximumBaseScore : 0;
             MaximumAccuracy.Value = maximumBaseScore > 0 ? (currentBaseScore + (maximumBaseScore - currentMaximumBaseScore)) / maximumBaseScore : 1;
+
+            AchievableMinimumAccuracy.Value = maximumBaseScore > 0 ? currentMaximumBaseScore / maximumBaseScore : 0;
 
             double comboProgress = maximumComboPortion > 0 ? currentComboPortion / maximumComboPortion : 1;
             double accuracyProgress = maximumAccuracyJudgementCount > 0 ? (double)currentAccuracyJudgementCount / maximumAccuracyJudgementCount : 1;

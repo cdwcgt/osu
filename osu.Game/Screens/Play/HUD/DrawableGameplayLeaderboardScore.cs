@@ -103,6 +103,8 @@ namespace osu.Game.Screens.Play.HUD
 
         private readonly LayoutValue drawSizeLayout = new LayoutValue(Invalidation.DrawSize);
 
+        private readonly bool updateDisplayScoreWhatever;
+
         /// <summary>
         /// Creates a new <see cref="DrawableGameplayLeaderboardScore"/>.
         /// </summary>
@@ -117,6 +119,7 @@ namespace osu.Game.Screens.Play.HUD
             ScorePosition.BindTo(score.Position);
             DisplayOrder.BindTo(score.DisplayOrder);
             GetDisplayScore = score.GetDisplayScore;
+            updateDisplayScoreWhatever = score.UpdateDisplayScoreWhatever;
 
             if (score.TeamColour != null)
                 BackgroundColour = score.TeamColour.Value;
@@ -383,6 +386,11 @@ namespace osu.Game.Screens.Play.HUD
         protected override void Update()
         {
             base.Update();
+
+            if (updateDisplayScoreWhatever)
+            {
+                updateScore();
+            }
 
             if (!drawSizeLayout.IsValid)
             {

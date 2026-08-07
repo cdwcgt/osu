@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
@@ -8,6 +9,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Caching;
 using osu.Framework.Graphics;
 using osu.Game.Online.Leaderboards;
+using osu.Game.Rulesets.Scoring;
 using osu.Game.Scoring;
 
 namespace osu.Game.Screens.Play.Leaderboards
@@ -23,12 +25,20 @@ namespace osu.Game.Screens.Play.Leaderboards
         [Resolved]
         private GameplayState? gameplayState { get; set; }
 
+        [Resolved]
+        private ScoreProcessor? scoreProcessor { get; set; }
+
         private readonly Cached sorting = new Cached();
         private bool isPartial;
+
+        private readonly Bindable<double> currentProgress = new Bindable<double>(1);
 
         protected override void LoadComplete()
         {
             base.LoadComplete();
+
+            if (scoreProcessor != null)
+                currentProgress.BindTo(scoreProcessor.AchievableMinimumAccuracy);
 
             var globalScores = leaderboardManager?.Scores.Value;
 
@@ -40,7 +50,11 @@ namespace osu.Game.Screens.Play.Leaderboards
             {
                 foreach (var topScore in globalScores.AllScores.OrderByTotalScore())
                 {
-                    newScores.Add(new GameplayLeaderboardScore(topScore, false, GameplayLeaderboardScore.ComboDisplayMode.Highest));
+                    newScores.Add(new GameplayLeaderboardScore(topScore, false, GameplayLeaderboardScore.ComboDisplayMode.Highest)
+                    {
+                        GetDisplayScore = _ => (long)Math.Round(topScore.TotalScore * currentProgress.Value),
+                        UpdateDisplayScoreWhatever = true
+                    });
                 }
             }
 
@@ -49,7 +63,7 @@ namespace osu.Game.Screens.Play.Leaderboards
                 var localScore = new GameplayLeaderboardScore(gameplayState, tracked: true, GameplayLeaderboardScore.ComboDisplayMode.Highest)
                 {
                     // Local score should always show lower than any existing scores in cases of ties.
-                    TotalScoreTiebreaker = long.MaxValue
+                    TotalScoreTiebreaker = long.MaxValue,
                 };
                 localScore.TotalScore.BindValueChanged(_ => sorting.Invalidate());
                 newScores.Add(localScore);
@@ -68,7 +82,13 @@ namespace osu.Game.Screens.Play.Leaderboards
                 return;
 
             var orderedByScore = scores
-                                 .OrderByDescending(i => i.TotalScore.Value)
+                                 .OrderByDescending(i =>
+                                 {
+                                     if (i.Tracked)
+                                         return i.TotalScore.Value;
+
+                                     return (long)Math.Round(i.TotalScore.Value * currentProgress.Value);
+                                 })
                                  .ThenBy(i => i.TotalScoreTiebreaker)
                                  .ToList();
 
