@@ -11,6 +11,7 @@ using osu.Framework.Graphics;
 using osu.Game.Online.Leaderboards;
 using osu.Game.Rulesets.Scoring;
 using osu.Game.Scoring;
+using osu.Game.Scoring.Legacy;
 
 namespace osu.Game.Screens.Play.Leaderboards
 {
@@ -52,7 +53,7 @@ namespace osu.Game.Screens.Play.Leaderboards
                 {
                     newScores.Add(new GameplayLeaderboardScore(topScore, false, GameplayLeaderboardScore.ComboDisplayMode.Highest)
                     {
-                        GetDisplayScore = _ => (long)Math.Round(topScore.TotalScore * currentProgress.Value),
+                        GetDisplayScore = mode => topScore.GetDisplayScore(mode, (long)Math.Round(topScore.TotalScore * currentProgress.Value)),
                         UpdateDisplayScoreWhatever = true
                     });
                 }

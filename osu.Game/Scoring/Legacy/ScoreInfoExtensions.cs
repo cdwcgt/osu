@@ -24,6 +24,9 @@ namespace osu.Game.Scoring.Legacy
         public static long GetDisplayScore(this MultiplayerScore multiplayerScore, ScoringMode mode)
             => getDisplayScore(multiplayerScore.RulesetId, multiplayerScore.TotalScore, mode, multiplayerScore.MaximumStatistics);
 
+        public static long GetDisplayScore(this ScoreInfo scoreInfo, ScoringMode mode, long totalScore)
+            => getDisplayScore(scoreInfo.Ruleset.OnlineID, totalScore, mode, scoreInfo.MaximumStatistics);
+
         private static long getDisplayScore(int rulesetId, long score, ScoringMode mode, IReadOnlyDictionary<HitResult, int> maximumStatistics)
         {
             if (mode == ScoringMode.Standardised)
