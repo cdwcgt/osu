@@ -177,6 +177,38 @@ namespace osu.Game.Tests.Gameplay
             Assert.That(scoreProcessor.MaximumAccuracy.Value, Is.EqualTo((double)(100 + 3 * 300) / (4 * 300)).Within(Precision.DOUBLE_EPSILON));
         }
 
+        [Test]
+        public void TestMaximumScoreProgress()
+        {
+            var beatmap = new Beatmap<HitObject>
+            {
+                HitObjects =
+                {
+                    new TestHitObject(),
+                    new TestHitObject(HitResult.LargeBonus),
+                }
+            };
+
+            var scoreProcessor = new ScoreProcessor(new OsuRuleset());
+            scoreProcessor.ApplyBeatmap(beatmap);
+
+            Assert.That(scoreProcessor.MaximumScoreProgress.Value, Is.Zero);
+
+            var firstResult = new JudgementResult(beatmap.HitObjects[0], beatmap.HitObjects[0].Judgement) { Type = HitResult.Great };
+            scoreProcessor.ApplyResult(firstResult);
+
+            Assert.That(scoreProcessor.MaximumScoreProgress.Value, Is.LessThan(1));
+
+            var secondResult = new JudgementResult(beatmap.HitObjects[1], beatmap.HitObjects[1].Judgement) { Type = HitResult.LargeBonus };
+            scoreProcessor.ApplyResult(secondResult);
+
+            Assert.That(scoreProcessor.MaximumScoreProgress.Value, Is.EqualTo(1));
+
+            scoreProcessor.RevertResult(secondResult);
+
+            Assert.That(scoreProcessor.MaximumScoreProgress.Value, Is.LessThan(1));
+        }
+
         private class TestJudgement : Judgement
         {
             public override HitResult MaxResult { get; }

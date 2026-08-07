@@ -75,13 +75,16 @@ namespace osu.Game.Rulesets.Scoring
         /// </summary>
         public readonly BindableDouble MinimumAccuracy = new BindableDouble { MinValue = 0, MaxValue = 1 };
 
-        public readonly BindableDouble AchievableMinimumAccuracy = new BindableDouble { MinValue = 0, MaxValue = 1 };
-
         /// <summary>
         /// The maximum achievable accuracy for the whole beatmap at this stage of gameplay.
         /// Assumes that all objects that have not been judged yet will receive the maximum hit result.
         /// </summary>
         public readonly BindableDouble MaximumAccuracy = new BindableDouble(1) { MinValue = 0, MaxValue = 1 };
+
+        /// <summary>
+        /// The proportion of the maximum total score which can be obtained by a perfect play up to the current judgement.
+        /// </summary>
+        public readonly BindableDouble MaximumScoreProgress = new BindableDouble { MinValue = 0, MaxValue = 1 };
 
         /// <summary>
         /// The current combo.
@@ -201,7 +204,10 @@ namespace osu.Game.Rulesets.Scoring
         protected readonly Dictionary<HitResult, int> MaximumResultCounts = new Dictionary<HitResult, int>();
 
         private readonly List<HitEvent> hitEvents = new List<HitEvent>();
+        private readonly List<double> maximumScoreProgresses = new List<double>();
         private HitObject? lastHitObject;
+
+        private bool recordingMaximumScoreProgresses;
 
         public bool ApplyNewJudgementsWhenFailed { get; set; }
 
@@ -235,6 +241,15 @@ namespace osu.Game.Rulesets.Scoring
             Beatmap.Value = beatmap;
 
             base.ApplyBeatmap(beatmap);
+
+            maximumScoreProgresses.Clear();
+            maximumScoreProgresses.Add(0);
+
+            recordingMaximumScoreProgresses = true;
+            SimulateAutoplay(beatmap);
+            recordingMaximumScoreProgresses = false;
+
+            Reset(false);
             beatmapApplied = true;
         }
 
@@ -244,7 +259,12 @@ namespace osu.Game.Rulesets.Scoring
             result.HighestComboAtJudgement = HighestCombo.Value;
 
             if (result.FailedAtJudgement && !ApplyNewJudgementsWhenFailed)
+            {
+                if (!IsSimulating)
+                    updateMaximumScoreProgress();
+
                 return;
+            }
 
             ScoreResultCounts[result.Type] = ScoreResultCounts.GetValueOrDefault(result.Type) + 1;
 
@@ -274,7 +294,12 @@ namespace osu.Game.Rulesets.Scoring
 
             ApplyScoreChange(result);
 
-            if (!IsSimulating)
+            if (recordingMaximumScoreProgresses)
+            {
+                updateScore();
+                maximumScoreProgresses.Add(MaximumTotalScore > 0 ? (double)TotalScore.Value / MaximumTotalScore : 0);
+            }
+            else if (!IsSimulating)
             {
                 if (TrackHitEvents)
                 {
@@ -283,6 +308,7 @@ namespace osu.Game.Rulesets.Scoring
                 }
 
                 updateScore();
+                updateMaximumScoreProgress();
             }
         }
 
@@ -306,7 +332,11 @@ namespace osu.Game.Rulesets.Scoring
             HighestCombo.Value -= (result.HighestComboAfterJudgement - result.HighestComboAtJudgement);
 
             if (result.FailedAtJudgement && !ApplyNewJudgementsWhenFailed)
+            {
+                updateMaximumScoreProgress();
+
                 return;
+            }
 
             ScoreResultCounts[result.Type] = ScoreResultCounts.GetValueOrDefault(result.Type) - 1;
 
@@ -331,6 +361,7 @@ namespace osu.Game.Rulesets.Scoring
             hitEvents.RemoveAt(hitEvents.Count - 1);
 
             updateScore();
+            updateMaximumScoreProgress();
         }
 
         /// <summary>
@@ -396,13 +427,17 @@ namespace osu.Game.Rulesets.Scoring
             MinimumAccuracy.Value = maximumBaseScore > 0 ? currentBaseScore / maximumBaseScore : 0;
             MaximumAccuracy.Value = maximumBaseScore > 0 ? (currentBaseScore + (maximumBaseScore - currentMaximumBaseScore)) / maximumBaseScore : 1;
 
-            AchievableMinimumAccuracy.Value = maximumBaseScore > 0 ? currentMaximumBaseScore / maximumBaseScore : 0;
-
             double comboProgress = maximumComboPortion > 0 ? currentComboPortion / maximumComboPortion : 1;
             double accuracyProgress = maximumAccuracyJudgementCount > 0 ? (double)currentAccuracyJudgementCount / maximumAccuracyJudgementCount : 1;
 
             TotalScoreWithoutMods.Value = (long)Math.Round(ComputeTotalScore(comboProgress, accuracyProgress, currentBonusPortion));
             TotalScore.Value = (long)Math.Round(TotalScoreWithoutMods.Value * scoreMultiplier);
+        }
+
+        private void updateMaximumScoreProgress()
+        {
+            int progressIndex = Math.Min(JudgedHits, maximumScoreProgresses.Count - 1);
+            MaximumScoreProgress.Value = progressIndex >= 0 ? maximumScoreProgresses[progressIndex] : 0;
         }
 
         private void updateRank()
@@ -472,6 +507,9 @@ namespace osu.Game.Rulesets.Scoring
             currentBonusPortion = 0;
 
             TotalScore.Value = 0;
+            MinimumAccuracy.Value = 0;
+            MaximumAccuracy.Value = 1;
+            MaximumScoreProgress.Value = 0;
             Accuracy.Value = 1;
             Combo.Value = 0;
             HighestCombo.Value = 0;
@@ -533,6 +571,7 @@ namespace osu.Game.Rulesets.Scoring
             SetScoreProcessorStatistics(frame.Header.ScoreProcessorStatistics);
 
             updateScore();
+            updateMaximumScoreProgress();
 
             OnResetFromReplayFrame?.Invoke();
         }

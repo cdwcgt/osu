@@ -38,7 +38,7 @@ namespace osu.Game.Screens.Play.Leaderboards
             base.LoadComplete();
 
             if (scoreProcessor != null)
-                currentProgress.BindTo(scoreProcessor.AchievableMinimumAccuracy);
+                currentProgress.BindTo(scoreProcessor.MaximumScoreProgress);
 
             var globalScores = leaderboardManager?.Scores.Value;
 
@@ -89,6 +89,7 @@ namespace osu.Game.Screens.Play.Leaderboards
 
                                      return (long)Math.Round(i.TotalScore.Value * currentProgress.Value);
                                  })
+                                 .ThenByDescending(i => i.TotalScore.Value)
                                  .ThenBy(i => i.TotalScoreTiebreaker)
                                  .ToList();
 
