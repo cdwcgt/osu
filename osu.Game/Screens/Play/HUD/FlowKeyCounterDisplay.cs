@@ -12,10 +12,10 @@ namespace osu.Game.Screens.Play.HUD
 {
     public partial class FlowKeyCounterDisplay : KeyCounterDisplay
     {
-        [SettingSource("Show Key Name")]
+        [SettingSource(typeof(FlowKeyCounterDisplayStrings), nameof(FlowKeyCounterDisplayStrings.ShowKeyName))]
         public BindableBool ShowTriggerName { get; } = new BindableBool(true);
 
-        [SettingSource("Flow Duration")]
+        [SettingSource(typeof(FlowKeyCounterDisplayStrings), nameof(FlowKeyCounterDisplayStrings.FlowDuration))]
         public BindableDouble FlowDuration { get; } = new BindableDouble(500)
         {
             MinValue = 250,
