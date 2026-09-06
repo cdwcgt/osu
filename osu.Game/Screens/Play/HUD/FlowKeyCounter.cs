@@ -136,7 +136,10 @@ namespace osu.Game.Screens.Play.HUD
             IsActive.BindValueChanged(active =>
             {
                 if (frameStableClock?.IsCatchingUp.Value == true)
+                {
+                    endFlow();
                     return;
+                }
 
                 if (active.NewValue)
                     beginFlow();
